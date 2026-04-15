@@ -6,7 +6,9 @@ import com.yss.subjectmatch.domain.model.DataSourceType;
 import com.yss.subjectmatch.extract.extractor.CsvRawDataExtractor;
 import com.yss.subjectmatch.extract.extractor.PoiRawDataExtractor;
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
+import com.yss.subjectmatch.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
+import com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
@@ -78,7 +80,8 @@ class RawDataExtractionIntegrationTest {
                         9002L
                 );
             } else if (sourceType == DataSourceType.EXCEL) {
-                PoiRawDataExtractor poiExtractor = new PoiRawDataExtractor(mapper, new ObjectMapper());
+                ValuationSheetStyleMapper styleMapper = session.getMapper(ValuationSheetStyleMapper.class);
+                PoiRawDataExtractor poiExtractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), styleMapper);
                 extracted = poiExtractor.extract(
                         DataSourceConfig.builder().sourceType(sourceType).sourceUri(source.toString()).build(),
                         9001L,
@@ -111,6 +114,10 @@ class RawDataExtractionIntegrationTest {
                         .orElseThrow();
                 assertThat(headerRecord.getHeaderMetaJson()).isNotBlank();
                 assertThat(headerRecord.getRowUniverJson()).isNotBlank();
+                List<ValuationSheetStylePO> sheetStyles = session.getMapper(ValuationSheetStyleMapper.class)
+                        .findByFileId(9002L);
+                assertThat(sheetStyles).isNotEmpty();
+                assertThat(sheetStyles.get(0).getSheetStyleJson()).isNotBlank();
             } else {
                 assertThat(rows.stream().anyMatch(row -> row.getHeaderMetaJson() != null && !row.getHeaderMetaJson().isBlank()))
                         .isFalse();

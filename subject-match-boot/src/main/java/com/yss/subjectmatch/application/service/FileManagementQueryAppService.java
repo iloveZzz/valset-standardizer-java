@@ -2,6 +2,7 @@ package com.yss.subjectmatch.application.service;
 
 import com.yss.subjectmatch.application.dto.SubjectMatchFileIngestLogViewDTO;
 import com.yss.subjectmatch.application.dto.SubjectMatchFileInfoViewDTO;
+import com.yss.subjectmatch.application.dto.ValuationSheetStyleViewDTO;
 
 import java.util.List;
 
@@ -24,4 +25,9 @@ public interface FileManagementQueryAppService {
      * 查询文件接入日志。
      */
     List<SubjectMatchFileIngestLogViewDTO> queryIngestLogs(Long fileId);
+
+    /**
+     * 查询 Excel sheet 样式快照。
+     */
+    List<ValuationSheetStyleViewDTO> querySheetStyles(Long fileId);
 }

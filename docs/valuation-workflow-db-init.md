@@ -7,16 +7,20 @@
 ### ODS 原始表
 
 - `t_ods_valuation_filedata`
+- `t_ods_valuation_sheet_style`
 
 SQL 文件：
 
 - `tools/extract/src/main/resources/db/migration/t_ods_valuation_filedata.sql`
+- `tools/extract/src/main/resources/db/migration/t_ods_valuation_sheet_style.sql`
 
 用途：
 
 - 保存 Excel / CSV 原始行数据
 - 每行一条记录
 - 通过 `file_id` 和后续分析、匹配阶段关联
+- `t_ods_valuation_sheet_style` 仅保存 Excel 的 sheet 级样式快照
+- 样式快照只保留标题、header、合并单元格及其预览行，不保存所有明细行样式
 
 ### 文件主数据表
 
@@ -92,7 +96,7 @@ SQL 文件：
 建议按下面顺序执行：
 
 1. 初始化文件主数据表 `t_subject_match_file_info` / `t_subject_match_file_ingest_log`
-2. 初始化 ODS 表 `t_ods_valuation_filedata`
+2. 初始化 ODS 表 `t_ods_valuation_filedata` / `t_ods_valuation_sheet_style`
 3. 初始化 DWD 表 `t_dwd_external_valuation*`
 4. 初始化任务与匹配结果相关表
 5. 启动应用

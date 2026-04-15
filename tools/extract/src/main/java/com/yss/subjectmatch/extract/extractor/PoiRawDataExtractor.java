@@ -7,7 +7,9 @@ import com.yss.subjectmatch.domain.extractor.RawDataExtractor;
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
 import com.yss.subjectmatch.domain.model.DataSourceType;
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
+import com.yss.subjectmatch.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
+import com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper;
 import com.yss.subjectmatch.extract.support.ExcelUniverSnapshotSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fesod.sheet.FesodSheet;
@@ -19,6 +21,7 @@ import org.apache.fesod.sheet.read.listener.ReadListener;
 import org.apache.fesod.sheet.read.metadata.holder.ReadRowHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -49,12 +52,20 @@ public class PoiRawDataExtractor implements RawDataExtractor {
 
     private final ValuationFileDataMapper valuationFileDataMapper;
     private final ObjectMapper objectMapper;
+    private final ValuationSheetStyleMapper valuationSheetStyleMapper;
     @Value("${subject.match.workflow.skip-excel-style-parsing:false}")
     private boolean skipExcelStyleParsing;
 
     public PoiRawDataExtractor(ValuationFileDataMapper valuationFileDataMapper, ObjectMapper objectMapper) {
+        this(valuationFileDataMapper, objectMapper, null);
+    }
+
+    public PoiRawDataExtractor(ValuationFileDataMapper valuationFileDataMapper,
+                               ObjectMapper objectMapper,
+                               @Nullable ValuationSheetStyleMapper valuationSheetStyleMapper) {
         this.valuationFileDataMapper = valuationFileDataMapper;
         this.objectMapper = objectMapper;
+        this.valuationSheetStyleMapper = valuationSheetStyleMapper;
     }
 
     @Override
@@ -146,7 +157,8 @@ public class PoiRawDataExtractor implements RawDataExtractor {
             int sheetRowIndex = context == null ? rowDataNumber - 1 : Math.max(context.getCurrentRowNum(), 0);
 
             try {
-                ExcelUniverSnapshotSupport.RowSnapshot rowSnapshot = buildRowSnapshot(sheetRowIndex, rowValues);
+                boolean includeStyle = !skipExcelStyleParsing && rowDataNumber <= HEADER_PREVIEW_ROWS;
+                ExcelUniverSnapshotSupport.RowSnapshot rowSnapshot = buildRowSnapshot(sheetRowIndex, rowValues, includeStyle);
 
                 if (!skipExcelStyleParsing && !headerMetaReady && headerPreviewRows.size() < HEADER_PREVIEW_ROWS) {
                     headerPreviewRows.add(rowSnapshot);
@@ -224,6 +236,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
             try {
                 String headerMetaJson = objectMapper.writeValueAsString(
                         snapshotSupport.buildHeaderMeta(currentSheetName, new ArrayList<>(headerPreviewRows)));
+                persistSheetStyleSnapshot(headerMetaJson);
                 if (!batch.isEmpty()) {
                     batch.get(0).setHeaderMetaJson(headerMetaJson);
                 }
@@ -241,9 +254,26 @@ public class PoiRawDataExtractor implements RawDataExtractor {
             batch.clear();
         }
 
-        private ExcelUniverSnapshotSupport.RowSnapshot buildRowSnapshot(int sheetRowIndex, List<String> rowValues) {
+        private void persistSheetStyleSnapshot(String headerMetaJson) {
+            if (skipExcelStyleParsing || valuationSheetStyleMapper == null) {
+                return;
+            }
+            ValuationSheetStylePO stylePO = new ValuationSheetStylePO();
+            stylePO.setTaskId(taskId);
+            stylePO.setFileId(fileId);
+            stylePO.setSheetName(currentSheetName);
+            stylePO.setStyleScope("HEADER_PREVIEW");
+            stylePO.setSheetStyleJson(headerMetaJson);
+            stylePO.setPreviewRowCount(headerPreviewRows.size());
+            stylePO.setCreatedAt(java.time.LocalDateTime.now());
+            valuationSheetStyleMapper.insert(stylePO);
+        }
+
+        private ExcelUniverSnapshotSupport.RowSnapshot buildRowSnapshot(int sheetRowIndex,
+                                                                       List<String> rowValues,
+                                                                       boolean includeStyle) {
             if (!skipExcelStyleParsing && snapshotSupport != null) {
-                return snapshotSupport.buildRowSnapshot(currentSheetName, sheetRowIndex, rowValues);
+                return snapshotSupport.buildRowSnapshot(currentSheetName, sheetRowIndex, rowValues, includeStyle);
             }
             return buildMinimalRowSnapshot(currentSheetName, sheetRowIndex, rowValues);
         }

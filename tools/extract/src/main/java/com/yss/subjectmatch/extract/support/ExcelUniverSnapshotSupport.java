@@ -54,6 +54,15 @@ public class ExcelUniverSnapshotSupport implements Closeable {
      * 构建单行 Univer 单元格快照。
      */
     public RowSnapshot buildRowSnapshot(String sheetName, int rowIndex, List<String> rowValues) {
+        return buildRowSnapshot(sheetName, rowIndex, rowValues, true);
+    }
+
+    /**
+     * 构建单行 Univer 单元格快照。
+     *
+     * @param includeStyle 是否保留单元格样式
+     */
+    public RowSnapshot buildRowSnapshot(String sheetName, int rowIndex, List<String> rowValues, boolean includeStyle) {
         Sheet sheet = sheet(sheetName);
         Row row = sheet == null ? null : sheet.getRow(rowIndex);
         int columnCount = resolveColumnCount(row, rowValues);
@@ -61,8 +70,10 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         Map<Integer, Map<String, Object>> rowCellData = new LinkedHashMap<>();
         for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
             String value = columnIndex < rowValues.size() ? rowValues.get(columnIndex) : null;
-            Cell cell = row == null ? null : row.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
-            Map<String, Object> univerCellData = buildCellData(cell, value);
+            Cell cell = includeStyle && row != null
+                    ? row.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL)
+                    : null;
+            Map<String, Object> univerCellData = buildCellData(cell, value, includeStyle);
             if (!univerCellData.isEmpty()) {
                 rowCellData.put(columnIndex, univerCellData);
             }
@@ -121,12 +132,12 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         workbook.close();
     }
 
-    private Map<String, Object> buildCellData(Cell cell, String rawValue) {
+    private Map<String, Object> buildCellData(Cell cell, String rawValue, boolean includeStyle) {
         Map<String, Object> cellData = new LinkedHashMap<>();
         if (rawValue != null) {
             cellData.put("v", rawValue);
         }
-        if (cell != null && cell.getCellStyle() != null) {
+        if (includeStyle && cell != null && cell.getCellStyle() != null) {
             Map<String, Object> styleData = convertStyle(cell.getCellStyle());
             if (!styleData.isEmpty()) {
                 cellData.put("s", styleData);

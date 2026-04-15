@@ -3,6 +3,7 @@ package com.yss.subjectmatch.controller;
 import com.yss.subjectmatch.application.dto.SubjectMatchFileIngestLogViewDTO;
 import com.yss.subjectmatch.application.dto.SubjectMatchFileInfoViewDTO;
 import com.yss.subjectmatch.application.dto.UploadValuationFileResponse;
+import com.yss.subjectmatch.application.dto.ValuationSheetStyleViewDTO;
 import com.yss.subjectmatch.application.service.FileManagementQueryAppService;
 import com.yss.subjectmatch.application.service.ValuationWorkflowAppService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,5 +75,15 @@ public class FileManagementController {
     @Operation(summary = "查询文件接入日志")
     public List<SubjectMatchFileIngestLogViewDTO> queryIngestLogs(@PathVariable Long fileId) {
         return fileManagementQueryAppService.queryIngestLogs(fileId);
+    }
+
+    /**
+     * 查询文件对应的 Excel sheet 样式快照。
+     */
+    @GetMapping("/{fileId}/sheet-styles")
+    @Operation(summary = "查询文件对应的 Excel sheet 样式快照",
+            description = "仅 Excel 文件会写入 sheet 样式快照，返回标题、header 与合并区域相关的 Univer 结构。")
+    public List<ValuationSheetStyleViewDTO> querySheetStyles(@PathVariable Long fileId) {
+        return fileManagementQueryAppService.querySheetStyles(fileId);
     }
 }

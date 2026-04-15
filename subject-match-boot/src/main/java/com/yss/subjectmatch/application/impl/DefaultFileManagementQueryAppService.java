@@ -2,6 +2,7 @@ package com.yss.subjectmatch.application.impl;
 
 import com.yss.subjectmatch.application.dto.SubjectMatchFileIngestLogViewDTO;
 import com.yss.subjectmatch.application.dto.SubjectMatchFileInfoViewDTO;
+import com.yss.subjectmatch.application.dto.ValuationSheetStyleViewDTO;
 import com.yss.subjectmatch.application.service.FileManagementQueryAppService;
 import com.yss.subjectmatch.domain.gateway.SubjectMatchFileInfoGateway;
 import com.yss.subjectmatch.domain.gateway.SubjectMatchFileIngestLogGateway;
@@ -9,6 +10,8 @@ import com.yss.subjectmatch.domain.model.SubjectMatchFileIngestLog;
 import com.yss.subjectmatch.domain.model.SubjectMatchFileInfo;
 import com.yss.subjectmatch.domain.model.SubjectMatchFileSourceChannel;
 import com.yss.subjectmatch.domain.model.SubjectMatchFileStatus;
+import com.yss.subjectmatch.extract.repository.entity.ValuationSheetStylePO;
+import com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,11 +33,14 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
 
     private final SubjectMatchFileInfoGateway subjectMatchFileInfoGateway;
     private final SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway;
+    private final ValuationSheetStyleMapper valuationSheetStyleMapper;
 
     public DefaultFileManagementQueryAppService(SubjectMatchFileInfoGateway subjectMatchFileInfoGateway,
-                                               SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway) {
+                                               SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway,
+                                               ValuationSheetStyleMapper valuationSheetStyleMapper) {
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.subjectMatchFileIngestLogGateway = subjectMatchFileIngestLogGateway;
+        this.valuationSheetStyleMapper = valuationSheetStyleMapper;
     }
 
     @Override
@@ -71,6 +77,20 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
             return Collections.emptyList();
         }
         return ingestLogs.stream().map(this::toView).toList();
+    }
+
+    @Override
+    public List<ValuationSheetStyleViewDTO> querySheetStyles(Long fileId) {
+        if (fileId == null) {
+            return Collections.emptyList();
+        }
+        List<ValuationSheetStylePO> stylePOs = valuationSheetStyleMapper.findByFileId(fileId);
+        if (stylePOs == null || stylePOs.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return stylePOs.stream()
+                .map(this::toView)
+                .toList();
     }
 
     private SubjectMatchFileInfoViewDTO toView(SubjectMatchFileInfo fileInfo) {
@@ -112,6 +132,19 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
                 .ingestMetaJson(ingestLog.getIngestMetaJson())
                 .createdBy(ingestLog.getCreatedBy())
                 .errorMessage(ingestLog.getErrorMessage())
+                .build();
+    }
+
+    private ValuationSheetStyleViewDTO toView(ValuationSheetStylePO stylePO) {
+        return ValuationSheetStyleViewDTO.builder()
+                .id(stylePO.getId())
+                .taskId(stylePO.getTaskId())
+                .fileId(stylePO.getFileId())
+                .sheetName(stylePO.getSheetName())
+                .styleScope(stylePO.getStyleScope())
+                .sheetStyleJson(stylePO.getSheetStyleJson())
+                .previewRowCount(stylePO.getPreviewRowCount())
+                .createdAt(stylePO.getCreatedAt())
                 .build();
     }
 

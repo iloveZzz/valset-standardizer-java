@@ -35,4 +35,4 @@
 - 接口调用说明：`docs/valuation-workflow-api.md`
 - 数据库初始化说明：`docs/valuation-workflow-db-init.md`
 - 文件管理设计：`docs/file-management-design.md`
-- 文件管理接口：`/api/files/upload`、`/api/files/{fileId}`、`/api/files`、`/api/files/{fileId}/ingest-logs`
+- 文件管理接口：`/api/files/upload`、`/api/files/{fileId}`、`/api/files`、`/api/files/{fileId}/ingest-logs`、`/api/files/{fileId}/sheet-styles`

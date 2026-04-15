@@ -225,3 +225,13 @@ curl "http://localhost:8080/api/valuation-workflows/10001/match-results"
 ### 9.4 查询文件接入日志
 
 `GET /api/files/{fileId}/ingest-logs`
+
+### 9.5 查询 Excel sheet 样式快照
+
+`GET /api/files/{fileId}/sheet-styles`
+
+说明：
+
+- 仅 Excel 文件会写入 sheet 样式快照
+- 返回标题、header、合并区对应的 Univer 结构快照
+- CSV 文件或关闭样式解析开关时，返回空列表
