@@ -1,8 +1,0 @@
-com/yss/subjectmatch/knowledge/config/KnowledgeMybatisConfig.class
-com/yss/subjectmatch/knowledge/CsvStandardSubjectLoader.class
-com/yss/subjectmatch/knowledge/PoiStandardSubjectLoader.class
-com/yss/subjectmatch/knowledge/PoiMappingSampleLoader.class
-com/yss/subjectmatch/knowledge/ApiStandardSubjectLoader.class
-com/yss/subjectmatch/knowledge/StandardSubjectLoaderRegistry.class
-com/yss/subjectmatch/knowledge/DbStandardSubjectLoader.class
-com/yss/subjectmatch/knowledge/PoiStandardSubjectLoader$BaseRow.class

@@ -1,8 +1,0 @@
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/ApiStandardSubjectLoader.java
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/CsvStandardSubjectLoader.java
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/DbMappingSampleLoader.java
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/DbStandardSubjectLoader.java
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/PoiMappingSampleLoader.java
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/PoiStandardSubjectLoader.java
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/StandardSubjectLoaderRegistry.java
-/Users/zhudaoming/yss-subject-match/subject-match-java/tools/knowledge/src/main/java/com/yss/subjectmatch/knowledge/config/KnowledgeMybatisConfig.java
