@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.domain.model.MatchCandidate;
+import com.yss.subjectmatch.domain.model.HeaderColumnMeta;
 import com.yss.subjectmatch.domain.model.MetricRecord;
 import com.yss.subjectmatch.domain.model.SubjectRecord;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,13 @@ public class JsonStringMapper {
      */
     public List<List<String>> toListListString(String value) {
         return read(value, new TypeReference<List<List<String>>>() {});
+    }
+
+    /**
+     * JSON 反序列化：List<HeaderColumnMeta>
+     */
+    public List<HeaderColumnMeta> toListHeaderColumnMeta(String value) {
+        return read(value, new TypeReference<List<HeaderColumnMeta>>() {});
     }
 
     /**

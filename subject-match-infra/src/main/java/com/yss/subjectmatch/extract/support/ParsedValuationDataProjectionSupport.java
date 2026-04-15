@@ -54,18 +54,15 @@ public final class ParsedValuationDataProjectionSupport {
         }
         Map<String, SubjectTreeNode> nodeMap = new LinkedHashMap<>();
         for (SubjectRecord subject : subjects) {
-            nodeMap.put(subject.getSubjectCode(), SubjectTreeNode.builder()
-                    .subjectCode(subject.getSubjectCode())
-                    .subjectName(subject.getSubjectName())
-                    .level(subject.getLevel())
-                    .parentCode(subject.getParentCode())
-                    .rootCode(subject.getRootCode())
-                    .leaf(subject.getLeaf())
-                    .marketValue(subject.getMarketValue())
-                    .marketValueRatio(subject.getMarketValueRatio())
-                    .cost(subject.getCost())
-                    .children(new ArrayList<>())
-                    .build());
+                nodeMap.put(subject.getSubjectCode(), SubjectTreeNode.builder()
+                        .subjectCode(subject.getSubjectCode())
+                        .subjectName(subject.getSubjectName())
+                        .level(subject.getLevel())
+                        .parentCode(subject.getParentCode())
+                        .rootCode(subject.getRootCode())
+                        .leaf(subject.getLeaf())
+                        .children(new ArrayList<>())
+                        .build());
         }
 
         List<SubjectTreeNode> roots = new ArrayList<>();
@@ -98,18 +95,13 @@ public final class ParsedValuationDataProjectionSupport {
         int metricRowCount = 0;
         int metricDataCount = 0;
         int maxLevel = 0;
-        Set<String> currencies = new LinkedHashSet<>();
         Set<String> rootCodes = new LinkedHashSet<>();
         Map<String, Integer> duplicateCounter = new LinkedHashMap<>();
         Map<Integer, Integer> levelDistribution = new LinkedHashMap<>();
-        List<SubjectRecord> marketValueSubjects = new ArrayList<>();
 
         for (SubjectRecord subject : subjects) {
             if (Boolean.TRUE.equals(subject.getLeaf())) {
                 leafCount++;
-            }
-            if (subject.getCurrency() != null && !subject.getCurrency().isBlank()) {
-                currencies.add(subject.getCurrency());
             }
             if (subject.getRootCode() != null && !subject.getRootCode().isBlank()) {
                 rootCodes.add(subject.getRootCode());
@@ -118,9 +110,6 @@ public final class ParsedValuationDataProjectionSupport {
             int level = subject.getLevel() == null ? 0 : subject.getLevel();
             levelDistribution.merge(level, 1, Integer::sum);
             maxLevel = Math.max(maxLevel, level);
-            if (subject.getMarketValue() != null) {
-                marketValueSubjects.add(subject);
-            }
         }
 
         for (MetricRecord metric : metrics) {
@@ -129,11 +118,6 @@ public final class ParsedValuationDataProjectionSupport {
             } else if ("metric_data".equals(metric.getMetricType())) {
                 metricDataCount++;
             }
-        }
-
-        marketValueSubjects.sort((left, right) -> compareBigDecimal(right.getMarketValue(), left.getMarketValue()));
-        if (marketValueSubjects.size() > 10) {
-            marketValueSubjects = new ArrayList<>(marketValueSubjects.subList(0, 10));
         }
 
         List<String> duplicateSubjectCodes = duplicateCounter.entrySet().stream()
@@ -169,10 +153,8 @@ public final class ParsedValuationDataProjectionSupport {
                 .metricDataCount(metricDataCount)
                 .rootSubjectCount(rootCodes.size())
                 .maxLevel(maxLevel)
-                .currencies(new ArrayList<>(currencies))
                 .duplicateSubjectCodes(duplicateSubjectCodes)
                 .levelDistribution(sortedLevelDistribution)
-                .topMarketValueSubjects(topMarketValueSubjects)
                 .build();
     }
 
@@ -184,11 +166,5 @@ public final class ParsedValuationDataProjectionSupport {
         for (SubjectTreeNode child : node.getChildren()) {
             sortTree(child);
         }
-    }
-
-    private static int compareBigDecimal(BigDecimal left, BigDecimal right) {
-        BigDecimal leftValue = Objects.requireNonNullElse(left, BigDecimal.ZERO);
-        BigDecimal rightValue = Objects.requireNonNullElse(right, BigDecimal.ZERO);
-        return leftValue.compareTo(rightValue);
     }
 }

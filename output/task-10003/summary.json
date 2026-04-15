@@ -1,0 +1,79 @@
+{
+  "title" : "DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321",
+  "sheetName" : "ODS_RAW_DATA",
+  "headerRowNumber" : 4,
+  "dataStartRowNumber" : 7,
+  "basicInfo" : {
+    "日期" : "2023-03-21",
+    "单位净值" : "1.1029"
+  },
+  "subjectCount" : 69,
+  "leafSubjectCount" : 34,
+  "nonLeafSubjectCount" : 35,
+  "metricCount" : 35,
+  "metricRowCount" : 6,
+  "metricDataCount" : 29,
+  "rootSubjectCount" : 6,
+  "maxLevel" : 6,
+  "currencies" : [ "CNY", "***" ],
+  "duplicateSubjectCodes" : [ ],
+  "levelDistribution" : {
+    "1" : 6,
+    "2" : 8,
+    "3" : 11,
+    "4" : 13,
+    "5" : 8,
+    "6" : 23
+  },
+  "topMarketValueSubjects" : [ {
+    "subjectCode" : "1002",
+    "subjectName" : "银行存款",
+    "marketValue" : 8107579260.48,
+    "marketValueRatio" : 0.936036
+  }, {
+    "subjectCode" : "1002.02",
+    "subjectName" : "定期存款",
+    "marketValue" : 8096882075,
+    "marketValueRatio" : 0.934801
+  }, {
+    "subjectCode" : "1002.02.01",
+    "subjectName" : "中资银行",
+    "marketValue" : 7919000000,
+    "marketValueRatio" : 0.914264
+  }, {
+    "subjectCode" : "1002.02.01.01",
+    "subjectName" : "定期存款-中资银行",
+    "marketValue" : 7919000000,
+    "marketValueRatio" : 0.914264
+  }, {
+    "subjectCode" : "1002.02.01.01.001",
+    "subjectName" : "工行",
+    "marketValue" : 5919000000,
+    "marketValueRatio" : 0.68336
+  }, {
+    "subjectCode" : "1002.02.01.01.002",
+    "subjectName" : "农行",
+    "marketValue" : 2000000000,
+    "marketValueRatio" : 0.230904
+  }, {
+    "subjectCode" : "1002.02.01.01.002.DC5058 OTC",
+    "subjectName" : "农行台州温岭支行20(20220610)",
+    "marketValue" : 2000000000,
+    "marketValueRatio" : 0.230904
+  }, {
+    "subjectCode" : "1002.02.01.01.001.DC5092 OTC",
+    "subjectName" : "工行中山银苑支行9.9(20220728)",
+    "marketValue" : 1980000000,
+    "marketValueRatio" : 0.228595
+  }, {
+    "subjectCode" : "1002.02.01.01.001.DC5079 OTC",
+    "subjectName" : "工商银行佛山高明沧江支行9.9(20220630)",
+    "marketValue" : 990000000,
+    "marketValueRatio" : 0.114297
+  }, {
+    "subjectCode" : "1002.02.01.01.001.DC5087 OTC",
+    "subjectName" : "工行中山西区支行9.8(20220722)",
+    "marketValue" : 980000000,
+    "marketValueRatio" : 0.113143
+  } ]
+}

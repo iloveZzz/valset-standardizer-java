@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -20,10 +19,6 @@ public class SubjectRecord {
     private Integer rowDataNumber;
     private String subjectCode;
     private String subjectName;
-    private String currency;
-    private BigDecimal marketValue;
-    private BigDecimal marketValueRatio;
-    private BigDecimal cost;
     private Integer level;
     private String parentCode;
     private String rootCode;

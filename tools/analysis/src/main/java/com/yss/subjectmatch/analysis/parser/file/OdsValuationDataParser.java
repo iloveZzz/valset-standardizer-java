@@ -3,6 +3,7 @@ package com.yss.subjectmatch.analysis.parser.file;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
+import com.yss.subjectmatch.domain.model.HeaderColumnMeta;
 import com.yss.subjectmatch.domain.model.MetricRecord;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.domain.model.SubjectRecord;
@@ -56,6 +57,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     .basicInfo(Map.of())
                     .headers(List.of())
                     .headerDetails(List.of())
+                    .headerColumns(List.of())
                     .subjects(List.of())
                     .metrics(List.of())
                     .build();
@@ -73,6 +75,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         List<String> headers = headerLayout.headers();
         Map<String, Integer> headerIndex = buildHeaderIndex(headers);
         List<List<String>> headerDetails = headerLayout.headerDetails();
+        List<HeaderColumnMeta> headerColumns = headerLayout.headerColumns();
         TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerBlockStartIndex);
         SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex);
 
@@ -92,6 +95,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
                 .basicInfo(titleAndInfo.basicInfo())
                 .headers(headers)
                 .headerDetails(headerDetails)
+                .headerColumns(headerColumns)
                 .subjects(splitResult.subjects())
                 .metrics(splitResult.metrics())
                 .build();
@@ -176,11 +180,12 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private HeaderLayout buildHeaderLayout(List<List<String>> headerBlockRows) {
         if (headerBlockRows.isEmpty()) {
-            return new HeaderLayout(List.of(), List.of());
+            return new HeaderLayout(List.of(), List.of(), List.of());
         }
         int columnCount = headerBlockRows.stream().mapToInt(List::size).max().orElse(0);
         List<String> headers = new ArrayList<>(columnCount);
         List<List<String>> headerDetails = new ArrayList<>(columnCount);
+        List<HeaderColumnMeta> headerColumns = new ArrayList<>(columnCount);
         for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
             List<String> pathSegments = new ArrayList<>();
             for (List<String> headerRow : headerBlockRows) {
@@ -192,10 +197,18 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     pathSegments.add(segment);
                 }
             }
-            headers.add(String.join("|", pathSegments));
+            String headerPath = String.join("|", pathSegments);
+            headers.add(headerPath);
             headerDetails.add(pathSegments);
+            headerColumns.add(HeaderColumnMeta.builder()
+                    .columnIndex(columnIndex)
+                    .headerName(headerPath)
+                    .headerPath(headerPath)
+                    .pathSegments(pathSegments)
+                    .blankColumn(headerPath.isBlank())
+                    .build());
         }
-        return new HeaderLayout(headers, headerDetails);
+        return new HeaderLayout(headers, headerDetails, headerColumns);
     }
 
     private List<String> fillMergedHeaderRow(List<String> rowTexts) {
@@ -306,10 +319,6 @@ public class OdsValuationDataParser implements ValuationDataParser {
                 .rowDataNumber(rowIndex + 1)
                 .subjectCode(subjectCode)
                 .subjectName(subjectName)
-                .currency(getText(rowValues, headers, headerIndex, "币种"))
-                .marketValue(getNumber(rowValues, headers, headerIndex, "市值", "市值占比", "行情"))
-                .marketValueRatio(getNumber(rowValues, headers, headerIndex, "市值占比"))
-                .cost(getNumber(rowValues, headers, headerIndex, "成本", "成本占比"))
                 .level(pathCodes.size())
                 .parentCode(null)
                 .rootCode(pathCodes.isEmpty() ? subjectCode : pathCodes.get(0))
@@ -462,7 +471,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
     private record TitleAndInfo(String title, Map<String, String> basicInfo) {
     }
 
-    private record HeaderLayout(List<String> headers, List<List<String>> headerDetails) {
+    private record HeaderLayout(List<String> headers, List<List<String>> headerDetails, List<HeaderColumnMeta> headerColumns) {
     }
 
     private record SplitResult(List<SubjectRecord> subjects, List<MetricRecord> metrics) {

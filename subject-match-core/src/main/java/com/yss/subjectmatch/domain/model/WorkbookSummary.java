@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -30,19 +29,6 @@ public class WorkbookSummary {
     private Integer metricDataCount;
     private Integer rootSubjectCount;
     private Integer maxLevel;
-    private List<String> currencies;
     private List<String> duplicateSubjectCodes;
     private Map<Integer, Integer> levelDistribution;
-    private List<TopMarketValueSubject> topMarketValueSubjects;
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class TopMarketValueSubject {
-        private String subjectCode;
-        private String subjectName;
-        private BigDecimal marketValue;
-        private BigDecimal marketValueRatio;
-    }
 }

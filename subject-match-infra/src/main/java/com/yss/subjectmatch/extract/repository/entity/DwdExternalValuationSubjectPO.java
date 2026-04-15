@@ -10,7 +10,6 @@ import lombok.Data;
 import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import java.math.BigDecimal;
 
 /**
  * DWD 外部估值明细表。
@@ -36,18 +35,6 @@ public class DwdExternalValuationSubjectPO {
 
     @TableField("subject_name")
     private String subjectName;
-
-    @TableField("currency")
-    private String currency;
-
-    @TableField("market_value")
-    private BigDecimal marketValue;
-
-    @TableField("market_value_ratio")
-    private BigDecimal marketValueRatio;
-
-    @TableField("cost")
-    private BigDecimal cost;
 
     @TableField("level_no")
     private Integer level;

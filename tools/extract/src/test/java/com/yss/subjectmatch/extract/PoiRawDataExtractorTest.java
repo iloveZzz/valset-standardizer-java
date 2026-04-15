@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class PoiRawDataExtractorTest {
@@ -48,7 +49,7 @@ class PoiRawDataExtractorTest {
 
         assertThat(count).isEqualTo(1);
         ArgumentCaptor<List<ValuationFileDataPO>> captor = ArgumentCaptor.forClass(List.class);
-        verify(mapper).insert(captor.capture());
+        verify(mapper).insert(captor.capture(), eq(1000));
         List<ValuationFileDataPO> rows = captor.getValue();
         assertThat(rows).hasSize(1);
         List<Object> values = objectMapper.readValue(rows.get(0).getRowDataJson(), List.class);
@@ -71,7 +72,7 @@ class PoiRawDataExtractorTest {
         );
 
         assertThat(count).isEqualTo(1);
-        verify(mapper).insert(anyList());
+        verify(mapper).insert(anyList(), eq(1000));
     }
 
     @Test

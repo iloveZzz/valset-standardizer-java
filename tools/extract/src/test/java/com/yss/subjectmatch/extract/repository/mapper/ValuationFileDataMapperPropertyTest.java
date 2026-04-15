@@ -73,7 +73,7 @@ public class ValuationFileDataMapperPropertyTest {
             session.getConnection().createStatement().execute("TRUNCATE TABLE t_ods_valuation_filedata");
             
             // When: insert via ValuationFileDataMapper
-            mapper.insert(rawRows);
+            mapper.insert(rawRows, 100);
 
             // Then: query back and verify
             List<ValuationFileDataPO> retrieved = mapper.findByTaskId(taskId);

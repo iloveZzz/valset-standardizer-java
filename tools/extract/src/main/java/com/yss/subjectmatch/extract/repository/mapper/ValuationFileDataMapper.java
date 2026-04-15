@@ -15,13 +15,6 @@ import java.util.List;
 public interface ValuationFileDataMapper extends BasePlusRepository<ValuationFileDataPO> {
 
     /**
-     * 批量插入原始行数据。
-     *
-     * @param rows 待插入的原始行数据集合
-     */
-    void insert(@Param("rows") List<ValuationFileDataPO> rows);
-    
-    /**
      * 查询指定任务下的全部原始行数据。
      *
      * @param taskId 任务标识

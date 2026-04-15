@@ -48,6 +48,9 @@ public class ParsedValuationDataPO {
     @TableField("header_details_json")
     private String headerDetailsJson;
 
+    @TableField("header_columns_json")
+    private String headerColumnsJson;
+
     @TableField("subjects_json")
     private String subjectsJson;
 

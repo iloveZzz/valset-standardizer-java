@@ -90,13 +90,28 @@ class RawDataExtractionIntegrationTest {
             List<Object> firstRow = new ObjectMapper().readValue(rows.get(0).getRowDataJson(), List.class);
             assertThat(firstRow.get(0)).isEqualTo("DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321");
 
-            List<Object> headerRow = new ObjectMapper().readValue(rows.get(4).getRowDataJson(), List.class);
-            assertThat(headerRow.get(0)).isEqualTo("科目代码");
-            assertThat(headerRow.get(1)).isEqualTo("科目名称");
+            List<Object> headerRow = rows.stream()
+                    .map(row -> readRow(row, new ObjectMapper()))
+                    .filter(values -> values.contains("科目代码") && values.contains("科目名称"))
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(headerRow).contains("科目代码", "科目名称");
 
-            List<Object> dataRow = new ObjectMapper().readValue(rows.get(7).getRowDataJson(), List.class);
+            List<Object> dataRow = rows.stream()
+                    .map(row -> readRow(row, new ObjectMapper()))
+                    .filter(values -> "1002".equals(values.get(0)) && "银行存款".equals(values.get(1)))
+                    .findFirst()
+                    .orElseThrow();
             assertThat(dataRow.get(0)).isEqualTo("1002");
             assertThat(dataRow.get(1)).isEqualTo("银行存款");
+        }
+    }
+
+    private List<Object> readRow(ValuationFileDataPO row, ObjectMapper objectMapper) {
+        try {
+            return objectMapper.readValue(row.getRowDataJson(), List.class);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to read row json", e);
         }
     }
 

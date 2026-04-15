@@ -118,7 +118,7 @@ public class CsvRawDataExtractor implements RawDataExtractor {
                     persistedRows++;
 
                     if (batch.size() >= BATCH_SIZE) {
-                        valuationFileDataMapper.insert(batch);
+                        valuationFileDataMapper.insert(batch, BATCH_SIZE);
                         batch.clear();
                     }
                 }
@@ -128,7 +128,7 @@ public class CsvRawDataExtractor implements RawDataExtractor {
         }
 
         if (!batch.isEmpty()) {
-            valuationFileDataMapper.insert(batch);
+            valuationFileDataMapper.insert(batch, BATCH_SIZE);
         }
 
         return persistedRows;

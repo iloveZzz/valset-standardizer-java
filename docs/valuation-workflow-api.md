@@ -168,6 +168,7 @@ curl "http://localhost:8080/api/valuation-workflows/10001/dwd-data"
 - 基础信息
 - 表头
 - 多层表头明细
+- 列级表头元数据
 - 外部估值数据明细
 - 指标行数据
 

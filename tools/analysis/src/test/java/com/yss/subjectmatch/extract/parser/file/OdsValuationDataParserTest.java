@@ -1,8 +1,9 @@
-package com.yss.subjectmatch.extract.parser.file;
+package com.yss.subjectmatch.analysis.parser.file;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
 import com.yss.subjectmatch.domain.model.DataSourceType;
+import com.yss.subjectmatch.domain.model.HeaderColumnMeta;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
@@ -20,7 +21,7 @@ class OdsValuationDataParserTest {
     void parseFromRawRows() throws Exception {
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         ObjectMapper objectMapper = new ObjectMapper();
-        com.yss.subjectmatch.analysis.file.OdsValuationDataParser parser = new com.yss.subjectmatch.analysis.file.OdsValuationDataParser(mapper, objectMapper);
+        OdsValuationDataParser parser = new OdsValuationDataParser(mapper, objectMapper);
 
         when(mapper.findByFileId(88L)).thenReturn(List.of(
                 row(1, "[\"DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321\"]"),
@@ -54,10 +55,21 @@ class OdsValuationDataParserTest {
         );
         assertThat(parsed.getHeaders()).contains(
                 "成本|本币|十亿千百十万千百十元角分",
+                "成本|本币|成本占比",
+                "成本|本币|行情",
                 "市值|本币|十亿千百十万千百十元角分",
                 "市值|本币|市值占比",
+                "市值|本币|估值增值",
                 "估值增值|本币|估值增值"
         );
+        assertThat(parsed.getHeaderColumns()).hasSize(parsed.getHeaders().size());
+        HeaderColumnMeta firstColumn = parsed.getHeaderColumns().get(0);
+        assertThat(firstColumn.getColumnIndex()).isEqualTo(0);
+        assertThat(firstColumn.getHeaderName()).isEqualTo("科目代码");
+        assertThat(firstColumn.getHeaderPath()).isEqualTo("科目代码");
+        assertThat(firstColumn.getPathSegments()).containsExactly("科目代码");
+        assertThat(firstColumn.getBlankColumn()).isFalse();
+        assertThat(parsed.getHeaderColumns().get(6).getHeaderPath()).isEqualTo("成本|本币|十亿千百十万千百十元角分");
         assertThat(parsed.getSubjects()).hasSize(1);
         assertThat(parsed.getMetrics()).hasSize(1);
         assertThat(parsed.getSubjects().get(0).getSubjectCode()).isEqualTo("1002");

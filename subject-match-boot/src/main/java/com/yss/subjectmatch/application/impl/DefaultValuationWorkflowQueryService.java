@@ -78,6 +78,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
                 .basicInfo(parsedValuationData.getBasicInfo())
                 .headers(parsedValuationData.getHeaders())
                 .headerDetails(parsedValuationData.getHeaderDetails())
+                .headerColumns(parsedValuationData.getHeaderColumns())
                 .subjects(parsedValuationData.getSubjects())
                 .metrics(parsedValuationData.getMetrics())
                 .build();

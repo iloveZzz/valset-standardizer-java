@@ -49,6 +49,7 @@ public class ApiValuationDataParser implements ValuationDataParser {
 
             return ParsedValuationData.builder()
                     .workbookPath(apiUrl)
+                    .headerColumns(List.of())
                     .subjects(subjects)
                     .metrics(metrics)
                     .title("API Source: " + apiUrl)

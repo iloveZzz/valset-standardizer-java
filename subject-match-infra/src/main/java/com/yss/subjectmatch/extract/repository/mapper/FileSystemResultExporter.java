@@ -119,10 +119,6 @@ public class FileSystemResultExporter implements ResultExporter {
                                                   row.put("row_data_number", subject.getRowDataNumber());
                                                   row.put("subject_code", subject.getSubjectCode());
                                                   row.put("subject_name", subject.getSubjectName());
-                                                  row.put("currency", subject.getCurrency());
-                                                  row.put("market_value", subject.getMarketValue());
-                                                  row.put("market_value_ratio", subject.getMarketValueRatio());
-                                                  row.put("cost", subject.getCost());
                                                   row.put("level", subject.getLevel());
                                                   row.put("parent_code", subject.getParentCode());
                                                   row.put("root_code", subject.getRootCode());
@@ -172,6 +168,33 @@ public class FileSystemResultExporter implements ResultExporter {
                     return row;
                 })
                 .toList();
+    }
+
+    private List<HeaderColumnMeta> resolveHeaderColumns(ParsedValuationData parsedValuationData) {
+        if (parsedValuationData == null) {
+            return List.of();
+        }
+        if (parsedValuationData.getHeaderColumns() != null && !parsedValuationData.getHeaderColumns().isEmpty()) {
+            return parsedValuationData.getHeaderColumns();
+        }
+        if (parsedValuationData.getHeaders() == null || parsedValuationData.getHeaders().isEmpty()) {
+            return List.of();
+        }
+        List<HeaderColumnMeta> result = new ArrayList<>(parsedValuationData.getHeaders().size());
+        for (int index = 0; index < parsedValuationData.getHeaders().size(); index++) {
+            String header = parsedValuationData.getHeaders().get(index);
+            List<String> detail = parsedValuationData.getHeaderDetails() != null && index < parsedValuationData.getHeaderDetails().size()
+                    ? parsedValuationData.getHeaderDetails().get(index)
+                    : List.of();
+            result.add(HeaderColumnMeta.builder()
+                    .columnIndex(index)
+                    .headerName(header)
+                    .headerPath(header)
+                    .pathSegments(detail)
+                    .blankColumn(header == null || header.isBlank())
+                    .build());
+        }
+        return result;
     }
 
     private List<Map<String, Object>> buildTop1Rows(List<SubjectMatchResult> results) {
@@ -323,6 +346,7 @@ public class FileSystemResultExporter implements ResultExporter {
         payload.put("basic_info", parsedValuationData.getBasicInfo());
         payload.put("headers", parsedValuationData.getHeaders());
         payload.put("header_details", parsedValuationData.getHeaderDetails());
+        payload.put("header_columns", parsedValuationData.getHeaderColumns());
         payload.put("subjects", parsedValuationData.getSubjects());
         payload.put("subject_relations", subjectRelations);
         payload.put("subject_tree", subjectTree);
@@ -403,6 +427,7 @@ public class FileSystemResultExporter implements ResultExporter {
                 insertBasicInfo(connection, parsedValuationData);
                 insertHeaders(connection, parsedValuationData);
                 insertHeaderDetails(connection, parsedValuationData);
+                insertHeaderColumns(connection, parsedValuationData);
                 insertSubjects(connection, parsedValuationData);
                 insertSubjectRelations(connection, subjectRelations);
                 insertMetrics(connection, parsedValuationData);
@@ -420,10 +445,11 @@ public class FileSystemResultExporter implements ResultExporter {
         execute(connection, "create table basic_info(info_key varchar, info_value varchar)");
         execute(connection, "create table headers(column_index integer, header_name varchar)");
         execute(connection, "create table header_details(detail_row_index integer, column_index integer, cell_value varchar)");
-        execute(connection, "create table subjects(sheet_name varchar, row_data_number integer, subject_code varchar, subject_name varchar, currency varchar, market_value decimal(38,12), market_value_ratio decimal(38,12), cost decimal(38,12), level integer, parent_code varchar, root_code varchar, segment_count integer, path_codes varchar, is_leaf boolean)");
+        execute(connection, "create table header_columns(column_index integer, header_name varchar, header_path varchar, path_segments varchar, is_blank boolean)");
+        execute(connection, "create table subjects(sheet_name varchar, row_data_number integer, subject_code varchar, subject_name varchar, level integer, parent_code varchar, root_code varchar, segment_count integer, path_codes varchar, is_leaf boolean)");
         execute(connection, "create table subject_relations(subject_code varchar, subject_name varchar, parent_code varchar, parent_name varchar, level integer, root_code varchar, segment_count integer, is_leaf boolean, path_codes varchar)");
         execute(connection, "create table metrics(sheet_name varchar, row_data_number integer, metric_name varchar, metric_type varchar, value varchar, raw_values varchar)");
-        execute(connection, "create table summary(title varchar, sheet_name varchar, header_row_number integer, data_start_row_number integer, subject_count integer, root_subject_count integer, leaf_subject_count integer, non_leaf_subject_count integer, metric_count integer, metric_row_count integer, metric_data_count integer, max_level integer, currencies varchar, duplicate_subject_codes varchar, level_distribution varchar, basic_info varchar, top_market_value_subjects varchar)");
+        execute(connection, "create table summary(title varchar, sheet_name varchar, header_row_number integer, data_start_row_number integer, subject_count integer, root_subject_count integer, leaf_subject_count integer, non_leaf_subject_count integer, metric_count integer, metric_row_count integer, metric_data_count integer, max_level integer, duplicate_subject_codes varchar, level_distribution varchar, basic_info varchar)");
         execute(connection, "create table subject_tree_json(tree_json varchar)");
     }
 
@@ -497,26 +523,40 @@ public class FileSystemResultExporter implements ResultExporter {
         }
     }
 
+    private void insertHeaderColumns(DuckDBConnection connection, ParsedValuationData parsedValuationData) throws SQLException {
+        List<HeaderColumnMeta> headerColumns = resolveHeaderColumns(parsedValuationData);
+        if (headerColumns == null || headerColumns.isEmpty()) {
+            return;
+        }
+        try (PreparedStatement statement = connection.prepareStatement("insert into header_columns values (?, ?, ?, ?, ?)")) {
+            for (HeaderColumnMeta headerColumn : headerColumns) {
+                statement.setInt(1, defaultInteger(headerColumn.getColumnIndex()) + 1);
+                statement.setString(2, headerColumn.getHeaderName());
+                statement.setString(3, headerColumn.getHeaderPath());
+                statement.setString(4, stringify(headerColumn.getPathSegments()));
+                statement.setBoolean(5, Boolean.TRUE.equals(headerColumn.getBlankColumn()));
+                statement.addBatch();
+            }
+            statement.executeBatch();
+        }
+    }
+
     private void insertSubjects(DuckDBConnection connection, ParsedValuationData parsedValuationData) throws SQLException {
         if (parsedValuationData.getSubjects() == null || parsedValuationData.getSubjects().isEmpty()) {
             return;
         }
-        try (PreparedStatement statement = connection.prepareStatement("insert into subjects values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+        try (PreparedStatement statement = connection.prepareStatement("insert into subjects values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             for (SubjectRecord subject : parsedValuationData.getSubjects()) {
                 statement.setString(1, subject.getSheetName());
                 statement.setInt(2, defaultInteger(subject.getRowDataNumber()));
                 statement.setString(3, subject.getSubjectCode());
                 statement.setString(4, subject.getSubjectName());
-                statement.setString(5, subject.getCurrency());
-                statement.setBigDecimal(6, jdbcDecimal(subject.getMarketValue()));
-                statement.setBigDecimal(7, jdbcDecimal(subject.getMarketValueRatio()));
-                statement.setBigDecimal(8, jdbcDecimal(subject.getCost()));
-                statement.setInt(9, defaultInteger(subject.getLevel()));
-                statement.setString(10, subject.getParentCode());
-                statement.setString(11, subject.getRootCode());
-                statement.setInt(12, defaultInteger(subject.getSegmentCount()));
-                statement.setString(13, stringify(subject.getPathCodes()));
-                statement.setBoolean(14, Boolean.TRUE.equals(subject.getLeaf()));
+                statement.setInt(5, defaultInteger(subject.getLevel()));
+                statement.setString(6, subject.getParentCode());
+                statement.setString(7, subject.getRootCode());
+                statement.setInt(8, defaultInteger(subject.getSegmentCount()));
+                statement.setString(9, stringify(subject.getPathCodes()));
+                statement.setBoolean(10, Boolean.TRUE.equals(subject.getLeaf()));
                 statement.addBatch();
             }
             statement.executeBatch();
@@ -563,7 +603,7 @@ public class FileSystemResultExporter implements ResultExporter {
     }
 
     private void insertSummary(DuckDBConnection connection, WorkbookSummary summary) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into summary values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+        try (PreparedStatement statement = connection.prepareStatement("insert into summary values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             statement.setString(1, summary.getTitle());
             statement.setString(2, summary.getSheetName());
             statement.setInt(3, defaultInteger(summary.getHeaderRowNumber()));
@@ -576,11 +616,9 @@ public class FileSystemResultExporter implements ResultExporter {
             statement.setInt(10, defaultInteger(summary.getMetricRowCount()));
             statement.setInt(11, defaultInteger(summary.getMetricDataCount()));
             statement.setInt(12, defaultInteger(summary.getMaxLevel()));
-            statement.setString(13, stringify(summary.getCurrencies()));
-            statement.setString(14, stringify(summary.getDuplicateSubjectCodes()));
-            statement.setString(15, stringify(summary.getLevelDistribution()));
-            statement.setString(16, stringify(summary.getBasicInfo()));
-            statement.setString(17, stringify(summary.getTopMarketValueSubjects()));
+            statement.setString(13, stringify(summary.getDuplicateSubjectCodes()));
+            statement.setString(14, stringify(summary.getLevelDistribution()));
+            statement.setString(15, stringify(summary.getBasicInfo()));
             statement.executeUpdate();
         }
     }

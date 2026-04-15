@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -22,8 +21,5 @@ public class SubjectTreeNode {
     private String parentCode;
     private String rootCode;
     private Boolean leaf;
-    private BigDecimal marketValue;
-    private BigDecimal marketValueRatio;
-    private BigDecimal cost;
     private List<SubjectTreeNode> children;
 }

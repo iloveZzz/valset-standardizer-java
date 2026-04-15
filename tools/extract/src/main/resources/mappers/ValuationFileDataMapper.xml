@@ -11,16 +11,6 @@
         <result column="row_data_json" property="rowDataJson" jdbcType="VARCHAR"/>
     </resultMap>
 
-    <!-- Batch Insert using foreach for efficient batch insertion -->
-    <insert id="insert" parameterType="java.util.List">
-        INSERT INTO t_ods_valuation_filedata
-        (id, task_id, file_id, row_data_number, row_data_json)
-        VALUES
-        <foreach collection="rows" item="row" separator=",">
-            (#{row.id}, #{row.taskId}, #{row.fileId}, #{row.rowDataNumber}, #{row.rowDataJson})
-        </foreach>
-    </insert>
-
     <!-- Find all records by task ID -->
     <select id="findByTaskId" resultMap="BaseResultMap">
         SELECT id, task_id, file_id, row_data_number, row_data_json

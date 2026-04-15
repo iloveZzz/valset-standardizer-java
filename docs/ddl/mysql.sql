@@ -64,6 +64,7 @@ CREATE TABLE t_subject_match_parsed_workbook (
     basic_info_json TEXT,
     headers_json TEXT,
     header_details_json TEXT,
+    header_columns_json TEXT,
     subjects_json TEXT,
     metrics_json TEXT
 );
@@ -142,7 +143,8 @@ CREATE TABLE t_dwd_external_valuation_header (
     valuation_id BIGINT NOT NULL,
     column_index INT NOT NULL,
     header_name VARCHAR(256),
-    header_detail_json TEXT
+    header_detail_json TEXT,
+    header_column_meta_json TEXT
 );
 
 CREATE TABLE t_dwd_external_valuation_subject (
@@ -161,7 +163,8 @@ CREATE TABLE t_dwd_external_valuation_subject (
     root_code VARCHAR(128),
     segment_count INT,
     path_codes_json TEXT,
-    is_leaf TINYINT(1)
+    is_leaf TINYINT(1),
+    raw_values_json TEXT
 );
 
 CREATE TABLE t_dwd_external_valuation_metric (
@@ -211,7 +214,7 @@ CREATE TABLE t_ods_mapping_sample (
     id BIGINT PRIMARY KEY,
     org_name VARCHAR(256),
     org_id VARCHAR(128),
-    external_code VARCHAR(255),
+    external_code VARCHAR(500),
     external_name VARCHAR(512),
     standard_code VARCHAR(128),
     standard_name VARCHAR(512),

@@ -1,6 +1,7 @@
 package com.yss.subjectmatch.analysis.parser.file;
 
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
+import com.yss.subjectmatch.domain.model.HeaderColumnMeta;
 import com.yss.subjectmatch.domain.model.MetricRecord;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.domain.model.SubjectRecord;
@@ -54,6 +55,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
             return ParsedValuationData.builder()
                     .workbookPath(csvPath.toAbsolutePath().toString())
                     .headers(headers)
+                    .headerColumns(buildHeaderColumns(headers))
                     .subjects(subjects)
                     .metrics(metrics)
                     .basicInfo(basicInfo)
@@ -62,5 +64,23 @@ public class CsvValuationDataParser implements ValuationDataParser {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse CSV source: " + config.getSourceUri(), e);
         }
+    }
+
+    private List<HeaderColumnMeta> buildHeaderColumns(List<String> headers) {
+        if (headers == null || headers.isEmpty()) {
+            return List.of();
+        }
+        List<HeaderColumnMeta> columns = new ArrayList<>(headers.size());
+        for (int index = 0; index < headers.size(); index++) {
+            String header = headers.get(index);
+            columns.add(HeaderColumnMeta.builder()
+                    .columnIndex(index)
+                    .headerName(header)
+                    .headerPath(header)
+                    .pathSegments(header == null || header.isBlank() ? List.of() : List.of(header))
+                    .blankColumn(header == null || header.isBlank())
+                    .build());
+        }
+        return columns;
     }
 }

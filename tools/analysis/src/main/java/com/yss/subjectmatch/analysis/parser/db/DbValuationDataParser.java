@@ -27,6 +27,7 @@ public class DbValuationDataParser implements ValuationDataParser {
                 .basicInfo(Map.of())
                 .headers(List.of())
                 .headerDetails(List.of())
+                .headerColumns(List.of())
                 .subjects(List.of())
                 .metrics(List.of())
                 .build();

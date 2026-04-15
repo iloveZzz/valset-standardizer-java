@@ -30,7 +30,8 @@ CREATE TABLE t_dwd_external_valuation_header (
     valuation_id      BIGINT NOT NULL COMMENT 'DWD 主表标识',
     column_index      INT    NOT NULL COMMENT '列序号，从0开始',
     header_name       VARCHAR(256) COMMENT '表头名称',
-    header_detail_json TEXT        COMMENT '多层表头明细 JSON'
+    header_detail_json TEXT        COMMENT '多层表头明细 JSON',
+    header_column_meta_json TEXT   COMMENT '表头列级元数据 JSON'
 ) COMMENT='DWD 外部估值表头表';
 
 CREATE INDEX idx_dwd_external_header_vid ON t_dwd_external_valuation_header(valuation_id, column_index);

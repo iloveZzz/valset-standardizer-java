@@ -32,4 +32,7 @@ public class DwdExternalValuationHeaderPO {
 
     @TableField("header_detail_json")
     private String headerDetailJson;
+
+    @TableField("header_column_meta_json")
+    private String headerColumnMetaJson;
 }

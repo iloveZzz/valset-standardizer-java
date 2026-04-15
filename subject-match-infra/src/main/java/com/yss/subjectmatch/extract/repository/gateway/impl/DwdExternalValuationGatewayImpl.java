@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.domain.gateway.DwdExternalValuationGateway;
+import com.yss.subjectmatch.domain.model.HeaderColumnMeta;
 import com.yss.subjectmatch.domain.model.MetricRecord;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.domain.model.SubjectRecord;
@@ -60,7 +61,10 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
 
         Long valuationId = valuationPO.getId();
         saveBasicInfos(valuationId, parsedValuationData.getBasicInfo());
-        saveHeaders(valuationId, parsedValuationData.getHeaders(), parsedValuationData.getHeaderDetails());
+        saveHeaders(valuationId,
+                parsedValuationData.getHeaders(),
+                parsedValuationData.getHeaderDetails(),
+                parsedValuationData.getHeaderColumns());
         saveSubjects(valuationId, parsedValuationData.getSubjects());
         saveMetrics(valuationId, parsedValuationData.getMetrics());
         log.info("DWD 外部估值标准数据落地完成，taskId={}, fileId={}, valuationId={}", taskId, fileId, valuationId);
@@ -87,6 +91,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 .basicInfo(loadBasicInfo(valuationId))
                 .headers(loadHeaders(valuationId))
                 .headerDetails(loadHeaderDetails(valuationId))
+                .headerColumns(loadHeaderColumns(valuationId))
                 .subjects(loadSubjects(valuationId))
                 .metrics(loadMetrics(valuationId))
                 .build();
@@ -109,7 +114,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
         basicInfoRepository.insertBatchSomeColumn(poList);
     }
 
-    private void saveHeaders(Long valuationId, List<String> headers, List<List<String>> headerDetails) {
+    private void saveHeaders(Long valuationId, List<String> headers, List<List<String>> headerDetails, List<HeaderColumnMeta> headerColumns) {
         if (headers == null || headers.isEmpty()) {
             return;
         }
@@ -123,6 +128,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                     ? headerDetails.get(index)
                     : List.of(headers.get(index));
             po.setHeaderDetailJson(writeJson(detail));
+            po.setHeaderColumnMetaJson(writeJson(resolveHeaderColumnMeta(index, headers.get(index), detail, headerColumns)));
             poList.add(po);
         }
         headerRepository.insertBatchSomeColumn(poList);
@@ -140,10 +146,6 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                     po.setRowDataNumber(subject.getRowDataNumber());
                     po.setSubjectCode(subject.getSubjectCode());
                     po.setSubjectName(subject.getSubjectName());
-                    po.setCurrency(subject.getCurrency());
-                    po.setMarketValue(subject.getMarketValue());
-                    po.setMarketValueRatio(subject.getMarketValueRatio());
-                    po.setCost(subject.getCost());
                     po.setLevel(subject.getLevel());
                     po.setParentCode(subject.getParentCode());
                     po.setRootCode(subject.getRootCode());
@@ -210,6 +212,22 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 .toList();
     }
 
+    private List<HeaderColumnMeta> loadHeaderColumns(Long valuationId) {
+        List<DwdExternalValuationHeaderPO> headerPOList = headerRepository.selectList(
+                Wrappers.lambdaQuery(DwdExternalValuationHeaderPO.class)
+                        .eq(DwdExternalValuationHeaderPO::getValuationId, valuationId)
+                        .orderByAsc(DwdExternalValuationHeaderPO::getColumnIndex)
+        );
+        if (headerPOList == null || headerPOList.isEmpty()) {
+            return List.of();
+        }
+        List<HeaderColumnMeta> result = new ArrayList<>(headerPOList.size());
+        for (DwdExternalValuationHeaderPO po : headerPOList) {
+            result.add(readHeaderColumnMeta(po));
+        }
+        return result;
+    }
+
     private List<SubjectRecord> loadSubjects(Long valuationId) {
         return subjectRepository.selectList(
                         Wrappers.lambdaQuery(DwdExternalValuationSubjectPO.class)
@@ -221,10 +239,6 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                         .rowDataNumber(po.getRowDataNumber())
                         .subjectCode(po.getSubjectCode())
                         .subjectName(po.getSubjectName())
-                        .currency(po.getCurrency())
-                        .marketValue(po.getMarketValue())
-                        .marketValueRatio(po.getMarketValueRatio())
-                        .cost(po.getCost())
                         .level(po.getLevel())
                         .parentCode(po.getParentCode())
                         .rootCode(po.getRootCode())
@@ -260,6 +274,55 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
         } catch (Exception exception) {
             throw new IllegalStateException("DWD 外部估值标准数据序列化失败", exception);
         }
+    }
+
+    private HeaderColumnMeta resolveHeaderColumnMeta(
+            int columnIndex,
+            String headerName,
+            List<String> headerDetail,
+            List<HeaderColumnMeta> headerColumns
+    ) {
+        if (headerColumns != null && columnIndex < headerColumns.size()) {
+            HeaderColumnMeta headerColumnMeta = headerColumns.get(columnIndex);
+            if (headerColumnMeta != null) {
+                return HeaderColumnMeta.builder()
+                        .columnIndex(columnIndex)
+                        .headerName(defaultString(headerColumnMeta.getHeaderName(), headerName))
+                        .headerPath(defaultString(headerColumnMeta.getHeaderPath(), headerName))
+                        .pathSegments(headerColumnMeta.getPathSegments() == null ? headerDetail : headerColumnMeta.getPathSegments())
+                        .blankColumn(headerColumnMeta.getBlankColumn() != null
+                                ? headerColumnMeta.getBlankColumn()
+                                : headerName == null || headerName.isBlank())
+                        .build();
+            }
+        }
+        return HeaderColumnMeta.builder()
+                .columnIndex(columnIndex)
+                .headerName(headerName)
+                .headerPath(headerName)
+                .pathSegments(headerDetail)
+                .blankColumn(headerName == null || headerName.isBlank())
+                .build();
+    }
+
+    private HeaderColumnMeta readHeaderColumnMeta(DwdExternalValuationHeaderPO po) {
+        HeaderColumnMeta meta = readJson(po.getHeaderColumnMetaJson(), new TypeReference<HeaderColumnMeta>() {
+        });
+        if (meta != null) {
+            return meta;
+        }
+        List<String> detail = readJson(po.getHeaderDetailJson(), STRING_LIST_TYPE);
+        return HeaderColumnMeta.builder()
+                .columnIndex(po.getColumnIndex())
+                .headerName(po.getHeaderName())
+                .headerPath(po.getHeaderName())
+                .pathSegments(detail == null ? List.of() : detail)
+                .blankColumn(po.getHeaderName() == null || po.getHeaderName().isBlank())
+                .build();
+    }
+
+    private String defaultString(String candidate, String fallback) {
+        return candidate == null || candidate.isBlank() ? fallback : candidate;
     }
 
     private <T> T readJson(String value, TypeReference<T> typeReference) {

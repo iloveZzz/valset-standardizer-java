@@ -18,6 +18,7 @@ public interface ParsedValuationDataConvertor {
     @Mapping(target = "basicInfoJson", source = "parsedValuationData.basicInfo")
     @Mapping(target = "headersJson", source = "parsedValuationData.headers")
     @Mapping(target = "headerDetailsJson", source = "parsedValuationData.headerDetails")
+    @Mapping(target = "headerColumnsJson", source = "parsedValuationData.headerColumns")
     @Mapping(target = "subjectsJson", source = "parsedValuationData.subjects")
     @Mapping(target = "metricsJson", source = "parsedValuationData.metrics")
     ParsedValuationDataPO toPO(Long taskId, Long fileId, ParsedValuationData parsedValuationData);
@@ -25,6 +26,7 @@ public interface ParsedValuationDataConvertor {
     @Mapping(target = "basicInfo", source = "basicInfoJson")
     @Mapping(target = "headers", source = "headersJson")
     @Mapping(target = "headerDetails", source = "headerDetailsJson")
+    @Mapping(target = "headerColumns", source = "headerColumnsJson")
     @Mapping(target = "subjects", source = "subjectsJson")
     @Mapping(target = "metrics", source = "metricsJson")
     ParsedValuationData toDomain(ParsedValuationDataPO po);

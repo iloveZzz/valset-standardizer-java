@@ -50,6 +50,7 @@ SQL 文件：
 - 保存外部估值标准化后的主数据
 - 支撑 `/api/valuation-workflows/{fileId}/dwd-data` 查询
 - 支撑匹配阶段优先从 DWD 读取标准化结果
+- `t_dwd_external_valuation_header.header_column_meta_json` 保存按列展开的表头元数据，包含列序号、完整路径、分层片段和空列标识
 
 ### 匹配结果表
 
@@ -78,6 +79,7 @@ SQL 文件：
 ### 兼容解析结果表
 
 - `t_subject_match_parsed_workbook`
+  - `header_columns_json`：按列保存表头完整路径、分层片段和空列标识，便于前端渲染和回查
 
 用途：
 
