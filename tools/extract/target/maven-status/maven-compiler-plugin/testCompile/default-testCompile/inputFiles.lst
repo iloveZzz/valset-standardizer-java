@@ -1,0 +1,5 @@
+/Users/zhudaoming/yss-subject-match/subject-match-java/tools/extract/src/test/java/com/yss/subjectmatch/extract/CsvRawDataExtractorTest.java
+/Users/zhudaoming/yss-subject-match/subject-match-java/tools/extract/src/test/java/com/yss/subjectmatch/extract/PoiRawDataExtractorTest.java
+/Users/zhudaoming/yss-subject-match/subject-match-java/tools/extract/src/test/java/com/yss/subjectmatch/extract/RawDataExtractionIntegrationTest.java
+/Users/zhudaoming/yss-subject-match/subject-match-java/tools/extract/src/test/java/com/yss/subjectmatch/extract/RawDataExtractorRegistryTest.java
+/Users/zhudaoming/yss-subject-match/subject-match-java/tools/extract/src/test/java/com/yss/subjectmatch/extract/repository/mapper/ValuationFileDataMapperPropertyTest.java

@@ -1,0 +1,17 @@
+spring:
+  config:
+    import:
+      - nacos:${spring.application.name}.yml?refreshEnabled=true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${nacosserver:192.168.164.18:30032}
+        namespace: ${namespace:yss-datamiddle-dev}
+        group: ${nacos_group:yss-dm}
+      config:
+        import-check:
+          enabled: true
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        namespace: ${spring.cloud.nacos.discovery.namespace}
+        group:  ${spring.cloud.nacos.discovery.group}
+        file-extension: yml

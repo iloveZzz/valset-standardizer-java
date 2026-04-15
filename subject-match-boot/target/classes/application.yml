@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: subject-match-boot
+  redis:
+    host: 192.168.164.18
+    port: 30644
+    jedis:
+      pool:
+        enabled: true
+  datasource:
+    primary:
+      url: jdbc:mysql://192.168.165.34:3306/datamiddle_approval
+      username: datamiddle_dev
+      password: datamiddle_dev
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+  quartz:
+    job-store-type: memory
+    auto-startup: true
+    wait-for-jobs-to-complete-on-shutdown: true
+    properties:
+      org.quartz.scheduler.instanceName: subjectMatchScheduler
+      org.quartz.threadPool.threadCount: 5
+  profiles:
+    active: nacos
+
+server:
+  port: 30066
+
+yss:
+  mybatis:
+    mapper-scan: com.yss.subjectmatch.extract.repository.mapper
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+mybatis-plus:
+  mapper-locations: classpath*:/mappers/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: assign_id
+
+logging:
+  level:
+    com.yss.datamiddle.approval: DEBUG
+    org.springframework.jdbc: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+subject:
+  match:
+    output-dir: output
+    upload-dir: uploads

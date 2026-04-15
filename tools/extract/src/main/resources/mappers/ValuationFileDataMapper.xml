@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper">
+
+    <!-- Result Map for ValuationFileDataPO -->
+    <resultMap id="BaseResultMap" type="com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="task_id" property="taskId" jdbcType="BIGINT"/>
+        <result column="file_id" property="fileId" jdbcType="BIGINT"/>
+        <result column="row_data_number" property="rowDataNumber" jdbcType="INTEGER"/>
+        <result column="row_data_json" property="rowDataJson" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- Batch Insert using foreach for efficient batch insertion -->
+    <insert id="insert" parameterType="java.util.List">
+        INSERT INTO t_ods_valuation_filedata
+        (id, task_id, file_id, row_data_number, row_data_json)
+        VALUES
+        <foreach collection="rows" item="row" separator=",">
+            (#{row.id}, #{row.taskId}, #{row.fileId}, #{row.rowDataNumber}, #{row.rowDataJson})
+        </foreach>
+    </insert>
+
+    <!-- Find all records by task ID -->
+    <select id="findByTaskId" resultMap="BaseResultMap">
+        SELECT id, task_id, file_id, row_data_number, row_data_json
+        FROM t_ods_valuation_filedata
+        WHERE task_id = #{taskId}
+        ORDER BY row_data_number ASC
+    </select>
+
+    <!-- Find all records by file ID -->
+    <select id="findByFileId" resultMap="BaseResultMap">
+        SELECT id, task_id, file_id, row_data_number, row_data_json
+        FROM t_ods_valuation_filedata
+        WHERE file_id = #{fileId}
+        ORDER BY row_data_number ASC
+    </select>
+
+</mapper>
