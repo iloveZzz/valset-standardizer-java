@@ -1,4 +1,4 @@
-package com.yss.subjectmatch.analysis.api;
+package com.yss.subjectmatch.analysis.parser.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

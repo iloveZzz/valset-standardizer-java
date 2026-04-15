@@ -1,4 +1,4 @@
-package com.yss.subjectmatch.analysis.file;
+package com.yss.subjectmatch.analysis.parser.file;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,8 +9,8 @@ import com.yss.subjectmatch.domain.model.SubjectRecord;
 import com.yss.subjectmatch.domain.parser.ValuationDataParser;
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
-import com.yss.subjectmatch.extract.support.ExcelParsingSupport;
-import com.yss.subjectmatch.extract.support.SubjectHierarchySupport;
+import com.yss.subjectmatch.analysis.support.ExcelParsingSupport;
+import com.yss.subjectmatch.analysis.support.SubjectHierarchySupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

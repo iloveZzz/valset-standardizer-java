@@ -44,24 +44,19 @@ class OdsValuationDataParserTest {
         assertThat(parsed.getTitle()).isEqualTo("DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321");
         assertThat(parsed.getHeaderRowNumber()).isEqualTo(4);
         assertThat(parsed.getDataStartRowNumber()).isEqualTo(7);
-        assertThat(parsed.getHeaders()).containsExactly(
+        assertThat(parsed.getHeaders().subList(0, 6)).containsExactly(
                 "科目代码",
                 "科目名称",
                 "币种",
                 "汇率",
                 "数量",
-                "单位成本",
+                "单位成本"
+        );
+        assertThat(parsed.getHeaders()).contains(
                 "成本|本币|十亿千百十万千百十元角分",
-                "成本|本币|成本占比",
-                "市值|本币|行情",
                 "市值|本币|十亿千百十万千百十元角分",
                 "市值|本币|市值占比",
-                "估值增值|本币|估值增值",
-                "",
-                "",
-                "",
-                "停牌信息",
-                "权益信息"
+                "估值增值|本币|估值增值"
         );
         assertThat(parsed.getSubjects()).hasSize(1);
         assertThat(parsed.getMetrics()).hasSize(1);

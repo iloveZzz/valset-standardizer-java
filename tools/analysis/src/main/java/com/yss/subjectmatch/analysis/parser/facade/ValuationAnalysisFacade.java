@@ -1,11 +1,11 @@
-package com.yss.subjectmatch.analysis.facade;
+package com.yss.subjectmatch.analysis.parser.facade;
 
 import com.yss.subjectmatch.domain.model.DataSourceType;
 import com.yss.subjectmatch.domain.parser.ValuationDataParser;
 import com.yss.subjectmatch.domain.parser.ValuationDataParserProvider;
-import com.yss.subjectmatch.analysis.api.ApiValuationDataParser;
-import com.yss.subjectmatch.analysis.db.DbValuationDataParser;
-import com.yss.subjectmatch.analysis.file.OdsValuationDataParser;
+import com.yss.subjectmatch.analysis.parser.api.ApiValuationDataParser;
+import com.yss.subjectmatch.analysis.parser.db.DbValuationDataParser;
+import com.yss.subjectmatch.analysis.parser.file.OdsValuationDataParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

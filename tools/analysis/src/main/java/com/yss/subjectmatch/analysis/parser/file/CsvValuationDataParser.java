@@ -1,4 +1,4 @@
-package com.yss.subjectmatch.analysis.file;
+package com.yss.subjectmatch.analysis.parser.file;
 
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
 import com.yss.subjectmatch.domain.model.MetricRecord;
