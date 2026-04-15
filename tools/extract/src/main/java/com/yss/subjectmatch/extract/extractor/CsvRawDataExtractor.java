@@ -2,6 +2,7 @@ package com.yss.subjectmatch.extract.extractor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.yss.subjectmatch.domain.exception.FileAccessException;
 import com.yss.subjectmatch.domain.extractor.RawDataExtractor;
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
@@ -28,7 +29,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Apache Commons CSV 原始数据提取器。
@@ -112,12 +112,11 @@ public class CsvRawDataExtractor implements RawDataExtractor {
                         continue;
                     }
                     ValuationFileDataPO po = new ValuationFileDataPO();
+                    po.setId(IdWorker.getId());
                     po.setTaskId(taskId);
                     po.setFileId(fileId);
-                    po.setSheetName("CSV");
                     po.setRowDataNumber(rowDataNumber);
                     po.setRowDataJson(rowDataJson);
-                    po.setRowUniverJson(buildRowSnapshot(rowDataNumber - 1, values));
                     batch.add(po);
                     persistedRows++;
 
@@ -154,33 +153,6 @@ public class CsvRawDataExtractor implements RawDataExtractor {
             log.error("CSV 记录序列化为 JSON 失败", e);
             return null;
         }
-    }
-
-    private String buildRowSnapshot(int rowIndex, List<String> values) {
-        try {
-            return objectMapper.writeValueAsString(Map.of(
-                    "sheetName", "CSV",
-                    "rowIndex", rowIndex,
-                    "cellData", Map.of(rowIndex, buildCellData(values))
-            ));
-        } catch (JsonProcessingException e) {
-            log.error("CSV 第 {} 条记录 Univer 快照构建失败", rowIndex + 1, e);
-            return null;
-        }
-    }
-
-    private Map<Integer, Map<String, Object>> buildCellData(List<String> values) {
-        Map<Integer, Map<String, Object>> rowCellData = new java.util.LinkedHashMap<>();
-        for (int index = 0; index < values.size(); index++) {
-            String value = values.get(index);
-            if (value == null) {
-                continue;
-            }
-            Map<String, Object> cellData = new java.util.LinkedHashMap<>();
-            cellData.put("v", value);
-            rowCellData.put(index, cellData);
-        }
-        return rowCellData;
     }
 
     private boolean isLikelyEncodingFailure(IOException exception) {

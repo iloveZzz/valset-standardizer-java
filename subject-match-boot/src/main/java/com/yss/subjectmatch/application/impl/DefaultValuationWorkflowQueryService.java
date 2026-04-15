@@ -10,10 +10,13 @@ import com.yss.subjectmatch.application.dto.RawValuationRowDTO;
 import com.yss.subjectmatch.domain.gateway.DwdExternalValuationGateway;
 import com.yss.subjectmatch.application.service.ValuationWorkflowQueryService;
 import com.yss.subjectmatch.domain.gateway.MatchResultGateway;
+import com.yss.subjectmatch.domain.gateway.SubjectMatchFileInfoGateway;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.domain.model.SubjectMatchResult;
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
+import com.yss.subjectmatch.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
+import com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,15 +34,21 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQueryService {
 
     private final ValuationFileDataMapper valuationFileDataMapper;
+    private final ValuationSheetStyleMapper valuationSheetStyleMapper;
+    private final SubjectMatchFileInfoGateway subjectMatchFileInfoGateway;
     private final DwdExternalValuationGateway dwdExternalValuationGateway;
     private final MatchResultGateway matchResultGateway;
     private final ObjectMapper objectMapper;
 
     public DefaultValuationWorkflowQueryService(ValuationFileDataMapper valuationFileDataMapper,
+                                                ValuationSheetStyleMapper valuationSheetStyleMapper,
+                                                SubjectMatchFileInfoGateway subjectMatchFileInfoGateway,
                                                 DwdExternalValuationGateway dwdExternalValuationGateway,
                                                 MatchResultGateway matchResultGateway,
                                                 ObjectMapper objectMapper) {
         this.valuationFileDataMapper = valuationFileDataMapper;
+        this.valuationSheetStyleMapper = valuationSheetStyleMapper;
+        this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.dwdExternalValuationGateway = dwdExternalValuationGateway;
         this.matchResultGateway = matchResultGateway;
         this.objectMapper = objectMapper;
@@ -55,28 +64,11 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
         List<RawValuationRowDTO> rowViews = rows.stream()
                 .limit(safeLimit)
                 .map(row -> RawValuationRowDTO.builder()
-                        .sheetName(row.getSheetName())
                         .rowDataNumber(row.getRowDataNumber())
                         .rowData(parseRowData(row.getRowDataJson()))
-                        .rowUniverData(parseMap(row.getRowUniverJson()))
                         .build())
                 .toList();
-        Map<String, List<ValuationFileDataPO>> rowsBySheet = rows.stream()
-                .collect(Collectors.groupingBy(row -> row.getSheetName() == null ? "Sheet1" : row.getSheetName(),
-                        LinkedHashMap::new,
-                        Collectors.toList()));
-        List<RawValuationSheetDTO> sheetViews = rowsBySheet.entrySet()
-                .stream()
-                .map(entry -> RawValuationSheetDTO.builder()
-                        .sheetName(entry.getKey())
-                        .headerMeta(entry.getValue().stream()
-                                .map(ValuationFileDataPO::getHeaderMetaJson)
-                                .filter(value -> value != null && !value.isBlank())
-                                .findFirst()
-                                .map(this::parseMap)
-                                .orElse(null))
-                        .build())
-                .toList();
+        List<RawValuationSheetDTO> sheetViews = buildSheetViews(fileId);
         return RawValuationDataViewDTO.builder()
                 .fileId(fileId)
                 .totalRows(rows.size())
@@ -127,6 +119,42 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
         } catch (Exception exception) {
             throw new IllegalStateException("ODS 原始行数据反序列化失败", exception);
         }
+    }
+
+    private List<RawValuationSheetDTO> buildSheetViews(Long fileId) {
+        List<ValuationSheetStylePO> sheetStyles = valuationSheetStyleMapper.findByFileId(fileId);
+        if (sheetStyles != null && !sheetStyles.isEmpty()) {
+            return sheetStyles.stream()
+                    .collect(Collectors.groupingBy(ValuationSheetStylePO::getSheetName,
+                            LinkedHashMap::new,
+                            Collectors.toList()))
+                    .entrySet()
+                    .stream()
+                    .map(entry -> RawValuationSheetDTO.builder()
+                            .sheetName(entry.getKey())
+                            .headerMeta(entry.getValue().stream()
+                                    .map(ValuationSheetStylePO::getSheetStyleJson)
+                                    .filter(value -> value != null && !value.isBlank())
+                                    .findFirst()
+                                    .map(this::parseMap)
+                                    .orElse(null))
+                            .build())
+                    .toList();
+        }
+
+        String fallbackSheetName = "Sheet1";
+        try {
+            var fileInfo = subjectMatchFileInfoGateway.findById(fileId);
+            if (fileInfo != null && fileInfo.getFileFormat() != null && !fileInfo.getFileFormat().isBlank()) {
+                fallbackSheetName = fileInfo.getFileFormat();
+            }
+        } catch (Exception ignored) {
+            // fallback
+        }
+        return List.of(RawValuationSheetDTO.builder()
+                .sheetName(fallbackSheetName)
+                .headerMeta(null)
+                .build());
     }
 
     private Map<String, Object> parseMap(String json) {

@@ -115,11 +115,8 @@ CREATE TABLE t_ods_valuation_filedata (
     id BIGINT PRIMARY KEY,
     task_id BIGINT NOT NULL,
     file_id BIGINT NOT NULL,
-    sheet_name VARCHAR(128),
     row_data_number INT NOT NULL,
-    row_data_json TEXT NOT NULL,
-    row_univer_json TEXT,
-    header_meta_json TEXT
+    row_data_json TEXT NOT NULL
 );
 
 CREATE TABLE t_ods_valuation_sheet_style (

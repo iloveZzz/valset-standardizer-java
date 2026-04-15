@@ -4,7 +4,6 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * ODS 原始行数据视图。
@@ -12,8 +11,6 @@ import java.util.Map;
 @Data
 @Builder
 public class RawValuationRowDTO {
-    private String sheetName;
     private Integer rowDataNumber;
     private List<Object> rowData;
-    private Map<String, Object> rowUniverData;
 }

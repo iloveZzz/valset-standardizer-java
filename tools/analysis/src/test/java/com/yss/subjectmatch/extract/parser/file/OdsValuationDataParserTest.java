@@ -9,30 +9,29 @@ import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class OdsValuationDataParserTest {
 
     @Test
     void parseFromRawRows() throws Exception {
-        ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
-        ObjectMapper objectMapper = new ObjectMapper();
-        OdsValuationDataParser parser = new OdsValuationDataParser(mapper, objectMapper);
-
-        when(mapper.findByFileId(88L)).thenReturn(List.of(
+        ValuationFileDataMapper mapper = mapperWithRows(List.of(
                 row(1, "[\"DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321\"]"),
                 row(2, "[\"基金名称：大家资产厚坤36号\"]"),
                 row(3, "[\"\",\"\"]"),
-                row(4, "[\"\",\"\",\"\",\"\",\"\",\"\",\"成本\",\"\",\"\",\"市值\",\"\",\"\",\"估值增值\",\"\",\"\",\"\",\"\"]"),
-                row(5, "[\"\",\"\",\"\",\"\",\"\",\"\",\"本币\",\"\",\"\",\"本币\",\"\",\"\",\"本币\",\"\",\"\",\"\",\"\"]"),
-                row(6, "[\"科目代码\",\"科目名称\",\"币种\",\"汇率\",\"数量\",\"单位成本\",\"十亿千百十万千百十元角分\",\"成本占比\",\"行情\",\"十亿千百十万千百十元角分\",\"市值占比\",\"估值增值\",\"\",\"\",\"\",\"停牌信息\",\"权益信息\"]"),
-                row(7, "[\"1002\",\"银行存款\",\"人民币\",\"\",\"\",\"900\",\"1000\",\"0.1\",\"\",\"2000\",\"0.2\",\"3000\",\"\",\"\",\"\",\"停牌\",\"权益\"]"),
+                row(4, "[\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"成本\",\"\",\"\",\"市值\",\"\",\"\",\"估值增值\",\"\",\"\",\"\",\"\"]"),
+                row(5, "[\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"本币\",\"\",\"\",\"本币\",\"\",\"\",\"本币\",\"\",\"\",\"\",\"\"]"),
+                row(6, "[\"\",\"科目代码\",\"科目名称\",\"币种\",\"汇率\",\"数量\",\"单位成本\",\"十亿千百十万千百十元角分\",\"成本占比\",\"行情\",\"十亿千百十万千百十元角分\",\"市值占比\",\"估值增值\",\"\",\"\",\"\",\"停牌信息\",\"权益信息\"]"),
+                row(7, "[\"-\",\"1002\",\"银行存款\",\"人民币\",\"\",\"\",\"900\",\"1000\",\"0.1\",\"\",\"2000\",\"0.2\",\"3000\",\"\",\"\",\"\",\"停牌\",\"权益\"]"),
                 row(8, "[\"净值\",\"1.23\"]")
         ));
+        ObjectMapper objectMapper = new ObjectMapper();
+        OdsValuationDataParser parser = new OdsValuationDataParser(mapper, objectMapper);
 
         ParsedValuationData parsed = parser.parse(DataSourceConfig.builder()
                 .sourceType(DataSourceType.EXCEL)
@@ -45,7 +44,8 @@ class OdsValuationDataParserTest {
         assertThat(parsed.getTitle()).isEqualTo("DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321");
         assertThat(parsed.getHeaderRowNumber()).isEqualTo(4);
         assertThat(parsed.getDataStartRowNumber()).isEqualTo(7);
-        assertThat(parsed.getHeaders().subList(0, 6)).containsExactly(
+        assertThat(parsed.getHeaders().subList(0, 7)).containsExactly(
+                "",
                 "科目代码",
                 "科目名称",
                 "币种",
@@ -54,6 +54,7 @@ class OdsValuationDataParserTest {
                 "单位成本"
         );
         assertThat(parsed.getHeaders()).contains(
+                "",
                 "成本|本币|十亿千百十万千百十元角分",
                 "成本|本币|成本占比",
                 "成本|本币|行情",
@@ -65,19 +66,42 @@ class OdsValuationDataParserTest {
         assertThat(parsed.getHeaderColumns()).hasSize(parsed.getHeaders().size());
         HeaderColumnMeta firstColumn = parsed.getHeaderColumns().get(0);
         assertThat(firstColumn.getColumnIndex()).isEqualTo(0);
-        assertThat(firstColumn.getHeaderName()).isEqualTo("科目代码");
-        assertThat(firstColumn.getHeaderPath()).isEqualTo("科目代码");
-        assertThat(firstColumn.getPathSegments()).containsExactly("科目代码");
-        assertThat(firstColumn.getBlankColumn()).isFalse();
-        assertThat(parsed.getHeaderColumns().get(6).getHeaderPath()).isEqualTo("成本|本币|十亿千百十万千百十元角分");
+        assertThat(firstColumn.getHeaderName()).isEqualTo("");
+        assertThat(firstColumn.getHeaderPath()).isEqualTo("");
+        assertThat(firstColumn.getPathSegments()).isEmpty();
+        assertThat(firstColumn.getBlankColumn()).isTrue();
+        assertThat(parsed.getHeaderColumns().get(7).getHeaderPath()).isEqualTo("成本|本币|十亿千百十万千百十元角分");
         assertThat(parsed.getSubjects()).hasSize(1);
         assertThat(parsed.getMetrics()).hasSize(1);
         assertThat(parsed.getSubjects().get(0).getSubjectCode()).isEqualTo("1002");
-        assertThat(parsed.getSubjects().get(0).getRawValues()).hasSize(17);
-        assertThat(parsed.getSubjects().get(0).getRawValues().get(12)).isEqualTo("");
-        assertThat(parsed.getSubjects().get(0).getRawValues().get(15)).isEqualTo("停牌");
+        assertThat(parsed.getSubjects().get(0).getRawValues()).hasSize(18);
+        assertThat(parsed.getSubjects().get(0).getRawValues().get(13)).isEqualTo("");
+        assertThat(parsed.getSubjects().get(0).getRawValues().get(16)).isEqualTo("停牌");
         assertThat(parsed.getMetrics().get(0).getMetricName()).isEqualTo("净值");
         assertThat(parsed.getMetrics().get(0).getValue()).isEqualTo("1.23");
+    }
+
+    private ValuationFileDataMapper mapperWithRows(List<ValuationFileDataPO> rows) {
+        InvocationHandler handler = (Object proxy, Method method, Object[] args) -> {
+            if ("findByFileId".equals(method.getName())) {
+                return rows;
+            }
+            if ("toString".equals(method.getName())) {
+                return "ValuationFileDataMapperTestProxy";
+            }
+            if ("hashCode".equals(method.getName())) {
+                return System.identityHashCode(proxy);
+            }
+            if ("equals".equals(method.getName())) {
+                return proxy == args[0];
+            }
+            throw new UnsupportedOperationException("Unexpected mapper method: " + method.getName());
+        };
+        return (ValuationFileDataMapper) Proxy.newProxyInstance(
+                ValuationFileDataMapper.class.getClassLoader(),
+                new Class<?>[]{ValuationFileDataMapper.class},
+                handler
+        );
     }
 
     private ValuationFileDataPO row(int rowDataNumber, String rowDataJson) {

@@ -7,6 +7,7 @@ import com.yss.subjectmatch.domain.model.DataSourceType;
 import com.yss.subjectmatch.extract.extractor.PoiRawDataExtractor;
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
+import com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -39,8 +40,10 @@ class PoiRawDataExtractorTest {
         createXlsx(file);
 
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
+
         ObjectMapper objectMapper = new ObjectMapper();
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, objectMapper);
+        ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, objectMapper,sheetStyleMapper);
 
         int count = extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
@@ -53,9 +56,6 @@ class PoiRawDataExtractorTest {
         verify(mapper).insert(captor.capture(), eq(1000));
         List<ValuationFileDataPO> rows = captor.getValue();
         assertThat(rows).hasSize(1);
-        assertThat(rows.get(0).getSheetName()).isEqualTo("Sheet1");
-        assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
-        assertThat(rows.get(0).getHeaderMetaJson()).isNotBlank();
         List<Object> values = objectMapper.readValue(rows.get(0).getRowDataJson(), List.class);
         assertThat(values).containsExactly("2023-03-21", "1", "3", null);
         assertThat(rows.get(0).getRowDataNumber()).isEqualTo(1);
@@ -69,7 +69,8 @@ class PoiRawDataExtractorTest {
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         doReturn(List.of()).when(mapper).insert(anyList(), anyInt());
 
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper());
+        ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
         ReflectionTestUtils.setField(extractor, "skipExcelStyleParsing", true);
 
         int count = extractor.extract(
@@ -83,9 +84,7 @@ class PoiRawDataExtractorTest {
         verify(mapper).insert(captor.capture(), eq(1000));
         List<ValuationFileDataPO> rows = captor.getValue();
         assertThat(rows).hasSize(1);
-        assertThat(rows.get(0).getHeaderMetaJson()).isNull();
-        assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
-        assertThat(rows.get(0).getRowUniverJson()).doesNotContain("\"s\"");
+        assertThat(rows.get(0).getRowDataJson()).isNotBlank();
     }
 
     @Test
@@ -94,7 +93,8 @@ class PoiRawDataExtractorTest {
         createXls(file);
 
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper());
+        ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
 
         int count = extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
@@ -109,8 +109,8 @@ class PoiRawDataExtractorTest {
     @Test
     void extractMissingWorkbookThrowsFileAccessException() {
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper());
-
+        ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
         assertThatThrownBy(() -> extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(tempDir.resolve("missing.xlsx").toString()).build(),
                 1L,

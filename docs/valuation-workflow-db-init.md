@@ -2,6 +2,22 @@
 
 ## 必需表
 
+## Liquibase 说明
+
+项目已提供一套独立的 Liquibase changelog 入口：
+
+- `subject-match-boot/src/main/resources/db/changelog/db.changelog-master.xml`
+
+默认不自动执行，需要在启动时显式开启：
+
+- `LIQUIBASE_ENABLED=true`
+
+如需切换 changelog，可通过：
+
+- `LIQUIBASE_CHANGE_LOG=classpath:/db/changelog/db.changelog-master.xml`
+
+当前这套 Liquibase 脚本已经整理为项目当前使用的完整 schema 基线，覆盖任务、调度、文件主表、接入日志、ODS 原始表、DWD 标准表、匹配结果表、标准科目表、知识样本表、`leaf_alloc` 以及 legacy 估值表。若你的环境已经使用本文档中的 SQL 或人工变更完成初始化，请先比对差异，再将 Liquibase 拆成增量 changeSet 执行迁移。
+
 当前全流程依赖以下数据表：
 
 ### ODS 原始表

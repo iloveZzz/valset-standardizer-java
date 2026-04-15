@@ -36,3 +36,21 @@
 - 数据库初始化说明：`docs/valuation-workflow-db-init.md`
 - 文件管理设计：`docs/file-management-design.md`
 - 文件管理接口：`/api/files/upload`、`/api/files/{fileId}`、`/api/files`、`/api/files/{fileId}/ingest-logs`、`/api/files/{fileId}/sheet-styles`
+
+## Liquibase
+
+项目已补充 Liquibase changelog 入口：
+
+- `subject-match-boot/src/main/resources/db/changelog/db.changelog-master.xml`
+
+启动配置默认关闭 Liquibase，需要显式开启：
+
+- `LIQUIBASE_ENABLED=true`
+- 可选覆盖 changelog：`LIQUIBASE_CHANGE_LOG=classpath:/db/changelog/db.changelog-master.xml`
+
+当前这套 Liquibase 脚本已经整理为项目当前使用的完整 schema 基线，覆盖任务、调度、文件主表、接入日志、ODS 原始表、DWD 标准表、匹配结果表、标准科目表、知识样本表、`leaf_alloc` 以及 legacy 估值表。
+
+注意：
+
+- 它可以作为新环境建库的基线入口，但不应直接覆盖已经运行中的存量库。
+- 如果目标环境已经按历史初始化脚本或人工变更建库，建议先对比字段差异，再拆分增量 changeSet 执行迁移。

@@ -63,7 +63,7 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
         }
 )
-class ValuationWorkflowPlaywrightE2ETest {
+public class ValuationWorkflowPlaywrightE2ETest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Path CSV_SAMPLE = Path.of("..", "20230321基金资产估值表DJ02www33.csv").toAbsolutePath().normalize();

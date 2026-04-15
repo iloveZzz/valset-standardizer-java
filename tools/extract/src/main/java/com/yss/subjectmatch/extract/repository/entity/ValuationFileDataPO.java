@@ -4,11 +4,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.yss.cloud.sankuai.GenerationTypeSeq;
 import lombok.Data;
 
-import javax.persistence.Column;
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
 @Data
@@ -24,18 +21,9 @@ public class ValuationFileDataPO {
     @TableField("file_id")
     private Long fileId;
 
-    @TableField("sheet_name")
-    private String sheetName;
-
     @TableField("row_data_number")
     private Integer rowDataNumber;
 
     @TableField("row_data_json")
     private String rowDataJson;
-
-    @TableField("row_univer_json")
-    private String rowUniverJson;
-
-    @TableField("header_meta_json")
-    private String headerMetaJson;
 }

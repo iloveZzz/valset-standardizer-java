@@ -8,6 +8,7 @@ import com.yss.subjectmatch.extract.extractor.CsvRawDataExtractor;
 import com.yss.subjectmatch.extract.extractor.PoiRawDataExtractor;
 import com.yss.subjectmatch.extract.extractor.RawDataExtractorRegistry;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
+import com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,7 +21,8 @@ class RawDataExtractorRegistryTest {
     void dispatchesExcelAndCsvExtractors() {
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         ObjectMapper objectMapper = new ObjectMapper();
-        PoiRawDataExtractor poi = new PoiRawDataExtractor(mapper, objectMapper);
+        ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
+        PoiRawDataExtractor poi = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
         CsvRawDataExtractor csv = new CsvRawDataExtractor(mapper, objectMapper);
         RawDataExtractorRegistry registry = new RawDataExtractorRegistry(poi, csv);
 
@@ -35,8 +37,9 @@ class RawDataExtractorRegistryTest {
     void rejectsUnsupportedTypes() {
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         ObjectMapper objectMapper = new ObjectMapper();
+        ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
         RawDataExtractorRegistry registry = new RawDataExtractorRegistry(
-                new PoiRawDataExtractor(mapper, objectMapper),
+                new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper),
                 new CsvRawDataExtractor(mapper, objectMapper)
         );
 

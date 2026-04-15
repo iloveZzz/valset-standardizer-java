@@ -1,5 +1,7 @@
 package com.yss.subjectmatch.application.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.application.dto.SubjectMatchFileIngestLogViewDTO;
 import com.yss.subjectmatch.application.dto.SubjectMatchFileInfoViewDTO;
 import com.yss.subjectmatch.application.dto.ValuationSheetStyleViewDTO;
@@ -17,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -34,13 +38,16 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     private final SubjectMatchFileInfoGateway subjectMatchFileInfoGateway;
     private final SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway;
     private final ValuationSheetStyleMapper valuationSheetStyleMapper;
+    private final ObjectMapper objectMapper;
 
     public DefaultFileManagementQueryAppService(SubjectMatchFileInfoGateway subjectMatchFileInfoGateway,
                                                SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway,
-                                               ValuationSheetStyleMapper valuationSheetStyleMapper) {
+                                               ValuationSheetStyleMapper valuationSheetStyleMapper,
+                                               ObjectMapper objectMapper) {
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.subjectMatchFileIngestLogGateway = subjectMatchFileIngestLogGateway;
         this.valuationSheetStyleMapper = valuationSheetStyleMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -136,6 +143,8 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     }
 
     private ValuationSheetStyleViewDTO toView(ValuationSheetStylePO stylePO) {
+        Map<String, Object> parsed = parseMap(stylePO.getSheetStyleJson());
+        List<Map<String, Object>> rows = extractRows(parsed);
         return ValuationSheetStyleViewDTO.builder()
                 .id(stylePO.getId())
                 .taskId(stylePO.getTaskId())
@@ -143,9 +152,120 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
                 .sheetName(stylePO.getSheetName())
                 .styleScope(stylePO.getStyleScope())
                 .sheetStyleJson(stylePO.getSheetStyleJson())
+                .titleRows(extractTitleRows(rows))
+                .headerRows(extractHeaderRows(rows))
+                .mergeAreas(extractMergeAreas(parsed))
                 .previewRowCount(stylePO.getPreviewRowCount())
                 .createdAt(stylePO.getCreatedAt())
                 .build();
+    }
+
+    private Map<String, Object> parseMap(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<LinkedHashMap<String, Object>>() {
+            });
+        } catch (Exception exception) {
+            throw new IllegalStateException("sheetStyleJson 反序列化失败", exception);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractRows(Map<String, Object> parsed) {
+        Object cellData = parsed.get("cellData");
+        if (!(cellData instanceof Map<?, ?> cellDataMap) || cellDataMap.isEmpty()) {
+            return List.of();
+        }
+        return cellDataMap.entrySet().stream()
+                .map(entry -> {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("rowIndex", parseInteger(entry.getKey()));
+                    row.put("cells", entry.getValue());
+                    row.put("texts", extractRowTexts(entry.getValue()));
+                    return row;
+                })
+                .toList();
+    }
+
+    private List<Map<String, Object>> extractTitleRows(List<Map<String, Object>> rows) {
+        int headerRowIndex = findHeaderRowIndex(rows);
+        if (headerRowIndex < 0) {
+            return rows;
+        }
+        return rows.stream()
+                .filter(row -> {
+                    Integer rowIndex = parseInteger(row.get("rowIndex"));
+                    return rowIndex != null && rowIndex < headerRowIndex;
+                })
+                .toList();
+    }
+
+    private List<Map<String, Object>> extractHeaderRows(List<Map<String, Object>> rows) {
+        int headerRowIndex = findHeaderRowIndex(rows);
+        if (headerRowIndex < 0) {
+            return List.of();
+        }
+        return rows.stream()
+                .filter(row -> {
+                    Integer rowIndex = parseInteger(row.get("rowIndex"));
+                    return rowIndex != null && rowIndex >= headerRowIndex;
+                })
+                .toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractMergeAreas(Map<String, Object> parsed) {
+        Object mergeData = parsed.get("mergeData");
+        if (!(mergeData instanceof List<?> mergeList) || mergeList.isEmpty()) {
+            return List.of();
+        }
+        return mergeList.stream()
+                .filter(Map.class::isInstance)
+                .map(item -> (Map<String, Object>) item)
+                .toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private int findHeaderRowIndex(List<Map<String, Object>> rows) {
+        for (Map<String, Object> row : rows) {
+            List<String> texts = (List<String>) row.get("texts");
+            if (texts != null && texts.contains("科目代码") && texts.contains("科目名称")) {
+                Integer rowIndex = parseInteger(row.get("rowIndex"));
+                return rowIndex == null ? -1 : rowIndex;
+            }
+        }
+        return -1;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> extractRowTexts(Object rowCellData) {
+        if (!(rowCellData instanceof Map<?, ?> cellMap) || cellMap.isEmpty()) {
+            return List.of();
+        }
+        return cellMap.values().stream()
+                .filter(Map.class::isInstance)
+                .map(item -> (Map<String, Object>) item)
+                .map(value -> {
+                    Object text = value.get("v");
+                    return text == null ? "" : String.valueOf(text);
+                })
+                .toList();
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private SubjectMatchFileSourceChannel parseSourceChannel(String sourceChannel) {

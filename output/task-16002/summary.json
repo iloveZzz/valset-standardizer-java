@@ -1,0 +1,24 @@
+{
+  "title" : "2025年03月05日宝丰2号-1202401686_9999(Z)-基金资产估值表",
+  "sheetName" : "ODS_RAW_DATA",
+  "headerRowNumber" : 4,
+  "dataStartRowNumber" : 7,
+  "basicInfo" : {
+    "日期" : "2025-03-05"
+  },
+  "subjectCount" : 118,
+  "leafSubjectCount" : 92,
+  "nonLeafSubjectCount" : 26,
+  "metricCount" : 35,
+  "metricRowCount" : 10,
+  "metricDataCount" : 25,
+  "rootSubjectCount" : 8,
+  "maxLevel" : 4,
+  "duplicateSubjectCodes" : [ ],
+  "levelDistribution" : {
+    "1" : 8,
+    "2" : 11,
+    "3" : 14,
+    "4" : 85
+  }
+}

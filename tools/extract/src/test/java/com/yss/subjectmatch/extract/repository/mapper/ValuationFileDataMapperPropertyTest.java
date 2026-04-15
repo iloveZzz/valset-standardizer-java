@@ -1,6 +1,7 @@
 package com.yss.subjectmatch.extract.repository.mapper;
 
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import net.jqwik.api.*;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
@@ -138,6 +139,7 @@ public class ValuationFileDataMapperPropertyTest {
                     
                     for (int i = 1; i <= rowCount; i++) {
                         ValuationFileDataPO po = new ValuationFileDataPO();
+                        po.setId(IdWorker.getId());
                         po.setTaskId(taskId);
                         po.setFileId(fileId);
                         po.setRowDataNumber(i);

@@ -7,7 +7,6 @@ import org.apache.poi.ss.usermodel.Color;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
@@ -15,7 +14,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 
 import java.io.Closeable;
@@ -32,8 +30,9 @@ import java.util.Map;
 /**
  * Excel 到 Univer 数据结构的转换辅助器。
  * <p>
- * 该工具负责把 POI 中可见的样式信息、合并单元格信息转换成 Univer 可直接消费的
- * JSON 结构。Fesod 继续负责按行读取原始值，POI 仅用于补充样式和布局信息。
+ * 该工具负责把 POI 中可见的结构性样式信息、合并单元格信息转换成 Univer 可直接消费的
+ * JSON 结构。Fesod 继续负责按行读取原始值，POI 仅用于补充表头/标题所需的布局信息。
+ * 字体族、字号、斜体、粗体、字体颜色等细粒度字体属性不再采集。
  * </p>
  */
 @Slf4j
@@ -48,13 +47,6 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         } catch (Exception exception) {
             throw new IllegalStateException("打开 Excel 工作簿失败，filePath=" + filePath, exception);
         }
-    }
-
-    /**
-     * 构建单行 Univer 单元格快照。
-     */
-    public RowSnapshot buildRowSnapshot(String sheetName, int rowIndex, List<String> rowValues) {
-        return buildRowSnapshot(sheetName, rowIndex, rowValues, true);
     }
 
     /**
@@ -152,29 +144,6 @@ public class ExcelUniverSnapshotSupport implements Closeable {
             return styleData;
         }
 
-        Font font = workbook.getFontAt(cellStyle.getFontIndexAsInt());
-        if (font != null) {
-            putIfNotNull(styleData, "ff", font.getFontName());
-            if (font.getFontHeightInPoints() > 0) {
-                styleData.put("fs", (int) font.getFontHeightInPoints());
-            }
-            styleData.put("it", font.getItalic() ? 1 : 0);
-            styleData.put("bl", font.getBold() ? 1 : 0);
-            if (font.getUnderline() > 0) {
-                styleData.put("ul", Map.of("s", 1, "c", 1, "t", (int) font.getUnderline()));
-            }
-            if (font.getStrikeout()) {
-                styleData.put("st", Map.of("s", 1, "c", 1, "t", 0));
-            }
-            putIfNotNull(styleData, "cl", resolveFontColor(font));
-            short typeOffset = font.getTypeOffset();
-            if (typeOffset == Font.SS_SUPER) {
-                styleData.put("va", 3);
-            } else if (typeOffset == Font.SS_SUB) {
-                styleData.put("va", 2);
-            }
-        }
-
         if (cellStyle.getFillPattern() != FillPatternType.NO_FILL) {
             String fillColor = resolveFillColor(cellStyle);
             if (fillColor != null) {
@@ -254,17 +223,6 @@ public class ExcelUniverSnapshotSupport implements Closeable {
             // ignore
         }
         return resolveIndexedColor(cellStyle.getFillForegroundColor());
-    }
-
-    private String resolveFontColor(Font font) {
-        try {
-            if (font instanceof XSSFFont xssfFont && xssfFont.getXSSFColor() != null) {
-                return normalizeHex(xssfFont.getXSSFColor().getARGBHex());
-            }
-        } catch (Exception ignored) {
-            // ignore
-        }
-        return resolveIndexedColor(font.getColor());
     }
 
     private String resolveColor(Color color) {
@@ -365,12 +323,6 @@ public class ExcelUniverSnapshotSupport implements Closeable {
             return 0;
         }
         return Math.max(0, Math.round(sheet.getDefaultRowHeightInPoints() * 96 / 72f));
-    }
-
-    private void putIfNotNull(Map<String, Object> map, String key, Object value) {
-        if (value != null) {
-            map.put(key, value);
-        }
     }
 
     /**

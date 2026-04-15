@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -70,6 +71,7 @@ class RawDataExtractionIntegrationTest {
         try (SqlSession session = sqlSessionFactory.openSession(true)) {
             ValuationFileDataMapper mapper = session.getMapper(ValuationFileDataMapper.class);
             session.getConnection().createStatement().execute("TRUNCATE TABLE t_ods_valuation_filedata");
+            session.getConnection().createStatement().execute("TRUNCATE TABLE t_ods_valuation_sheet_style");
 
             int extracted;
             if (sourceType == DataSourceType.CSV) {
@@ -97,8 +99,6 @@ class RawDataExtractionIntegrationTest {
 
             List<Object> firstRow = new ObjectMapper().readValue(rows.get(0).getRowDataJson(), List.class);
             assertThat(firstRow.get(0)).isEqualTo("DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321");
-            assertThat(rows.get(0).getSheetName()).isNotBlank();
-            assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
 
             List<Object> headerRow = rows.stream()
                     .map(row -> readRow(row, new ObjectMapper()))
@@ -108,19 +108,13 @@ class RawDataExtractionIntegrationTest {
             assertThat(headerRow).contains("科目代码", "科目名称");
 
             if (sourceType == DataSourceType.EXCEL) {
-                ValuationFileDataPO headerRecord = rows.stream()
-                        .filter(row -> row.getHeaderMetaJson() != null && !row.getHeaderMetaJson().isBlank())
-                        .findFirst()
-                        .orElseThrow();
-                assertThat(headerRecord.getHeaderMetaJson()).isNotBlank();
-                assertThat(headerRecord.getRowUniverJson()).isNotBlank();
                 List<ValuationSheetStylePO> sheetStyles = session.getMapper(ValuationSheetStyleMapper.class)
                         .findByFileId(9002L);
                 assertThat(sheetStyles).isNotEmpty();
                 assertThat(sheetStyles.get(0).getSheetStyleJson()).isNotBlank();
+                assertThat(containsFontAttributes(sheetStyles.get(0).getSheetStyleJson())).isFalse();
             } else {
-                assertThat(rows.stream().anyMatch(row -> row.getHeaderMetaJson() != null && !row.getHeaderMetaJson().isBlank()))
-                        .isFalse();
+                assertThat(session.getMapper(ValuationSheetStyleMapper.class).findByFileId(9002L)).isEmpty();
             }
 
             List<Object> dataRow = rows.stream()
@@ -130,6 +124,46 @@ class RawDataExtractionIntegrationTest {
                     .orElseThrow();
             assertThat(dataRow.get(0)).isEqualTo("1002");
             assertThat(dataRow.get(1)).isEqualTo("银行存款");
+        }
+    }
+
+    private boolean containsFontAttributes(String sheetStyleJson) {
+        try {
+            Map<String, Object> parsed = new ObjectMapper().readValue(sheetStyleJson, Map.class);
+            Object cellData = parsed.get("cellData");
+            if (!(cellData instanceof Map<?, ?> cellDataMap)) {
+                return false;
+            }
+            for (Object rowValue : cellDataMap.values()) {
+                if (!(rowValue instanceof Map<?, ?> rowMap)) {
+                    continue;
+                }
+                for (Object cellValue : rowMap.values()) {
+                    if (!(cellValue instanceof Map<?, ?> cellMap)) {
+                        continue;
+                    }
+                    Object styleValue = cellMap.get("s");
+                    if (!(styleValue instanceof Map<?, ?> styleMap)) {
+                        continue;
+                    }
+                    for (Object keyObj : styleMap.keySet()) {
+                        String key = String.valueOf(keyObj);
+                        if (key.equals("ff")
+                                || key.equals("fs")
+                                || key.equals("it")
+                                || key.equals("bl")
+                                || key.equals("ul")
+                                || key.equals("st")
+                                || key.equals("cl")
+                                || key.equals("va")) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Failed to inspect sheetStyleJson", exception);
         }
     }
 

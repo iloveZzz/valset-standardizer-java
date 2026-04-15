@@ -235,3 +235,40 @@ curl "http://localhost:8080/api/valuation-workflows/10001/match-results"
 - 仅 Excel 文件会写入 sheet 样式快照
 - 返回标题、header、合并区对应的 Univer 结构快照
 - CSV 文件或关闭样式解析开关时，返回空列表
+
+示例返回：
+
+```json
+[
+  {
+    "id": 101,
+    "taskId": 202,
+    "fileId": 303,
+    "sheetName": "Sheet1",
+    "styleScope": "HEADER_PREVIEW",
+    "sheetStyleJson": "{\"title\":\"demo\",\"mergeAreas\":[{\"firstRow\":0,\"lastRow\":1,\"firstColumn\":0,\"lastColumn\":2}]}",
+    "titleRows": [
+      {
+        "rowIndex": 0,
+        "texts": ["估值表标题"]
+      }
+    ],
+    "headerRows": [
+      {
+        "rowIndex": 1,
+        "texts": ["科目代码", "科目名称"]
+      }
+    ],
+    "mergeAreas": [
+      {
+        "firstRow": 0,
+        "lastRow": 1,
+        "firstColumn": 0,
+        "lastColumn": 2
+      }
+    ],
+    "previewRowCount": 20,
+    "createdAt": "2026-04-15T12:30:00"
+  }
+]
+```

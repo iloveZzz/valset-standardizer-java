@@ -133,10 +133,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private int findDataStartRow(List<List<Object>> rows, int headerRowIndex) {
         for (int rowIndex = headerRowIndex + 1; rowIndex < rows.size(); rowIndex++) {
-            List<Object> rowValues = rows.get(rowIndex);
-            String firstCell = ExcelParsingSupport.textAt(rowValues, 0);
-            String secondCell = ExcelParsingSupport.textAt(rowValues, 1);
-            if (ExcelParsingSupport.isSubjectCode(firstCell) && !secondCell.isBlank()) {
+            if (isSubjectDataRow(rows.get(rowIndex))) {
                 return rowIndex;
             }
         }
@@ -287,12 +284,10 @@ public class OdsValuationDataParser implements ValuationDataParser {
         List<MetricRecord> metrics = new ArrayList<>();
         for (int rowIndex = dataStartRowIndex; rowIndex < rows.size(); rowIndex++) {
             List<Object> rowValues = rows.get(rowIndex);
-            String firstCell = ExcelParsingSupport.textAt(rowValues, 0);
-            String secondCell = ExcelParsingSupport.textAt(rowValues, 1);
-            if (firstCell.isBlank() && secondCell.isBlank()) {
+            if (isBlankRow(toRowTexts(rowValues))) {
                 continue;
             }
-            if (ExcelParsingSupport.isSubjectCode(firstCell) && !secondCell.isBlank()) {
+            if (isSubjectDataRow(rowValues)) {
                 subjects.add(extractSubjectRecord(rowIndex, rowValues, headers, headerIndex));
                 continue;
             }
@@ -302,6 +297,35 @@ public class OdsValuationDataParser implements ValuationDataParser {
         }
         SubjectHierarchySupport.enrichSubjectHierarchy(subjects);
         return new SplitResult(subjects, metrics);
+    }
+
+    private boolean isSubjectDataRow(List<Object> rowValues) {
+        if (rowValues == null || rowValues.isEmpty()) {
+            return false;
+        }
+        int subjectCodeScanLimit = Math.min(rowValues.size(), 5);
+        for (int columnIndex = 0; columnIndex < subjectCodeScanLimit; columnIndex++) {
+            String candidateCode = ExcelParsingSupport.textAt(rowValues, columnIndex);
+            if (!ExcelParsingSupport.isSubjectCode(candidateCode)) {
+                continue;
+            }
+            if (hasSubjectNameAfterCode(rowValues, columnIndex)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasSubjectNameAfterCode(List<Object> rowValues, int codeColumnIndex) {
+        int scanEndIndex = Math.min(rowValues.size(), codeColumnIndex + 4);
+        for (int columnIndex = codeColumnIndex + 1; columnIndex < scanEndIndex; columnIndex++) {
+            String candidateText = ExcelParsingSupport.textAt(rowValues, columnIndex);
+            if (candidateText.isBlank() || "-".equals(candidateText)) {
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     private SubjectRecord extractSubjectRecord(

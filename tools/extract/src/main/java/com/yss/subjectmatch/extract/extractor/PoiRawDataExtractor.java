@@ -2,6 +2,7 @@ package com.yss.subjectmatch.extract.extractor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.yss.subjectmatch.domain.exception.FileAccessException;
 import com.yss.subjectmatch.domain.extractor.RawDataExtractor;
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
@@ -11,6 +12,7 @@ import com.yss.subjectmatch.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper;
 import com.yss.subjectmatch.extract.support.ExcelUniverSnapshotSupport;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fesod.sheet.FesodSheet;
 import org.apache.fesod.sheet.context.AnalysisContext;
@@ -43,6 +45,7 @@ import java.util.Map;
  * </p>
  */
 @Slf4j
+@RequiredArgsConstructor
 @Component
 public class PoiRawDataExtractor implements RawDataExtractor {
 
@@ -55,18 +58,6 @@ public class PoiRawDataExtractor implements RawDataExtractor {
     private final ValuationSheetStyleMapper valuationSheetStyleMapper;
     @Value("${subject.match.workflow.skip-excel-style-parsing:false}")
     private boolean skipExcelStyleParsing;
-
-    public PoiRawDataExtractor(ValuationFileDataMapper valuationFileDataMapper, ObjectMapper objectMapper) {
-        this(valuationFileDataMapper, objectMapper, null);
-    }
-
-    public PoiRawDataExtractor(ValuationFileDataMapper valuationFileDataMapper,
-                               ObjectMapper objectMapper,
-                               @Nullable ValuationSheetStyleMapper valuationSheetStyleMapper) {
-        this.valuationFileDataMapper = valuationFileDataMapper;
-        this.objectMapper = objectMapper;
-        this.valuationSheetStyleMapper = valuationSheetStyleMapper;
-    }
 
     @Override
     public int extract(DataSourceConfig config, Long taskId, Long fileId) {
@@ -165,12 +156,11 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                 }
 
                 ValuationFileDataPO po = new ValuationFileDataPO();
+                po.setId(IdWorker.getId());
                 po.setTaskId(taskId);
                 po.setFileId(fileId);
-                po.setSheetName(currentSheetName);
                 po.setRowDataNumber(rowDataNumber);
                 po.setRowDataJson(objectMapper.writeValueAsString(rowValues));
-                po.setRowUniverJson(objectMapper.writeValueAsString(rowSnapshot));
                 batch.add(po);
                 persistedRows++;
 
@@ -237,9 +227,6 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                 String headerMetaJson = objectMapper.writeValueAsString(
                         snapshotSupport.buildHeaderMeta(currentSheetName, new ArrayList<>(headerPreviewRows)));
                 persistSheetStyleSnapshot(headerMetaJson);
-                if (!batch.isEmpty()) {
-                    batch.get(0).setHeaderMetaJson(headerMetaJson);
-                }
                 headerMetaReady = true;
             } catch (JsonProcessingException exception) {
                 throw new IllegalStateException("构建 Univer 表头元数据失败，sheet=" + currentSheetName, exception);
@@ -259,6 +246,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                 return;
             }
             ValuationSheetStylePO stylePO = new ValuationSheetStylePO();
+            stylePO.setId(IdWorker.getId());
             stylePO.setTaskId(taskId);
             stylePO.setFileId(fileId);
             stylePO.setSheetName(currentSheetName);
