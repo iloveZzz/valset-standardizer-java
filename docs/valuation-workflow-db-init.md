@@ -51,6 +51,7 @@ SQL 文件：
 - 支撑 `/api/valuation-workflows/{fileId}/dwd-data` 查询
 - 支撑匹配阶段优先从 DWD 读取标准化结果
 - `t_dwd_external_valuation_header.header_column_meta_json` 保存按列展开的表头元数据，包含列序号、完整路径、分层片段和空列标识
+- `t_dwd_external_valuation_subject` 只保存外部估值明细的科目编码、名称、层级、路径和原始列，不再保存币种、市值、占比、成本等字段
 
 ### 匹配结果表
 

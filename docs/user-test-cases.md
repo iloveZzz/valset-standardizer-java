@@ -108,7 +108,7 @@ curl http://localhost:30066/api/tasks/{taskId}
 重点核查：
 
 - `subjects.csv` 中科目数量大于 0
-- `summary.json` 中 `subjectCount`、`maxLevel`、`currencies` 有值
+- `summary.json` 中 `subjectCount`、`maxLevel` 有值
 
 ## 4. 用例 3：标准科目匹配成功
 

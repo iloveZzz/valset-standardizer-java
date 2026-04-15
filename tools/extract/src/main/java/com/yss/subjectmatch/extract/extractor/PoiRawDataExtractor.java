@@ -8,6 +8,7 @@ import com.yss.subjectmatch.domain.model.DataSourceConfig;
 import com.yss.subjectmatch.domain.model.DataSourceType;
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
+import com.yss.subjectmatch.extract.support.ExcelUniverSnapshotSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fesod.sheet.FesodSheet;
 import org.apache.fesod.sheet.context.AnalysisContext;
@@ -17,6 +18,7 @@ import org.apache.fesod.sheet.metadata.data.ReadCellData;
 import org.apache.fesod.sheet.read.listener.ReadListener;
 import org.apache.fesod.sheet.read.metadata.holder.ReadRowHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -32,16 +34,23 @@ import java.util.Map;
  * <p>
  * 该实现同时支持 .xls 和 .xlsx，并通过监听器按行读取后落入 ODS 原始表。
  * 行数据会保留列顺序、空列占位以及合并表头所需的原始列结构。
+ * <br>
+ * 除了原始行值之外，还会补充 Univer 兼容的行级单元格快照和表头预览信息，
+ * 供前端直接渲染 Excel 样式与合并区域。
+ * </p>
  */
 @Slf4j
 @Component
 public class PoiRawDataExtractor implements RawDataExtractor {
 
     private static final int BATCH_SIZE = 1000;
+    private static final int HEADER_PREVIEW_ROWS = 20;
     private static final int MAX_COLUMNS = 10000;
 
     private final ValuationFileDataMapper valuationFileDataMapper;
     private final ObjectMapper objectMapper;
+    @Value("${subject.match.workflow.skip-excel-style-parsing:false}")
+    private boolean skipExcelStyleParsing;
 
     public PoiRawDataExtractor(ValuationFileDataMapper valuationFileDataMapper, ObjectMapper objectMapper) {
         this.valuationFileDataMapper = valuationFileDataMapper;
@@ -60,8 +69,8 @@ public class PoiRawDataExtractor implements RawDataExtractor {
         }
 
         long startedAt = System.currentTimeMillis();
-        FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId);
-        try {
+        try (ExcelUniverSnapshotSupport snapshotSupport = skipExcelStyleParsing ? null : new ExcelUniverSnapshotSupport(filePath)) {
+            FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId, snapshotSupport, skipExcelStyleParsing);
             FesodSheet.read(filePath.toString(), listener)
                     .headRowNumber(0)
                     .extraRead(CellExtraTypeEnum.MERGE)
@@ -86,13 +95,20 @@ public class PoiRawDataExtractor implements RawDataExtractor {
 
         private final Long taskId;
         private final Long fileId;
+        private final ExcelUniverSnapshotSupport snapshotSupport;
+        private final boolean skipExcelStyleParsing;
         private final List<ValuationFileDataPO> batch = new ArrayList<>(BATCH_SIZE);
+        private final List<ExcelUniverSnapshotSupport.RowSnapshot> headerPreviewRows = new ArrayList<>();
+        private String currentSheetName;
+        private boolean headerMetaReady;
         private int rowSequence;
         private int persistedRows;
 
-        private FesodRawRowListener(Long taskId, Long fileId) {
+        private FesodRawRowListener(Long taskId, Long fileId, ExcelUniverSnapshotSupport snapshotSupport, boolean skipExcelStyleParsing) {
             this.taskId = taskId;
             this.fileId = fileId;
+            this.snapshotSupport = snapshotSupport;
+            this.skipExcelStyleParsing = skipExcelStyleParsing;
         }
 
         @Override
@@ -110,24 +126,48 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                 return;
             }
 
+            String sheetName = currentSheetName(context);
+            if (sheetName == null) {
+                sheetName = "Sheet1";
+            }
+            if (currentSheetName != null && !currentSheetName.equals(sheetName)) {
+                flushCurrentSheet();
+            }
+            if (currentSheetName == null) {
+                currentSheetName = sheetName;
+            }
+
             List<String> rowValues = buildDenseRow(data, context);
             if (rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.isBlank())) {
                 return;
             }
 
             int rowDataNumber = ++rowSequence;
+            int sheetRowIndex = context == null ? rowDataNumber - 1 : Math.max(context.getCurrentRowNum(), 0);
+
             try {
+                ExcelUniverSnapshotSupport.RowSnapshot rowSnapshot = buildRowSnapshot(sheetRowIndex, rowValues);
+
+                if (!skipExcelStyleParsing && !headerMetaReady && headerPreviewRows.size() < HEADER_PREVIEW_ROWS) {
+                    headerPreviewRows.add(rowSnapshot);
+                }
+
                 ValuationFileDataPO po = new ValuationFileDataPO();
                 po.setTaskId(taskId);
                 po.setFileId(fileId);
+                po.setSheetName(currentSheetName);
                 po.setRowDataNumber(rowDataNumber);
                 po.setRowDataJson(objectMapper.writeValueAsString(rowValues));
+                po.setRowUniverJson(objectMapper.writeValueAsString(rowSnapshot));
                 batch.add(po);
                 persistedRows++;
 
+                if (!skipExcelStyleParsing && !headerMetaReady && headerPreviewRows.size() >= HEADER_PREVIEW_ROWS) {
+                    attachHeaderMetaIfNecessary();
+                }
+
                 if (batch.size() >= BATCH_SIZE) {
-                    valuationFileDataMapper.insert(new ArrayList<>(batch), BATCH_SIZE);
-                    batch.clear();
+                    flushBatch();
                 }
             } catch (JsonProcessingException exception) {
                 log.error("第 {} 行序列化为 JSON 失败，已跳过", rowDataNumber, exception);
@@ -148,10 +188,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
 
         @Override
         public void doAfterAllAnalysed(AnalysisContext context) {
-            if (!batch.isEmpty()) {
-                valuationFileDataMapper.insert(new ArrayList<>(batch), BATCH_SIZE);
-                batch.clear();
-            }
+            flushCurrentSheet();
             log.info("Excel 原始数据写入完成，sheet={}, persistedRows={}",
                     currentSheetName(context), persistedRows);
         }
@@ -168,6 +205,61 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                     context == null ? null : context.getCurrentRowNum(),
                     exception);
             throw exception;
+        }
+
+        private void flushCurrentSheet() {
+            if (!skipExcelStyleParsing) {
+                attachHeaderMetaIfNecessary();
+            }
+            flushBatch();
+            headerPreviewRows.clear();
+            headerMetaReady = false;
+            currentSheetName = null;
+        }
+
+        private void attachHeaderMetaIfNecessary() {
+            if (skipExcelStyleParsing || headerMetaReady || headerPreviewRows.isEmpty()) {
+                return;
+            }
+            try {
+                String headerMetaJson = objectMapper.writeValueAsString(
+                        snapshotSupport.buildHeaderMeta(currentSheetName, new ArrayList<>(headerPreviewRows)));
+                if (!batch.isEmpty()) {
+                    batch.get(0).setHeaderMetaJson(headerMetaJson);
+                }
+                headerMetaReady = true;
+            } catch (JsonProcessingException exception) {
+                throw new IllegalStateException("构建 Univer 表头元数据失败，sheet=" + currentSheetName, exception);
+            }
+        }
+
+        private void flushBatch() {
+            if (batch.isEmpty()) {
+                return;
+            }
+            valuationFileDataMapper.insert(new ArrayList<>(batch), BATCH_SIZE);
+            batch.clear();
+        }
+
+        private ExcelUniverSnapshotSupport.RowSnapshot buildRowSnapshot(int sheetRowIndex, List<String> rowValues) {
+            if (!skipExcelStyleParsing && snapshotSupport != null) {
+                return snapshotSupport.buildRowSnapshot(currentSheetName, sheetRowIndex, rowValues);
+            }
+            return buildMinimalRowSnapshot(currentSheetName, sheetRowIndex, rowValues);
+        }
+
+        private ExcelUniverSnapshotSupport.RowSnapshot buildMinimalRowSnapshot(String sheetName, int rowIndex, List<String> rowValues) {
+            Map<Integer, Map<String, Object>> rowCellData = new java.util.LinkedHashMap<>();
+            for (int columnIndex = 0; columnIndex < rowValues.size(); columnIndex++) {
+                String value = rowValues.get(columnIndex);
+                if (value == null) {
+                    continue;
+                }
+                Map<String, Object> cellData = new java.util.LinkedHashMap<>();
+                cellData.put("v", value);
+                rowCellData.put(columnIndex, cellData);
+            }
+            return new ExcelUniverSnapshotSupport.RowSnapshot(sheetName, rowIndex, rowCellData);
         }
 
         private List<String> buildDenseRow(Map<Integer, String> data, AnalysisContext context) {
@@ -226,7 +318,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
 
         private String currentSheetName(AnalysisContext context) {
             if (context == null || context.readSheetHolder() == null) {
-                return null;
+                return currentSheetName;
             }
             return context.readSheetHolder().getSheetName();
         }

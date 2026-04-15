@@ -2,6 +2,8 @@ package com.yss.subjectmatch.extract.repository.mapper;
 
 import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
 import net.jqwik.api.*;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.jdbc.ScriptRunner;
 import org.apache.ibatis.session.SqlSession;
@@ -31,6 +33,9 @@ public class ValuationFileDataMapperPropertyTest {
             // Initialize MyBatis with H2 in-memory database
             Reader reader = Resources.getResourceAsReader("mybatis-config-test.xml");
             sqlSessionFactory = new SqlSessionFactoryBuilder().build(reader);
+            GlobalConfig globalConfig = GlobalConfigUtils.getGlobalConfig(sqlSessionFactory.getConfiguration());
+            globalConfig.setSqlSessionFactory(sqlSessionFactory);
+            GlobalConfigUtils.setGlobalConfig(sqlSessionFactory.getConfiguration(), globalConfig);
             
             // Create schema
             try (SqlSession session = sqlSessionFactory.openSession()) {

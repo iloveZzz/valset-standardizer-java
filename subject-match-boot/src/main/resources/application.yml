@@ -62,3 +62,6 @@ subject:
   match:
     output-dir: output
     upload-dir: uploads
+    workflow:
+      skip-excel-style-parsing: false
+      enable-match-process: true

@@ -13,5 +13,6 @@ import java.util.List;
 public class RawValuationDataViewDTO {
     private Long fileId;
     private Integer totalRows;
+    private List<RawValuationSheetDTO> sheets;
     private List<RawValuationRowDTO> rows;
 }

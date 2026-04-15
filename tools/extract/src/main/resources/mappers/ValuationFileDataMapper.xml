@@ -7,24 +7,49 @@
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="task_id" property="taskId" jdbcType="BIGINT"/>
         <result column="file_id" property="fileId" jdbcType="BIGINT"/>
+        <result column="sheet_name" property="sheetName" jdbcType="VARCHAR"/>
         <result column="row_data_number" property="rowDataNumber" jdbcType="INTEGER"/>
         <result column="row_data_json" property="rowDataJson" jdbcType="VARCHAR"/>
+        <result column="row_univer_json" property="rowUniverJson" jdbcType="VARCHAR"/>
+        <result column="header_meta_json" property="headerMetaJson" jdbcType="VARCHAR"/>
     </resultMap>
+
+    <insert id="insert" parameterType="com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO">
+        INSERT INTO t_ods_valuation_filedata (
+            id,
+            task_id,
+            file_id,
+            sheet_name,
+            row_data_number,
+            row_data_json,
+            row_univer_json,
+            header_meta_json
+        ) VALUES (
+            #{id},
+            #{taskId},
+            #{fileId},
+            #{sheetName},
+            #{rowDataNumber},
+            #{rowDataJson},
+            #{rowUniverJson},
+            #{headerMetaJson}
+        )
+    </insert>
 
     <!-- Find all records by task ID -->
     <select id="findByTaskId" resultMap="BaseResultMap">
-        SELECT id, task_id, file_id, row_data_number, row_data_json
+        SELECT id, task_id, file_id, sheet_name, row_data_number, row_data_json, row_univer_json, header_meta_json
         FROM t_ods_valuation_filedata
         WHERE task_id = #{taskId}
-        ORDER BY row_data_number ASC
+        ORDER BY sheet_name ASC, row_data_number ASC
     </select>
 
     <!-- Find all records by file ID -->
     <select id="findByFileId" resultMap="BaseResultMap">
-        SELECT id, task_id, file_id, row_data_number, row_data_json
+        SELECT id, task_id, file_id, sheet_name, row_data_number, row_data_json, row_univer_json, header_meta_json
         FROM t_ods_valuation_filedata
         WHERE file_id = #{fileId}
-        ORDER BY row_data_number ASC
+        ORDER BY sheet_name ASC, row_data_number ASC
     </select>
 
 </mapper>

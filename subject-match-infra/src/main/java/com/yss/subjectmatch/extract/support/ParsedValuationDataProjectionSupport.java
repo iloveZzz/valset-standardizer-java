@@ -2,7 +2,6 @@ package com.yss.subjectmatch.extract.support;
 
 import com.yss.subjectmatch.domain.model.*;
 
-import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -130,15 +129,6 @@ public final class ParsedValuationDataProjectionSupport {
                 .sorted(Map.Entry.comparingByKey())
                 .forEach(entry -> sortedLevelDistribution.put(entry.getKey(), entry.getValue()));
 
-        List<WorkbookSummary.TopMarketValueSubject> topMarketValueSubjects = marketValueSubjects.stream()
-                .map(subject -> WorkbookSummary.TopMarketValueSubject.builder()
-                        .subjectCode(subject.getSubjectCode())
-                        .subjectName(subject.getSubjectName())
-                        .marketValue(subject.getMarketValue())
-                        .marketValueRatio(subject.getMarketValueRatio())
-                        .build())
-                .toList();
-
         return WorkbookSummary.builder()
                 .title(parsedValuationData.getTitle())
                 .sheetName(parsedValuationData.getSheetName())
@@ -157,7 +147,6 @@ public final class ParsedValuationDataProjectionSupport {
                 .levelDistribution(sortedLevelDistribution)
                 .build();
     }
-
     private static void sortTree(SubjectTreeNode node) {
         if (node.getChildren() == null || node.getChildren().isEmpty()) {
             return;

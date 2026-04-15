@@ -9,6 +9,8 @@ import com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO;
 import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.jdbc.ScriptRunner;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
@@ -34,6 +36,9 @@ class RawDataExtractionIntegrationTest {
     void setupDatabase() throws Exception {
         Reader reader = Resources.getResourceAsReader("mybatis-config-test.xml");
         sqlSessionFactory = new SqlSessionFactoryBuilder().build(reader);
+        GlobalConfig globalConfig = GlobalConfigUtils.getGlobalConfig(sqlSessionFactory.getConfiguration());
+        globalConfig.setSqlSessionFactory(sqlSessionFactory);
+        GlobalConfigUtils.setGlobalConfig(sqlSessionFactory.getConfiguration(), globalConfig);
         try (SqlSession session = sqlSessionFactory.openSession()) {
             Connection connection = session.getConnection();
             ScriptRunner runner = new ScriptRunner(connection);
@@ -89,6 +94,8 @@ class RawDataExtractionIntegrationTest {
 
             List<Object> firstRow = new ObjectMapper().readValue(rows.get(0).getRowDataJson(), List.class);
             assertThat(firstRow.get(0)).isEqualTo("DJ0233大家资产厚坤36号集合资产管理产品委托资产估值表20230321");
+            assertThat(rows.get(0).getSheetName()).isNotBlank();
+            assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
 
             List<Object> headerRow = rows.stream()
                     .map(row -> readRow(row, new ObjectMapper()))
@@ -96,6 +103,18 @@ class RawDataExtractionIntegrationTest {
                     .findFirst()
                     .orElseThrow();
             assertThat(headerRow).contains("科目代码", "科目名称");
+
+            if (sourceType == DataSourceType.EXCEL) {
+                ValuationFileDataPO headerRecord = rows.stream()
+                        .filter(row -> row.getHeaderMetaJson() != null && !row.getHeaderMetaJson().isBlank())
+                        .findFirst()
+                        .orElseThrow();
+                assertThat(headerRecord.getHeaderMetaJson()).isNotBlank();
+                assertThat(headerRecord.getRowUniverJson()).isNotBlank();
+            } else {
+                assertThat(rows.stream().anyMatch(row -> row.getHeaderMetaJson() != null && !row.getHeaderMetaJson().isBlank()))
+                        .isFalse();
+            }
 
             List<Object> dataRow = rows.stream()
                     .map(row -> readRow(row, new ObjectMapper()))

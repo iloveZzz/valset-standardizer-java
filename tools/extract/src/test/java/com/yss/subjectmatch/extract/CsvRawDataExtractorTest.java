@@ -47,6 +47,8 @@ class CsvRawDataExtractorTest {
         verify(mapper).insert(captor.capture(), eq(1000));
         List<ValuationFileDataPO> rows = captor.getValue();
         assertThat(rows).hasSize(2);
+        assertThat(rows.get(0).getSheetName()).isEqualTo("CSV");
+        assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
 
         List<Object> firstRow = objectMapper.readValue(rows.get(0).getRowDataJson(), List.class);
         assertThat(firstRow).containsExactly("a", "  b  ", null);
@@ -77,6 +79,8 @@ class CsvRawDataExtractorTest {
         List<ValuationFileDataPO> rows = captor.getValue();
         List<Object> firstRow = objectMapper.readValue(rows.get(0).getRowDataJson(), List.class);
         assertThat(firstRow).containsExactly("科目", "余额");
+        assertThat(rows.get(0).getSheetName()).isEqualTo("CSV");
+        assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
         List<Object> secondRow = objectMapper.readValue(rows.get(1).getRowDataJson(), List.class);
         assertThat(secondRow).containsExactly("资产", "100");
     }

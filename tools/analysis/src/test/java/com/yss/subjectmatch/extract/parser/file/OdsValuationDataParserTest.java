@@ -73,8 +73,6 @@ class OdsValuationDataParserTest {
         assertThat(parsed.getSubjects()).hasSize(1);
         assertThat(parsed.getMetrics()).hasSize(1);
         assertThat(parsed.getSubjects().get(0).getSubjectCode()).isEqualTo("1002");
-        assertThat(parsed.getSubjects().get(0).getCost()).isEqualByComparingTo("1000");
-        assertThat(parsed.getSubjects().get(0).getMarketValue()).isEqualByComparingTo("2000");
         assertThat(parsed.getSubjects().get(0).getRawValues()).hasSize(17);
         assertThat(parsed.getSubjects().get(0).getRawValues().get(12)).isEqualTo("");
         assertThat(parsed.getSubjects().get(0).getRawValues().get(15)).isEqualTo("停牌");

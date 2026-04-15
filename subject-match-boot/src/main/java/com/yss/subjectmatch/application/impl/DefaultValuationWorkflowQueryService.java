@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.application.dto.DwdExternalValuationViewDTO;
 import com.yss.subjectmatch.application.dto.MatchResultViewDTO;
 import com.yss.subjectmatch.application.dto.RawValuationDataViewDTO;
+import com.yss.subjectmatch.application.dto.RawValuationSheetDTO;
 import com.yss.subjectmatch.application.dto.RawValuationRowDTO;
 import com.yss.subjectmatch.domain.gateway.DwdExternalValuationGateway;
 import com.yss.subjectmatch.application.service.ValuationWorkflowQueryService;
@@ -16,7 +17,10 @@ import com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
@@ -51,13 +55,32 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
         List<RawValuationRowDTO> rowViews = rows.stream()
                 .limit(safeLimit)
                 .map(row -> RawValuationRowDTO.builder()
+                        .sheetName(row.getSheetName())
                         .rowDataNumber(row.getRowDataNumber())
                         .rowData(parseRowData(row.getRowDataJson()))
+                        .rowUniverData(parseMap(row.getRowUniverJson()))
+                        .build())
+                .toList();
+        Map<String, List<ValuationFileDataPO>> rowsBySheet = rows.stream()
+                .collect(Collectors.groupingBy(row -> row.getSheetName() == null ? "Sheet1" : row.getSheetName(),
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+        List<RawValuationSheetDTO> sheetViews = rowsBySheet.entrySet()
+                .stream()
+                .map(entry -> RawValuationSheetDTO.builder()
+                        .sheetName(entry.getKey())
+                        .headerMeta(entry.getValue().stream()
+                                .map(ValuationFileDataPO::getHeaderMetaJson)
+                                .filter(value -> value != null && !value.isBlank())
+                                .findFirst()
+                                .map(this::parseMap)
+                                .orElse(null))
                         .build())
                 .toList();
         return RawValuationDataViewDTO.builder()
                 .fileId(fileId)
                 .totalRows(rows.size())
+                .sheets(sheetViews)
                 .rows(rowViews)
                 .build();
     }
@@ -103,6 +126,18 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
             });
         } catch (Exception exception) {
             throw new IllegalStateException("ODS 原始行数据反序列化失败", exception);
+        }
+    }
+
+    private Map<String, Object> parseMap(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception exception) {
+            throw new IllegalStateException("JSON 反序列化失败", exception);
         }
     }
 }

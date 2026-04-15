@@ -1,0 +1,38 @@
+id,creater,create_time,modifier,modify_time,file_scene,file_type_name,region_name,column_map,column_map_name,status,multi_index,required
+1,,,system,2025-02-15 14:13:43.952000,ALL,,column,subject_cd,科目代码,true,,true
+2901,lihongmin,2025-06-25 10:53:58.524826,lihongmin,2025-06-25 13:19:57.653196,ALL,VALUATION,column,x,空列,true,false,false
+101,system,2025-02-15 14:22:58.434000,system,2025-02-15 14:22:58.399000,ALL,,column,subject_nm,科目名称,true,,true
+3,,,,,ALL,VALUATION,column,n_hldamt,持仓数量,true,,false
+5,,,,,ALL,VALUATION,column,n_price_cost,单位成本,true,,false
+6,,,,,ALL,,column,n_hldcst_locl,本币持仓成本,true,,true
+7,,,,,ALL,,column,n_cb_jz_bl,本币成本占比,true,,false
+2501,lihongmin,2025-03-13 14:38:08.705218,lihongmin,2025-03-13 14:38:08.678951,ALL,VALUATION,column,project_cd,项目代码,true,false,false
+9,,,,,ALL,,column,n_valprice,证券估值行情,true,,false
+10,,,,,ALL,,column,n_hldmkv_locl,本币持仓市值,true,,true
+2502,lihongmin,2025-03-13 15:04:49.770408,lihongmin,2025-03-13 15:04:49.765616,ALL,VALUATION,column,project_nm,项目名称,true,false,false
+12,,,,,ALL,,column,n_sz_jz_bl,本币市值占比,true,,false
+743,,,liyuanyuan,2025-04-03 16:39:38.172488,ALL,,metric,seven_annu_yield,七日年化收益率,true,false,false
+15,,,,,ALL,,column,n_hldvva_l,本币证券估增,true,,false
+16,,,wangyancong2,2025-08-11 09:50:11.982923,ALL,VALUATION,column,c_subpend,停牌信息,true,,false
+2,,,,,ALL,,basic,biz_date,业务日期,true,,false
+19,,,zhudaoming,2025-05-07 11:13:01.206241,ALL,,column,c_rights,权益信息,true,,false
+20,,,zhudaoming,2025-04-16 10:01:05.167975,ALL,VALUATION,column,c_cury_code,估值币种,true,,false
+22,,,,,ALL,,column,n_valrate,货币估值汇率,true,,false
+23,,,zhudaoming,2025-04-16 10:01:25.771620,ALL,VALUATION,column,n_hldcst,原币持仓成本,true,,false
+24,,,,,ALL,,column,n_hldmkv,原币持仓市值,true,,false
+13,,,,,ALL,,basic,pd_name,产品名称,true,,false
+26,,,,,ALL,,column,n_hldvva,原币证券估增,true,,false
+14,,,,,ALL,,basic,pd_code,产品代码,true,,false
+28,,,zhudaoming,2025-04-16 10:00:59.477866,ALL,VALUATION,column,c_mkt_code,交易市场,true,,false
+722,,,wr_user1,2025-03-06 09:52:57.688593,ALL,,metric,total_assets,资产合计,true,true,false
+723,,,wr_user1,2025-03-06 10:11:23.665690,ALL,,metric,total_liabi,负债合计,true,true,false
+724,,,wr_user1,2025-03-06 10:12:01.890186,ALL,,metric,paid_capital,实收资本,true,true,false
+725,,,yuanlingling,2025-07-01 09:43:59.738656,ALL,,metric,deviation,偏离度,true,true,false
+726,,,wr_user1,2025-03-06 10:10:33.605667,ALL,,metric,asset_value,资产净值,true,true,false
+728,,,,,ALL,,metric,yield,本日收益,true,false,false
+731,,,,,ALL,,metric,avg_nav,今日单位净值,true,false,false
+732,,,,,ALL,,metric,asset_value_y,资产净值(原币),true,true,false
+733,,,,,ALL,,metric,ten_sou_yield,每日万份收益,true,false,false
+734,,,liyuanyuan,2025-04-03 16:34:53.689643,ALL,,metric,acc_net,累计单位净值,true,false,false
+739,,,,,ALL,,metric,deviation_amt,偏离金额,true,false,false
+740,,,,,ALL,,metric,yield2,每日收益,true,false,false

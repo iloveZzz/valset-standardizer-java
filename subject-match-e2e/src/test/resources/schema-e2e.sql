@@ -25,9 +25,14 @@ CREATE TABLE IF NOT EXISTS t_ods_valuation_filedata (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_id BIGINT NOT NULL,
     file_id BIGINT NOT NULL,
+    sheet_name VARCHAR(128),
     row_data_number INT NOT NULL,
-    row_data_json TEXT NOT NULL
+    row_data_json TEXT NOT NULL,
+    row_univer_json TEXT,
+    header_meta_json TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_ods_filedata_file_sheet_row ON t_ods_valuation_filedata(file_id, sheet_name, row_data_number);
 
 CREATE TABLE IF NOT EXISTS t_subject_match_parsed_workbook (
     id BIGINT PRIMARY KEY,
@@ -81,10 +86,6 @@ CREATE TABLE IF NOT EXISTS t_dwd_external_valuation_subject (
     row_data_number INT,
     subject_code VARCHAR(128),
     subject_name VARCHAR(512),
-    currency VARCHAR(32),
-    market_value DECIMAL(24, 8),
-    market_value_ratio DECIMAL(18, 8),
-    cost DECIMAL(24, 8),
     level_no INT,
     parent_code VARCHAR(128),
     root_code VARCHAR(128),

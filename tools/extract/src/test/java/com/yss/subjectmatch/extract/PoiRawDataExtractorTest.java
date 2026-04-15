@@ -13,6 +13,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -52,9 +53,39 @@ class PoiRawDataExtractorTest {
         verify(mapper).insert(captor.capture(), eq(1000));
         List<ValuationFileDataPO> rows = captor.getValue();
         assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).getSheetName()).isEqualTo("Sheet1");
+        assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
+        assertThat(rows.get(0).getHeaderMetaJson()).isNotBlank();
         List<Object> values = objectMapper.readValue(rows.get(0).getRowDataJson(), List.class);
         assertThat(values).containsExactly("2023-03-21", "1", "3", null);
         assertThat(rows.get(0).getRowDataNumber()).isEqualTo(1);
+    }
+
+    @Test
+    void extractXlsxCanSkipStyleSnapshot() throws Exception {
+        Path file = tempDir.resolve("sample-skip-style.xlsx");
+        createXlsx(file);
+
+        ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
+        doReturn(List.of()).when(mapper).insert(anyList(), anyInt());
+
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper());
+        ReflectionTestUtils.setField(extractor, "skipExcelStyleParsing", true);
+
+        int count = extractor.extract(
+                DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
+                102L,
+                202L
+        );
+
+        assertThat(count).isEqualTo(1);
+        ArgumentCaptor<List<ValuationFileDataPO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mapper).insert(captor.capture(), eq(1000));
+        List<ValuationFileDataPO> rows = captor.getValue();
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).getHeaderMetaJson()).isNull();
+        assertThat(rows.get(0).getRowUniverJson()).isNotBlank();
+        assertThat(rows.get(0).getRowUniverJson()).doesNotContain("\"s\"");
     }
 
     @Test

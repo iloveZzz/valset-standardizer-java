@@ -1,0 +1,2501 @@
+{
+  "workbook_path" : "/Users/zhudaoming/yss-subject-match/subject-match-java/uploads/2026-04-15/c2c8c093-0894-41d6-a73b-4362067f9f93_WWGZB_JJZGJH22082301_20250305.xls",
+  "sheet_name" : "ODS_RAW_DATA",
+  "header_row_number" : 4,
+  "data_start_row_number" : 5,
+  "title" : "创金合信基金管理有限公司___创金合信嘉乾3号集合资产管理计划___专用表",
+  "basic_info" : {
+    "估值日期" : "2025-03-05",
+    "单位净值" : "0.9585",
+    "单位" : "元"
+  },
+  "headers" : [ "科目代码", "科目名称", "数量", "单位成本", "成本", "成本占净值%", "市价", "市值", "市值占净值%", "估值增值", "停牌信息" ],
+  "header_details" : [ [ "科目代码" ], [ "科目名称" ], [ "数量" ], [ "单位成本" ], [ "成本" ], [ "成本占净值%" ], [ "市价" ], [ "市值" ], [ "市值占净值%" ], [ "估值增值" ], [ "停牌信息" ] ],
+  "header_columns" : [ {
+    "columnIndex" : 0,
+    "headerName" : "科目代码",
+    "pathSegments" : [ "科目代码" ],
+    "headerPath" : "科目代码",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 1,
+    "headerName" : "科目名称",
+    "pathSegments" : [ "科目名称" ],
+    "headerPath" : "科目名称",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 2,
+    "headerName" : "数量",
+    "pathSegments" : [ "数量" ],
+    "headerPath" : "数量",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 3,
+    "headerName" : "单位成本",
+    "pathSegments" : [ "单位成本" ],
+    "headerPath" : "单位成本",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 4,
+    "headerName" : "成本",
+    "pathSegments" : [ "成本" ],
+    "headerPath" : "成本",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 5,
+    "headerName" : "成本占净值%",
+    "pathSegments" : [ "成本占净值%" ],
+    "headerPath" : "成本占净值%",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 6,
+    "headerName" : "市价",
+    "pathSegments" : [ "市价" ],
+    "headerPath" : "市价",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 7,
+    "headerName" : "市值",
+    "pathSegments" : [ "市值" ],
+    "headerPath" : "市值",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 8,
+    "headerName" : "市值占净值%",
+    "pathSegments" : [ "市值占净值%" ],
+    "headerPath" : "市值占净值%",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 9,
+    "headerName" : "估值增值",
+    "pathSegments" : [ "估值增值" ],
+    "headerPath" : "估值增值",
+    "blankColumn" : false
+  }, {
+    "columnIndex" : 10,
+    "headerName" : "停牌信息",
+    "pathSegments" : [ "停牌信息" ],
+    "headerPath" : "停牌信息",
+    "blankColumn" : false
+  } ],
+  "subjects" : [ {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 5,
+    "subjectCode" : "1002",
+    "subjectName" : "银行存款",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "1002",
+    "segmentCount" : 1,
+    "pathCodes" : [ "1002" ],
+    "leaf" : false,
+    "rawValues" : [ "1002", "银行存款", "0", "0", "99192908.46", "7.9645", "0", "99192908.46", "7.9645", "0", null, null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 6,
+    "subjectCode" : "1002.01",
+    "subjectName" : "托管账户",
+    "level" : 2,
+    "parentCode" : "1002",
+    "rootCode" : "1002",
+    "segmentCount" : 2,
+    "pathCodes" : [ "1002", "1002.01" ],
+    "leaf" : false,
+    "rawValues" : [ "1002.01", "托管账户", "0", "0", "98789167.94", "7.9321", "0", "98789167.94", "7.9321", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 7,
+    "subjectCode" : "1002.01.003",
+    "subjectName" : "中国农业银行",
+    "level" : 3,
+    "parentCode" : "1002.01",
+    "rootCode" : "1002",
+    "segmentCount" : 3,
+    "pathCodes" : [ "1002", "1002.01", "1002.01.003" ],
+    "leaf" : false,
+    "rawValues" : [ "1002.01.003", "中国农业银行", "0", "0", "98789167.94", "7.9321", "0", "98789167.94", "7.9321", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 8,
+    "subjectCode" : "1002.01.003.000001",
+    "subjectName" : "创金合信嘉乾 3 号集合资产管理计划",
+    "level" : 4,
+    "parentCode" : "1002.01.003",
+    "rootCode" : "1002",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1002", "1002.01", "1002.01.003", "1002.01.003.000001" ],
+    "leaf" : true,
+    "rawValues" : [ "1002.01.003.000001", "创金合信嘉乾 3 号集合资产管理计划", "0", "0", "98789167.94", "7.9321", "0", "98789167.94", "7.9321", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 9,
+    "subjectCode" : "1002.51",
+    "subjectName" : "托管账户-应计利息",
+    "level" : 2,
+    "parentCode" : "1002",
+    "rootCode" : "1002",
+    "segmentCount" : 2,
+    "pathCodes" : [ "1002", "1002.51" ],
+    "leaf" : false,
+    "rawValues" : [ "1002.51", "托管账户-应计利息", "0", "0", "403740.52", "0.0324", "0", "403740.52", "0.0324", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 10,
+    "subjectCode" : "1002.51.003",
+    "subjectName" : "中国农业银行",
+    "level" : 3,
+    "parentCode" : "1002.51",
+    "rootCode" : "1002",
+    "segmentCount" : 3,
+    "pathCodes" : [ "1002", "1002.51", "1002.51.003" ],
+    "leaf" : false,
+    "rawValues" : [ "1002.51.003", "中国农业银行", "0", "0", "403740.52", "0.0324", "0", "403740.52", "0.0324", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 11,
+    "subjectCode" : "1002.51.003.000001",
+    "subjectName" : "创金合信嘉乾 3 号集合资产管理计划",
+    "level" : 4,
+    "parentCode" : "1002.51.003",
+    "rootCode" : "1002",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1002", "1002.51", "1002.51.003", "1002.51.003.000001" ],
+    "leaf" : true,
+    "rawValues" : [ "1002.51.003.000001", "创金合信嘉乾 3 号集合资产管理计划", "0", "0", "403740.52", "0.0324", "0", "403740.52", "0.0324", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 12,
+    "subjectCode" : "1021",
+    "subjectName" : "结算备付金",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "1021",
+    "segmentCount" : 1,
+    "pathCodes" : [ "1021" ],
+    "leaf" : false,
+    "rawValues" : [ "1021", "结算备付金", "0", "0", "277837.18", "0.0223", "0", "277837.18", "0.0223", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 13,
+    "subjectCode" : "1021.01",
+    "subjectName" : "上海最低清算备付金",
+    "level" : 2,
+    "parentCode" : "1021",
+    "rootCode" : "1021",
+    "segmentCount" : 2,
+    "pathCodes" : [ "1021", "1021.01" ],
+    "leaf" : true,
+    "rawValues" : [ "1021.01", "上海最低清算备付金", "0", "0", "277777.78", "0.0223", "0", "277777.78", "0.0223", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 14,
+    "subjectCode" : "1021.51",
+    "subjectName" : "上海最低清算备付金-应计利息",
+    "level" : 2,
+    "parentCode" : "1021",
+    "rootCode" : "1021",
+    "segmentCount" : 2,
+    "pathCodes" : [ "1021", "1021.51" ],
+    "leaf" : true,
+    "rawValues" : [ "1021.51", "上海最低清算备付金-应计利息", "0", "0", "59.4", "0", "0", "59.4", "0", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 15,
+    "subjectCode" : "1105",
+    "subjectName" : "交易性基金投资",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "1105",
+    "segmentCount" : 1,
+    "pathCodes" : [ "1105" ],
+    "leaf" : false,
+    "rawValues" : [ "1105", "交易性基金投资", "623367150.41", "0", "1089778712.73", "87.5016", "0", "1146037155.94", "92.0188", "56258443.21", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 16,
+    "subjectCode" : "1105.F1",
+    "subjectName" : "场外开放式基金",
+    "level" : 2,
+    "parentCode" : "1105",
+    "rootCode" : "1105",
+    "segmentCount" : 2,
+    "pathCodes" : [ "1105", "1105.F1" ],
+    "leaf" : false,
+    "rawValues" : [ "1105.F1", "场外开放式基金", "575538555", "0", "973532839.03", "78.1679", "0", "1033582562.41", "82.9895", "60049723.38", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 17,
+    "subjectCode" : "1105.F1.01",
+    "subjectName" : "成本",
+    "level" : 3,
+    "parentCode" : "1105.F1",
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01" ],
+    "leaf" : false,
+    "rawValues" : [ "1105.F1.01", "成本", "575538555", "0", "973532839.03", "78.1679", "0", "1033582562.41", "82.9895", "60049723.38", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 18,
+    "subjectCode" : "1105.F1.01.000628",
+    "subjectName" : "大成高新技术产业股票A",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.000628" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.000628", "大成高新技术产业股票A", "6442254.01", "4.6566", "29999000", "2.4087", "4.7075", "30326910.75", "2.435", "327910.75", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 19,
+    "subjectCode" : "1105.F1.01.001667",
+    "subjectName" : "南方转型增长灵活配置混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.001667" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.001667", "南方转型增长灵活配置混合A", "28175585.89", "1.9662", "55400074.4", "4.4482", "1.8525", "52195272.86", "4.1909", "-3204801.54", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 20,
+    "subjectCode" : "1105.F1.01.002910",
+    "subjectName" : "易方达供给改革混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.002910" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.002910", "易方达供给改革混合", "32062152.45", "2.689", "86214433.4", "6.9224", "2.76", "88491540.76", "7.1053", "2277107.36", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 21,
+    "subjectCode" : "1105.F1.01.004317",
+    "subjectName" : "前海开源沪港深裕鑫C",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.004317" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.004317", "前海开源沪港深裕鑫C", "8382229.67", "1.193", "10000000", "0.8029", "1.3224", "11084660.52", "0.89", "1084660.52", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 22,
+    "subjectCode" : "1105.F1.01.004475",
+    "subjectName" : "华泰柏瑞富利混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.004475" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.004475", "华泰柏瑞富利混合A", "67354714.17", "1.9301", "130000000", "10.4381", "2.1075", "141950060.11", "11.3976", "11950060.11", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 23,
+    "subjectCode" : "1105.F1.01.004814",
+    "subjectName" : "中欧红利优享灵活配置混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.004814" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.004814", "中欧红利优享灵活配置混合A", "93903938.34", "1.397", "131185691.55", "10.5333", "1.6586", "155749072.13", "12.5056", "24563380.58", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 24,
+    "subjectCode" : "1105.F1.01.005094",
+    "subjectName" : "万家臻选混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.005094" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.005094", "万家臻选混合", "37113384.07", "2.6469", "98233741.56", "7.8875", "2.8248", "104837887.32", "8.4178", "6604145.76", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 25,
+    "subjectCode" : "1105.F1.01.008269",
+    "subjectName" : "大成睿享混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.008269" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.008269", "大成睿享混合A", "41961017.36", "1.4299", "59998000", "4.8174", "1.5794", "66273230.82", "5.3213", "6275230.82", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 26,
+    "subjectCode" : "1105.F1.01.010761",
+    "subjectName" : "华商甄选回报混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.010761" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.010761", "华商甄选回报混合A", "56492341.5", "1.2876", "72740247.6", "5.8405", "1.5977", "90257814.01", "7.2471", "17517566.41", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 27,
+    "subjectCode" : "1105.F1.01.011066",
+    "subjectName" : "大成高新技术产业股票C",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.011066" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.011066", "大成高新技术产业股票C", "13477311.73", "4.4519", "60000000", "4.8176", "4.6328", "62437689.78", "5.0133", "2437689.78", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 28,
+    "subjectCode" : "1105.F1.01.017167",
+    "subjectName" : "景顺长城策略精选灵活配置混合C",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.017167" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.017167", "景顺长城策略精选灵活配置混合C", "10369858.28", "2.893", "30000000", "2.4088", "2.908", "30155547.88", "2.4213", "155547.88", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 29,
+    "subjectCode" : "1105.F1.01.166020",
+    "subjectName" : "中欧成长优选回报灵活配置混合型发起式",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.166020" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.166020", "中欧成长优选回报灵活配置混合型发起式", "16035385.93", "1.8708", "29999000", "2.4087", "1.5687", "25154709.91", "2.0197", "-4844290.09", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 30,
+    "subjectCode" : "1105.F1.01.166301",
+    "subjectName" : "华商新趋势优选混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.166301" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.166301", "华商新趋势优选混合", "7895078.69", "8.8367", "69766650.52", "5.6018", "10.187", "80427166.62", "6.4577", "10660516.1", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 31,
+    "subjectCode" : "1105.F1.01.483003",
+    "subjectName" : "工银精选平衡混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.483003" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.01.483003", "工银精选平衡混合", "155873302.91", "0.7057", "109996000", "8.8319", "0.6046", "94240998.94", "7.5669", "-15755001.06", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 32,
+    "subjectCode" : "1105.F1.99",
+    "subjectName" : "估值增值",
+    "level" : 3,
+    "parentCode" : "1105.F1",
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99" ],
+    "leaf" : false,
+    "rawValues" : [ "1105.F1.99", "估值增值", "0", "0", "60049723.38", "4.8216", "0", "60049723.38", "4.8216", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 33,
+    "subjectCode" : "1105.F1.99.000628",
+    "subjectName" : "大成高新技术产业股票A",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.000628" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.000628", "大成高新技术产业股票A", "0", "0", "327910.75", "0.0263", "0", "327910.75", "0.0263", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 34,
+    "subjectCode" : "1105.F1.99.001667",
+    "subjectName" : "南方转型增长灵活配置混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.001667" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.001667", "南方转型增长灵活配置混合A", "0", "0", "-3204801.54", "-0.2573", "0", "-3204801.54", "-0.2573", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 35,
+    "subjectCode" : "1105.F1.99.002910",
+    "subjectName" : "易方达供给改革混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.002910" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.002910", "易方达供给改革混合", "0", "0", "2277107.36", "0.1828", "0", "2277107.36", "0.1828", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 36,
+    "subjectCode" : "1105.F1.99.004317",
+    "subjectName" : "前海开源沪港深裕鑫C",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.004317" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.004317", "前海开源沪港深裕鑫C", "0", "0", "1084660.52", "0.0871", "0", "1084660.52", "0.0871", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 37,
+    "subjectCode" : "1105.F1.99.004475",
+    "subjectName" : "华泰柏瑞富利混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.004475" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.004475", "华泰柏瑞富利混合A", "0", "0", "11950060.11", "0.9595", "0", "11950060.11", "0.9595", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 38,
+    "subjectCode" : "1105.F1.99.004814",
+    "subjectName" : "中欧红利优享灵活配置混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.004814" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.004814", "中欧红利优享灵活配置混合A", "0", "0", "24563380.58", "1.9723", "0", "24563380.58", "1.9723", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 39,
+    "subjectCode" : "1105.F1.99.005094",
+    "subjectName" : "万家臻选混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.005094" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.005094", "万家臻选混合", "0", "0", "6604145.76", "0.5303", "0", "6604145.76", "0.5303", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 40,
+    "subjectCode" : "1105.F1.99.008269",
+    "subjectName" : "大成睿享混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.008269" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.008269", "大成睿享混合A", "0", "0", "6275230.82", "0.5039", "0", "6275230.82", "0.5039", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 41,
+    "subjectCode" : "1105.F1.99.010761",
+    "subjectName" : "华商甄选回报混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.010761" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.010761", "华商甄选回报混合A", "0", "0", "17517566.41", "1.4065", "0", "17517566.41", "1.4065", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 42,
+    "subjectCode" : "1105.F1.99.011066",
+    "subjectName" : "大成高新技术产业股票C",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.011066" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.011066", "大成高新技术产业股票C", "0", "0", "2437689.78", "0.1957", "0", "2437689.78", "0.1957", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 43,
+    "subjectCode" : "1105.F1.99.017167",
+    "subjectName" : "景顺长城策略精选灵活配置混合C",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.017167" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.017167", "景顺长城策略精选灵活配置混合C", "0", "0", "155547.88", "0.0125", "0", "155547.88", "0.0125", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 44,
+    "subjectCode" : "1105.F1.99.166020",
+    "subjectName" : "中欧成长优选混合A",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.166020" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.166020", "中欧成长优选混合A", "0", "0", "-4844290.09", "-0.389", "0", "-4844290.09", "-0.389", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 45,
+    "subjectCode" : "1105.F1.99.166301",
+    "subjectName" : "华商新趋势优选混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.166301" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.166301", "华商新趋势优选混合", "0", "0", "10660516.1", "0.856", "0", "10660516.1", "0.856", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 46,
+    "subjectCode" : "1105.F1.99.483003",
+    "subjectName" : "工银精选平衡混合",
+    "level" : 4,
+    "parentCode" : "1105.F1.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.483003" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F1.99.483003", "工银精选平衡混合", "0", "0", "-15755001.06", "-1.265", "0", "-15755001.06", "-1.265", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 47,
+    "subjectCode" : "1105.F2",
+    "subjectName" : "场外LOF基金",
+    "level" : 2,
+    "parentCode" : "1105",
+    "rootCode" : "1105",
+    "segmentCount" : 2,
+    "pathCodes" : [ "1105", "1105.F2" ],
+    "leaf" : false,
+    "rawValues" : [ "1105.F2", "场外LOF基金", "47828595.41", "0", "116245873.7", "9.3337", "0", "112454593.53", "9.0293", "-3791280.17", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 48,
+    "subjectCode" : "1105.F2.01",
+    "subjectName" : "成本",
+    "level" : 3,
+    "parentCode" : "1105.F2",
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.01" ],
+    "leaf" : false,
+    "rawValues" : [ "1105.F2.01", "成本", "47828595.41", "0", "116245873.7", "9.3337", "0", "112454593.53", "9.0293", "-3791280.17", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 49,
+    "subjectCode" : "1105.F2.01.161222",
+    "subjectName" : "国投瑞利",
+    "level" : 4,
+    "parentCode" : "1105.F2.01",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.01", "1105.F2.01.161222" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F2.01.161222", "国投瑞利", "47828595.41", "2.4305", "116245873.7", "9.3337", "2.3512", "112454593.53", "9.0293", "-3791280.17", "【正常交易】2025-3-5[资讯]" ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 50,
+    "subjectCode" : "1105.F2.99",
+    "subjectName" : "估值增值",
+    "level" : 3,
+    "parentCode" : "1105.F2",
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.99" ],
+    "leaf" : false,
+    "rawValues" : [ "1105.F2.99", "估值增值", "0", "0", "-3791280.17", "-0.3044", "0", "-3791280.17", "-0.3044", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 51,
+    "subjectCode" : "1105.F2.99.161222",
+    "subjectName" : "国投瑞利",
+    "level" : 4,
+    "parentCode" : "1105.F2.99",
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.99", "1105.F2.99.161222" ],
+    "leaf" : true,
+    "rawValues" : [ "1105.F2.99.161222", "国投瑞利", "0", "0", "-3791280.17", "-0.3044", "0", "-3791280.17", "-0.3044", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 52,
+    "subjectCode" : "2206",
+    "subjectName" : "应付管理人报酬",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2206",
+    "segmentCount" : 1,
+    "pathCodes" : [ "2206" ],
+    "leaf" : false,
+    "rawValues" : [ "2206", "应付管理人报酬", "0", "0", "22423.96", "0.0018", "0", "22423.96", "0.0018", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 53,
+    "subjectCode" : "2206.01",
+    "subjectName" : "应付基金管理费",
+    "level" : 2,
+    "parentCode" : "2206",
+    "rootCode" : "2206",
+    "segmentCount" : 2,
+    "pathCodes" : [ "2206", "2206.01" ],
+    "leaf" : false,
+    "rawValues" : [ "2206.01", "应付基金管理费", "0", "0", "22423.96", "0.0018", "0", "22423.96", "0.0018", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 54,
+    "subjectCode" : "2206.01.3M2273",
+    "subjectName" : "应付基金管理费",
+    "level" : 3,
+    "parentCode" : "2206.01",
+    "rootCode" : "2206",
+    "segmentCount" : 3,
+    "pathCodes" : [ "2206", "2206.01", "2206.01.3M2273" ],
+    "leaf" : true,
+    "rawValues" : [ "2206.01.3M2273", "应付基金管理费", "0", "0", "22423.96", "0.0018", "0", "22423.96", "0.0018", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 55,
+    "subjectCode" : "2207",
+    "subjectName" : "应付托管费",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2207",
+    "segmentCount" : 1,
+    "pathCodes" : [ "2207" ],
+    "leaf" : false,
+    "rawValues" : [ "2207", "应付托管费", "0", "0", "44847.89", "0.0036", "0", "44847.89", "0.0036", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 56,
+    "subjectCode" : "2207.01",
+    "subjectName" : "应付托管费",
+    "level" : 2,
+    "parentCode" : "2207",
+    "rootCode" : "2207",
+    "segmentCount" : 2,
+    "pathCodes" : [ "2207", "2207.01" ],
+    "leaf" : false,
+    "rawValues" : [ "2207.01", "应付托管费", "0", "0", "44847.89", "0.0036", "0", "44847.89", "0.0036", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 57,
+    "subjectCode" : "2207.01.3M2273",
+    "subjectName" : "应付托管费",
+    "level" : 3,
+    "parentCode" : "2207.01",
+    "rootCode" : "2207",
+    "segmentCount" : 3,
+    "pathCodes" : [ "2207", "2207.01", "2207.01.3M2273" ],
+    "leaf" : true,
+    "rawValues" : [ "2207.01.3M2273", "应付托管费", "0", "0", "44847.89", "0.0036", "0", "44847.89", "0.0036", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 58,
+    "subjectCode" : "2209",
+    "subjectName" : "应付交易费用",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2209",
+    "segmentCount" : 1,
+    "pathCodes" : [ "2209" ],
+    "leaf" : false,
+    "rawValues" : [ "2209", "应付交易费用", "0", "0", "50", "0", "0", "50", "0", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 59,
+    "subjectCode" : "2209.01",
+    "subjectName" : "应付佣金",
+    "level" : 2,
+    "parentCode" : "2209",
+    "rootCode" : "2209",
+    "segmentCount" : 2,
+    "pathCodes" : [ "2209", "2209.01" ],
+    "leaf" : false,
+    "rawValues" : [ "2209.01", "应付佣金", "0", "0", "50", "0", "0", "50", "0", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 60,
+    "subjectCode" : "2209.01.29",
+    "subjectName" : "国泰君安证券",
+    "level" : 3,
+    "parentCode" : "2209.01",
+    "rootCode" : "2209",
+    "segmentCount" : 3,
+    "pathCodes" : [ "2209", "2209.01", "2209.01.29" ],
+    "leaf" : false,
+    "rawValues" : [ "2209.01.29", "国泰君安证券", "0", "0", "50", "0", "0", "50", "0", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 61,
+    "subjectCode" : "2209.01.29.37450",
+    "subjectName" : "37450",
+    "level" : 4,
+    "parentCode" : "2209.01.29",
+    "rootCode" : "2209",
+    "segmentCount" : 4,
+    "pathCodes" : [ "2209", "2209.01", "2209.01.29", "2209.01.29.37450" ],
+    "leaf" : true,
+    "rawValues" : [ "2209.01.29.37450", "37450", "0", "0", "50", "0", "0", "50", "0", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 62,
+    "subjectCode" : "2501",
+    "subjectName" : "预提费用",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2501",
+    "segmentCount" : 1,
+    "pathCodes" : [ "2501" ],
+    "leaf" : false,
+    "rawValues" : [ "2501", "预提费用", "0", "0", "2630.4", "0.0002", "0", "2630.4", "0.0002", "0", null ]
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 63,
+    "subjectCode" : "2501.01",
+    "subjectName" : "审计费用",
+    "level" : 2,
+    "parentCode" : "2501",
+    "rootCode" : "2501",
+    "segmentCount" : 2,
+    "pathCodes" : [ "2501", "2501.01" ],
+    "leaf" : true,
+    "rawValues" : [ "2501.01", "审计费用", "0", "0", "2630.4", "0.0002", "0", "2630.4", "0.0002", "0", null ]
+  } ],
+  "subject_relations" : [ {
+    "subjectCode" : "1002",
+    "subjectName" : "银行存款",
+    "parentCode" : null,
+    "parentName" : null,
+    "level" : 1,
+    "rootCode" : "1002",
+    "segmentCount" : 1,
+    "leaf" : false,
+    "pathCodes" : [ "1002" ]
+  }, {
+    "subjectCode" : "1002.01",
+    "subjectName" : "托管账户",
+    "parentCode" : "1002",
+    "parentName" : "银行存款",
+    "level" : 2,
+    "rootCode" : "1002",
+    "segmentCount" : 2,
+    "leaf" : false,
+    "pathCodes" : [ "1002", "1002.01" ]
+  }, {
+    "subjectCode" : "1002.51",
+    "subjectName" : "托管账户-应计利息",
+    "parentCode" : "1002",
+    "parentName" : "银行存款",
+    "level" : 2,
+    "rootCode" : "1002",
+    "segmentCount" : 2,
+    "leaf" : false,
+    "pathCodes" : [ "1002", "1002.51" ]
+  }, {
+    "subjectCode" : "1002.01.003",
+    "subjectName" : "中国农业银行",
+    "parentCode" : "1002.01",
+    "parentName" : "托管账户",
+    "level" : 3,
+    "rootCode" : "1002",
+    "segmentCount" : 3,
+    "leaf" : false,
+    "pathCodes" : [ "1002", "1002.01", "1002.01.003" ]
+  }, {
+    "subjectCode" : "1002.51.003",
+    "subjectName" : "中国农业银行",
+    "parentCode" : "1002.51",
+    "parentName" : "托管账户-应计利息",
+    "level" : 3,
+    "rootCode" : "1002",
+    "segmentCount" : 3,
+    "leaf" : false,
+    "pathCodes" : [ "1002", "1002.51", "1002.51.003" ]
+  }, {
+    "subjectCode" : "1002.01.003.000001",
+    "subjectName" : "创金合信嘉乾 3 号集合资产管理计划",
+    "parentCode" : "1002.01.003",
+    "parentName" : "中国农业银行",
+    "level" : 4,
+    "rootCode" : "1002",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1002", "1002.01", "1002.01.003", "1002.01.003.000001" ]
+  }, {
+    "subjectCode" : "1002.51.003.000001",
+    "subjectName" : "创金合信嘉乾 3 号集合资产管理计划",
+    "parentCode" : "1002.51.003",
+    "parentName" : "中国农业银行",
+    "level" : 4,
+    "rootCode" : "1002",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1002", "1002.51", "1002.51.003", "1002.51.003.000001" ]
+  }, {
+    "subjectCode" : "1021",
+    "subjectName" : "结算备付金",
+    "parentCode" : null,
+    "parentName" : null,
+    "level" : 1,
+    "rootCode" : "1021",
+    "segmentCount" : 1,
+    "leaf" : false,
+    "pathCodes" : [ "1021" ]
+  }, {
+    "subjectCode" : "1021.01",
+    "subjectName" : "上海最低清算备付金",
+    "parentCode" : "1021",
+    "parentName" : "结算备付金",
+    "level" : 2,
+    "rootCode" : "1021",
+    "segmentCount" : 2,
+    "leaf" : true,
+    "pathCodes" : [ "1021", "1021.01" ]
+  }, {
+    "subjectCode" : "1021.51",
+    "subjectName" : "上海最低清算备付金-应计利息",
+    "parentCode" : "1021",
+    "parentName" : "结算备付金",
+    "level" : 2,
+    "rootCode" : "1021",
+    "segmentCount" : 2,
+    "leaf" : true,
+    "pathCodes" : [ "1021", "1021.51" ]
+  }, {
+    "subjectCode" : "1105",
+    "subjectName" : "交易性基金投资",
+    "parentCode" : null,
+    "parentName" : null,
+    "level" : 1,
+    "rootCode" : "1105",
+    "segmentCount" : 1,
+    "leaf" : false,
+    "pathCodes" : [ "1105" ]
+  }, {
+    "subjectCode" : "1105.F1",
+    "subjectName" : "场外开放式基金",
+    "parentCode" : "1105",
+    "parentName" : "交易性基金投资",
+    "level" : 2,
+    "rootCode" : "1105",
+    "segmentCount" : 2,
+    "leaf" : false,
+    "pathCodes" : [ "1105", "1105.F1" ]
+  }, {
+    "subjectCode" : "1105.F2",
+    "subjectName" : "场外LOF基金",
+    "parentCode" : "1105",
+    "parentName" : "交易性基金投资",
+    "level" : 2,
+    "rootCode" : "1105",
+    "segmentCount" : 2,
+    "leaf" : false,
+    "pathCodes" : [ "1105", "1105.F2" ]
+  }, {
+    "subjectCode" : "1105.F1.01",
+    "subjectName" : "成本",
+    "parentCode" : "1105.F1",
+    "parentName" : "场外开放式基金",
+    "level" : 3,
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "leaf" : false,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01" ]
+  }, {
+    "subjectCode" : "1105.F1.99",
+    "subjectName" : "估值增值",
+    "parentCode" : "1105.F1",
+    "parentName" : "场外开放式基金",
+    "level" : 3,
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "leaf" : false,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99" ]
+  }, {
+    "subjectCode" : "1105.F2.01",
+    "subjectName" : "成本",
+    "parentCode" : "1105.F2",
+    "parentName" : "场外LOF基金",
+    "level" : 3,
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "leaf" : false,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.01" ]
+  }, {
+    "subjectCode" : "1105.F2.99",
+    "subjectName" : "估值增值",
+    "parentCode" : "1105.F2",
+    "parentName" : "场外LOF基金",
+    "level" : 3,
+    "rootCode" : "1105",
+    "segmentCount" : 3,
+    "leaf" : false,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.99" ]
+  }, {
+    "subjectCode" : "1105.F1.01.000628",
+    "subjectName" : "大成高新技术产业股票A",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.000628" ]
+  }, {
+    "subjectCode" : "1105.F1.01.001667",
+    "subjectName" : "南方转型增长灵活配置混合A",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.001667" ]
+  }, {
+    "subjectCode" : "1105.F1.01.002910",
+    "subjectName" : "易方达供给改革混合",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.002910" ]
+  }, {
+    "subjectCode" : "1105.F1.01.004317",
+    "subjectName" : "前海开源沪港深裕鑫C",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.004317" ]
+  }, {
+    "subjectCode" : "1105.F1.01.004475",
+    "subjectName" : "华泰柏瑞富利混合A",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.004475" ]
+  }, {
+    "subjectCode" : "1105.F1.01.004814",
+    "subjectName" : "中欧红利优享灵活配置混合A",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.004814" ]
+  }, {
+    "subjectCode" : "1105.F1.01.005094",
+    "subjectName" : "万家臻选混合",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.005094" ]
+  }, {
+    "subjectCode" : "1105.F1.01.008269",
+    "subjectName" : "大成睿享混合A",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.008269" ]
+  }, {
+    "subjectCode" : "1105.F1.01.010761",
+    "subjectName" : "华商甄选回报混合A",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.010761" ]
+  }, {
+    "subjectCode" : "1105.F1.01.011066",
+    "subjectName" : "大成高新技术产业股票C",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.011066" ]
+  }, {
+    "subjectCode" : "1105.F1.01.017167",
+    "subjectName" : "景顺长城策略精选灵活配置混合C",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.017167" ]
+  }, {
+    "subjectCode" : "1105.F1.01.166020",
+    "subjectName" : "中欧成长优选回报灵活配置混合型发起式",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.166020" ]
+  }, {
+    "subjectCode" : "1105.F1.01.166301",
+    "subjectName" : "华商新趋势优选混合",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.166301" ]
+  }, {
+    "subjectCode" : "1105.F1.01.483003",
+    "subjectName" : "工银精选平衡混合",
+    "parentCode" : "1105.F1.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.01", "1105.F1.01.483003" ]
+  }, {
+    "subjectCode" : "1105.F1.99.000628",
+    "subjectName" : "大成高新技术产业股票A",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.000628" ]
+  }, {
+    "subjectCode" : "1105.F1.99.001667",
+    "subjectName" : "南方转型增长灵活配置混合A",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.001667" ]
+  }, {
+    "subjectCode" : "1105.F1.99.002910",
+    "subjectName" : "易方达供给改革混合",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.002910" ]
+  }, {
+    "subjectCode" : "1105.F1.99.004317",
+    "subjectName" : "前海开源沪港深裕鑫C",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.004317" ]
+  }, {
+    "subjectCode" : "1105.F1.99.004475",
+    "subjectName" : "华泰柏瑞富利混合A",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.004475" ]
+  }, {
+    "subjectCode" : "1105.F1.99.004814",
+    "subjectName" : "中欧红利优享灵活配置混合A",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.004814" ]
+  }, {
+    "subjectCode" : "1105.F1.99.005094",
+    "subjectName" : "万家臻选混合",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.005094" ]
+  }, {
+    "subjectCode" : "1105.F1.99.008269",
+    "subjectName" : "大成睿享混合A",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.008269" ]
+  }, {
+    "subjectCode" : "1105.F1.99.010761",
+    "subjectName" : "华商甄选回报混合A",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.010761" ]
+  }, {
+    "subjectCode" : "1105.F1.99.011066",
+    "subjectName" : "大成高新技术产业股票C",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.011066" ]
+  }, {
+    "subjectCode" : "1105.F1.99.017167",
+    "subjectName" : "景顺长城策略精选灵活配置混合C",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.017167" ]
+  }, {
+    "subjectCode" : "1105.F1.99.166020",
+    "subjectName" : "中欧成长优选混合A",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.166020" ]
+  }, {
+    "subjectCode" : "1105.F1.99.166301",
+    "subjectName" : "华商新趋势优选混合",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.166301" ]
+  }, {
+    "subjectCode" : "1105.F1.99.483003",
+    "subjectName" : "工银精选平衡混合",
+    "parentCode" : "1105.F1.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F1", "1105.F1.99", "1105.F1.99.483003" ]
+  }, {
+    "subjectCode" : "1105.F2.01.161222",
+    "subjectName" : "国投瑞利",
+    "parentCode" : "1105.F2.01",
+    "parentName" : "成本",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.01", "1105.F2.01.161222" ]
+  }, {
+    "subjectCode" : "1105.F2.99.161222",
+    "subjectName" : "国投瑞利",
+    "parentCode" : "1105.F2.99",
+    "parentName" : "估值增值",
+    "level" : 4,
+    "rootCode" : "1105",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "1105", "1105.F2", "1105.F2.99", "1105.F2.99.161222" ]
+  }, {
+    "subjectCode" : "2206",
+    "subjectName" : "应付管理人报酬",
+    "parentCode" : null,
+    "parentName" : null,
+    "level" : 1,
+    "rootCode" : "2206",
+    "segmentCount" : 1,
+    "leaf" : false,
+    "pathCodes" : [ "2206" ]
+  }, {
+    "subjectCode" : "2206.01",
+    "subjectName" : "应付基金管理费",
+    "parentCode" : "2206",
+    "parentName" : "应付管理人报酬",
+    "level" : 2,
+    "rootCode" : "2206",
+    "segmentCount" : 2,
+    "leaf" : false,
+    "pathCodes" : [ "2206", "2206.01" ]
+  }, {
+    "subjectCode" : "2206.01.3M2273",
+    "subjectName" : "应付基金管理费",
+    "parentCode" : "2206.01",
+    "parentName" : "应付基金管理费",
+    "level" : 3,
+    "rootCode" : "2206",
+    "segmentCount" : 3,
+    "leaf" : true,
+    "pathCodes" : [ "2206", "2206.01", "2206.01.3M2273" ]
+  }, {
+    "subjectCode" : "2207",
+    "subjectName" : "应付托管费",
+    "parentCode" : null,
+    "parentName" : null,
+    "level" : 1,
+    "rootCode" : "2207",
+    "segmentCount" : 1,
+    "leaf" : false,
+    "pathCodes" : [ "2207" ]
+  }, {
+    "subjectCode" : "2207.01",
+    "subjectName" : "应付托管费",
+    "parentCode" : "2207",
+    "parentName" : "应付托管费",
+    "level" : 2,
+    "rootCode" : "2207",
+    "segmentCount" : 2,
+    "leaf" : false,
+    "pathCodes" : [ "2207", "2207.01" ]
+  }, {
+    "subjectCode" : "2207.01.3M2273",
+    "subjectName" : "应付托管费",
+    "parentCode" : "2207.01",
+    "parentName" : "应付托管费",
+    "level" : 3,
+    "rootCode" : "2207",
+    "segmentCount" : 3,
+    "leaf" : true,
+    "pathCodes" : [ "2207", "2207.01", "2207.01.3M2273" ]
+  }, {
+    "subjectCode" : "2209",
+    "subjectName" : "应付交易费用",
+    "parentCode" : null,
+    "parentName" : null,
+    "level" : 1,
+    "rootCode" : "2209",
+    "segmentCount" : 1,
+    "leaf" : false,
+    "pathCodes" : [ "2209" ]
+  }, {
+    "subjectCode" : "2209.01",
+    "subjectName" : "应付佣金",
+    "parentCode" : "2209",
+    "parentName" : "应付交易费用",
+    "level" : 2,
+    "rootCode" : "2209",
+    "segmentCount" : 2,
+    "leaf" : false,
+    "pathCodes" : [ "2209", "2209.01" ]
+  }, {
+    "subjectCode" : "2209.01.29",
+    "subjectName" : "国泰君安证券",
+    "parentCode" : "2209.01",
+    "parentName" : "应付佣金",
+    "level" : 3,
+    "rootCode" : "2209",
+    "segmentCount" : 3,
+    "leaf" : false,
+    "pathCodes" : [ "2209", "2209.01", "2209.01.29" ]
+  }, {
+    "subjectCode" : "2209.01.29.37450",
+    "subjectName" : "37450",
+    "parentCode" : "2209.01.29",
+    "parentName" : "国泰君安证券",
+    "level" : 4,
+    "rootCode" : "2209",
+    "segmentCount" : 4,
+    "leaf" : true,
+    "pathCodes" : [ "2209", "2209.01", "2209.01.29", "2209.01.29.37450" ]
+  }, {
+    "subjectCode" : "2501",
+    "subjectName" : "预提费用",
+    "parentCode" : null,
+    "parentName" : null,
+    "level" : 1,
+    "rootCode" : "2501",
+    "segmentCount" : 1,
+    "leaf" : false,
+    "pathCodes" : [ "2501" ]
+  }, {
+    "subjectCode" : "2501.01",
+    "subjectName" : "审计费用",
+    "parentCode" : "2501",
+    "parentName" : "预提费用",
+    "level" : 2,
+    "rootCode" : "2501",
+    "segmentCount" : 2,
+    "leaf" : true,
+    "pathCodes" : [ "2501", "2501.01" ]
+  } ],
+  "subject_tree" : [ {
+    "subjectCode" : "1002",
+    "subjectName" : "银行存款",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "1002",
+    "leaf" : false,
+    "children" : [ {
+      "subjectCode" : "1002.01",
+      "subjectName" : "托管账户",
+      "level" : 2,
+      "parentCode" : "1002",
+      "rootCode" : "1002",
+      "leaf" : false,
+      "children" : [ {
+        "subjectCode" : "1002.01.003",
+        "subjectName" : "中国农业银行",
+        "level" : 3,
+        "parentCode" : "1002.01",
+        "rootCode" : "1002",
+        "leaf" : false,
+        "children" : [ {
+          "subjectCode" : "1002.01.003.000001",
+          "subjectName" : "创金合信嘉乾 3 号集合资产管理计划",
+          "level" : 4,
+          "parentCode" : "1002.01.003",
+          "rootCode" : "1002",
+          "leaf" : true,
+          "children" : [ ]
+        } ]
+      } ]
+    }, {
+      "subjectCode" : "1002.51",
+      "subjectName" : "托管账户-应计利息",
+      "level" : 2,
+      "parentCode" : "1002",
+      "rootCode" : "1002",
+      "leaf" : false,
+      "children" : [ {
+        "subjectCode" : "1002.51.003",
+        "subjectName" : "中国农业银行",
+        "level" : 3,
+        "parentCode" : "1002.51",
+        "rootCode" : "1002",
+        "leaf" : false,
+        "children" : [ {
+          "subjectCode" : "1002.51.003.000001",
+          "subjectName" : "创金合信嘉乾 3 号集合资产管理计划",
+          "level" : 4,
+          "parentCode" : "1002.51.003",
+          "rootCode" : "1002",
+          "leaf" : true,
+          "children" : [ ]
+        } ]
+      } ]
+    } ]
+  }, {
+    "subjectCode" : "1021",
+    "subjectName" : "结算备付金",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "1021",
+    "leaf" : false,
+    "children" : [ {
+      "subjectCode" : "1021.01",
+      "subjectName" : "上海最低清算备付金",
+      "level" : 2,
+      "parentCode" : "1021",
+      "rootCode" : "1021",
+      "leaf" : true,
+      "children" : [ ]
+    }, {
+      "subjectCode" : "1021.51",
+      "subjectName" : "上海最低清算备付金-应计利息",
+      "level" : 2,
+      "parentCode" : "1021",
+      "rootCode" : "1021",
+      "leaf" : true,
+      "children" : [ ]
+    } ]
+  }, {
+    "subjectCode" : "1105",
+    "subjectName" : "交易性基金投资",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "1105",
+    "leaf" : false,
+    "children" : [ {
+      "subjectCode" : "1105.F1",
+      "subjectName" : "场外开放式基金",
+      "level" : 2,
+      "parentCode" : "1105",
+      "rootCode" : "1105",
+      "leaf" : false,
+      "children" : [ {
+        "subjectCode" : "1105.F1.01",
+        "subjectName" : "成本",
+        "level" : 3,
+        "parentCode" : "1105.F1",
+        "rootCode" : "1105",
+        "leaf" : false,
+        "children" : [ {
+          "subjectCode" : "1105.F1.01.000628",
+          "subjectName" : "大成高新技术产业股票A",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.001667",
+          "subjectName" : "南方转型增长灵活配置混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.002910",
+          "subjectName" : "易方达供给改革混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.004317",
+          "subjectName" : "前海开源沪港深裕鑫C",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.004475",
+          "subjectName" : "华泰柏瑞富利混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.004814",
+          "subjectName" : "中欧红利优享灵活配置混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.005094",
+          "subjectName" : "万家臻选混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.008269",
+          "subjectName" : "大成睿享混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.010761",
+          "subjectName" : "华商甄选回报混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.011066",
+          "subjectName" : "大成高新技术产业股票C",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.017167",
+          "subjectName" : "景顺长城策略精选灵活配置混合C",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.166020",
+          "subjectName" : "中欧成长优选回报灵活配置混合型发起式",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.166301",
+          "subjectName" : "华商新趋势优选混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.01.483003",
+          "subjectName" : "工银精选平衡混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        } ]
+      }, {
+        "subjectCode" : "1105.F1.99",
+        "subjectName" : "估值增值",
+        "level" : 3,
+        "parentCode" : "1105.F1",
+        "rootCode" : "1105",
+        "leaf" : false,
+        "children" : [ {
+          "subjectCode" : "1105.F1.99.000628",
+          "subjectName" : "大成高新技术产业股票A",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.001667",
+          "subjectName" : "南方转型增长灵活配置混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.002910",
+          "subjectName" : "易方达供给改革混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.004317",
+          "subjectName" : "前海开源沪港深裕鑫C",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.004475",
+          "subjectName" : "华泰柏瑞富利混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.004814",
+          "subjectName" : "中欧红利优享灵活配置混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.005094",
+          "subjectName" : "万家臻选混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.008269",
+          "subjectName" : "大成睿享混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.010761",
+          "subjectName" : "华商甄选回报混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.011066",
+          "subjectName" : "大成高新技术产业股票C",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.017167",
+          "subjectName" : "景顺长城策略精选灵活配置混合C",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.166020",
+          "subjectName" : "中欧成长优选混合A",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.166301",
+          "subjectName" : "华商新趋势优选混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        }, {
+          "subjectCode" : "1105.F1.99.483003",
+          "subjectName" : "工银精选平衡混合",
+          "level" : 4,
+          "parentCode" : "1105.F1.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        } ]
+      } ]
+    }, {
+      "subjectCode" : "1105.F2",
+      "subjectName" : "场外LOF基金",
+      "level" : 2,
+      "parentCode" : "1105",
+      "rootCode" : "1105",
+      "leaf" : false,
+      "children" : [ {
+        "subjectCode" : "1105.F2.01",
+        "subjectName" : "成本",
+        "level" : 3,
+        "parentCode" : "1105.F2",
+        "rootCode" : "1105",
+        "leaf" : false,
+        "children" : [ {
+          "subjectCode" : "1105.F2.01.161222",
+          "subjectName" : "国投瑞利",
+          "level" : 4,
+          "parentCode" : "1105.F2.01",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        } ]
+      }, {
+        "subjectCode" : "1105.F2.99",
+        "subjectName" : "估值增值",
+        "level" : 3,
+        "parentCode" : "1105.F2",
+        "rootCode" : "1105",
+        "leaf" : false,
+        "children" : [ {
+          "subjectCode" : "1105.F2.99.161222",
+          "subjectName" : "国投瑞利",
+          "level" : 4,
+          "parentCode" : "1105.F2.99",
+          "rootCode" : "1105",
+          "leaf" : true,
+          "children" : [ ]
+        } ]
+      } ]
+    } ]
+  }, {
+    "subjectCode" : "2206",
+    "subjectName" : "应付管理人报酬",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2206",
+    "leaf" : false,
+    "children" : [ {
+      "subjectCode" : "2206.01",
+      "subjectName" : "应付基金管理费",
+      "level" : 2,
+      "parentCode" : "2206",
+      "rootCode" : "2206",
+      "leaf" : false,
+      "children" : [ {
+        "subjectCode" : "2206.01.3M2273",
+        "subjectName" : "应付基金管理费",
+        "level" : 3,
+        "parentCode" : "2206.01",
+        "rootCode" : "2206",
+        "leaf" : true,
+        "children" : [ ]
+      } ]
+    } ]
+  }, {
+    "subjectCode" : "2207",
+    "subjectName" : "应付托管费",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2207",
+    "leaf" : false,
+    "children" : [ {
+      "subjectCode" : "2207.01",
+      "subjectName" : "应付托管费",
+      "level" : 2,
+      "parentCode" : "2207",
+      "rootCode" : "2207",
+      "leaf" : false,
+      "children" : [ {
+        "subjectCode" : "2207.01.3M2273",
+        "subjectName" : "应付托管费",
+        "level" : 3,
+        "parentCode" : "2207.01",
+        "rootCode" : "2207",
+        "leaf" : true,
+        "children" : [ ]
+      } ]
+    } ]
+  }, {
+    "subjectCode" : "2209",
+    "subjectName" : "应付交易费用",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2209",
+    "leaf" : false,
+    "children" : [ {
+      "subjectCode" : "2209.01",
+      "subjectName" : "应付佣金",
+      "level" : 2,
+      "parentCode" : "2209",
+      "rootCode" : "2209",
+      "leaf" : false,
+      "children" : [ {
+        "subjectCode" : "2209.01.29",
+        "subjectName" : "国泰君安证券",
+        "level" : 3,
+        "parentCode" : "2209.01",
+        "rootCode" : "2209",
+        "leaf" : false,
+        "children" : [ {
+          "subjectCode" : "2209.01.29.37450",
+          "subjectName" : "37450",
+          "level" : 4,
+          "parentCode" : "2209.01.29",
+          "rootCode" : "2209",
+          "leaf" : true,
+          "children" : [ ]
+        } ]
+      } ]
+    } ]
+  }, {
+    "subjectCode" : "2501",
+    "subjectName" : "预提费用",
+    "level" : 1,
+    "parentCode" : null,
+    "rootCode" : "2501",
+    "leaf" : false,
+    "children" : [ {
+      "subjectCode" : "2501.01",
+      "subjectName" : "审计费用",
+      "level" : 2,
+      "parentCode" : "2501",
+      "rootCode" : "2501",
+      "leaf" : true,
+      "children" : [ ]
+    } ]
+  } ],
+  "metrics" : [ {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 65,
+    "metricName" : "证券投资合计",
+    "metricType" : "metric_row",
+    "value" : "1146037155.94",
+    "rawValues" : {
+      "科目代码" : "证券投资合计",
+      "科目名称" : "证券投资合计",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 1089778712.73,
+      "成本占净值%" : 87.5016,
+      "市价" : 0,
+      "市值" : 1146037155.94,
+      "市值占净值%" : 92.0188,
+      "估值增值" : 56258443.21,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 66,
+    "metricName" : "其中基金投资",
+    "metricType" : "metric_row",
+    "value" : "1146037155.94",
+    "rawValues" : {
+      "科目代码" : "其中基金投资",
+      "科目名称" : "其中基金投资",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 1089778712.73,
+      "成本占净值%" : 87.5016,
+      "市价" : 0,
+      "市值" : 1146037155.94,
+      "市值占净值%" : 92.0188,
+      "估值增值" : 56258443.21,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 67,
+    "metricName" : "证券投资占总资产比(%)",
+    "metricType" : "metric_row",
+    "value" : "92.01",
+    "rawValues" : {
+      "科目代码" : "证券投资占总资产比(%)",
+      "科目名称" : "证券投资占总资产比(%)",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 91.64,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 92.01,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 69,
+    "metricName" : "今日可用头寸",
+    "metricType" : "metric_row",
+    "value" : "98789167.94",
+    "rawValues" : {
+      "科目代码" : "今日可用头寸",
+      "科目名称" : "今日可用头寸",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 98789167.94,
+      "成本占净值%" : 7.93,
+      "市价" : 0,
+      "市值" : 98789167.94,
+      "市值占净值%" : 7.93,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 71,
+    "metricName" : "实收资本金额",
+    "metricType" : "metric_row",
+    "value" : "1299369138.5",
+    "rawValues" : {
+      "科目代码" : "实收资本金额",
+      "科目名称" : "实收资本金额",
+      "数量" : 1299369138.5,
+      "单位成本" : 1,
+      "成本" : 1299369138.5,
+      "成本占净值%" : 104.3303,
+      "市价" : 0,
+      "市值" : 1299369138.5,
+      "市值占净值%" : 104.3303,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 72,
+    "metricName" : "实收资本",
+    "metricType" : "metric_row",
+    "value" : "1299369138.5",
+    "rawValues" : {
+      "科目代码" : "实收资本",
+      "科目名称" : "实收资本",
+      "数量" : 1299369138.5,
+      "单位成本" : 0,
+      "成本" : 1299369138.5,
+      "成本占净值%" : 104.3303,
+      "市价" : 0,
+      "市值" : 1299369138.5,
+      "市值占净值%" : 104.3303,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 73,
+    "metricName" : "损益平准金未实现",
+    "metricType" : "metric_row",
+    "value" : "-1194590.5",
+    "rawValues" : {
+      "科目代码" : "损益平准金未实现",
+      "科目名称" : "损益平准金未实现",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : -1194590.5,
+      "成本占净值%" : -0.1,
+      "市价" : 0,
+      "市值" : -1194590.5,
+      "市值占净值%" : -0.1,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 74,
+    "metricName" : "损益平准金已实现",
+    "metricType" : "metric_row",
+    "value" : "1698285.41",
+    "rawValues" : {
+      "科目代码" : "损益平准金已实现",
+      "科目名称" : "损益平准金已实现",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 1698285.41,
+      "成本占净值%" : 0.14,
+      "市价" : 0,
+      "市值" : 1698285.41,
+      "市值占净值%" : 0.14,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 75,
+    "metricName" : "资产类合计",
+    "metricType" : "metric_row",
+    "value" : "1245507901.58",
+    "rawValues" : {
+      "科目代码" : "资产类合计",
+      "科目名称" : "资产类合计",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 1189249458.37,
+      "成本占净值%" : 95.4885,
+      "市价" : 0,
+      "市值" : 1245507901.58,
+      "市值占净值%" : 100.0056,
+      "估值增值" : 56258443.21,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 76,
+    "metricName" : "负债类合计",
+    "metricType" : "metric_row",
+    "value" : "69952.25",
+    "rawValues" : {
+      "科目代码" : "负债类合计",
+      "科目名称" : "负债类合计",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 69952.25,
+      "成本占净值%" : 0.0056,
+      "市价" : 0,
+      "市值" : 69952.25,
+      "市值占净值%" : 0.0056,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 78,
+    "metricName" : "基金资产净值",
+    "metricType" : "metric_row",
+    "value" : "1245437949.33",
+    "rawValues" : {
+      "科目代码" : "基金资产净值",
+      "科目名称" : "基金资产净值",
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 1189179506.12,
+      "成本占净值%" : 95.48,
+      "市价" : 0,
+      "市值" : 1245437949.33,
+      "市值占净值%" : 100,
+      "估值增值" : 56258443.21,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 79,
+    "metricName" : "基金单位净值",
+    "metricType" : "metric_row",
+    "value" : "0.9585",
+    "rawValues" : {
+      "科目代码" : "基金单位净值",
+      "科目名称" : 0.9585,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0.9152,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0.9585,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 80,
+    "metricName" : "累计单位净值",
+    "metricType" : "metric_row",
+    "value" : "0.9585",
+    "rawValues" : {
+      "科目代码" : "累计单位净值",
+      "科目名称" : 0.9585,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : "",
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0.9585,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 82,
+    "metricName" : "年初单位净值",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "年初单位净值",
+      "科目名称" : 0.9325,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 83,
+    "metricName" : "期初单位净值",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "期初单位净值",
+      "科目名称" : 0.9457,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 84,
+    "metricName" : "周初单位净值",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "周初单位净值",
+      "科目名称" : 0.9457,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 85,
+    "metricName" : "上一交易日单位净值",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "上一交易日单位净值",
+      "科目名称" : 0.9506,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 87,
+    "metricName" : "成立以来净值增长率(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "成立以来净值增长率(%)",
+      "科目名称" : -4.15,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 88,
+    "metricName" : "净值年增长率(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "净值年增长率(%)",
+      "科目名称" : 2.7882,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 89,
+    "metricName" : "净值季增长率(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "净值季增长率(%)",
+      "科目名称" : 2.7882,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 90,
+    "metricName" : "净值月增长率(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "净值月增长率(%)",
+      "科目名称" : 1.3535,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 91,
+    "metricName" : "净值周增长率(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "净值周增长率(%)",
+      "科目名称" : 1.3535,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 92,
+    "metricName" : "净值日增长率(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "净值日增长率(%)",
+      "科目名称" : 0.8311,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 93,
+    "metricName" : "单位可分配利润",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "单位可分配利润",
+      "科目名称" : -0.18,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 94,
+    "metricName" : "累计派现金额",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "累计派现金额",
+      "科目名称" : 0,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 96,
+    "metricName" : "本年已实现收益",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "本年已实现收益",
+      "科目名称" : -12875486.36,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 97,
+    "metricName" : "本季已实现收益",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "本季已实现收益",
+      "科目名称" : -12875486.36,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 98,
+    "metricName" : "本月已实现收益",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "本月已实现收益",
+      "科目名称" : 15788.99,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 99,
+    "metricName" : "已实现收益（成立日至今）",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "已实现收益（成立日至今）",
+      "科目名称" : -592673512.23,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 100,
+    "metricName" : "可分配利润",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "可分配利润",
+      "科目名称" : -234392343.61,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 101,
+    "metricName" : "现金类占净值比(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "现金类占净值比(%)",
+      "科目名称" : 0,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 102,
+    "metricName" : "一年内到期的政府债券占净值比(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "一年内到期的政府债券占净值比(%)",
+      "科目名称" : 0,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 103,
+    "metricName" : "七日可变现资产",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "七日可变现资产",
+      "科目名称" : 1244826323.88,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  }, {
+    "sheetName" : "ODS_RAW_DATA",
+    "rowDataNumber" : 104,
+    "metricName" : "7日可变现资产占净值比(%)",
+    "metricType" : "metric_row",
+    "value" : "0",
+    "rawValues" : {
+      "科目代码" : "7日可变现资产占净值比(%)",
+      "科目名称" : 99.95,
+      "数量" : 0,
+      "单位成本" : 0,
+      "成本" : 0,
+      "成本占净值%" : 0,
+      "市价" : 0,
+      "市值" : 0,
+      "市值占净值%" : 0,
+      "估值增值" : 0,
+      "停牌信息" : ""
+    }
+  } ]
+}

@@ -30,8 +30,10 @@ import com.yss.subjectmatch.domain.model.TaskType;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Locale;
 
@@ -52,6 +54,8 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     private final TaskReuseService taskReuseService;
     private final SubjectMatchFileInfoGateway subjectMatchFileInfoGateway;
     private final SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway;
+    @Value("${subject.match.workflow.enable-match-process:true}")
+    private boolean enableMatchProcess;
 
     public DefaultValuationWorkflowAppService(UploadedFileStorageService uploadedFileStorageService,
                                               TaskGateway taskGateway,
@@ -139,6 +143,10 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
 
     @Override
     public TaskViewDTO match(MatchTaskCommand command) {
+        if (!enableMatchProcess) {
+            log.info("科目匹配流程已关闭，直接返回跳过结果，fileId={}, workbookPath={}", command.getFileId(), command.getWorkbookPath());
+            return buildSkippedMatchTask(command, "subject.match.workflow.enable-match-process=false");
+        }
         TaskViewDTO taskViewDTO = runTask(
                 TaskType.MATCH_SUBJECT,
                 buildMatchBusinessKey(command),
@@ -179,7 +187,9 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         matchTaskCommand.setTopK(topK == null ? 5 : topK);
         matchTaskCommand.setCreatedBy(createdBy);
         matchTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
-        TaskViewDTO matchTask = match(matchTaskCommand);
+        TaskViewDTO matchTask = enableMatchProcess
+                ? match(matchTaskCommand)
+                : buildSkippedMatchTask(matchTaskCommand, "subject.match.workflow.enable-match-process=false");
 
         return FullWorkflowResponse.builder()
                 .fileId(uploadResponse.getFileId())
@@ -189,6 +199,21 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 .extractTask(uploadResponse.getExtractTask())
                 .parseTask(parseTask)
                 .matchTask(matchTask)
+                .build();
+    }
+
+    private TaskViewDTO buildSkippedMatchTask(MatchTaskCommand command, String reason) {
+        Map<String, Object> resultData = new LinkedHashMap<>();
+        resultData.put("skipped", true);
+        resultData.put("reason", reason);
+        resultData.put("fileId", command == null ? null : command.getFileId());
+        resultData.put("workbookPath", command == null ? null : command.getWorkbookPath());
+        return TaskViewDTO.builder()
+                .taskType(TaskType.MATCH_SUBJECT.name())
+                .taskStage(TaskStage.MATCH.name())
+                .taskStatus("SKIPPED")
+                .businessKey(buildMatchBusinessKey(command))
+                .resultData(resultData)
                 .build();
     }
 
