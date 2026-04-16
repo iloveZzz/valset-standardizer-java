@@ -13,6 +13,7 @@
     <include file="sql/common/parse-dictionary-cleanup.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/legacy-source.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/indexes.sql" relativeToChangelogFile="true"/>
+    <include file="sql/common/audit-columns-cleanup.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/legacy-cleanup.sql" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

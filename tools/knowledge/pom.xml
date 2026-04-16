@@ -20,6 +20,11 @@
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
+            <artifactId>subject-match-extract</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
             <artifactId>subject-match-infra</artifactId>
             <version>${project.version}</version>
         </dependency>

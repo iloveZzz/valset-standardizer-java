@@ -36,11 +36,13 @@
         <module name="subject-match-boot" />
         <module name="subject-match-knowledge" />
         <module name="subject-match-core" />
-        <module name="yss-component-file-parser" />
         <module name="subject-match-e2e" />
         <module name="subject-match-infra" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="yss-component-file-parser" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

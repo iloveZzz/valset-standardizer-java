@@ -43,11 +43,18 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
     @Override
     public void saveStandardizedExternalValuation(Long valuationId, Long fileId, ParsedValuationData standardizedValuationData) {
         if (standardizedValuationData == null) {
+            log.info("标准化 DWD 明细写入跳过，原因=standardizedValuationData为空，valuationId={}, fileId={}", valuationId, fileId);
             return;
         }
         if (persistStandardizedDwdDetails) {
+            // Step: 仅在开关开启时落地标准化中间明细，便于审计与回放
             saveSubjects(valuationId, fileId, standardizedValuationData.getSubjects());
             saveMetrics(valuationId, fileId, standardizedValuationData.getMetrics());
+            log.info("标准化 DWD 明细写入完成，valuationId={}, fileId={}, subjectCount={}, metricCount={}",
+                    valuationId,
+                    fileId,
+                    standardizedValuationData.getSubjects() == null ? 0 : standardizedValuationData.getSubjects().size(),
+                    standardizedValuationData.getMetrics() == null ? 0 : standardizedValuationData.getMetrics().size());
         } else {
             log.info("标准化 DWD 明细写入已跳过，仅保留标准化结果内存态和 t_tr_* 落地，valuationId={}, fileId={}", valuationId, fileId);
         }

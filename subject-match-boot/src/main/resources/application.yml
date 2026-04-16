@@ -44,6 +44,13 @@ management:
     web:
       exposure:
         include: health,info,metrics
+  tracing:
+    enabled: ${OTEL_TRACING_ENABLED:true}
+    sampling:
+      probability: ${OTEL_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://127.0.0.1:4318/v1/traces}
 
 mybatis-plus:
   mapper-locations: classpath*:/mappers/**/*.xml
@@ -56,10 +63,12 @@ mybatis-plus:
 
 logging:
   level:
-    com.yss.datamiddle.approval: DEBUG
-    org.springframework.jdbc: DEBUG
+    com.yss.datamiddle.approval: INFO
+    org.springframework.jdbc: INFO
+    io.opentelemetry: INFO
+    io.micrometer.tracing: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [traceId=%X{traceId:-},spanId=%X{spanId:-}] %logger{36} - %msg%n"
 
 subject:
   match:

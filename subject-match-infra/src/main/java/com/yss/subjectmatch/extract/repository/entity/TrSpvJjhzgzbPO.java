@@ -144,14 +144,6 @@ public class TrSpvJjhzgzbPO {
     @TableField("data_dt")
     private String dataDt;
 
-    /** 是否审核 */
-    @TableField("is_audt")
-    private Boolean isAudt;
-
-    /** 审核ID */
-    @TableField("audt_id")
-    private String audtId;
-
     /** ISIN代码 */
     @TableField("isin_cd")
     private String isinCd;

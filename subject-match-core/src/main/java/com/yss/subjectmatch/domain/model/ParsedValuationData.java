@@ -26,6 +26,8 @@ public class ParsedValuationData {
     private List<String> headers;
     private List<List<String>> headerDetails;
     private List<HeaderColumnMeta> headerColumns;
+    private List<MappingDecision> headerMappingDecisions;
+    private MappingQualityReport mappingQualityReport;
     private List<SubjectRecord> subjects;
     private List<MetricRecord> metrics;
 }

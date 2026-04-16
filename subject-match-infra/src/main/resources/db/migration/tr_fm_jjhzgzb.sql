@@ -31,8 +31,6 @@ CREATE TABLE t_tr_jjhzgzb (
     source_sign VARCHAR(300) COMMENT '来源标记',
     sn SMALLINT COMMENT '序号',
     data_dt VARCHAR(8) COMMENT '数据日期',
-    is_audt TINYINT COMMENT '是否审核',
-    audt_id VARCHAR(30) COMMENT '审核ID',
     isin_cd VARCHAR(30) COMMENT 'ISIN代码'
 ) COMMENT '基金持仓估值表';
 
@@ -45,9 +43,7 @@ CREATE TABLE t_tr_index (
     indx_valu VARCHAR(300) COMMENT '指标值',
     source_tp VARCHAR(30) COMMENT '来源类型',
     source_sign VARCHAR(300) COMMENT '来源标记',
-    time_stamp DATETIME COMMENT '时间戳',
-    is_audt TINYINT COMMENT '是否审核',
-    audt_id VARCHAR(30) COMMENT '审核ID'
+    time_stamp DATETIME COMMENT '时间戳'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资产估值指标信息（原始数据）';
 
 CREATE INDEX idx_t_tr_jjhzgzb_org ON t_tr_jjhzgzb(org_cd);

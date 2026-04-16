@@ -3,6 +3,8 @@ package com.yss.subjectmatch.extract.support;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.domain.model.SubjectRecord;
 import com.yss.subjectmatch.extract.repository.entity.TrDwdJjhzgzbPO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,8 +21,10 @@ import java.util.Map;
  */
 public final class JjhzgzbStandardizationSupport {
 
+    private static final Logger log = LoggerFactory.getLogger(JjhzgzbStandardizationSupport.class);
     private static final DateTimeFormatter BASIC_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ROOT);
     private static final DateTimeFormatter BASIC_DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+    private static final String DROP_REASON_SUBJECT_EMPTY = "DROP_SUBJECT_EMPTY";
 
     private JjhzgzbStandardizationSupport() {
     }
@@ -30,11 +34,17 @@ public final class JjhzgzbStandardizationSupport {
             return List.of();
         }
         List<TrDwdJjhzgzbPO> result = new ArrayList<>();
+        int droppedSubjectEmpty = 0;
         for (SubjectRecord subject : standardizedValuationData.getSubjects()) {
             TrDwdJjhzgzbPO row = buildRow(subject, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign);
             if (row != null) {
                 result.add(row);
+            } else {
+                droppedSubjectEmpty++;
             }
+        }
+        if (droppedSubjectEmpty > 0) {
+            log.warn("t_tr_jjhzgzb 落地时存在被丢弃科目行，reason={}, droppedCount={}", DROP_REASON_SUBJECT_EMPTY, droppedSubjectEmpty);
         }
         return result;
     }

@@ -9,6 +9,7 @@ import com.yss.subjectmatch.domain.model.MetricRecord;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.domain.model.SubjectRecord;
 import com.yss.subjectmatch.domain.parser.ValuationDataParser;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -32,6 +33,7 @@ import java.util.Map;
 /**
  * CSV 格式估值表数据解析器。
  */
+@Slf4j
 @Component
 public class CsvValuationDataParser implements ValuationDataParser {
 
@@ -54,19 +56,35 @@ public class CsvValuationDataParser implements ValuationDataParser {
     public ParsedValuationData parse(DataSourceConfig config) {
         Path csvPath = Paths.get(config.getSourceUri());
         try {
+            long startedAt = System.currentTimeMillis();
+            log.info("开始解析 CSV 估值文件，sourceUri={}", config.getSourceUri());
             List<List<Object>> rows = readRows(csvPath);
             if (rows.isEmpty()) {
+                log.warn("CSV 估值文件没有可解析行，sourceUri={}", config.getSourceUri());
                 return emptyResult(csvPath);
             }
 
+            // Step 1: 识别表头和数据起始行
             int headerRowIndex = findHeaderRow(rows);
             int dataStartRowIndex = findDataStartRow(rows, headerRowIndex);
+
+            // Step 2: 构建分层表头结构（header/headerDetails/headerColumns）
             List<List<String>> headerBlockRows = extractHeaderBlock(rows, headerRowIndex, dataStartRowIndex);
             HeaderLayout headerLayout = buildHeaderLayout(headerBlockRows);
             List<String> headers = headerLayout.headers();
             Map<String, Integer> headerIndex = buildHeaderIndex(headers);
+
+            // Step 3: 解析标题与基础信息，拆分科目行和指标行
             TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerRowIndex);
             SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex);
+            log.info("CSV 估值文件解析完成，sourceUri={}, headerRow={}, dataStartRow={}, headerCount={}, subjectCount={}, metricCount={}, elapsedMs={}",
+                    config.getSourceUri(),
+                    headerRowIndex + 1,
+                    dataStartRowIndex + 1,
+                    headers.size(),
+                    splitResult.subjects().size(),
+                    splitResult.metrics().size(),
+                    System.currentTimeMillis() - startedAt);
 
             return ParsedValuationData.builder()
                     .workbookPath(csvPath.toAbsolutePath().toString())
@@ -82,6 +100,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
                     .metrics(splitResult.metrics())
                     .build();
         } catch (Exception e) {
+            log.error("CSV 估值文件解析失败，sourceUri={}", config.getSourceUri(), e);
             throw new IllegalStateException("Failed to parse CSV source: " + config.getSourceUri(), e);
         }
     }

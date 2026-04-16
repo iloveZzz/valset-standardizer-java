@@ -27,6 +27,8 @@ import com.yss.subjectmatch.domain.model.TaskInfo;
 import com.yss.subjectmatch.domain.model.TaskStatus;
 import com.yss.subjectmatch.domain.model.TaskStage;
 import com.yss.subjectmatch.domain.model.TaskType;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 /**
  * 外部估值全流程编排服务默认实现。
@@ -54,6 +57,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     private final TaskReuseService taskReuseService;
     private final SubjectMatchFileInfoGateway subjectMatchFileInfoGateway;
     private final SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway;
+    private final Tracer tracer;
     @Value("${subject.match.workflow.enable-match-process:true}")
     private boolean enableMatchProcess;
 
@@ -66,7 +70,8 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                                               ObjectMapper objectMapper,
                                               TaskReuseService taskReuseService,
                                               SubjectMatchFileInfoGateway subjectMatchFileInfoGateway,
-                                              SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway) {
+                                              SubjectMatchFileIngestLogGateway subjectMatchFileIngestLogGateway,
+                                              Tracer tracer) {
         this.uploadedFileStorageService = uploadedFileStorageService;
         this.taskGateway = taskGateway;
         this.taskQueryAppService = taskQueryAppService;
@@ -77,10 +82,17 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         this.taskReuseService = taskReuseService;
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.subjectMatchFileIngestLogGateway = subjectMatchFileIngestLogGateway;
+        this.tracer = tracer;
     }
 
     @Override
     public UploadValuationFileResponse uploadAndExtract(MultipartFile file, String dataSourceType, String createdBy, Boolean forceRebuild) {
+        log.info("全流程-上传与提取开始，fileName={}, dataSourceType={}, createdBy={}, forceRebuild={}",
+                file == null ? null : file.getOriginalFilename(),
+                dataSourceType,
+                createdBy,
+                forceRebuild);
+        // Step 1: 文件入库与指纹登记
         StoredFileDTO storedFile = uploadedFileStorageService.store(file, dataSourceType);
         SubjectMatchFileInfo fileInfo = registerUploadedFile(storedFile, createdBy);
         ExtractDataTaskCommand command = new ExtractDataTaskCommand();
@@ -111,6 +123,10 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 LocalDateTime.now(),
                 null
         );
+        log.info("全流程-上传与提取完成，fileId={}, extractTaskId={}, reusedTask={}",
+                fileInfo.getFileId() == null ? fileId : fileInfo.getFileId(),
+                extractTask.getTaskId(),
+                reusedExistingTask);
         return UploadValuationFileResponse.builder()
                 .fileId(fileInfo.getFileId() == null ? fileId : fileInfo.getFileId())
                 .workbookPath(fileInfo.getStorageUri())
@@ -124,6 +140,10 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
 
     @Override
     public TaskViewDTO analyze(ParseTaskCommand command) {
+        log.info("全流程-解析阶段开始，fileId={}, workbookPath={}, dataSourceType={}",
+                command == null ? null : command.getFileId(),
+                command == null ? null : command.getWorkbookPath(),
+                command == null ? null : command.getDataSourceType());
         TaskViewDTO taskViewDTO = runTask(
                 TaskType.PARSE_WORKBOOK,
                 buildParseBusinessKey(command),
@@ -138,6 +158,10 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 LocalDateTime.now(),
                 null
         );
+        log.info("全流程-解析阶段完成，fileId={}, parseTaskId={}, status={}",
+                command == null ? null : command.getFileId(),
+                taskViewDTO.getTaskId(),
+                taskViewDTO.getTaskStatus());
         return taskViewDTO;
     }
 
@@ -170,37 +194,77 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                                                 Integer topK,
                                                 String createdBy,
                                                 Boolean forceRebuild) {
-        UploadValuationFileResponse uploadResponse = uploadAndExtract(file, dataSourceType, createdBy, forceRebuild);
+        Span rootSpan = tracer.nextSpan().name("workflow.full.execute")
+                .tag("data.source.type", dataSourceType == null ? "EXCEL" : dataSourceType)
+                .start();
+        try (Tracer.SpanInScope ws = tracer.withSpan(rootSpan)) {
+            long startedAt = System.currentTimeMillis();
+            log.info("全流程执行开始，fileName={}, dataSourceType={}, topK={}, createdBy={}, forceRebuild={}",
+                    file == null ? null : file.getOriginalFilename(),
+                    dataSourceType,
+                    topK,
+                    createdBy,
+                    forceRebuild);
 
-        ParseTaskCommand parseTaskCommand = new ParseTaskCommand();
-        parseTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
-        parseTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
-        parseTaskCommand.setFileId(uploadResponse.getFileId());
-        parseTaskCommand.setFileNameOriginal(file.getOriginalFilename());
-        parseTaskCommand.setCreatedBy(createdBy);
-        parseTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
-        TaskViewDTO parseTask = analyze(parseTaskCommand);
+            // Step 1: 上传 + 原始提取
+            UploadValuationFileResponse uploadResponse = traceSpan("workflow.full.extract",
+                    () -> uploadAndExtract(file, dataSourceType, createdBy, forceRebuild));
 
-        MatchTaskCommand matchTaskCommand = new MatchTaskCommand();
-        matchTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
-        matchTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
-        matchTaskCommand.setFileId(uploadResponse.getFileId());
-        matchTaskCommand.setTopK(topK == null ? 5 : topK);
-        matchTaskCommand.setCreatedBy(createdBy);
-        matchTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
-        TaskViewDTO matchTask = enableMatchProcess
-                ? match(matchTaskCommand)
-                : buildSkippedMatchTask(matchTaskCommand, "subject.match.workflow.enable-match-process=false");
+            ParseTaskCommand parseTaskCommand = new ParseTaskCommand();
+            parseTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
+            parseTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
+            parseTaskCommand.setFileId(uploadResponse.getFileId());
+            parseTaskCommand.setFileNameOriginal(file.getOriginalFilename());
+            parseTaskCommand.setCreatedBy(createdBy);
+            parseTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
+            // Step 2: 结构化解析 + 标准化落地
+            TaskViewDTO parseTask = traceSpan("workflow.full.parse", () -> analyze(parseTaskCommand));
 
-        return FullWorkflowResponse.builder()
-                .fileId(uploadResponse.getFileId())
-                .workbookPath(uploadResponse.getWorkbookPath())
-                .dataSourceType(uploadResponse.getDataSourceType())
-                .fileFingerprint(uploadResponse.getFileFingerprint())
-                .extractTask(uploadResponse.getExtractTask())
-                .parseTask(parseTask)
-                .matchTask(matchTask)
-                .build();
+            MatchTaskCommand matchTaskCommand = new MatchTaskCommand();
+            matchTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
+            matchTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
+            matchTaskCommand.setFileId(uploadResponse.getFileId());
+            matchTaskCommand.setTopK(topK == null ? 5 : topK);
+            matchTaskCommand.setCreatedBy(createdBy);
+            matchTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
+            // Step 3: 科目匹配（可配置跳过）
+            TaskViewDTO matchTask = traceSpan("workflow.full.match", () -> enableMatchProcess
+                    ? match(matchTaskCommand)
+                    : buildSkippedMatchTask(matchTaskCommand, "subject.match.workflow.enable-match-process=false"));
+
+            log.info("全流程执行完成，fileId={}, extractTaskId={}, parseTaskId={}, matchTaskId={}, totalMs={}",
+                    uploadResponse.getFileId(),
+                    uploadResponse.getExtractTask() == null ? null : uploadResponse.getExtractTask().getTaskId(),
+                    parseTask == null ? null : parseTask.getTaskId(),
+                    matchTask == null ? null : matchTask.getTaskId(),
+                    System.currentTimeMillis() - startedAt);
+            return FullWorkflowResponse.builder()
+                    .fileId(uploadResponse.getFileId())
+                    .workbookPath(uploadResponse.getWorkbookPath())
+                    .dataSourceType(uploadResponse.getDataSourceType())
+                    .fileFingerprint(uploadResponse.getFileFingerprint())
+                    .extractTask(uploadResponse.getExtractTask())
+                    .parseTask(parseTask)
+                    .matchTask(matchTask)
+                    .build();
+        } catch (Exception exception) {
+            rootSpan.error(exception);
+            throw exception;
+        } finally {
+            rootSpan.end();
+        }
+    }
+
+    private <T> T traceSpan(String spanName, Supplier<T> supplier) {
+        Span span = tracer.nextSpan().name(spanName).start();
+        try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
+            return supplier.get();
+        } catch (RuntimeException exception) {
+            span.error(exception);
+            throw exception;
+        } finally {
+            span.end();
+        }
     }
 
     private TaskViewDTO buildSkippedMatchTask(MatchTaskCommand command, String reason) {
@@ -229,15 +293,20 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             log.info("任务复用成功，taskType={}, businessKey={}, taskId={}", taskType, businessKey, reusableTask.getTaskId());
             return taskQueryAppService.queryTask(reusableTask.getTaskId());
         }
+        long startedAt = System.currentTimeMillis();
         Long taskId = createTask(taskType, businessKey, fileId, command);
         try {
             LocalDateTime taskStartTime = LocalDateTime.now();
             taskGateway.markRunning(taskId, inferTaskStage(taskType).name(), taskStartTime);
             log.info("同步执行任务开始，taskId={}, taskType={}", taskId, taskType);
             taskExecution.execute(taskId);
+            log.info("同步执行任务完成，taskId={}, taskType={}, elapsedMs={}",
+                    taskId, taskType, System.currentTimeMillis() - startedAt);
             return taskQueryAppService.queryTask(taskId);
         } catch (Exception exception) {
             taskGateway.markFailed(taskId, exception.getMessage());
+            log.error("同步执行任务失败，taskId={}, taskType={}, elapsedMs={}",
+                    taskId, taskType, System.currentTimeMillis() - startedAt, exception);
             throw new IllegalStateException("执行任务失败，taskType=" + taskType + ", taskId=" + taskId, exception);
         }
     }
