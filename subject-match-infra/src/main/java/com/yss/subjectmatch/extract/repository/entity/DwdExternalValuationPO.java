@@ -15,7 +15,7 @@ import javax.persistence.Id;
  * DWD 外部估值主表。
  */
 @Data
-@TableName("t_dwd_external_valuation")
+@TableName("t_stg_external_valuation")
 public class DwdExternalValuationPO {
 
     @Id

@@ -16,12 +16,17 @@ public final class SubjectHierarchySupport {
      * 将科目代码拆分为层次结构段。
      */
     public static List<String> splitSubjectCode(String subjectCode) {
-        String code = ExcelParsingSupport.normalizeText(subjectCode);
+        String code = ExcelParsingSupport.normalizeText(subjectCode)
+                .replace('．', '.')
+                .replace('。', '.')
+                .replace('　', ' ')
+                .replace('\u00A0', ' ')
+                .trim();
         if (code.isEmpty()) {
             return List.of();
         }
-        if (code.contains(".")) {
-            String[] segments = code.split("\\.");
+        if (code.contains(".") || code.contains(" ")) {
+            String[] segments = code.split("[\\.\\s]+");
             List<String> result = new ArrayList<>(segments.length);
             for (String segment : segments) {
                 if (!segment.isBlank()) {
@@ -30,12 +35,13 @@ public final class SubjectHierarchySupport {
             }
             return result;
         }
-        if (code.length() <= 4) {
-            return List.of(code);
+        String compact = code.replaceAll("[\\s\\.\\p{Punct}]+", "");
+        if (compact.length() <= 4) {
+            return List.of(compact);
         }
         List<String> segments = new ArrayList<>();
-        segments.add(code.substring(0, 4));
-        String remainder = code.substring(4);
+        segments.add(compact.substring(0, 4));
+        String remainder = compact.substring(4);
         while (!remainder.isEmpty()) {
             if (remainder.length() <= 2) {
                 segments.add(remainder);
@@ -53,13 +59,6 @@ public final class SubjectHierarchySupport {
     public static List<String> buildSubjectPathCodes(String subjectCode, List<String> segments) {
         if (segments == null || segments.isEmpty()) {
             return List.of();
-        }
-        if (subjectCode != null && subjectCode.contains(".")) {
-            List<String> pathCodes = new ArrayList<>(segments.size());
-            for (int index = 1; index <= segments.size(); index++) {
-                pathCodes.add(String.join(".", segments.subList(0, index)));
-            }
-            return pathCodes;
         }
         List<String> pathCodes = new ArrayList<>(segments.size());
         StringBuilder current = new StringBuilder();

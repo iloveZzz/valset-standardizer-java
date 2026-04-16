@@ -21,7 +21,7 @@ class LiquibaseChangelogSmokeTest {
                     .map(changeSet -> changeSet.getFilePath())
                     .collect(Collectors.toSet());
 
-            assertThat(liquibase.getDatabaseChangeLog().getChangeSets()).hasSize(18);
+            assertThat(liquibase.getDatabaseChangeLog().getChangeSets()).hasSize(27);
             assertThat(changeSetPaths).contains(
                     "db/changelog/sql/common/core.sql",
                     "db/changelog/sql/common/ods.sql",

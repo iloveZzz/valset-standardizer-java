@@ -11,11 +11,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 基金持仓估值表（tr_fm_jjhzgzb）。
+ * 基金持仓估值表（t_tr_jjhzgzb）。
  */
 @Data
-@TableName("tr_fm_jjhzgzb")
-public class TrFmJjhzgzbPO {
+@TableName("t_tr_jjhzgzb")
+public class TrDwdJjhzgzbPO {
     @Id
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     private Long id;

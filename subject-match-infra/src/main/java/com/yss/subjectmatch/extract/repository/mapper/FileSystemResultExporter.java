@@ -50,7 +50,6 @@ public class FileSystemResultExporter implements ResultExporter {
         List<SubjectTreeNode> subjectTree = ParsedValuationDataProjectionSupport.buildSubjectTree(parsedValuationData.getSubjects());
         WorkbookSummary summary = ParsedValuationDataProjectionSupport.buildSummary(parsedValuationData);
 
-        writeJson(taskDirectory.resolve("parsed_workbook.json"), parsedValuationData);
         writeJson(taskDirectory.resolve("parsed.json"), buildParsedPayload(parsedValuationData, subjectRelations, subjectTree));
         writeCsv(taskDirectory.resolve("subjects.csv"), buildSubjectRows(parsedValuationData.getSubjects()));
         writeCsv(taskDirectory.resolve("subject_relations.csv"), buildSubjectRelationRows(subjectRelations));

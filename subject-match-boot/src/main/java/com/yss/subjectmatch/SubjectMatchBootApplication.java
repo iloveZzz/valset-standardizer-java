@@ -1,6 +1,5 @@
 package com.yss.subjectmatch;
 
-import com.yss.cloud.EnableDistributedId;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
@@ -13,7 +12,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @EnableAsync
 @EnableDiscoveryClient
 @EnableAspectJAutoProxy
-@EnableDistributedId
 @SpringBootApplication(scanBasePackages = {"com.yss"})
 public class SubjectMatchBootApplication {
     /**

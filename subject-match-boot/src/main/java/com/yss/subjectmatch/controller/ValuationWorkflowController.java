@@ -8,6 +8,7 @@ import com.yss.subjectmatch.application.dto.MatchResultViewDTO;
 import com.yss.subjectmatch.application.dto.RawValuationDataViewDTO;
 import com.yss.subjectmatch.application.dto.TaskViewDTO;
 import com.yss.subjectmatch.application.dto.UploadValuationFileResponse;
+import com.yss.subjectmatch.application.dto.StgExternalValuationViewDTO;
 import com.yss.subjectmatch.application.service.ValuationWorkflowAppService;
 import com.yss.subjectmatch.application.service.ValuationWorkflowQueryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -100,6 +101,15 @@ public class ValuationWorkflowController {
     public RawValuationDataViewDTO queryRawData(@PathVariable Long fileId,
                                                 @RequestParam(value = "limit", required = false) Integer limit) {
         return valuationWorkflowQueryService.queryRawData(fileId, limit);
+    }
+
+    /**
+     * 查询 STG 外部估值解析快照。
+     */
+    @GetMapping("/{fileId}/stg-data")
+    @Operation(summary = "查询 STG 外部估值解析快照", description = "按 fileId 聚合查询 STG 外部估值主表、基础信息、表头、明细和指标数据。")
+    public StgExternalValuationViewDTO queryStgData(@PathVariable Long fileId) {
+        return valuationWorkflowQueryService.queryStgData(fileId);
     }
 
     /**

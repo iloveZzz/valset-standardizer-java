@@ -42,7 +42,7 @@ class LiquibaseContainerMigrationTest {
                 MYSQL.getJdbcUrl(),
                 MYSQL.getUsername(),
                 MYSQL.getPassword(),
-                "select count(*) from information_schema.tables where table_schema = database() and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_dwd_external_valuation','t_ods_standard_subject')",
+                "select count(*) from information_schema.tables where table_schema = database() and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_stg_external_valuation','t_dwd_external_valuation_subject','t_dwd_external_valuation_metric','t_ods_standard_subject')",
                 "select count(*) from information_schema.statistics where table_schema = database() and table_name = 't_subject_match_file_info' and index_name = 'uk_subject_match_file_fingerprint'"
         );
     }
@@ -53,7 +53,7 @@ class LiquibaseContainerMigrationTest {
                 POSTGRES.getJdbcUrl(),
                 POSTGRES.getUsername(),
                 POSTGRES.getPassword(),
-                "select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_dwd_external_valuation','t_ods_standard_subject')",
+                "select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_stg_external_valuation','t_dwd_external_valuation_subject','t_dwd_external_valuation_metric','t_ods_standard_subject')",
                 "select count(*) from pg_indexes where schemaname = 'public' and tablename = 't_subject_match_file_info' and indexname = 'uk_subject_match_file_fingerprint'"
         );
     }

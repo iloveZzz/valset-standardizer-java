@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 已解析的工作簿主题行。
@@ -26,4 +27,12 @@ public class SubjectRecord {
     private List<String> pathCodes;
     private Boolean leaf;
     private List<Object> rawValues;
+    private String standardCode;
+    private String standardName;
+    private Map<String, Object> standardValues;
+    private Long mappingRuleId;
+    private Long mappingSourceId;
+    private String mappingStatus;
+    private String mappingReason;
+    private Double mappingConfidence;
 }

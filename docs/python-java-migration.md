@@ -44,7 +44,6 @@
     - 已支持名称/路径/关键词/编码/历史分数组合评分
     - 已支持层级覆写规则和置信度分层
 - `FileSystemResultExporter`
-    - 已支持 `parsed_workbook.json`
     - 已支持 `subjects.csv / subject_relations.csv / metrics.csv`
     - 已支持 `subject_tree.json / summary.json / parsed.json`
     - 已支持 `parsed.duckdb`

@@ -30,6 +30,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private static final String DEFAULT_SHEET_NAME = "ODS_RAW_DATA";
     private static final List<String> REQUIRED_HEADERS = List.of("科目代码", "科目名称");
+    private static final List<String> FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
 
     private final ValuationFileDataMapper valuationFileDataMapper;
     private final ObjectMapper objectMapper;
@@ -69,14 +70,13 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
         int headerRowIndex = findHeaderRow(rows);
         int dataStartRowIndex = findDataStartRow(rows, headerRowIndex);
-        int headerBlockStartIndex = findHeaderBlockStart(rows, headerRowIndex);
-        List<List<String>> headerBlockRows = extractHeaderBlock(rows, headerBlockStartIndex, dataStartRowIndex);
+        List<List<String>> headerBlockRows = extractHeaderBlock(rows, headerRowIndex, dataStartRowIndex);
         HeaderLayout headerLayout = buildHeaderLayout(headerBlockRows);
         List<String> headers = headerLayout.headers();
         Map<String, Integer> headerIndex = buildHeaderIndex(headers);
         List<List<String>> headerDetails = headerLayout.headerDetails();
         List<HeaderColumnMeta> headerColumns = headerLayout.headerColumns();
-        TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerBlockStartIndex);
+        TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerRowIndex);
         SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex);
 
         log.info("基于原始数据表的估值分析完成，fileId={}, headerRow={}, dataStartRow={}, subjectCount={}, metricCount={}",
@@ -89,7 +89,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         return ParsedValuationData.builder()
                 .workbookPath(config.getSourceUri())
                 .sheetName(DEFAULT_SHEET_NAME)
-                .headerRowNumber(headerBlockStartIndex + 1)
+                .headerRowNumber(headerRowIndex + 1)
                 .dataStartRowNumber(dataStartRowIndex + 1)
                 .title(titleAndInfo.title())
                 .basicInfo(titleAndInfo.basicInfo())
@@ -132,10 +132,21 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private int findDataStartRow(List<List<Object>> rows, int headerRowIndex) {
+        int firstMetricCandidate = -1;
         for (int rowIndex = headerRowIndex + 1; rowIndex < rows.size(); rowIndex++) {
-            if (isSubjectDataRow(rows.get(rowIndex))) {
+            List<Object> rowValues = rows.get(rowIndex);
+            if (isFooterRow(rowValues)) {
+                break;
+            }
+            if (ExcelParsingSupport.isSubjectDataRow(rowValues)) {
                 return rowIndex;
             }
+            if (firstMetricCandidate < 0 && isMetricCandidate(rowValues)) {
+                firstMetricCandidate = rowIndex;
+            }
+        }
+        if (firstMetricCandidate >= 0) {
+            return firstMetricCandidate;
         }
         throw new IllegalArgumentException("在表头下方未找到科目数据。");
     }
@@ -151,21 +162,9 @@ public class OdsValuationDataParser implements ValuationDataParser {
         return headerIndex;
     }
 
-    private int findHeaderBlockStart(List<List<Object>> rows, int headerRowIndex) {
-        int blockStart = headerRowIndex;
-        while (blockStart > 0) {
-            List<String> previousRow = toRowTexts(rows.get(blockStart - 1));
-            if (isBlankRow(previousRow) || isBasicInfoRow(previousRow)) {
-                break;
-            }
-            blockStart--;
-        }
-        return blockStart;
-    }
-
-    private List<List<String>> extractHeaderBlock(List<List<Object>> rows, int headerBlockStartIndex, int dataStartRowIndex) {
+    private List<List<String>> extractHeaderBlock(List<List<Object>> rows, int headerRowIndex, int dataStartRowIndex) {
         List<List<String>> headerBlockRows = new ArrayList<>();
-        for (int rowIndex = headerBlockStartIndex; rowIndex < dataStartRowIndex; rowIndex++) {
+        for (int rowIndex = headerRowIndex; rowIndex < dataStartRowIndex; rowIndex++) {
             List<String> rowTexts = toRowTexts(rows.get(rowIndex));
             if (isBlankRow(rowTexts)) {
                 continue;
@@ -226,20 +225,6 @@ public class OdsValuationDataParser implements ValuationDataParser {
         return rowTexts == null || rowTexts.stream().allMatch(String::isBlank);
     }
 
-    private boolean isBasicInfoRow(List<String> rowTexts) {
-        if (rowTexts == null || rowTexts.isEmpty()) {
-            return false;
-        }
-        long nonBlankCount = rowTexts.stream().filter(text -> text != null && !text.isBlank()).count();
-        if (nonBlankCount == 0) {
-            return false;
-        }
-        boolean containsKeyValueText = rowTexts.stream()
-                .filter(text -> text != null && !text.isBlank())
-                .anyMatch(text -> text.contains("：") || text.contains(":"));
-        return containsKeyValueText && nonBlankCount <= 3;
-    }
-
     private TitleAndInfo extractTitleAndBasicInfo(List<List<Object>> rows, int headerRowIndex) {
         Map<String, String> basicInfo = new LinkedHashMap<>();
         List<String> titleCandidates = new ArrayList<>();
@@ -252,16 +237,20 @@ public class OdsValuationDataParser implements ValuationDataParser {
             if (nonEmptyTexts.size() == 1 && !nonEmptyTexts.get(0).contains("：") && !nonEmptyTexts.get(0).contains(":")) {
                 titleCandidates.add(nonEmptyTexts.get(0));
             }
-            for (String text : nonEmptyTexts) {
+            for (int cellIndex = 0; cellIndex < rowTexts.size(); cellIndex++) {
+                String text = rowTexts.get(cellIndex);
                 String delimiter = text.contains("：") ? "：" : (text.contains(":") ? ":" : null);
                 if (delimiter == null) {
                     continue;
                 }
                 String[] parts = text.split(delimiter, 2);
-                String key = parts[0].trim();
+                String key = stripTrailingPunctuation(parts[0]);
                 String value = parts.length > 1 ? parts[1].trim() : "";
+                if (value.isBlank()) {
+                    value = findNextMeaningfulText(rowTexts, cellIndex + 1);
+                }
                 if (!key.isBlank()) {
-                    basicInfo.put(key, value);
+                    basicInfo.put(key, stripTrailingPunctuation(value));
                 }
             }
         }
@@ -287,7 +276,10 @@ public class OdsValuationDataParser implements ValuationDataParser {
             if (isBlankRow(toRowTexts(rowValues))) {
                 continue;
             }
-            if (isSubjectDataRow(rowValues)) {
+            if (isFooterRow(rowValues)) {
+                break;
+            }
+            if (ExcelParsingSupport.isSubjectDataRow(rowValues)) {
                 subjects.add(extractSubjectRecord(rowIndex, rowValues, headers, headerIndex));
                 continue;
             }
@@ -299,45 +291,17 @@ public class OdsValuationDataParser implements ValuationDataParser {
         return new SplitResult(subjects, metrics);
     }
 
-    private boolean isSubjectDataRow(List<Object> rowValues) {
-        if (rowValues == null || rowValues.isEmpty()) {
-            return false;
-        }
-        int subjectCodeScanLimit = Math.min(rowValues.size(), 5);
-        for (int columnIndex = 0; columnIndex < subjectCodeScanLimit; columnIndex++) {
-            String candidateCode = ExcelParsingSupport.textAt(rowValues, columnIndex);
-            if (!ExcelParsingSupport.isSubjectCode(candidateCode)) {
-                continue;
-            }
-            if (hasSubjectNameAfterCode(rowValues, columnIndex)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasSubjectNameAfterCode(List<Object> rowValues, int codeColumnIndex) {
-        int scanEndIndex = Math.min(rowValues.size(), codeColumnIndex + 4);
-        for (int columnIndex = codeColumnIndex + 1; columnIndex < scanEndIndex; columnIndex++) {
-            String candidateText = ExcelParsingSupport.textAt(rowValues, columnIndex);
-            if (candidateText.isBlank() || "-".equals(candidateText)) {
-                continue;
-            }
-            return true;
-        }
-        return false;
-    }
-
     private SubjectRecord extractSubjectRecord(
             int rowIndex,
             List<Object> rowValues,
             List<String> headers,
             Map<String, Integer> headerIndex
     ) {
-        String subjectCode = getText(rowValues, headers, headerIndex, "科目代码");
+        String rawSubjectCode = getText(rowValues, headers, headerIndex, "科目代码");
+        String subjectCode = ExcelParsingSupport.normalizeSubjectCode(rawSubjectCode);
         String subjectName = getText(rowValues, headers, headerIndex, "科目名称");
-        List<String> segments = SubjectHierarchySupport.splitSubjectCode(subjectCode);
-        List<String> pathCodes = SubjectHierarchySupport.buildSubjectPathCodes(subjectCode, segments);
+        List<String> segments = SubjectHierarchySupport.splitSubjectCode(rawSubjectCode);
+        List<String> pathCodes = SubjectHierarchySupport.buildSubjectPathCodes(rawSubjectCode, segments);
         return SubjectRecord.builder()
                 .sheetName(DEFAULT_SHEET_NAME)
                 .rowDataNumber(rowIndex + 1)
@@ -359,9 +323,10 @@ public class OdsValuationDataParser implements ValuationDataParser {
             List<String> headers,
             Map<String, Integer> headerIndex
     ) {
-        String metricName = ExcelParsingSupport.textAt(rowValues, 0);
+        String metricName = normalizeMetricLabel(rowValues);
         if (ExcelParsingSupport.isMetricDataRow(rowValues)) {
-            Object rawValue = ExcelParsingSupport.valueAt(rowValues, 1);
+            int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
+            Object rawValue = findFirstValueAfterLabel(rowValues, labelIndex);
             return MetricRecord.builder()
                     .sheetName(DEFAULT_SHEET_NAME)
                     .rowDataNumber(rowIndex + 1)
@@ -411,6 +376,14 @@ public class OdsValuationDataParser implements ValuationDataParser {
         return columnIndex == null ? "" : ExcelParsingSupport.textAt(rowValues, columnIndex);
     }
 
+    private String normalizeMetricLabel(List<Object> rowValues) {
+        int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
+        if (labelIndex < 0) {
+            return "";
+        }
+        return stripTrailingPunctuation(ExcelParsingSupport.textAt(rowValues, labelIndex));
+    }
+
     private BigDecimal getNumber(List<Object> rowValues, List<String> headers, Map<String, Integer> headerIndex, String headerName, String... excludedTokens) {
         Integer columnIndex = resolveHeaderIndex(headers, headerIndex, headerName, excludedTokens);
         return columnIndex == null ? null : ExcelParsingSupport.normalizeNumber(ExcelParsingSupport.valueAt(rowValues, columnIndex));
@@ -446,6 +419,62 @@ public class OdsValuationDataParser implements ValuationDataParser {
         return header.startsWith(headerName + "|")
                 || header.endsWith("|" + headerName)
                 || header.contains("|" + headerName + "|");
+    }
+
+    private boolean isMetricCandidate(List<Object> rowValues) {
+        return (ExcelParsingSupport.isMetricDataRow(rowValues) || ExcelParsingSupport.isMetricRow(rowValues))
+                && !isFooterRow(rowValues);
+    }
+
+    private boolean isFooterRow(List<Object> rowValues) {
+        int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
+        if (labelIndex < 0) {
+            return false;
+        }
+        String labelText = ExcelParsingSupport.textAt(rowValues, labelIndex);
+        for (String keyword : FOOTER_KEYWORDS) {
+            if (labelText.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String findNextMeaningfulText(List<String> rowTexts, int startIndex) {
+        if (rowTexts == null || startIndex < 0 || startIndex >= rowTexts.size()) {
+            return "";
+        }
+        for (int index = startIndex; index < rowTexts.size(); index++) {
+            String text = rowTexts.get(index);
+            if (text != null && !text.isBlank()) {
+                return text;
+            }
+        }
+        return "";
+    }
+
+    private String stripTrailingPunctuation(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim()
+                .replaceAll("[：:]+$", "")
+                .trim();
+    }
+
+    private Object findFirstValueAfterLabel(List<Object> rowValues, int labelIndex) {
+        if (rowValues == null || rowValues.isEmpty() || labelIndex < 0) {
+            return "";
+        }
+        for (int index = labelIndex + 1; index < rowValues.size(); index++) {
+            Object value = ExcelParsingSupport.valueAt(rowValues, index);
+            String text = ExcelParsingSupport.textAt(rowValues, index);
+            if (text.isBlank() || "-".equals(text)) {
+                continue;
+            }
+            return value;
+        }
+        return "";
     }
 
     private boolean containsAnySegment(String header, String... excludedTokens) {

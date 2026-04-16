@@ -9,6 +9,7 @@ import com.yss.subjectmatch.domain.exporter.ResultExporter;
 import com.yss.subjectmatch.domain.gateway.MatchResultGateway;
 import com.yss.subjectmatch.domain.gateway.TaskGateway;
 import com.yss.subjectmatch.domain.gateway.StandardSubjectGateway;
+import com.yss.subjectmatch.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.subjectmatch.domain.matcher.SubjectMatcher;
 
 import com.yss.subjectmatch.domain.model.DataSourceType;
@@ -40,6 +41,7 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
     private final StandardSubjectGateway standardSubjectGateway;
     private final MappingHintGateway mappingHintGateway;
     private final SubjectMatcher subjectMatcher;
+    private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
     private final DwdExternalValuationGateway dwdExternalValuationGateway;
     private final MatchResultGateway matchResultGateway;
     private final ObjectMapper objectMapper;
@@ -98,12 +100,17 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
         }
 
         if ((type == DataSourceType.EXCEL || type == DataSourceType.CSV) && command.getFileId() != null) {
+            ParsedValuationData standardizedSnapshot = standardizedExternalValuationGateway.findLatestByFileId(command.getFileId());
+            if (standardizedSnapshot != null) {
+                log.info("匹配任务优先使用标准化落地数据，fileId={}", command.getFileId());
+                return standardizedSnapshot;
+            }
             ParsedValuationData dwdSnapshot = dwdExternalValuationGateway.findLatestByFileId(command.getFileId());
             if (dwdSnapshot != null) {
-                log.info("匹配任务优先使用 DWD 外部估值标准数据，fileId={}", command.getFileId());
+                log.info("匹配任务未找到标准化落地数据，回退使用 DWD 外部估值标准数据，fileId={}", command.getFileId());
                 return dwdSnapshot;
             }
-            log.warn("匹配任务未找到 DWD 外部估值标准数据，回退到解析器分析，fileId={}", command.getFileId());
+            log.warn("匹配任务未找到标准化落地数据，回退到解析器分析，fileId={}", command.getFileId());
         }
 
         DataSourceConfig config = buildAnalysisConfig(type, command.getWorkbookPath(), command.getFileId());

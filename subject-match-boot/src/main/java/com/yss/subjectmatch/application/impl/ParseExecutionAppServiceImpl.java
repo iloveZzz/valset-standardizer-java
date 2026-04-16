@@ -3,9 +3,11 @@ package com.yss.subjectmatch.application.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.application.command.ParseTaskCommand;
 import com.yss.subjectmatch.application.port.ParseExecutionUseCase;
-import com.yss.subjectmatch.domain.gateway.DwdExternalValuationGateway;
 import com.yss.subjectmatch.domain.exporter.ResultExporter;
-import com.yss.subjectmatch.domain.gateway.ParsedValuationDataGateway;
+import com.yss.subjectmatch.domain.gateway.DwdExternalValuationGateway;
+import com.yss.subjectmatch.domain.gateway.DwdJjhzgzbGateway;
+import com.yss.subjectmatch.domain.gateway.TrIndexGateway;
+import com.yss.subjectmatch.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.subjectmatch.domain.gateway.TaskGateway;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
 import com.yss.subjectmatch.domain.model.TaskInfo;
@@ -13,10 +15,12 @@ import com.yss.subjectmatch.domain.parser.ValuationDataParser;
 import com.yss.subjectmatch.domain.parser.ValuationDataParserProvider;
 import com.yss.subjectmatch.domain.model.DataSourceConfig;
 import com.yss.subjectmatch.domain.model.DataSourceType;
+import com.yss.subjectmatch.extract.standardization.ExternalValuationStandardizationService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,8 +37,11 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
 
     private final TaskGateway taskGateway;
     private final ValuationDataParserProvider parserProvider;
-    private final ParsedValuationDataGateway parsedValuationDataGateway;
     private final DwdExternalValuationGateway dwdExternalValuationGateway;
+    private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
+    private final DwdJjhzgzbGateway dwdJjhzgzbGateway;
+    private final TrIndexGateway trIndexGateway;
+    private final ExternalValuationStandardizationService standardizationService;
     private final ResultExporter resultExporter;
     private final ObjectMapper objectMapper;
     private final String outputRoot;
@@ -42,16 +49,22 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     public ParseExecutionAppServiceImpl(
             TaskGateway taskGateway,
             ValuationDataParserProvider parserProvider,
-            ParsedValuationDataGateway parsedValuationDataGateway,
             DwdExternalValuationGateway dwdExternalValuationGateway,
+            StandardizedExternalValuationGateway standardizedExternalValuationGateway,
+            DwdJjhzgzbGateway dwdJjhzgzbGateway,
+            TrIndexGateway trIndexGateway,
+            ExternalValuationStandardizationService standardizationService,
             ResultExporter resultExporter,
             ObjectMapper objectMapper,
             @Value("${subject.match.output-dir:output}") String outputRoot
     ) {
         this.taskGateway = taskGateway;
         this.parserProvider = parserProvider;
-        this.parsedValuationDataGateway = parsedValuationDataGateway;
         this.dwdExternalValuationGateway = dwdExternalValuationGateway;
+        this.standardizedExternalValuationGateway = standardizedExternalValuationGateway;
+        this.dwdJjhzgzbGateway = dwdJjhzgzbGateway;
+        this.trIndexGateway = trIndexGateway;
+        this.standardizationService = standardizationService;
         this.resultExporter = resultExporter;
         this.objectMapper = objectMapper;
         this.outputRoot = outputRoot;
@@ -61,6 +74,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
      * 执行任务 ID 的解析工作流程。
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void execute(Long taskId) {
         try {
             log.info("开始执行估值数据解析任务，taskId={}", taskId);
@@ -85,8 +99,11 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
 
             long standardizeStartMs = System.currentTimeMillis();
             ParsedValuationData parsedValuationData = parser.parse(config);
-            parsedValuationDataGateway.saveParsedValuationData(taskId, taskInfo.getFileId(), parsedValuationData);
             dwdExternalValuationGateway.saveDwdExternalValuation(taskId, taskInfo.getFileId(), parsedValuationData);
+            ParsedValuationData standardizedValuationData = standardizationService.standardize(parsedValuationData);
+            standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, taskInfo.getFileId(), standardizedValuationData);
+            dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, taskInfo.getFileId(), type.name(), standardizedValuationData);
+            trIndexGateway.saveStandardizedIndex(taskId, taskInfo.getFileId(), type.name(), standardizedValuationData);
             long standardizeDurationMs = System.currentTimeMillis() - standardizeStartMs;
 
             resultExporter.exportParsedValuationData(taskId, parsedValuationData);
@@ -127,7 +144,6 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             payload.put("metricCount", parsedValuationData.getMetrics() == null ? 0 : parsedValuationData.getMetrics().size());
             payload.put("outputDir", resolveTaskOutputDirectory(taskId).toString());
             payload.put("artifacts", List.of(
-                    "parsed_workbook.json",
                     "parsed.json",
                     "subjects.csv",
                     "subject_relations.csv",

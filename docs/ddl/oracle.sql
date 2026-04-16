@@ -52,23 +52,6 @@ CREATE TABLE t_subject_match_schedule (
     next_trigger_time TIMESTAMP
 );
 
-CREATE TABLE t_subject_match_parsed_workbook (
-    id NUMBER(19) PRIMARY KEY,
-    task_id NUMBER(19),
-    file_id NUMBER(19),
-    workbook_path VARCHAR2(512 CHAR),
-    sheet_name VARCHAR2(128 CHAR),
-    header_row_number NUMBER(10),
-    data_start_row_number NUMBER(10),
-    title VARCHAR2(512 CHAR),
-    basic_info_json CLOB,
-    headers_json CLOB,
-    header_details_json CLOB,
-    header_columns_json CLOB,
-    subjects_json CLOB,
-    metrics_json CLOB
-);
-
 CREATE TABLE t_subject_match_result (
     id NUMBER(19) PRIMARY KEY,
     task_id NUMBER(19) NOT NULL,
@@ -236,7 +219,6 @@ CREATE UNIQUE INDEX uk_ods_sheet_style_file_sheet_scope
     ON t_ods_valuation_sheet_style(file_id, sheet_name, style_scope);
 CREATE INDEX idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
 
-CREATE INDEX idx_pwb_file_id ON t_subject_match_parsed_workbook(file_id);
 CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 
 CREATE INDEX idx_dwd_val_file_id ON t_dwd_external_valuation(file_id);
@@ -259,7 +241,7 @@ CREATE INDEX idx_subject_match_ingest_file_id
 CREATE INDEX idx_subject_match_ingest_channel_msg
     ON t_subject_match_file_ingest_log(source_channel, channel_message_id);
 
-CREATE TABLE tr_fm_jjhzgzb (
+CREATE TABLE t_tr_jjhzgzb (
     id NUMBER(19) PRIMARY KEY,
     org_cd VARCHAR2(30 CHAR),
     pd_cd VARCHAR2(30 CHAR),
@@ -296,13 +278,27 @@ CREATE TABLE tr_fm_jjhzgzb (
     audt_id VARCHAR2(30 CHAR),
     isin_cd VARCHAR2(30 CHAR)
 );
+COMMENT ON TABLE t_tr_jjhzgzb IS '基金持仓估值表';
+CREATE TABLE t_tr_index (
+    id NUMBER(19) PRIMARY KEY,
+    org_cd VARCHAR2(30 CHAR),
+    pd_cd VARCHAR2(60 CHAR),
+    biz_date VARCHAR2(8 CHAR),
+    indx_nm VARCHAR2(300 CHAR),
+    indx_valu VARCHAR2(300 CHAR),
+    source_tp VARCHAR2(30 CHAR),
+    source_sign VARCHAR2(300 CHAR),
+    time_stamp TIMESTAMP,
+    is_audt NUMBER(1),
+    audt_id VARCHAR2(30 CHAR)
+);
 
-
-COMMENT ON TABLE tr_fm_jjhzgzb IS '基金持仓估值表';
-CREATE INDEX idx_tr_fm_jjhzgzb_org ON tr_fm_jjhzgzb(org_cd);
-CREATE INDEX idx_tr_fm_jjhzgzb_subject ON tr_fm_jjhzgzb(subject_cd);
-CREATE INDEX idx_tr_fm_jjhzgzb_biz_date ON tr_fm_jjhzgzb(biz_date);
-CREATE INDEX idx_tr_fm_jjhzgzb_pd ON tr_fm_jjhzgzb(pd_cd);
+COMMENT ON TABLE t_tr_index IS '资产估值指标信息（原始数据）';
+CREATE INDEX idx_t_tr_jjhzgzb_org ON t_tr_jjhzgzb(org_cd);
+CREATE INDEX idx_t_tr_jjhzgzb_subject ON t_tr_jjhzgzb(subject_cd);
+CREATE INDEX idx_t_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
+CREATE INDEX idx_t_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
+CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
 
 CREATE TABLE tr_spv_jjhzgzb (
     id NUMBER(19) PRIMARY KEY,

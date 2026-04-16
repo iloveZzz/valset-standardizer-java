@@ -52,23 +52,6 @@ CREATE TABLE t_subject_match_schedule (
     next_trigger_time DATETIME
 );
 
-CREATE TABLE t_subject_match_parsed_workbook (
-    id BIGINT PRIMARY KEY,
-    task_id BIGINT,
-    file_id BIGINT,
-    workbook_path VARCHAR(512),
-    sheet_name VARCHAR(128),
-    header_row_number INT,
-    data_start_row_number INT,
-    title VARCHAR(512),
-    basic_info_json TEXT,
-    headers_json TEXT,
-    header_details_json TEXT,
-    header_columns_json TEXT,
-    subjects_json TEXT,
-    metrics_json TEXT
-);
-
 CREATE TABLE t_subject_match_result (
     id BIGINT PRIMARY KEY,
     task_id BIGINT NOT NULL,
@@ -236,7 +219,6 @@ CREATE UNIQUE INDEX uk_ods_sheet_style_file_sheet_scope
     ON t_ods_valuation_sheet_style(file_id, sheet_name, style_scope);
 CREATE INDEX idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
 
-CREATE INDEX idx_pwb_file_id ON t_subject_match_parsed_workbook(file_id);
 CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 
 CREATE INDEX idx_dwd_val_file_id ON t_dwd_external_valuation(file_id);
@@ -263,7 +245,7 @@ CREATE INDEX idx_ods_mapping_sample_org ON t_ods_mapping_sample(org_name);
 CREATE INDEX idx_ods_mapping_sample_ext_code ON t_ods_mapping_sample(external_code);
 CREATE INDEX idx_ods_mapping_sample_std_code ON t_ods_mapping_sample(standard_code);
 
-CREATE TABLE tr_fm_jjhzgzb (
+CREATE TABLE t_tr_jjhzgzb (
     id BIGINT PRIMARY KEY,
     org_cd VARCHAR(30),
     pd_cd VARCHAR(30),
@@ -301,10 +283,25 @@ CREATE TABLE tr_fm_jjhzgzb (
     isin_cd VARCHAR(30) COMMENT 'ISIN代码'
 ) COMMENT='基金持仓估值表';
 
-CREATE INDEX idx_tr_fm_jjhzgzb_org ON tr_fm_jjhzgzb(org_cd);
-CREATE INDEX idx_tr_fm_jjhzgzb_subject ON tr_fm_jjhzgzb(subject_cd);
-CREATE INDEX idx_tr_fm_jjhzgzb_biz_date ON tr_fm_jjhzgzb(biz_date);
-CREATE INDEX idx_tr_fm_jjhzgzb_pd ON tr_fm_jjhzgzb(pd_cd);
+CREATE TABLE t_tr_index (
+    id BIGINT PRIMARY KEY,
+    org_cd VARCHAR(30),
+    pd_cd VARCHAR(60),
+    biz_date VARCHAR(8),
+    indx_nm VARCHAR(300),
+    indx_valu VARCHAR(300),
+    source_tp VARCHAR(30),
+    source_sign VARCHAR(300),
+    time_stamp DATETIME,
+    is_audt TINYINT COMMENT '是否审核',
+    audt_id VARCHAR(30) COMMENT '审核ID'
+) COMMENT='资产估值指标信息（原始数据）';
+
+CREATE INDEX idx_t_tr_jjhzgzb_org ON t_tr_jjhzgzb(org_cd);
+CREATE INDEX idx_t_tr_jjhzgzb_subject ON t_tr_jjhzgzb(subject_cd);
+CREATE INDEX idx_t_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
+CREATE INDEX idx_t_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
+CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
 
 CREATE TABLE tr_spv_jjhzgzb (
     id BIGINT PRIMARY KEY,

@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 public final class ExcelParsingSupport {
 
     public static final List<String> REQUIRED_HEADERS = List.of("科目代码", "科目名称");
-    private static final Pattern SUBJECT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]+(?:\\.[A-Za-z0-9_ ]+)*$");
+    private static final Pattern SUBJECT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]+$");
 
     private ExcelParsingSupport() {
     }
@@ -118,7 +118,46 @@ public final class ExcelParsingSupport {
      * 检查某个值是否看起来像科目代码。
      */
     public static boolean isSubjectCode(String value) {
-        return value != null && !value.isBlank() && SUBJECT_CODE_PATTERN.matcher(value.trim()).matches();
+        String normalized = normalizeSubjectCode(value);
+        return !normalized.isEmpty()
+                && !containsChineseCharacter(normalized)
+                && SUBJECT_CODE_PATTERN.matcher(normalized).matches();
+    }
+
+    /**
+     * 将科目代码归一为便于识别和比较的紧凑形式。
+     */
+    public static String normalizeSubjectCode(Object value) {
+        String normalized = normalizeText(value);
+        if (normalized.isEmpty()) {
+            return "";
+        }
+        normalized = normalized
+                .replace('．', '.')
+                .replace('。', '.')
+                .replace('　', ' ')
+                .replace('\u00A0', ' ')
+                .replaceAll("[,，]", "")
+                .trim();
+        if (normalized.isEmpty()) {
+            return "";
+        }
+
+        List<String> segments = new ArrayList<>();
+        for (String segment : normalized.split("[\\.\\s]+")) {
+            if (!segment.isBlank()) {
+                segments.add(segment.trim());
+            }
+        }
+        if (segments.size() > 1) {
+            return String.join("", segments);
+        }
+
+        String compact = normalized.replaceAll("[\\s\\.\\p{Punct}]+", "");
+        if (!compact.isEmpty() && compact.chars().allMatch(Character::isDigit) && compact.length() > 4) {
+            return splitCompactNumericCode(compact).replace(".", "");
+        }
+        return compact;
     }
 
     /**
@@ -165,6 +204,36 @@ public final class ExcelParsingSupport {
             return "";
         }
         return normalizeText(values.get(index));
+    }
+
+    private static boolean containsChineseCharacter(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            if (Character.UnicodeScript.of(value.charAt(index)) == Character.UnicodeScript.HAN) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String splitCompactNumericCode(String compact) {
+        if (compact.length() <= 4) {
+            return compact;
+        }
+        List<String> segments = new ArrayList<>();
+        segments.add(compact.substring(0, 4));
+        String remainder = compact.substring(4);
+        while (!remainder.isEmpty()) {
+            if (remainder.length() <= 2) {
+                segments.add(remainder);
+                break;
+            }
+            segments.add(remainder.substring(0, 2));
+            remainder = remainder.substring(2);
+        }
+        return String.join(".", segments);
     }
 
     /**

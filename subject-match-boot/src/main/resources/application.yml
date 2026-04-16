@@ -9,7 +9,7 @@ spring:
         enabled: true
   datasource:
     primary:
-      url: jdbc:mysql://192.168.165.34:3306/datamiddle_approval
+      url: jdbc:mysql://192.168.165.34:3306/t_data_datamiddle_subject
       username: datamiddle_dev
       password: datamiddle_dev
       driver-class-name: com.mysql.cj.jdbc.Driver
@@ -68,3 +68,4 @@ subject:
     workflow:
       skip-excel-style-parsing: false
       enable-match-process: true
+      persist-dwd-details: false

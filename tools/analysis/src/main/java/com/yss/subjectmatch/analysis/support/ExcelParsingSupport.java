@@ -13,7 +13,9 @@ import java.util.regex.Pattern;
 public final class ExcelParsingSupport {
 
     public static final List<String> REQUIRED_HEADERS = List.of("科目代码", "科目名称");
-    private static final Pattern SUBJECT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]+(?:\\.[A-Za-z0-9_ ]+)*$");
+    public static final int SUBJECT_CODE_SCAN_LIMIT = 5;
+    public static final int SUBJECT_NAME_SCAN_LIMIT = 4;
+    private static final Pattern SUBJECT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]+$");
 
     private ExcelParsingSupport() {
     }
@@ -100,37 +102,190 @@ public final class ExcelParsingSupport {
     }
 
     public static boolean isSubjectCode(String value) {
-        return value != null && !value.isBlank() && SUBJECT_CODE_PATTERN.matcher(value.trim()).matches();
-    }
-
-    public static boolean isMetricDataRow(List<Object> rowValues) {
-        String firstCell = textAt(rowValues, 0);
-        if (firstCell.isEmpty() || isSubjectCode(firstCell)) {
+        String normalized = normalizeSubjectCode(value);
+        if (normalized.isEmpty()) {
             return false;
         }
-        if (textAt(rowValues, 1).isEmpty()) {
+        if (containsChineseCharacter(normalized)) {
             return false;
         }
-        for (int index = 2; index < rowValues.size(); index++) {
-            if (!textAt(rowValues, index).isEmpty()) {
-                return false;
-            }
+        if (!SUBJECT_CODE_PATTERN.matcher(normalized).matches()) {
+            return false;
         }
         return true;
     }
 
-    public static boolean isMetricRow(List<Object> rowValues) {
-        String firstCell = textAt(rowValues, 0);
-        if (firstCell.isEmpty() || isSubjectCode(firstCell)) {
-            return false;
+    /**
+     * 将科目代码归一为便于识别和比较的紧凑形式。
+     * <p>
+     * 会统一全角点、空格和标点，并移除所有分隔符，只保留字母数字。
+     * </p>
+     */
+    public static String normalizeSubjectCode(Object value) {
+        String normalized = normalizeText(value);
+        if (normalized.isEmpty()) {
+            return "";
         }
-        int filledCount = 0;
-        for (int index = 1; index < rowValues.size(); index++) {
-            if (!textAt(rowValues, index).isEmpty()) {
-                filledCount++;
+        normalized = normalized
+                .replace('．', '.')
+                .replace('。', '.')
+                .replace('　', ' ')
+                .replace('\u00A0', ' ')
+                .replaceAll("[,，]", "")
+                .trim();
+        if (normalized.isEmpty()) {
+            return "";
+        }
+
+        List<String> segments = new ArrayList<>();
+        for (String segment : normalized.split("[\\.\\s]+")) {
+            if (!segment.isBlank()) {
+                segments.add(segment.trim());
             }
         }
-        return filledCount >= 2;
+        if (segments.size() > 1) {
+            return String.join("", segments);
+        }
+
+        String compact = normalized.replaceAll("[\\s\\.\\p{Punct}]+", "");
+        if (!compact.isEmpty() && compact.chars().allMatch(Character::isDigit) && compact.length() > 4) {
+            return splitCompactNumericCode(compact).replace(".", "");
+        }
+        return compact;
+    }
+
+    /**
+     * 读取一行中第一个有效单元格的索引。
+     * <p>
+     * 有效单元格指非空且不是常见占位符 "-"。
+     * </p>
+     */
+    public static int findFirstMeaningfulCellIndex(List<Object> rowValues) {
+        if (rowValues == null || rowValues.isEmpty()) {
+            return -1;
+        }
+        for (int index = 0; index < rowValues.size(); index++) {
+            String text = textAt(rowValues, index);
+            if (!text.isBlank() && !"-".equals(text)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * 统计一行中的有效单元格数量。
+     */
+    public static int countMeaningfulCells(List<Object> rowValues) {
+        if (rowValues == null || rowValues.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (Object value : rowValues) {
+            String text = normalizeText(value);
+            if (!text.isBlank() && !"-".equals(text)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 判断文本是否看起来像数字、百分比或日期时间值。
+     */
+    public static boolean looksNumericLike(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        return text.trim().matches(".*\\d.*");
+    }
+
+    public static boolean isSubjectDataRow(List<Object> rowValues) {
+        return findSubjectCodeColumnIndex(rowValues) >= 0;
+    }
+
+    public static int findSubjectCodeColumnIndex(List<Object> rowValues) {
+        if (rowValues == null || rowValues.isEmpty()) {
+            return -1;
+        }
+        int subjectCodeScanLimit = Math.min(rowValues.size(), SUBJECT_CODE_SCAN_LIMIT);
+        boolean seenMeaningfulText = false;
+        for (int columnIndex = 0; columnIndex < subjectCodeScanLimit; columnIndex++) {
+            String candidateCode = textAt(rowValues, columnIndex);
+            if (candidateCode.isBlank() || "-".equals(candidateCode)) {
+                continue;
+            }
+            if (!isSubjectCode(candidateCode)) {
+                seenMeaningfulText = true;
+                continue;
+            }
+            if (seenMeaningfulText) {
+                continue;
+            }
+            if (hasSubjectNameAfterCode(rowValues, columnIndex)) {
+                return columnIndex;
+            }
+        }
+        return -1;
+    }
+
+    public static boolean hasSubjectNameAfterCode(List<Object> rowValues, int codeColumnIndex) {
+        if (rowValues == null || rowValues.isEmpty() || codeColumnIndex < 0) {
+            return false;
+        }
+        int scanEndIndex = Math.min(rowValues.size(), codeColumnIndex + SUBJECT_NAME_SCAN_LIMIT);
+        for (int columnIndex = codeColumnIndex + 1; columnIndex < scanEndIndex; columnIndex++) {
+            String candidateText = textAt(rowValues, columnIndex);
+            if (candidateText.isBlank() || "-".equals(candidateText)) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isMetricDataRow(List<Object> rowValues) {
+        int labelIndex = findFirstMeaningfulCellIndex(rowValues);
+        if (labelIndex < 0) {
+            return false;
+        }
+        String labelText = textAt(rowValues, labelIndex);
+        if (isSubjectCode(labelText)) {
+            return false;
+        }
+        int valueCount = 0;
+        boolean hasNumericLikeValue = false;
+        for (int index = labelIndex + 1; index < rowValues.size(); index++) {
+            String valueText = textAt(rowValues, index);
+            if (valueText.isBlank() || "-".equals(valueText)) {
+                continue;
+            }
+            valueCount++;
+            hasNumericLikeValue = hasNumericLikeValue || looksNumericLike(valueText);
+        }
+        return valueCount == 1 && hasNumericLikeValue;
+    }
+
+    public static boolean isMetricRow(List<Object> rowValues) {
+        int labelIndex = findFirstMeaningfulCellIndex(rowValues);
+        if (labelIndex < 0) {
+            return false;
+        }
+        String labelText = textAt(rowValues, labelIndex);
+        if (isSubjectCode(labelText)) {
+            return false;
+        }
+        int valueCount = 0;
+        boolean hasNumericLikeValue = false;
+        for (int index = labelIndex + 1; index < rowValues.size(); index++) {
+            String valueText = textAt(rowValues, index);
+            if (valueText.isBlank() || "-".equals(valueText)) {
+                continue;
+            }
+            valueCount++;
+            hasNumericLikeValue = hasNumericLikeValue || looksNumericLike(valueText);
+        }
+        return valueCount >= 2 && hasNumericLikeValue;
     }
 
     public static String textAt(List<Object> values, int index) {
@@ -138,6 +293,40 @@ public final class ExcelParsingSupport {
             return "";
         }
         return normalizeText(values.get(index));
+    }
+
+    private static boolean isChineseCharacter(char ch) {
+        return Character.UnicodeScript.of(ch) == Character.UnicodeScript.HAN;
+    }
+
+    private static String splitCompactNumericCode(String compact) {
+        if (compact.length() <= 4) {
+            return compact;
+        }
+        List<String> segments = new ArrayList<>();
+        segments.add(compact.substring(0, 4));
+        String remainder = compact.substring(4);
+        while (!remainder.isEmpty()) {
+            if (remainder.length() <= 2) {
+                segments.add(remainder);
+                break;
+            }
+            segments.add(remainder.substring(0, 2));
+            remainder = remainder.substring(2);
+        }
+        return String.join(".", segments);
+    }
+
+    private static boolean containsChineseCharacter(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            if (isChineseCharacter(value.charAt(index))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static Object valueAt(List<Object> values, int index) {

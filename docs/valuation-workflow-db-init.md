@@ -53,11 +53,27 @@ SQL 文件：
 - 记录每一次文件接入事件，支持手动上传、邮件收取和对象存储接入
 - `file_id` 由文件主表统一发放，不再从任务表倒推
 
+### STG 外部估值解析表
+
+- `t_stg_external_valuation`
+- `t_stg_external_valuation_basic_info`
+- `t_stg_external_valuation_header`
+- `t_stg_external_valuation_subject`
+- `t_stg_external_valuation_metric`
+
+SQL 文件：
+
+- `subject-match-infra/src/main/resources/db/migration/t_dwd_external_valuation.sql`
+
+用途：
+
+- 保存一次解析得到的结构化中间结果
+- 记录主表、基础信息、表头、科目行和指标行
+- 作为标准化引擎的输入层
+- 不承担最终标准化业务含义
+
 ### DWD 外部估值标准表
 
-- `t_dwd_external_valuation`
-- `t_dwd_external_valuation_basic_info`
-- `t_dwd_external_valuation_header`
 - `t_dwd_external_valuation_subject`
 - `t_dwd_external_valuation_metric`
 
@@ -70,8 +86,8 @@ SQL 文件：
 - 保存外部估值标准化后的主数据
 - 支撑 `/api/valuation-workflows/{fileId}/dwd-data` 查询
 - 支撑匹配阶段优先从 DWD 读取标准化结果
-- `t_dwd_external_valuation_header.header_column_meta_json` 保存按列展开的表头元数据，包含列序号、完整路径、分层片段和空列标识
-- `t_dwd_external_valuation_subject` 只保存外部估值明细的科目编码、名称、层级、路径和原始列，不再保存币种、市值、占比、成本等字段
+- `t_dwd_external_valuation_subject` 保存标准化后的外部估值明细事实，并保留标准列值、映射依据和原始列
+- `t_dwd_external_valuation_metric` 保存标准化后的指标事实，并保留标准指标码、标准值和映射依据
 
 ### 匹配结果表
 
@@ -97,23 +113,13 @@ SQL 文件：
   - `match_standard_subject_time_ms`：匹配标准科目耗时，主要由 `MATCH_SUBJECT` 任务写入
 - 任务复用逻辑默认开启：同一份文件的同一阶段任务在成功后会被复用，除非请求显式传入 `forceRebuild=true`
 
-### 兼容解析结果表
-
-- `t_subject_match_parsed_workbook`
-  - `header_columns_json`：按列保存表头完整路径、分层片段和空列标识，便于前端渲染和回查
-
-用途：
-
-- 保留原有解析结果持久化，兼容现有实现和历史功能
-- 当前 DWD 已独立落表，不再依赖这张表做对外查询
-
 ## 初始化顺序
 
 建议按下面顺序执行：
 
 1. 初始化文件主数据表 `t_subject_match_file_info` / `t_subject_match_file_ingest_log`
 2. 初始化 ODS 表 `t_ods_valuation_filedata` / `t_ods_valuation_sheet_style`
-3. 初始化 DWD 表 `t_dwd_external_valuation*`
+3. 初始化 STG 表 `t_stg_external_valuation*` 和 DWD 表 `t_dwd_external_valuation_subject` / `t_dwd_external_valuation_metric`
 4. 初始化任务与匹配结果相关表
 5. 启动应用
 
@@ -124,5 +130,6 @@ SQL 文件：
 - `/match` 写匹配结果表
 - `/files/*` 负责文件信息管理和文件接入日志查询
 - `/raw-data` 读 ODS 表
-- `/dwd-data` 读 DWD 标准表
+- `/stg-data` 读 STG 解析快照表
+- `/dwd-data` 读 DWD 标准表，STG 仅用于回溯和排障
 - `/match-results` 读匹配结果表

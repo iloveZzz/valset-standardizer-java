@@ -7,7 +7,9 @@ import com.yss.subjectmatch.application.dto.MatchResultViewDTO;
 import com.yss.subjectmatch.application.dto.RawValuationDataViewDTO;
 import com.yss.subjectmatch.application.dto.RawValuationSheetDTO;
 import com.yss.subjectmatch.application.dto.RawValuationRowDTO;
+import com.yss.subjectmatch.application.dto.StgExternalValuationViewDTO;
 import com.yss.subjectmatch.domain.gateway.DwdExternalValuationGateway;
+import com.yss.subjectmatch.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.subjectmatch.application.service.ValuationWorkflowQueryService;
 import com.yss.subjectmatch.domain.gateway.MatchResultGateway;
 import com.yss.subjectmatch.domain.gateway.SubjectMatchFileInfoGateway;
@@ -37,6 +39,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
     private final ValuationSheetStyleMapper valuationSheetStyleMapper;
     private final SubjectMatchFileInfoGateway subjectMatchFileInfoGateway;
     private final DwdExternalValuationGateway dwdExternalValuationGateway;
+    private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
     private final MatchResultGateway matchResultGateway;
     private final ObjectMapper objectMapper;
 
@@ -44,12 +47,14 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
                                                 ValuationSheetStyleMapper valuationSheetStyleMapper,
                                                 SubjectMatchFileInfoGateway subjectMatchFileInfoGateway,
                                                 DwdExternalValuationGateway dwdExternalValuationGateway,
+                                                StandardizedExternalValuationGateway standardizedExternalValuationGateway,
                                                 MatchResultGateway matchResultGateway,
                                                 ObjectMapper objectMapper) {
         this.valuationFileDataMapper = valuationFileDataMapper;
         this.valuationSheetStyleMapper = valuationSheetStyleMapper;
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.dwdExternalValuationGateway = dwdExternalValuationGateway;
+        this.standardizedExternalValuationGateway = standardizedExternalValuationGateway;
         this.matchResultGateway = matchResultGateway;
         this.objectMapper = objectMapper;
     }
@@ -78,24 +83,48 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
     }
 
     @Override
+    public StgExternalValuationViewDTO queryStgData(Long fileId) {
+        ParsedValuationData stgValuationData = dwdExternalValuationGateway.findLatestByFileId(fileId);
+        if (stgValuationData == null) {
+            throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的 STG 外部估值数据");
+        }
+        return StgExternalValuationViewDTO.builder()
+                .fileId(fileId)
+                .workbookPath(stgValuationData.getWorkbookPath())
+                .sheetName(stgValuationData.getSheetName())
+                .headerRowNumber(stgValuationData.getHeaderRowNumber())
+                .dataStartRowNumber(stgValuationData.getDataStartRowNumber())
+                .title(stgValuationData.getTitle())
+                .basicInfo(stgValuationData.getBasicInfo())
+                .headers(stgValuationData.getHeaders())
+                .headerDetails(stgValuationData.getHeaderDetails())
+                .headerColumns(stgValuationData.getHeaderColumns())
+                .subjects(stgValuationData.getSubjects())
+                .metrics(stgValuationData.getMetrics())
+                .build();
+    }
+
+    @Override
     public DwdExternalValuationViewDTO queryDwdData(Long fileId) {
-        ParsedValuationData parsedValuationData = dwdExternalValuationGateway.findLatestByFileId(fileId);
-        if (parsedValuationData == null) {
+        ParsedValuationData stgValuationData = dwdExternalValuationGateway.findLatestByFileId(fileId);
+        ParsedValuationData standardizedValuationData = standardizedExternalValuationGateway.findLatestByFileId(fileId);
+        if (stgValuationData == null && standardizedValuationData == null) {
             throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的 DWD 外部估值数据");
         }
+        ParsedValuationData viewData = standardizedValuationData == null ? stgValuationData : standardizedValuationData;
         return DwdExternalValuationViewDTO.builder()
                 .fileId(fileId)
-                .workbookPath(parsedValuationData.getWorkbookPath())
-                .sheetName(parsedValuationData.getSheetName())
-                .headerRowNumber(parsedValuationData.getHeaderRowNumber())
-                .dataStartRowNumber(parsedValuationData.getDataStartRowNumber())
-                .title(parsedValuationData.getTitle())
-                .basicInfo(parsedValuationData.getBasicInfo())
-                .headers(parsedValuationData.getHeaders())
-                .headerDetails(parsedValuationData.getHeaderDetails())
-                .headerColumns(parsedValuationData.getHeaderColumns())
-                .subjects(parsedValuationData.getSubjects())
-                .metrics(parsedValuationData.getMetrics())
+                .workbookPath(stgValuationData == null ? null : stgValuationData.getWorkbookPath())
+                .sheetName(stgValuationData == null ? null : stgValuationData.getSheetName())
+                .headerRowNumber(stgValuationData == null ? null : stgValuationData.getHeaderRowNumber())
+                .dataStartRowNumber(stgValuationData == null ? null : stgValuationData.getDataStartRowNumber())
+                .title(stgValuationData == null ? null : stgValuationData.getTitle())
+                .basicInfo(stgValuationData == null ? null : stgValuationData.getBasicInfo())
+                .headers(stgValuationData == null ? null : stgValuationData.getHeaders())
+                .headerDetails(stgValuationData == null ? null : stgValuationData.getHeaderDetails())
+                .headerColumns(stgValuationData == null ? null : stgValuationData.getHeaderColumns())
+                .subjects(viewData.getSubjects())
+                .metrics(viewData.getMetrics())
                 .build();
     }
 

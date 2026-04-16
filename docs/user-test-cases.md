@@ -96,7 +96,6 @@ curl http://localhost:30066/api/tasks/{taskId}
 - `resultData.outputDir`、`resultData.artifacts` 可直接读取
 - 产物目录存在：`/Users/zhudaoming/yss-subject-match/subject-match-java/output/task-{taskId}` 或运行配置里的输出目录
 - 目录中至少包含：
-    - `parsed_workbook.json`
     - `parsed.json`
     - `subjects.csv`
     - `subject_relations.csv`

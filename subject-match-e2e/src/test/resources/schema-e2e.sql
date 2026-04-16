@@ -57,23 +57,6 @@ CREATE TABLE IF NOT EXISTS t_subject_match_schedule (
     next_trigger_time TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS t_subject_match_parsed_workbook (
-    id BIGINT PRIMARY KEY,
-    task_id BIGINT,
-    file_id BIGINT,
-    workbook_path VARCHAR(512),
-    sheet_name VARCHAR(128),
-    header_row_number INT,
-    data_start_row_number INT,
-    title VARCHAR(512),
-    basic_info_json TEXT,
-    headers_json TEXT,
-    header_details_json TEXT,
-    header_columns_json TEXT,
-    subjects_json TEXT,
-    metrics_json TEXT
-);
-
 CREATE TABLE IF NOT EXISTS t_subject_match_result (
     id BIGINT PRIMARY KEY,
     task_id BIGINT NOT NULL,
@@ -140,6 +123,71 @@ CREATE TABLE IF NOT EXISTS t_ods_valuation_data (
     subject_name VARCHAR(512)
 );
 
+CREATE TABLE IF NOT EXISTS t_stg_external_valuation (
+    id BIGINT PRIMARY KEY,
+    task_id BIGINT NOT NULL,
+    file_id BIGINT NOT NULL,
+    workbook_path VARCHAR(512),
+    sheet_name VARCHAR(128),
+    header_row_number INT,
+    data_start_row_number INT,
+    title VARCHAR(512)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stg_external_valuation_file_id ON t_stg_external_valuation(file_id);
+
+CREATE TABLE IF NOT EXISTS t_stg_external_valuation_basic_info (
+    id BIGINT PRIMARY KEY,
+    valuation_id BIGINT NOT NULL,
+    sort_order INT NOT NULL,
+    info_key VARCHAR(128),
+    info_value VARCHAR(512)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stg_external_basic_info_vid ON t_stg_external_valuation_basic_info(valuation_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS t_stg_external_valuation_header (
+    id BIGINT PRIMARY KEY,
+    valuation_id BIGINT NOT NULL,
+    column_index INT NOT NULL,
+    header_name VARCHAR(256),
+    header_detail_json TEXT,
+    header_column_meta_json TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_stg_external_header_vid ON t_stg_external_valuation_header(valuation_id, column_index);
+
+CREATE TABLE IF NOT EXISTS t_stg_external_valuation_subject (
+    id BIGINT PRIMARY KEY,
+    valuation_id BIGINT NOT NULL,
+    sheet_name VARCHAR(128),
+    row_data_number INT,
+    subject_code VARCHAR(128),
+    subject_name VARCHAR(512),
+    level_no INT,
+    parent_code VARCHAR(128),
+    root_code VARCHAR(128),
+    segment_count INT,
+    path_codes_json TEXT,
+    is_leaf BOOLEAN,
+    raw_values_json TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_stg_external_subject_vid ON t_stg_external_valuation_subject(valuation_id, row_data_number);
+
+CREATE TABLE IF NOT EXISTS t_stg_external_valuation_metric (
+    id BIGINT PRIMARY KEY,
+    valuation_id BIGINT NOT NULL,
+    sheet_name VARCHAR(128),
+    row_data_number INT,
+    metric_name VARCHAR(256),
+    metric_type VARCHAR(64),
+    metric_value VARCHAR(512),
+    raw_values_json TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_stg_external_metric_vid ON t_stg_external_valuation_metric(valuation_id, row_data_number);
+
 CREATE TABLE IF NOT EXISTS t_dwd_external_valuation (
     id BIGINT PRIMARY KEY,
     task_id BIGINT NOT NULL,
@@ -171,6 +219,7 @@ CREATE TABLE IF NOT EXISTS t_dwd_external_valuation_header (
 CREATE TABLE IF NOT EXISTS t_dwd_external_valuation_subject (
     id BIGINT PRIMARY KEY,
     valuation_id BIGINT NOT NULL,
+    file_id BIGINT NOT NULL,
     sheet_name VARCHAR(128),
     row_data_number INT,
     subject_code VARCHAR(128),
@@ -181,19 +230,107 @@ CREATE TABLE IF NOT EXISTS t_dwd_external_valuation_subject (
     segment_count INT,
     path_codes_json TEXT,
     is_leaf BOOLEAN,
+    standard_code VARCHAR(128),
+    standard_name VARCHAR(512),
+    standard_values_json TEXT,
+    mapping_rule_id BIGINT,
+    mapping_source_id BIGINT,
+    mapping_status VARCHAR(32),
+    mapping_reason VARCHAR(512),
+    mapping_confidence DECIMAL(10, 6),
     raw_values_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS t_dwd_external_valuation_metric (
     id BIGINT PRIMARY KEY,
     valuation_id BIGINT NOT NULL,
+    file_id BIGINT NOT NULL,
     sheet_name VARCHAR(128),
     row_data_number INT,
     metric_name VARCHAR(256),
     metric_type VARCHAR(64),
-    metric_value VARCHAR(512),
+    metric_code VARCHAR(128),
+    metric_standard_name VARCHAR(512),
+    standard_value_text VARCHAR(512),
+    standard_value_num DECIMAL(38, 12),
+    standard_value_unit VARCHAR(64),
+    standard_values_json TEXT,
+    mapping_rule_id BIGINT,
+    mapping_source_id BIGINT,
+    mapping_status VARCHAR(32),
+    mapping_reason VARCHAR(512),
+    mapping_confidence DECIMAL(10, 6),
     raw_values_json TEXT
 );
+
+CREATE TABLE IF NOT EXISTS t_file_parse_rule (
+    id BIGINT PRIMARY KEY,
+    creater VARCHAR(128),
+    create_time TIMESTAMP,
+    modifier VARCHAR(128),
+    modify_time TIMESTAMP,
+    file_scene VARCHAR(64) NOT NULL,
+    file_type_name VARCHAR(128) NOT NULL,
+    region_name VARCHAR(64) NOT NULL,
+    column_map VARCHAR(128) NOT NULL,
+    column_map_name VARCHAR(256) NOT NULL,
+    status BOOLEAN,
+    multi_index BOOLEAN,
+    required BOOLEAN
+);
+
+CREATE TABLE IF NOT EXISTS t_file_parse_source (
+    id BIGINT PRIMARY KEY,
+    file_type VARCHAR(128) NOT NULL,
+    column_map VARCHAR(128) NOT NULL,
+    column_name VARCHAR(256) NOT NULL,
+    file_ext_info VARCHAR(512),
+    status BOOLEAN,
+    creater VARCHAR(128),
+    create_time TIMESTAMP,
+    modifier VARCHAR(128),
+    modify_time TIMESTAMP
+);
+
+INSERT INTO t_file_parse_rule (id, creater, create_time, modifier, modify_time, file_scene, file_type_name, region_name, column_map, column_map_name, status, multi_index, required)
+VALUES
+    (1001, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'subject_cd', '科目代码', TRUE, FALSE, TRUE),
+    (1002, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'subject_nm', '科目名称', TRUE, FALSE, TRUE),
+    (1003, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'ccy_cd', '币种', TRUE, FALSE, FALSE),
+    (1004, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_valrate', '汇率', TRUE, FALSE, FALSE),
+    (1005, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_hldamt', '数量', TRUE, FALSE, FALSE),
+    (1006, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_price_cost', '单位成本', TRUE, FALSE, FALSE),
+    (1007, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_hldcst', '成本', TRUE, FALSE, FALSE),
+    (1008, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_cb_jz_bl', '成本占比', TRUE, FALSE, FALSE),
+    (1009, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_valprice', '行情', TRUE, FALSE, FALSE),
+    (1010, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_hldmkv', '市值', TRUE, FALSE, FALSE),
+    (1011, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_sz_jz_bl', '市值占比', TRUE, FALSE, FALSE),
+    (1012, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'n_hldvva', '估值增值', TRUE, FALSE, FALSE),
+    (1013, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'susp_info', '停牌信息', TRUE, FALSE, FALSE),
+    (1014, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'valuat_equity', '权益信息', TRUE, FALSE, FALSE),
+    (1015, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'biz_date', '日期', TRUE, FALSE, FALSE),
+    (1016, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'source_tp', '来源类型', TRUE, FALSE, FALSE),
+    (1017, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP, 'jjhzgzb', '基金资产估值表', '通用', 'source_sign', '来源标记', TRUE, FALSE, FALSE);
+
+INSERT INTO t_file_parse_source (id, file_type, column_map, column_name, file_ext_info, status, creater, create_time, modifier, modify_time)
+VALUES
+    (2001, 'COMMON', 'subject_cd', '科目代码', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2002, 'COMMON', 'subject_nm', '科目名称', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2003, 'COMMON', 'ccy_cd', '币种', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2004, 'COMMON', 'n_valrate', '汇率', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2005, 'COMMON', 'n_hldamt', '数量', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2006, 'COMMON', 'n_price_cost', '单位成本', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2007, 'COMMON', 'n_hldcst', '成本', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2008, 'COMMON', 'n_cb_jz_bl', '成本占比', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2009, 'COMMON', 'n_valprice', '行情', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2010, 'COMMON', 'n_hldmkv', '市值', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2011, 'COMMON', 'n_sz_jz_bl', '市值占比', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2012, 'COMMON', 'n_hldvva', '估值增值', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2013, 'COMMON', 'susp_info', '停牌信息', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2014, 'COMMON', 'valuat_equity', '权益信息', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2015, 'COMMON', 'biz_date', '日期', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2016, 'COMMON', 'source_tp', '来源类型', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP),
+    (2017, 'COMMON', 'source_sign', '来源标记', NULL, TRUE, 'seed', CURRENT_TIMESTAMP, 'seed', CURRENT_TIMESTAMP);
 
 CREATE TABLE IF NOT EXISTS t_ods_standard_subject (
     id BIGINT PRIMARY KEY,
@@ -234,7 +371,7 @@ CREATE TABLE IF NOT EXISTS t_ods_mapping_sample (
     system_name VARCHAR(256)
 );
 
-CREATE TABLE IF NOT EXISTS tr_fm_jjhzgzb (
+CREATE TABLE IF NOT EXISTS t_tr_jjhzgzb (
     id BIGINT PRIMARY KEY,
     org_cd VARCHAR(30),
     pd_cd VARCHAR(30),
@@ -270,6 +407,20 @@ CREATE TABLE IF NOT EXISTS tr_fm_jjhzgzb (
     is_audt BOOLEAN,
     audt_id VARCHAR(30),
     isin_cd VARCHAR(30)
+);
+
+CREATE TABLE IF NOT EXISTS t_tr_index (
+    id BIGINT PRIMARY KEY,
+    org_cd VARCHAR(30),
+    pd_cd VARCHAR(60),
+    biz_date VARCHAR(8),
+    indx_nm VARCHAR(300),
+    indx_valu VARCHAR(300),
+    source_tp VARCHAR(30),
+    source_sign VARCHAR(300),
+    time_stamp TIMESTAMP,
+    is_audt BOOLEAN,
+    audt_id VARCHAR(30)
 );
 
 CREATE TABLE IF NOT EXISTS tr_spv_jjhzgzb (
@@ -321,7 +472,6 @@ CREATE INDEX IF NOT EXISTS idx_ods_filedata_task_row ON t_ods_valuation_filedata
 CREATE UNIQUE INDEX IF NOT EXISTS uk_ods_sheet_style_file_sheet_scope ON t_ods_valuation_sheet_style(file_id, sheet_name, style_scope);
 CREATE INDEX IF NOT EXISTS idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
 
-CREATE INDEX IF NOT EXISTS idx_pwb_file_id ON t_subject_match_parsed_workbook(file_id);
 CREATE INDEX IF NOT EXISTS idx_match_result_file_id ON t_subject_match_result(file_id);
 
 CREATE INDEX IF NOT EXISTS idx_dwd_val_file_id ON t_dwd_external_valuation(file_id);
@@ -337,10 +487,12 @@ CREATE INDEX IF NOT EXISTS idx_ods_mapping_sample_org ON t_ods_mapping_sample(or
 CREATE INDEX IF NOT EXISTS idx_ods_mapping_sample_ext_code ON t_ods_mapping_sample(external_code);
 CREATE INDEX IF NOT EXISTS idx_ods_mapping_sample_std_code ON t_ods_mapping_sample(standard_code);
 
-CREATE INDEX IF NOT EXISTS idx_tr_fm_jjhzgzb_org ON tr_fm_jjhzgzb(org_cd);
-CREATE INDEX IF NOT EXISTS idx_tr_fm_jjhzgzb_subject ON tr_fm_jjhzgzb(subject_cd);
-CREATE INDEX IF NOT EXISTS idx_tr_fm_jjhzgzb_biz_date ON tr_fm_jjhzgzb(biz_date);
-CREATE INDEX IF NOT EXISTS idx_tr_fm_jjhzgzb_pd ON tr_fm_jjhzgzb(pd_cd);
+CREATE INDEX IF NOT EXISTS idx_t_tr_jjhzgzb_org ON t_tr_jjhzgzb(org_cd);
+CREATE INDEX IF NOT EXISTS idx_t_tr_jjhzgzb_subject ON t_tr_jjhzgzb(subject_cd);
+CREATE INDEX IF NOT EXISTS idx_t_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
+CREATE INDEX IF NOT EXISTS idx_t_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
+
+CREATE INDEX IF NOT EXISTS idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
 
 CREATE INDEX IF NOT EXISTS idx_tr_spv_jjhzgzb_org ON tr_spv_jjhzgzb(org_cd);
 CREATE INDEX IF NOT EXISTS idx_tr_spv_jjhzgzb_subject ON tr_spv_jjhzgzb(subject_cd);

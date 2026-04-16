@@ -1,4 +1,4 @@
-CREATE TABLE tr_fm_jjhzgzb (
+CREATE TABLE t_tr_jjhzgzb (
     id BIGINT PRIMARY KEY COMMENT '主键',
     org_cd VARCHAR(30) COMMENT '机构代码',
     pd_cd VARCHAR(30) COMMENT '产品代码',
@@ -36,7 +36,22 @@ CREATE TABLE tr_fm_jjhzgzb (
     isin_cd VARCHAR(30) COMMENT 'ISIN代码'
 ) COMMENT '基金持仓估值表';
 
-CREATE INDEX idx_tr_fm_jjhzgzb_org ON tr_fm_jjhzgzb(org_cd);
-CREATE INDEX idx_tr_fm_jjhzgzb_subject ON tr_fm_jjhzgzb(subject_cd);
-CREATE INDEX idx_tr_fm_jjhzgzb_biz_date ON tr_fm_jjhzgzb(biz_date);
-CREATE INDEX idx_tr_fm_jjhzgzb_pd ON tr_fm_jjhzgzb(pd_cd);
+CREATE TABLE t_tr_index (
+    id BIGINT PRIMARY KEY COMMENT '主键',
+    org_cd VARCHAR(30) COMMENT '机构代码',
+    pd_cd VARCHAR(60) COMMENT '产品代码',
+    biz_date VARCHAR(8) COMMENT '业务日期',
+    indx_nm VARCHAR(300) COMMENT '指标名称',
+    indx_valu VARCHAR(300) COMMENT '指标值',
+    source_tp VARCHAR(30) COMMENT '来源类型',
+    source_sign VARCHAR(300) COMMENT '来源标记',
+    time_stamp DATETIME COMMENT '时间戳',
+    is_audt TINYINT COMMENT '是否审核',
+    audt_id VARCHAR(30) COMMENT '审核ID'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资产估值指标信息（原始数据）';
+
+CREATE INDEX idx_t_tr_jjhzgzb_org ON t_tr_jjhzgzb(org_cd);
+CREATE INDEX idx_t_tr_jjhzgzb_subject ON t_tr_jjhzgzb(subject_cd);
+CREATE INDEX idx_t_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
+CREATE INDEX idx_t_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
+CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);

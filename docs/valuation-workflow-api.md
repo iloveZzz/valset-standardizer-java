@@ -6,9 +6,9 @@
 
 1. 上传外部估值表
 2. 抽取 ODS 原始行数据
-3. 基于 ODS 原始行生成 DWD 外部估值标准数据
+3. 基于 ODS 原始行生成 STG 解析数据，并进一步生成 DWD 标准化数据
 4. 将外部估值明细与内部标准科目做匹配打标
-5. 查询 ODS、DWD 和匹配结果
+5. 查询 ODS、STG、DWD 和匹配结果
 
 接口前缀：`/api/valuation-workflows`
 
@@ -69,7 +69,7 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 - `fileId` 必填
 - `workbookPath` 仍然保留在任务入参里，便于任务追踪和结果输出
 - `forceRebuild` 可选，默认 `false`。开启后会强制重新生成解析任务
-- 该接口会写入 DWD 外部估值标准表
+- 该接口会先写入 STG 解析表，再写入 DWD 标准表
 - 返回的任务结果会包含：
   - `taskStage=PARSE`
   - `taskStartTime`
@@ -96,7 +96,7 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 说明：
 
 - `fileId` 必填
-- 匹配时优先读取 DWD 外部估值标准表
+- 匹配时优先读取 DWD 标准表
 - 如果 DWD 未生成，系统会回退到当前解析器逻辑
 - `forceRebuild` 可选，默认 `false`。开启后会强制重新生成匹配任务
 - 返回的任务结果会包含：
@@ -152,7 +152,27 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/full-process" \
 curl "http://localhost:8080/api/valuation-workflows/10001/raw-data?limit=200"
 ```
 
-## 6. 查询 DWD 标准数据
+## 6. 查询 STG 解析快照
+
+`GET /api/valuation-workflows/{fileId}/stg-data`
+
+示例：
+
+```bash
+curl "http://localhost:8080/api/valuation-workflows/10001/stg-data"
+```
+
+返回结构包括：
+
+- 标题信息
+- 基础信息
+- 表头
+- 多层表头明细
+- 列级表头元数据
+- 原始解析明细
+- 原始解析指标行
+
+## 7. 查询 DWD 标准数据
 
 `GET /api/valuation-workflows/{fileId}/dwd-data`
 
@@ -169,10 +189,10 @@ curl "http://localhost:8080/api/valuation-workflows/10001/dwd-data"
 - 表头
 - 多层表头明细
 - 列级表头元数据
-- 外部估值数据明细
-- 指标行数据
+- 标准化后的外部估值数据明细
+- 标准化后的指标行数据
 
-## 7. 查询匹配结果
+## 8. 查询匹配结果
 
 `GET /api/valuation-workflows/{fileId}/match-results`
 
@@ -187,11 +207,11 @@ curl "http://localhost:8080/api/valuation-workflows/10001/match-results"
 1. 调 `/upload` 拿到 `fileId`
 2. 调 `/analyze` 生成 DWD 标准数据
 3. 调 `/match` 生成匹配结果
-4. 调 `/raw-data`、`/dwd-data`、`/match-results` 查询结果
+4. 调 `/raw-data`、`/stg-data`、`/dwd-data`、`/match-results` 查询结果
 
 如果不需要分步控制，直接调用 `/full-process`。
 
-## 8. 查询单个任务
+## 9. 查询单个任务
 
 `GET /api/tasks/{taskId}`
 
@@ -203,7 +223,7 @@ curl "http://localhost:8080/api/valuation-workflows/10001/match-results"
 - 对 `MATCH_SUBJECT` 任务会将匹配标准科目耗时写入 `matchStandardSubjectTimeMs`
 - 任务是否复用由 `extractTask.reusedExistingTask` 或 `upload` / `full-process` 返回值体现
 
-## 9. 文件管理接口
+## 10. 文件管理接口
 
 ### 9.1 手动上传文件
 

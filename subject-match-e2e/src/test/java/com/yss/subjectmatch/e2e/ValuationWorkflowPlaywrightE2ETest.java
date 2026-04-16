@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.io.InputStream;
@@ -68,6 +69,9 @@ public class ValuationWorkflowPlaywrightE2ETest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final Path CSV_SAMPLE = Path.of("..", "20230321基金资产估值表DJ02www33.csv").toAbsolutePath().normalize();
     private static final Path XLS_SAMPLE = Path.of("..", "20230321基金资产估值表DJ0233.xls").toAbsolutePath().normalize();
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @LocalServerPort
     private int port;
@@ -127,6 +131,62 @@ public class ValuationWorkflowPlaywrightE2ETest {
         assertThat(analyzeJson.get("taskStatus").asText()).isEqualTo("SUCCESS");
         assertThat(analyzeJson.get("taskStage").asText()).isEqualTo(TaskStage.PARSE.name());
         assertThat(analyzeJson.get("standardizeTimeMs").asLong()).isGreaterThanOrEqualTo(0L);
+
+        List<Object[]> firstRows = jdbcTemplate.query(
+                "select subject_cd, subject_nm, ccy_cd, biz_date " +
+                        "from t_tr_jjhzgzb where subject_cd = ? order by id desc limit 1",
+                (rs, rowNum) -> new Object[] {
+                        rs.getString(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getString(4)
+                },
+                "1002"
+        );
+        assertThat(firstRows).hasSize(1);
+        Object[] firstRow = firstRows.get(0);
+        assertThat(firstRow[0]).isEqualTo("1002");
+        assertThat(firstRow[1]).isEqualTo("银行存款");
+        assertThat(firstRow[2]).isEqualTo("CNY");
+        assertThat(firstRow[3]).isEqualTo("20230321");
+
+        Integer trIndexCount = jdbcTemplate.queryForObject(
+                "select count(*) from t_tr_index where biz_date = ?",
+                Integer.class,
+                "20230321"
+        );
+        assertThat(trIndexCount).isGreaterThanOrEqualTo(37);
+
+        List<Object[]> indexRows = jdbcTemplate.query(
+                "select indx_nm, indx_valu, source_tp, biz_date from t_tr_index where biz_date = ? and source_tp = ? and indx_valu is not null order by id limit 1",
+                (rs, rowNum) -> new Object[] {
+                        rs.getString(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getString(4)
+                },
+                "20230321",
+                dataSourceType
+        );
+        assertThat(indexRows).hasSize(1);
+        Object[] indexRow = indexRows.get(0);
+        assertThat((String) indexRow[0]).isNotBlank();
+        assertThat(indexRow[1]).isNotNull();
+        assertThat(indexRow[2]).isEqualTo(dataSourceType);
+        assertThat(indexRow[3]).isEqualTo("20230321");
+
+        Integer dwdSubjectCount = jdbcTemplate.queryForObject(
+                "select count(*) from t_dwd_external_valuation_subject where file_id = ?",
+                Integer.class,
+                fileId
+        );
+        Integer dwdMetricCount = jdbcTemplate.queryForObject(
+                "select count(*) from t_dwd_external_valuation_metric where file_id = ?",
+                Integer.class,
+                fileId
+        );
+        assertThat(dwdSubjectCount).isEqualTo(0);
+        assertThat(dwdMetricCount).isEqualTo(0);
 
         APIResponse rawResponse = requestContext.get(
                 "/api/valuation-workflows/" + fileId + "/raw-data",
