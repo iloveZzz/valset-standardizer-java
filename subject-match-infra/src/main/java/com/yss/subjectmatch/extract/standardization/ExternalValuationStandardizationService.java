@@ -52,6 +52,7 @@ public class ExternalValuationStandardizationService {
         List<String> headers = parsedValuationData.getHeaders() == null ? List.of() : parsedValuationData.getHeaders();
         List<HeaderColumnMeta> headerColumns = parsedValuationData.getHeaderColumns() == null ? List.of() : parsedValuationData.getHeaderColumns();
         Map<Integer, HeaderMappingDecision> standardColumnByIndex = resolveStandardColumnByIndex(headers, headerColumns, dictionary);
+        logHeaderMappingSummary(headers, standardColumnByIndex);
 
         List<SubjectRecord> standardizedSubjects = parsedValuationData.getSubjects() == null
                 ? List.of()
@@ -63,6 +64,7 @@ public class ExternalValuationStandardizationService {
                 : parsedValuationData.getMetrics().stream()
                 .map(metric -> standardizeMetric(metric, dictionary))
                 .toList();
+        logSubjectMetricMappingSummary(standardizedSubjects, standardizedMetrics);
 
         return ParsedValuationData.builder()
                 .workbookPath(parsedValuationData.getWorkbookPath())
@@ -276,16 +278,74 @@ public class ExternalValuationStandardizationService {
         }
         String trimmedText = text.trim();
         Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? Map.of() : dictionary.sourceByAlias();
+        String bestAlias = null;
+        ParseSourceEntry bestEntry = null;
         for (Map.Entry<String, ParseSourceEntry> entry : sourceByAlias.entrySet()) {
             String alias = entry.getKey();
             if (alias == null || alias.isBlank() || alias.length() < 2) {
                 continue;
             }
             if (trimmedText.contains(alias)) {
-                return entry.getValue();
+                if (bestAlias == null || alias.length() > bestAlias.length()) {
+                    bestAlias = alias;
+                    bestEntry = entry.getValue();
+                }
             }
         }
-        return null;
+        return bestEntry;
+    }
+
+    private void logHeaderMappingSummary(List<String> headers, Map<Integer, HeaderMappingDecision> standardColumnByIndex) {
+        if (headers == null || headers.isEmpty()) {
+            return;
+        }
+        int mappedCount = 0;
+        List<String> unmappedHeaders = new java.util.ArrayList<>();
+        for (int index = 0; index < headers.size(); index++) {
+            String header = headers.get(index);
+            if (header == null || header.isBlank()) {
+                continue;
+            }
+            HeaderMappingDecision decision = standardColumnByIndex.get(index);
+            if (decision != null && decision.matched()) {
+                mappedCount++;
+                continue;
+            }
+            unmappedHeaders.add(header);
+        }
+        int total = mappedCount + unmappedHeaders.size();
+        double ratio = total == 0 ? 1D : ((double) mappedCount / total);
+        if (ratio < 0.70D) {
+            log.warn(
+                    "外部估值表头映射率偏低，mapped={}, total={}, ratio={}, unmappedTop5={}",
+                    mappedCount,
+                    total,
+                    String.format(java.util.Locale.ROOT, "%.2f", ratio),
+                    unmappedHeaders.stream().limit(5).toList()
+            );
+            return;
+        }
+        log.info(
+                "外部估值表头映射完成，mapped={}, total={}, ratio={}, unmappedCount={}",
+                mappedCount,
+                total,
+                String.format(java.util.Locale.ROOT, "%.2f", ratio),
+                unmappedHeaders.size()
+        );
+    }
+
+    private void logSubjectMetricMappingSummary(List<SubjectRecord> subjects, List<MetricRecord> metrics) {
+        long mappedSubjects = subjects == null ? 0 : subjects.stream().filter(s -> "MAPPED".equalsIgnoreCase(s.getMappingStatus())).count();
+        long totalSubjects = subjects == null ? 0 : subjects.size();
+        long mappedMetrics = metrics == null ? 0 : metrics.stream().filter(m -> "MAPPED".equalsIgnoreCase(m.getMappingStatus())).count();
+        long totalMetrics = metrics == null ? 0 : metrics.size();
+        log.info(
+                "外部估值标准化映射统计，subjectMapped={}/{}, metricMapped={}/{}",
+                mappedSubjects,
+                totalSubjects,
+                mappedMetrics,
+                totalMetrics
+        );
     }
 
     private String buildSubjectMappingReason(Map<String, Object> standardValues, List<HeaderMappingDecision> matchedDecisions) {

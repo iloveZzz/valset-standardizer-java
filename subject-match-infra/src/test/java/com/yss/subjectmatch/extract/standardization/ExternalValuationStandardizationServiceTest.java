@@ -65,6 +65,46 @@ class ExternalValuationStandardizationServiceTest {
         assertThat(subject.getMappingConfidence()).isGreaterThan(0D);
     }
 
+    @Test
+    void should_match_by_alias_contains_when_header_has_suffix() {
+        ExternalValuationStandardizationService service = new ExternalValuationStandardizationService(
+                new ObjectMapper(),
+                proxyRuleRepository(List.of(
+                        rule(1L, "subject_cd", "科目代码"),
+                        rule(2L, "subject_nm", "科目名称"),
+                        rule(3L, "n_hldamt", "数量")
+                )),
+                proxySourceRepository(List.of(
+                        source(1L, "subject_cd", "科目代码"),
+                        source(2L, "subject_nm", "科目名称"),
+                        source(3L, "n_hldamt", "数量")
+                ))
+        );
+
+        ParsedValuationData parsedValuationData = ParsedValuationData.builder()
+                .headers(List.of("科目代码", "科目名称", "持仓数量(份)"))
+                .headerColumns(List.of(
+                        headerColumn(0, "科目代码"),
+                        headerColumn(1, "科目名称"),
+                        headerColumn(2, "持仓数量(份)")
+                ))
+                .subjects(List.of(SubjectRecord.builder()
+                        .sheetName("Sheet1")
+                        .rowDataNumber(8)
+                        .subjectCode("1002")
+                        .subjectName("银行存款")
+                        .rawValues(List.of("1002", "银行存款", "88.01"))
+                        .build()))
+                .build();
+
+        ParsedValuationData standardized = service.standardize(parsedValuationData);
+
+        assertThat(standardized.getSubjects()).hasSize(1);
+        SubjectRecord subject = standardized.getSubjects().get(0);
+        assertThat(subject.getStandardValues()).containsEntry("n_hldamt", "88.01");
+        assertThat(subject.getMappingStatus()).isEqualTo("MAPPED");
+    }
+
     private HeaderColumnMeta headerColumn(int index, String headerName) {
         return HeaderColumnMeta.builder()
                 .columnIndex(index)
