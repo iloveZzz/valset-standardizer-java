@@ -8,8 +8,10 @@ import com.yss.subjectmatch.domain.gateway.DwdExternalValuationGateway;
 import com.yss.subjectmatch.domain.gateway.DwdJjhzgzbGateway;
 import com.yss.subjectmatch.domain.gateway.TrIndexGateway;
 import com.yss.subjectmatch.domain.gateway.StandardizedExternalValuationGateway;
+import com.yss.subjectmatch.domain.gateway.SubjectMatchFileInfoGateway;
 import com.yss.subjectmatch.domain.gateway.TaskGateway;
 import com.yss.subjectmatch.domain.model.ParsedValuationData;
+import com.yss.subjectmatch.domain.model.SubjectMatchFileInfo;
 import com.yss.subjectmatch.domain.model.TaskInfo;
 import com.yss.subjectmatch.domain.parser.ValuationDataParser;
 import com.yss.subjectmatch.domain.parser.ValuationDataParserProvider;
@@ -41,6 +43,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
     private final DwdJjhzgzbGateway dwdJjhzgzbGateway;
     private final TrIndexGateway trIndexGateway;
+    private final SubjectMatchFileInfoGateway subjectMatchFileInfoGateway;
     private final ExternalValuationStandardizationService standardizationService;
     private final ResultExporter resultExporter;
     private final ObjectMapper objectMapper;
@@ -53,6 +56,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             StandardizedExternalValuationGateway standardizedExternalValuationGateway,
             DwdJjhzgzbGateway dwdJjhzgzbGateway,
             TrIndexGateway trIndexGateway,
+            SubjectMatchFileInfoGateway subjectMatchFileInfoGateway,
             ExternalValuationStandardizationService standardizationService,
             ResultExporter resultExporter,
             ObjectMapper objectMapper,
@@ -64,6 +68,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
         this.standardizedExternalValuationGateway = standardizedExternalValuationGateway;
         this.dwdJjhzgzbGateway = dwdJjhzgzbGateway;
         this.trIndexGateway = trIndexGateway;
+        this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.standardizationService = standardizationService;
         this.resultExporter = resultExporter;
         this.objectMapper = objectMapper;
@@ -99,11 +104,19 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
 
             long standardizeStartMs = System.currentTimeMillis();
             ParsedValuationData parsedValuationData = parser.parse(config);
+            String fileNameOriginal = resolveFileNameOriginal(taskInfo);
+            parsedValuationData = parsedValuationData.toBuilder()
+                    .fileNameOriginal(fileNameOriginal)
+                    .build();
             dwdExternalValuationGateway.saveDwdExternalValuation(taskId, taskInfo.getFileId(), parsedValuationData);
             ParsedValuationData standardizedValuationData = standardizationService.standardize(parsedValuationData);
+            standardizedValuationData = standardizedValuationData == null ? null : standardizedValuationData.toBuilder()
+                    .fileNameOriginal(fileNameOriginal)
+                    .build();
             standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, taskInfo.getFileId(), standardizedValuationData);
-            dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, taskInfo.getFileId(), type.name(), standardizedValuationData);
-            trIndexGateway.saveStandardizedIndex(taskId, taskInfo.getFileId(), type.name(), standardizedValuationData);
+            String sourceSign = fileNameOriginal;
+            dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, taskInfo.getFileId(), type.name(), sourceSign, standardizedValuationData);
+            trIndexGateway.saveStandardizedIndex(taskId, taskInfo.getFileId(), type.name(), sourceSign, standardizedValuationData);
             long standardizeDurationMs = System.currentTimeMillis() - standardizeStartMs;
 
             resultExporter.exportParsedValuationData(taskId, parsedValuationData);
@@ -118,6 +131,25 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
             throw new IllegalStateException("Failed to execute parse task " + taskId, e);
         }
+    }
+
+    private String resolveFileNameOriginal(TaskInfo taskInfo) {
+        SubjectMatchFileInfo fileInfo = taskInfo == null || taskInfo.getFileId() == null
+                ? null
+                : subjectMatchFileInfoGateway.findById(taskInfo.getFileId());
+        return fileInfo == null ? null : fileInfo.getFileNameOriginal();
+    }
+
+    private String firstNonBlank(String... candidates) {
+        if (candidates == null) {
+            return null;
+        }
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate.trim();
+            }
+        }
+        return null;
     }
 
     private DataSourceConfig buildAnalysisConfig(DataSourceType type, String sourceUri, Long fileId) {
@@ -139,7 +171,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("workbookPath", parsedValuationData.getWorkbookPath());
             payload.put("sheetName", parsedValuationData.getSheetName());
-            payload.put("title", parsedValuationData.getTitle());
+            payload.put("fileNameOriginal", parsedValuationData.getFileNameOriginal());
             payload.put("subjectCount", parsedValuationData.getSubjects() == null ? 0 : parsedValuationData.getSubjects().size());
             payload.put("metricCount", parsedValuationData.getMetrics() == null ? 0 : parsedValuationData.getMetrics().size());
             payload.put("outputDir", resolveTaskOutputDirectory(taskId).toString());

@@ -20,7 +20,6 @@ import com.yss.subjectmatch.extract.repository.entity.DwdExternalValuationPO;
 import com.yss.subjectmatch.extract.repository.entity.DwdExternalValuationSubjectPO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -47,8 +46,6 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
     private final DwdExternalValuationSubjectRepository subjectRepository;
     private final DwdExternalValuationMetricRepository metricRepository;
     private final ObjectMapper objectMapper;
-    @Value("${subject.match.workflow.persist-dwd-details:false}")
-    private boolean persistDwdDetails;
 
     @Override
     public void saveDwdExternalValuation(Long taskId, Long fileId, ParsedValuationData parsedValuationData) {
@@ -68,12 +65,8 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 parsedValuationData.getHeaders(),
                 parsedValuationData.getHeaderDetails(),
                 parsedValuationData.getHeaderColumns());
-        if (persistDwdDetails) {
-            saveSubjects(valuationId, parsedValuationData.getSubjects());
-            saveMetrics(valuationId, parsedValuationData.getMetrics());
-        } else {
-            log.info("DWD 外部估值明细写入已跳过，仅保留主表/基础信息/表头，taskId={}, fileId={}", taskId, fileId);
-        }
+        saveSubjects(valuationId, parsedValuationData.getSubjects());
+        saveMetrics(valuationId, parsedValuationData.getMetrics());
         log.info("DWD 外部估值标准数据落地完成，taskId={}, fileId={}, valuationId={}", taskId, fileId, valuationId);
     }
 
@@ -94,6 +87,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 .sheetName(valuationPO.getSheetName())
                 .headerRowNumber(valuationPO.getHeaderRowNumber())
                 .dataStartRowNumber(valuationPO.getDataStartRowNumber())
+                .fileNameOriginal(valuationPO.getTitle())
                 .title(valuationPO.getTitle())
                 .basicInfo(loadBasicInfo(valuationId))
                 .headers(loadHeaders(valuationId))

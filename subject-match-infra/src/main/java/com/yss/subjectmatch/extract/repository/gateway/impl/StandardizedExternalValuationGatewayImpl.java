@@ -12,6 +12,8 @@ import com.yss.subjectmatch.extract.repository.entity.DwdExternalValuationStanda
 import com.yss.subjectmatch.extract.repository.mapper.DwdExternalValuationStandardMetricRepository;
 import com.yss.subjectmatch.extract.repository.mapper.DwdExternalValuationStandardSubjectRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -22,6 +24,7 @@ import java.util.Map;
 /**
  * 外部估值标准化结果持久化网关实现。
  */
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class StandardizedExternalValuationGatewayImpl implements StandardizedExternalValuationGateway {
@@ -34,14 +37,20 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
     private final DwdExternalValuationStandardSubjectRepository subjectRepository;
     private final DwdExternalValuationStandardMetricRepository metricRepository;
     private final ObjectMapper objectMapper;
+    @Value("${subject.match.workflow.persist-standardized-dwd-details:false}")
+    private boolean persistStandardizedDwdDetails;
 
     @Override
     public void saveStandardizedExternalValuation(Long valuationId, Long fileId, ParsedValuationData standardizedValuationData) {
         if (standardizedValuationData == null) {
             return;
         }
-        saveSubjects(valuationId, fileId, standardizedValuationData.getSubjects());
-        saveMetrics(valuationId, fileId, standardizedValuationData.getMetrics());
+        if (persistStandardizedDwdDetails) {
+            saveSubjects(valuationId, fileId, standardizedValuationData.getSubjects());
+            saveMetrics(valuationId, fileId, standardizedValuationData.getMetrics());
+        } else {
+            log.info("标准化 DWD 明细写入已跳过，仅保留标准化结果内存态和 t_tr_* 落地，valuationId={}, fileId={}", valuationId, fileId);
+        }
     }
 
     @Override
@@ -60,6 +69,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
             return null;
         }
         return ParsedValuationData.builder()
+                .fileNameOriginal(null)
                 .subjects(loadSubjects(subjectPOList))
                 .metrics(loadMetrics(metricPOList))
                 .build();

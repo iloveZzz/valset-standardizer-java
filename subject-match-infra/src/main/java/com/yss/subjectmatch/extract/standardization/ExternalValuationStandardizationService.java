@@ -1,7 +1,6 @@
 package com.yss.subjectmatch.extract.standardization;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.subjectmatch.domain.model.HeaderColumnMeta;
 import com.yss.subjectmatch.domain.model.MetricRecord;
@@ -17,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +28,6 @@ import java.util.Objects;
 @Slf4j
 @Service
 public class ExternalValuationStandardizationService {
-
-    private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {
-    };
 
     private final ObjectMapper objectMapper;
     private final FileParseRuleRepository parseRuleRepository;
@@ -54,7 +51,7 @@ public class ExternalValuationStandardizationService {
         Dictionary dictionary = dictionary();
         List<String> headers = parsedValuationData.getHeaders() == null ? List.of() : parsedValuationData.getHeaders();
         List<HeaderColumnMeta> headerColumns = parsedValuationData.getHeaderColumns() == null ? List.of() : parsedValuationData.getHeaderColumns();
-        Map<Integer, String> standardColumnByIndex = resolveStandardColumnByIndex(headers, headerColumns, dictionary);
+        Map<Integer, HeaderMappingDecision> standardColumnByIndex = resolveStandardColumnByIndex(headers, headerColumns, dictionary);
 
         List<SubjectRecord> standardizedSubjects = parsedValuationData.getSubjects() == null
                 ? List.of()
@@ -73,6 +70,7 @@ public class ExternalValuationStandardizationService {
                 .headerRowNumber(parsedValuationData.getHeaderRowNumber())
                 .dataStartRowNumber(parsedValuationData.getDataStartRowNumber())
                 .title(parsedValuationData.getTitle())
+                .fileNameOriginal(parsedValuationData.getFileNameOriginal())
                 .basicInfo(parsedValuationData.getBasicInfo())
                 .headers(parsedValuationData.getHeaders())
                 .headerDetails(parsedValuationData.getHeaderDetails())
@@ -82,28 +80,39 @@ public class ExternalValuationStandardizationService {
                 .build();
     }
 
-    private SubjectRecord standardizeSubject(SubjectRecord subject, List<String> headers, Map<Integer, String> standardColumnByIndex, Dictionary dictionary) {
+    private SubjectRecord standardizeSubject(
+            SubjectRecord subject,
+            List<String> headers,
+            Map<Integer, HeaderMappingDecision> standardColumnByIndex,
+            Dictionary dictionary
+    ) {
         Map<String, Object> standardValues = new LinkedHashMap<>();
+        List<HeaderMappingDecision> matchedDecisions = new java.util.ArrayList<>();
         List<Object> rawValues = subject.getRawValues() == null ? List.of() : subject.getRawValues();
         for (int index = 0; index < Math.min(headers.size(), rawValues.size()); index++) {
-            String standardCode = standardColumnByIndex.get(index);
-            if (standardCode == null || standardCode.isBlank()) {
+            HeaderMappingDecision decision = standardColumnByIndex.get(index);
+            if (decision == null || !decision.matched()) {
                 continue;
             }
+            String standardCode = decision.standardCode();
             Object value = rawValues.get(index);
             if (isBlankValue(value)) {
                 continue;
             }
-            standardValues.putIfAbsent(standardCode, normalizeValue(value));
+            if (!standardValues.containsKey(standardCode)) {
+                standardValues.put(standardCode, normalizeValue(value));
+                matchedDecisions.add(decision);
+            }
         }
 
         ParseSourceEntry subjectCodeEntry = resolveSource(subject.getSubjectCode(), dictionary);
         ParseSourceEntry subjectNameEntry = resolveSource(subject.getSubjectName(), dictionary);
         Long mappingRuleId = firstNonNull(subjectCodeEntry, subjectNameEntry, entry -> entry.getRule().getId());
         Long mappingSourceId = firstNonNull(subjectCodeEntry, subjectNameEntry, ParseSourceEntry::getId);
+
         String mappingStatus = standardValues.isEmpty() ? "UNMAPPED" : "MAPPED";
-        String mappingReason = standardValues.isEmpty() ? "No standard columns matched" : "Matched " + standardValues.size() + " standard columns";
-        Double mappingConfidence = standardValues.isEmpty() ? 0D : Math.min(1D, 0.5D + standardValues.size() * 0.03D);
+        String mappingReason = buildSubjectMappingReason(standardValues, matchedDecisions);
+        Double mappingConfidence = calculateSubjectMappingConfidence(standardValues, matchedDecisions);
 
         subject.setStandardCode(subject.getSubjectCode());
         subject.setStandardName(subject.getSubjectName());
@@ -148,43 +157,168 @@ public class ExternalValuationStandardizationService {
         return metric;
     }
 
-    private Map<Integer, String> resolveStandardColumnByIndex(List<String> headers, List<HeaderColumnMeta> headerColumns, Dictionary dictionary) {
-        Map<Integer, String> result = new LinkedHashMap<>();
+    private Map<Integer, HeaderMappingDecision> resolveStandardColumnByIndex(
+            List<String> headers,
+            List<HeaderColumnMeta> headerColumns,
+            Dictionary dictionary
+    ) {
+        Map<Integer, HeaderMappingDecision> result = new LinkedHashMap<>();
         for (int index = 0; index < headers.size(); index++) {
-            String header = headers.get(index);
-            if (header == null || header.isBlank()) {
-                continue;
+            HeaderMappingDecision decision = resolveHeaderDecision(headers.get(index), dictionary);
+            if (decision != null && decision.matched()) {
+                result.put(index, decision);
             }
-            result.put(index, resolveStandardCode(header, dictionary));
         }
         for (HeaderColumnMeta meta : headerColumns) {
             if (meta == null || meta.getColumnIndex() == null) {
                 continue;
             }
-            String standardCode = resolveStandardCode(meta.getHeaderName(), dictionary);
-            if (standardCode != null && !standardCode.isBlank()) {
-                result.put(meta.getColumnIndex(), standardCode);
+            HeaderMappingDecision decision = resolveHeaderDecision(meta, dictionary);
+            if (decision == null || !decision.matched()) {
+                continue;
+            }
+            HeaderMappingDecision current = result.get(meta.getColumnIndex());
+            if (current == null || decision.confidence() > current.confidence()) {
+                result.put(meta.getColumnIndex(), decision);
             }
         }
         return result;
     }
 
-    private String resolveStandardCode(String text, Dictionary dictionary) {
-        ParseSourceEntry entry = resolveSource(text, dictionary);
-        return entry == null ? null : entry.getRule().getColumnMap();
+    private HeaderMappingDecision resolveHeaderDecision(HeaderColumnMeta meta, Dictionary dictionary) {
+        if (meta == null) {
+            return HeaderMappingDecision.unmatched();
+        }
+        HeaderMappingDecision byHeaderName = resolveHeaderDecision(meta.getHeaderName(), dictionary);
+        if (byHeaderName.matched()) {
+            return byHeaderName;
+        }
+        if (meta.getPathSegments() == null || meta.getPathSegments().isEmpty()) {
+            return HeaderMappingDecision.unmatched();
+        }
+        for (String segment : meta.getPathSegments()) {
+            HeaderMappingDecision bySegment = resolveHeaderDecision(segment, dictionary);
+            if (bySegment.matched()) {
+                return bySegment;
+            }
+        }
+        return HeaderMappingDecision.unmatched();
+    }
+
+    private HeaderMappingDecision resolveHeaderDecision(String text, Dictionary dictionary) {
+        if (text == null || text.isBlank()) {
+            return HeaderMappingDecision.unmatched();
+        }
+        String trimmedText = text.trim();
+
+        ParseSourceEntry exact = resolveSourceExact(trimmedText, dictionary);
+        if (exact != null) {
+            return HeaderMappingDecision.of(exact, "exact_header", 0.98D, trimmedText);
+        }
+
+        for (String segment : trimmedText.split("\\|")) {
+            String segmentText = segment.trim();
+            if (segmentText.isBlank()) {
+                continue;
+            }
+            ParseSourceEntry segmentEntry = resolveSourceExact(segmentText, dictionary);
+            if (segmentEntry != null) {
+                return HeaderMappingDecision.of(segmentEntry, "header_segment", 0.92D, segmentText);
+            }
+        }
+
+        ParseSourceEntry containsEntry = resolveAliasContains(trimmedText, dictionary);
+        if (containsEntry != null) {
+            return HeaderMappingDecision.of(containsEntry, "alias_contains", 0.80D, trimmedText);
+        }
+
+        return HeaderMappingDecision.unmatched();
     }
 
     private ParseSourceEntry resolveSource(String text, Dictionary dictionary) {
         if (text == null || text.isBlank()) {
             return null;
         }
-        Map<String, ParseSourceEntry> sourceByCode = dictionary == null ? Map.of() : dictionary.sourceByCode();
-        Map<String, ParseSourceEntry> sourceByNormalizedName = dictionary == null ? Map.of() : dictionary.sourceByNormalizedName();
-        ParseSourceEntry entry = sourceByCode.get(text.trim());
+        String trimmedText = text.trim();
+        ParseSourceEntry entry = resolveSourceExact(trimmedText, dictionary);
         if (entry != null) {
             return entry;
         }
-        return sourceByNormalizedName.get(MatchTextSupport.normalizeMatchText(text));
+        for (String segment : trimmedText.split("\\|")) {
+            String segmentText = segment.trim();
+            if (segmentText.isBlank()) {
+                continue;
+            }
+            entry = resolveSourceExact(segmentText, dictionary);
+            if (entry != null) {
+                return entry;
+            }
+        }
+        return resolveAliasContains(trimmedText, dictionary);
+    }
+
+    private ParseSourceEntry resolveSourceExact(String text, Dictionary dictionary) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        Map<String, ParseSourceEntry> sourceByCode = dictionary == null ? Map.of() : dictionary.sourceByCode();
+        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? Map.of() : dictionary.sourceByAlias();
+        ParseSourceEntry entry = sourceByCode.get(text);
+        if (entry != null) {
+            return entry;
+        }
+        return sourceByAlias.get(text);
+    }
+
+    private ParseSourceEntry resolveAliasContains(String text, Dictionary dictionary) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        String trimmedText = text.trim();
+        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? Map.of() : dictionary.sourceByAlias();
+        for (Map.Entry<String, ParseSourceEntry> entry : sourceByAlias.entrySet()) {
+            String alias = entry.getKey();
+            if (alias == null || alias.isBlank() || alias.length() < 2) {
+                continue;
+            }
+            if (trimmedText.contains(alias)) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private String buildSubjectMappingReason(Map<String, Object> standardValues, List<HeaderMappingDecision> matchedDecisions) {
+        if (standardValues == null || standardValues.isEmpty()) {
+            return "No standard columns matched for subject row";
+        }
+        Map<String, Integer> strategyCount = new HashMap<>();
+        for (HeaderMappingDecision decision : matchedDecisions) {
+            if (decision == null || !decision.matched() || decision.strategy() == null) {
+                continue;
+            }
+            strategyCount.merge(decision.strategy(), 1, Integer::sum);
+        }
+        return "Matched " + standardValues.size() + " standard columns, strategies=" + strategyCount;
+    }
+
+    private Double calculateSubjectMappingConfidence(Map<String, Object> standardValues, List<HeaderMappingDecision> matchedDecisions) {
+        if (standardValues == null || standardValues.isEmpty() || matchedDecisions == null || matchedDecisions.isEmpty()) {
+            return 0D;
+        }
+        double total = 0D;
+        int count = 0;
+        for (HeaderMappingDecision decision : matchedDecisions) {
+            if (decision == null || !decision.matched()) {
+                continue;
+            }
+            total += decision.confidence();
+            count++;
+        }
+        if (count == 0) {
+            return 0D;
+        }
+        return Math.min(1D, total / count);
     }
 
     private String extractUnit(String text) {
@@ -262,13 +396,13 @@ public class ExternalValuationStandardizationService {
 
             List<ParseSourceEntry> sources = loadSources(parseSourceRepository, ruleByCode);
             Map<String, ParseSourceEntry> sourceByCode = new LinkedHashMap<>();
-            Map<String, ParseSourceEntry> sourceByNormalizedName = new LinkedHashMap<>();
+            Map<String, ParseSourceEntry> sourceByAlias = new LinkedHashMap<>();
             for (ParseSourceEntry source : sources) {
-                registerSourceAlias(sourceByCode, sourceByNormalizedName, source.getColumnName(), source);
-                registerSourceAlias(sourceByCode, sourceByNormalizedName, source.getColumnMap(), source);
-                registerSourceAlias(sourceByCode, sourceByNormalizedName, source.getRule().getColumnMapName(), source);
+                registerSourceAlias(sourceByCode, sourceByAlias, source.getColumnName(), source);
+                registerSourceAlias(sourceByCode, sourceByAlias, source.getColumnMap(), source);
+                registerSourceAlias(sourceByCode, sourceByAlias, source.getRule().getColumnMapName(), source);
             }
-            return new Dictionary(sourceByCode, sourceByNormalizedName);
+            return new Dictionary(sourceByCode, sourceByAlias);
         } catch (Exception exception) {
             log.warn("加载外部估值标准字典失败，将使用空字典", exception);
             return new Dictionary(Map.of(), Map.of());
@@ -317,24 +451,45 @@ public class ExternalValuationStandardizationService {
 
     private void registerSourceAlias(
             Map<String, ParseSourceEntry> sourceByCode,
-            Map<String, ParseSourceEntry> sourceByNormalizedName,
+            Map<String, ParseSourceEntry> sourceByAlias,
             String alias,
             ParseSourceEntry source
     ) {
         if (alias == null || alias.isBlank() || source == null) {
             return;
         }
-        sourceByCode.putIfAbsent(alias.trim(), source);
-        String normalized = MatchTextSupport.normalizeMatchText(alias);
-        if (!normalized.isBlank()) {
-            sourceByNormalizedName.putIfAbsent(normalized, source);
-        }
+        String trimmedAlias = alias.trim();
+        sourceByCode.putIfAbsent(trimmedAlias, source);
+        sourceByAlias.putIfAbsent(trimmedAlias, source);
     }
 
     private record Dictionary(
             Map<String, ParseSourceEntry> sourceByCode,
-            Map<String, ParseSourceEntry> sourceByNormalizedName
+            Map<String, ParseSourceEntry> sourceByAlias
     ) {
+    }
+
+    private record HeaderMappingDecision(
+            String standardCode,
+            ParseSourceEntry source,
+            String strategy,
+            Double confidence,
+            String matchedText
+    ) {
+        static HeaderMappingDecision unmatched() {
+            return new HeaderMappingDecision(null, null, null, 0D, null);
+        }
+
+        static HeaderMappingDecision of(ParseSourceEntry source, String strategy, Double confidence, String matchedText) {
+            if (source == null || source.getRule() == null || source.getRule().getColumnMap() == null || source.getRule().getColumnMap().isBlank()) {
+                return unmatched();
+            }
+            return new HeaderMappingDecision(source.getRule().getColumnMap(), source, strategy, confidence, matchedText);
+        }
+
+        boolean matched() {
+            return standardCode != null && !standardCode.isBlank();
+        }
     }
 
     @Getter

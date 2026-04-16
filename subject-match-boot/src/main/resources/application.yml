@@ -68,4 +68,4 @@ subject:
     workflow:
       skip-excel-style-parsing: false
       enable-match-process: true
-      persist-dwd-details: false
+      persist-standardized-dwd-details: false

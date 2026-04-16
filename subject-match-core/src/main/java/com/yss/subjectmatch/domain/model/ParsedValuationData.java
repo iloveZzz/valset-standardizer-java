@@ -12,7 +12,7 @@ import java.util.Map;
  * 估值数据分析结果聚合。
  */
 @Data
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class ParsedValuationData {
@@ -21,6 +21,7 @@ public class ParsedValuationData {
     private Integer headerRowNumber;
     private Integer dataStartRowNumber;
     private String title;
+    private String fileNameOriginal;
     private Map<String, String> basicInfo;
     private List<String> headers;
     private List<List<String>> headerDetails;

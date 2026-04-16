@@ -46,11 +46,13 @@ class JjhzgzbStandardizationSupportTest {
                 .build();
 
         ParsedValuationData parsedValuationData = ParsedValuationData.builder()
+                .title("20230321基金资产估值表")
+                .workbookPath("/tmp/20230321基金资产估值表.xlsx")
                 .basicInfo(Map.of("日期", "2023-03-21"))
                 .subjects(List.of(subject))
                 .build();
 
-        List<TrDwdJjhzgzbPO> rows = JjhzgzbStandardizationSupport.buildRows(parsedValuationData, "CSV");
+        List<TrDwdJjhzgzbPO> rows = JjhzgzbStandardizationSupport.buildRows(parsedValuationData, "CSV", "20230321基金资产估值表.xlsx");
 
         assertThat(rows).hasSize(1);
         TrDwdJjhzgzbPO row = rows.get(0);
@@ -63,7 +65,43 @@ class JjhzgzbStandardizationSupportTest {
         assertThat(row.getNCbJzBl()).isEqualTo(new BigDecimal("0.936036"));
         assertThat(row.getNSzJzBl()).isEqualTo(new BigDecimal("0.936036"));
         assertThat(row.getSourceTp()).isEqualTo("CSV");
+        assertThat(row.getSourceSign()).isEqualTo("20230321基金资产估值表.xlsx");
         assertThat(row.getSn()).isEqualTo(8);
         assertThat(row.getDataDt()).isEqualTo("20230321");
+    }
+
+    @Test
+    void should_fallback_to_subject_and_basic_info_when_standard_values_not_mapped() {
+        SubjectRecord subject = SubjectRecord.builder()
+                .sheetName("Sheet1")
+                .rowDataNumber(9)
+                .subjectCode("1102")
+                .subjectName("结算备付金")
+                .standardValues(Map.of())
+                .build();
+
+        ParsedValuationData parsedValuationData = ParsedValuationData.builder()
+                .title("20230321基金资产估值表")
+                .workbookPath("/tmp/20230321基金资产估值表.xlsx")
+                .basicInfo(Map.of(
+                        "机构代码", "ORG-BASIC",
+                        "产品代码", "PD-BASIC",
+                        "日期", "2023-03-21"
+                ))
+                .subjects(List.of(subject))
+                .build();
+
+        List<TrDwdJjhzgzbPO> rows = JjhzgzbStandardizationSupport.buildRows(parsedValuationData, "EXCEL", "20230321基金资产估值表.xlsx");
+
+        assertThat(rows).hasSize(1);
+        TrDwdJjhzgzbPO row = rows.get(0);
+        assertThat(row.getOrgCd()).isEqualTo("ORG-BASIC");
+        assertThat(row.getPdCd()).isEqualTo("PD-BASIC");
+        assertThat(row.getBizDate()).isEqualTo("20230321");
+        assertThat(row.getSubjectCd()).isEqualTo("1102");
+        assertThat(row.getSubjectNm()).isEqualTo("结算备付金");
+        assertThat(row.getSourceTp()).isEqualTo("EXCEL");
+        assertThat(row.getSourceSign()).isEqualTo("20230321基金资产估值表.xlsx");
+        assertThat(row.getSn()).isEqualTo(9);
     }
 }

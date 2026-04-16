@@ -36,6 +36,7 @@
         <module name="subject-match-boot" />
         <module name="subject-match-knowledge" />
         <module name="subject-match-core" />
+        <module name="yss-component-file-parser" />
         <module name="subject-match-e2e" />
         <module name="subject-match-infra" />
       </profile>
@@ -53,6 +54,7 @@
       <module name="subject-match-knowledge" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
       <module name="subject-match-parent" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
       <module name="subject-match-tools" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
+      <module name="yss-component-file-parser" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
     </option>
   </component>
 </project>

@@ -20,6 +20,7 @@ public class StgExternalValuationViewDTO {
     private String sheetName;
     private Integer headerRowNumber;
     private Integer dataStartRowNumber;
+    private String fileNameOriginal;
     private String title;
     private Map<String, String> basicInfo;
     private List<String> headers;

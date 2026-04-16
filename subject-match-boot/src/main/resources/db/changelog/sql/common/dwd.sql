@@ -342,8 +342,6 @@ CREATE TABLE t_tr_jjhzgzb (
     source_sign VARCHAR2(300 CHAR),
     sn NUMBER(10),
     data_dt VARCHAR2(8 CHAR),
-    is_audt NUMBER(1),
-    audt_id VARCHAR2(30 CHAR),
     isin_cd VARCHAR2(30 CHAR)
 );
 
@@ -356,7 +354,5 @@ CREATE TABLE t_tr_index (
     indx_valu VARCHAR2(300 CHAR),
     source_tp VARCHAR2(30 CHAR),
     source_sign VARCHAR2(300 CHAR),
-    time_stamp TIMESTAMP,
-    is_audt NUMBER(1),
-    audt_id VARCHAR2(30 CHAR)
+    time_stamp TIMESTAMP
 );

@@ -52,11 +52,4 @@ public class TrIndexPO {
     @TableField("time_stamp")
     private LocalDateTime timeStamp;
 
-    /** 是否审核 */
-    @TableField("is_audt")
-    private Boolean isAudt;
-
-    /** 审核ID */
-    @TableField("audt_id")
-    private String audtId;
 }

@@ -28,7 +28,7 @@ class TrIndexStandardizationSupportTest {
                 ))
                 .build();
 
-        List<TrIndexPO> rows = TrIndexStandardizationSupport.buildRows(parsedValuationData, "CSV");
+        List<TrIndexPO> rows = TrIndexStandardizationSupport.buildRows(parsedValuationData, "CSV", "20230321基金资产估值表.xlsx");
 
         assertThat(rows).hasSize(1);
         TrIndexPO row = rows.get(0);
@@ -36,6 +36,6 @@ class TrIndexStandardizationSupportTest {
         assertThat(row.getIndxNm()).isEqualTo("市值");
         assertThat(row.getIndxValu()).isEqualTo("123.45");
         assertThat(row.getSourceTp()).isEqualTo("CSV");
-        assertThat(row.getSourceSign()).contains("sheet=Sheet1", "row=8");
+        assertThat(row.getSourceSign()).isEqualTo("20230321基金资产估值表.xlsx");
     }
 }

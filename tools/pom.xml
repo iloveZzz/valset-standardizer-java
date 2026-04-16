@@ -18,5 +18,6 @@
         <module>extract</module>
         <module>analysis</module>
         <module>batch</module>
+        <module>fileparser</module>
     </modules>
 </project>

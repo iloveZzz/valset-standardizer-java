@@ -130,6 +130,7 @@ public final class ParsedValuationDataProjectionSupport {
                 .forEach(entry -> sortedLevelDistribution.put(entry.getKey(), entry.getValue()));
 
         return WorkbookSummary.builder()
+                .fileNameOriginal(parsedValuationData.getFileNameOriginal())
                 .title(parsedValuationData.getTitle())
                 .sheetName(parsedValuationData.getSheetName())
                 .headerRowNumber(parsedValuationData.getHeaderRowNumber())

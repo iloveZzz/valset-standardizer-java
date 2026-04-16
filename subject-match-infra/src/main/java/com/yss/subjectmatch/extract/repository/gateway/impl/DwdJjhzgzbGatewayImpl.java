@@ -22,8 +22,8 @@ public class DwdJjhzgzbGatewayImpl implements DwdJjhzgzbGateway {
     private final TrDwdJjhzgzbRepository repository;
 
     @Override
-    public void saveStandardizedJjhzgzb(Long taskId, Long fileId, String sourceTp, ParsedValuationData standardizedValuationData) {
-        List<TrDwdJjhzgzbPO> rows = JjhzgzbStandardizationSupport.buildRows(standardizedValuationData, sourceTp);
+    public void saveStandardizedJjhzgzb(Long taskId, Long fileId, String sourceTp, String sourceSign, ParsedValuationData standardizedValuationData) {
+        List<TrDwdJjhzgzbPO> rows = JjhzgzbStandardizationSupport.buildRows(standardizedValuationData, sourceTp, sourceSign);
         if (rows.isEmpty()) {
             log.info("t_tr_jjhzgzb 标准化结果为空，taskId={}, fileId={}, sourceTp={}", taskId, fileId, sourceTp);
             return;

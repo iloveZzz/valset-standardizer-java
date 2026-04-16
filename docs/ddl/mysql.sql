@@ -278,8 +278,6 @@ CREATE TABLE t_tr_jjhzgzb (
     source_sign VARCHAR(300),
     sn SMALLINT,
     data_dt VARCHAR(8),
-    is_audt TINYINT COMMENT '是否审核',
-    audt_id VARCHAR(30) COMMENT '审核ID',
     isin_cd VARCHAR(30) COMMENT 'ISIN代码'
 ) COMMENT='基金持仓估值表';
 
@@ -292,9 +290,7 @@ CREATE TABLE t_tr_index (
     indx_valu VARCHAR(300),
     source_tp VARCHAR(30),
     source_sign VARCHAR(300),
-    time_stamp DATETIME,
-    is_audt TINYINT COMMENT '是否审核',
-    audt_id VARCHAR(30) COMMENT '审核ID'
+    time_stamp DATETIME
 ) COMMENT='资产估值指标信息（原始数据）';
 
 CREATE INDEX idx_t_tr_jjhzgzb_org ON t_tr_jjhzgzb(org_cd);

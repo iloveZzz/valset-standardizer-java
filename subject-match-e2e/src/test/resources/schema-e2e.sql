@@ -404,8 +404,6 @@ CREATE TABLE IF NOT EXISTS t_tr_jjhzgzb (
     source_sign VARCHAR(300),
     sn SMALLINT,
     data_dt VARCHAR(8),
-    is_audt BOOLEAN,
-    audt_id VARCHAR(30),
     isin_cd VARCHAR(30)
 );
 
@@ -418,9 +416,7 @@ CREATE TABLE IF NOT EXISTS t_tr_index (
     indx_valu VARCHAR(300),
     source_tp VARCHAR(30),
     source_sign VARCHAR(300),
-    time_stamp TIMESTAMP,
-    is_audt BOOLEAN,
-    audt_id VARCHAR(30)
+    time_stamp TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS tr_spv_jjhzgzb (

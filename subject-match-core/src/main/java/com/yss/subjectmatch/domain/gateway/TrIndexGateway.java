@@ -10,5 +10,5 @@ public interface TrIndexGateway {
     /**
      * 将标准化后的指标明细落入 t_tr_index。
      */
-    void saveStandardizedIndex(Long taskId, Long fileId, String sourceTp, ParsedValuationData standardizedValuationData);
+    void saveStandardizedIndex(Long taskId, Long fileId, String sourceTp, String sourceSign, ParsedValuationData standardizedValuationData);
 }

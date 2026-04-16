@@ -274,8 +274,6 @@ CREATE TABLE t_tr_jjhzgzb (
     source_sign VARCHAR2(300 CHAR),
     sn NUMBER(5),
     data_dt VARCHAR2(8 CHAR),
-    is_audt NUMBER(1),
-    audt_id VARCHAR2(30 CHAR),
     isin_cd VARCHAR2(30 CHAR)
 );
 COMMENT ON TABLE t_tr_jjhzgzb IS '基金持仓估值表';
@@ -288,9 +286,7 @@ CREATE TABLE t_tr_index (
     indx_valu VARCHAR2(300 CHAR),
     source_tp VARCHAR2(30 CHAR),
     source_sign VARCHAR2(300 CHAR),
-    time_stamp TIMESTAMP,
-    is_audt NUMBER(1),
-    audt_id VARCHAR2(30 CHAR)
+    time_stamp TIMESTAMP
 );
 
 COMMENT ON TABLE t_tr_index IS '资产估值指标信息（原始数据）';

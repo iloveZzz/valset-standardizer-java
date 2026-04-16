@@ -22,8 +22,8 @@ public class TrIndexGatewayImpl implements TrIndexGateway {
     private final TrIndexRepository repository;
 
     @Override
-    public void saveStandardizedIndex(Long taskId, Long fileId, String sourceTp, ParsedValuationData standardizedValuationData) {
-        List<TrIndexPO> rows = TrIndexStandardizationSupport.buildRows(standardizedValuationData, sourceTp);
+    public void saveStandardizedIndex(Long taskId, Long fileId, String sourceTp, String sourceSign, ParsedValuationData standardizedValuationData) {
+        List<TrIndexPO> rows = TrIndexStandardizationSupport.buildRows(standardizedValuationData, sourceTp, sourceSign);
         if (rows.isEmpty()) {
             log.info("t_tr_index 标准化结果为空，taskId={}, fileId={}, sourceTp={}", taskId, fileId, sourceTp);
             return;

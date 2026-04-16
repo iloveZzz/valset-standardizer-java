@@ -176,6 +176,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         parseTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
         parseTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
         parseTaskCommand.setFileId(uploadResponse.getFileId());
+        parseTaskCommand.setFileNameOriginal(file.getOriginalFilename());
         parseTaskCommand.setCreatedBy(createdBy);
         parseTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
         TaskViewDTO parseTask = analyze(parseTaskCommand);

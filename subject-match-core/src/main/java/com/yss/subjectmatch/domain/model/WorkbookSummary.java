@@ -16,6 +16,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WorkbookSummary {
+    private String fileNameOriginal;
     private String title;
     private String sheetName;
     private Integer headerRowNumber;

@@ -29,6 +29,11 @@ public class ParseTaskCommand {
     private Long fileId;
 
     /**
+     * 可选的原始文件名。
+     */
+    private String fileNameOriginal;
+
+    /**
      * 可选的创建者标识符。
      */
     private String createdBy;

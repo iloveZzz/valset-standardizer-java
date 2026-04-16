@@ -25,13 +25,13 @@ public final class JjhzgzbStandardizationSupport {
     private JjhzgzbStandardizationSupport() {
     }
 
-    public static List<TrDwdJjhzgzbPO> buildRows(ParsedValuationData standardizedValuationData, String sourceTp) {
+    public static List<TrDwdJjhzgzbPO> buildRows(ParsedValuationData standardizedValuationData, String sourceTp, String sourceSign) {
         if (standardizedValuationData == null || standardizedValuationData.getSubjects() == null || standardizedValuationData.getSubjects().isEmpty()) {
             return List.of();
         }
         List<TrDwdJjhzgzbPO> result = new ArrayList<>();
         for (SubjectRecord subject : standardizedValuationData.getSubjects()) {
-            TrDwdJjhzgzbPO row = buildRow(subject, standardizedValuationData.getBasicInfo(), standardizedValuationData.getTitle(), sourceTp);
+            TrDwdJjhzgzbPO row = buildRow(subject, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign);
             if (row != null) {
                 result.add(row);
             }
@@ -39,22 +39,25 @@ public final class JjhzgzbStandardizationSupport {
         return result;
     }
 
-    private static TrDwdJjhzgzbPO buildRow(SubjectRecord subject, Map<String, String> basicInfo, String title, String sourceTp) {
+    private static TrDwdJjhzgzbPO buildRow(SubjectRecord subject, Map<String, String> basicInfo, String sourceTp, String sourceSign) {
         Map<String, Object> standardValues = subject == null || subject.getStandardValues() == null
                 ? Map.of()
                 : new LinkedHashMap<>(subject.getStandardValues());
-        if (standardValues.isEmpty()) {
-            return null;
-        }
 
         TrDwdJjhzgzbPO row = new TrDwdJjhzgzbPO();
-        row.setOrgCd(stringValue(standardValues, "org_cd"));
-        row.setPdCd(stringValue(standardValues, "pd_cd"));
+        row.setOrgCd(firstNonBlank(
+                stringValue(standardValues, "org_cd"),
+                lookupBasicInfo(basicInfo, "org_cd", "orgCd", "机构代码")
+        ));
+        row.setPdCd(firstNonBlank(
+                stringValue(standardValues, "pd_cd"),
+                lookupBasicInfo(basicInfo, "pd_cd", "pdCd", "产品代码")
+        ));
         row.setBizDate(normalizeDateValue(firstNonBlank(
                 stringValue(standardValues, "biz_date"),
                 normalizeBizDate(basicInfo, "biz_date"),
                 normalizeBizDate(basicInfo, "日期"),
-                extractBizDate(title)
+                extractBizDate(sourceSign)
         )));
         row.setSubjectCd(firstNonBlank(stringValue(standardValues, "subject_cd"), subject.getSubjectCode()));
         row.setSubjectNm(firstNonBlank(stringValue(standardValues, "subject_nm"), subject.getSubjectName()));
@@ -81,30 +84,31 @@ public final class JjhzgzbStandardizationSupport {
         row.setTimeStamp(localDateTimeValue(standardValues, "time_stamp"));
         row.setConsFloatTpCd(stringValue(standardValues, "cons_float_tp_cd"));
         row.setSourceTp(firstNonBlank(stringValue(standardValues, "source_tp"), sourceTp));
-        row.setSourceSign(buildSourceSign(subject, standardValues));
+        row.setSourceSign(truncate(sourceSign, 300));
         row.setSn(subject.getRowDataNumber());
         row.setDataDt(normalizeDateValue(firstNonBlank(stringValue(standardValues, "data_dt"), row.getBizDate())));
-        row.setIsAudt(booleanValue(standardValues, "is_audt"));
-        row.setAudtId(stringValue(standardValues, "audt_id"));
         row.setIsinCd(stringValue(standardValues, "isin_cd"));
+        if ((row.getSubjectCd() == null || row.getSubjectCd().isBlank())
+                && (row.getSubjectNm() == null || row.getSubjectNm().isBlank())) {
+            return null;
+        }
         return row;
     }
 
-    private static String buildSourceSign(SubjectRecord subject, Map<String, Object> standardValues) {
-        List<String> items = new ArrayList<>();
-        if (subject != null) {
-            if (subject.getSheetName() != null && !subject.getSheetName().isBlank()) {
-                items.add("sheet=" + subject.getSheetName());
+    private static String lookupBasicInfo(Map<String, String> basicInfo, String... keys) {
+        if (basicInfo == null || basicInfo.isEmpty() || keys == null) {
+            return null;
+        }
+        for (String key : keys) {
+            if (key == null || key.isBlank()) {
+                continue;
             }
-            if (subject.getRowDataNumber() != null) {
-                items.add("row=" + subject.getRowDataNumber());
+            String value = basicInfo.get(key);
+            if (value != null && !value.isBlank()) {
+                return value.trim();
             }
         }
-        if (!standardValues.isEmpty()) {
-            items.add("fields=" + String.join(",", standardValues.keySet()));
-        }
-        String sign = String.join(";", items);
-        return sign.length() > 300 ? sign.substring(0, 300) : sign;
+        return null;
     }
 
     private static String normalizeBizDate(Map<String, String> basicInfo, String key) {
@@ -161,33 +165,19 @@ public final class JjhzgzbStandardizationSupport {
         return null;
     }
 
+    private static String truncate(String value, int maxLength) {
+        if (value == null || maxLength <= 0 || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
+    }
+
     private static BigDecimal decimalValue(Map<String, Object> values, String key) {
         Object value = values.get(key);
         if (value == null) {
             return null;
         }
         return ExcelParsingSupport.normalizeNumber(value);
-    }
-
-    private static Boolean booleanValue(Map<String, Object> values, String key) {
-        Object value = values.get(key);
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Boolean bool) {
-            return bool;
-        }
-        String text = ExcelParsingSupport.normalizeText(value).trim().toLowerCase(Locale.ROOT);
-        if (text.isBlank()) {
-            return null;
-        }
-        if (List.of("true", "1", "y", "yes", "是").contains(text)) {
-            return Boolean.TRUE;
-        }
-        if (List.of("false", "0", "n", "no", "否").contains(text)) {
-            return Boolean.FALSE;
-        }
-        return null;
     }
 
     private static LocalDateTime localDateTimeValue(Map<String, Object> values, String key) {

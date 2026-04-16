@@ -341,6 +341,7 @@ public class FileSystemResultExporter implements ResultExporter {
         payload.put("sheet_name", parsedValuationData.getSheetName());
         payload.put("header_row_number", parsedValuationData.getHeaderRowNumber());
         payload.put("data_start_row_number", parsedValuationData.getDataStartRowNumber());
+        payload.put("file_name_original", parsedValuationData.getFileNameOriginal());
         payload.put("title", parsedValuationData.getTitle());
         payload.put("basic_info", parsedValuationData.getBasicInfo());
         payload.put("headers", parsedValuationData.getHeaders());
@@ -440,7 +441,7 @@ public class FileSystemResultExporter implements ResultExporter {
     }
 
     private void createDuckDbTables(DuckDBConnection connection) throws SQLException {
-        execute(connection, "create table workbook_info(workbook_path varchar, sheet_name varchar, title varchar, header_row_number integer, data_start_row_number integer)");
+        execute(connection, "create table workbook_info(workbook_path varchar, sheet_name varchar, file_name_original varchar, title varchar, header_row_number integer, data_start_row_number integer)");
         execute(connection, "create table basic_info(info_key varchar, info_value varchar)");
         execute(connection, "create table headers(column_index integer, header_name varchar)");
         execute(connection, "create table header_details(detail_row_index integer, column_index integer, cell_value varchar)");
@@ -448,7 +449,7 @@ public class FileSystemResultExporter implements ResultExporter {
         execute(connection, "create table subjects(sheet_name varchar, row_data_number integer, subject_code varchar, subject_name varchar, level integer, parent_code varchar, root_code varchar, segment_count integer, path_codes varchar, is_leaf boolean)");
         execute(connection, "create table subject_relations(subject_code varchar, subject_name varchar, parent_code varchar, parent_name varchar, level integer, root_code varchar, segment_count integer, is_leaf boolean, path_codes varchar)");
         execute(connection, "create table metrics(sheet_name varchar, row_data_number integer, metric_name varchar, metric_type varchar, value varchar, raw_values varchar)");
-        execute(connection, "create table summary(title varchar, sheet_name varchar, header_row_number integer, data_start_row_number integer, subject_count integer, root_subject_count integer, leaf_subject_count integer, non_leaf_subject_count integer, metric_count integer, metric_row_count integer, metric_data_count integer, max_level integer, duplicate_subject_codes varchar, level_distribution varchar, basic_info varchar)");
+        execute(connection, "create table summary(file_name_original varchar, title varchar, sheet_name varchar, header_row_number integer, data_start_row_number integer, subject_count integer, root_subject_count integer, leaf_subject_count integer, non_leaf_subject_count integer, metric_count integer, metric_row_count integer, metric_data_count integer, max_level integer, duplicate_subject_codes varchar, level_distribution varchar, basic_info varchar)");
         execute(connection, "create table subject_tree_json(tree_json varchar)");
     }
 
@@ -459,12 +460,13 @@ public class FileSystemResultExporter implements ResultExporter {
     }
 
     private void insertWorkbookInfo(DuckDBConnection connection, ParsedValuationData parsedValuationData) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into workbook_info values (?, ?, ?, ?, ?)")) {
+        try (PreparedStatement statement = connection.prepareStatement("insert into workbook_info values (?, ?, ?, ?, ?, ?)")) {
             statement.setString(1, parsedValuationData.getWorkbookPath());
             statement.setString(2, parsedValuationData.getSheetName());
-            statement.setString(3, parsedValuationData.getTitle());
-            statement.setInt(4, defaultInteger(parsedValuationData.getHeaderRowNumber()));
-            statement.setInt(5, defaultInteger(parsedValuationData.getDataStartRowNumber()));
+            statement.setString(3, parsedValuationData.getFileNameOriginal());
+            statement.setString(4, parsedValuationData.getTitle());
+            statement.setInt(5, defaultInteger(parsedValuationData.getHeaderRowNumber()));
+            statement.setInt(6, defaultInteger(parsedValuationData.getDataStartRowNumber()));
             statement.executeUpdate();
         }
     }
@@ -602,22 +604,23 @@ public class FileSystemResultExporter implements ResultExporter {
     }
 
     private void insertSummary(DuckDBConnection connection, WorkbookSummary summary) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("insert into summary values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
-            statement.setString(1, summary.getTitle());
-            statement.setString(2, summary.getSheetName());
-            statement.setInt(3, defaultInteger(summary.getHeaderRowNumber()));
-            statement.setInt(4, defaultInteger(summary.getDataStartRowNumber()));
-            statement.setInt(5, defaultInteger(summary.getSubjectCount()));
-            statement.setInt(6, defaultInteger(summary.getRootSubjectCount()));
-            statement.setInt(7, defaultInteger(summary.getLeafSubjectCount()));
-            statement.setInt(8, defaultInteger(summary.getNonLeafSubjectCount()));
-            statement.setInt(9, defaultInteger(summary.getMetricCount()));
-            statement.setInt(10, defaultInteger(summary.getMetricRowCount()));
-            statement.setInt(11, defaultInteger(summary.getMetricDataCount()));
-            statement.setInt(12, defaultInteger(summary.getMaxLevel()));
-            statement.setString(13, stringify(summary.getDuplicateSubjectCodes()));
-            statement.setString(14, stringify(summary.getLevelDistribution()));
-            statement.setString(15, stringify(summary.getBasicInfo()));
+        try (PreparedStatement statement = connection.prepareStatement("insert into summary values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+            statement.setString(1, summary.getFileNameOriginal());
+            statement.setString(2, summary.getTitle());
+            statement.setString(3, summary.getSheetName());
+            statement.setInt(4, defaultInteger(summary.getHeaderRowNumber()));
+            statement.setInt(5, defaultInteger(summary.getDataStartRowNumber()));
+            statement.setInt(6, defaultInteger(summary.getSubjectCount()));
+            statement.setInt(7, defaultInteger(summary.getRootSubjectCount()));
+            statement.setInt(8, defaultInteger(summary.getLeafSubjectCount()));
+            statement.setInt(9, defaultInteger(summary.getNonLeafSubjectCount()));
+            statement.setInt(10, defaultInteger(summary.getMetricCount()));
+            statement.setInt(11, defaultInteger(summary.getMetricRowCount()));
+            statement.setInt(12, defaultInteger(summary.getMetricDataCount()));
+            statement.setInt(13, defaultInteger(summary.getMaxLevel()));
+            statement.setString(14, stringify(summary.getDuplicateSubjectCodes()));
+            statement.setString(15, stringify(summary.getLevelDistribution()));
+            statement.setString(16, stringify(summary.getBasicInfo()));
             statement.executeUpdate();
         }
     }
