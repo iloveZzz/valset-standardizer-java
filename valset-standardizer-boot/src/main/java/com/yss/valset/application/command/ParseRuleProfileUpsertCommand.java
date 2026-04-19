@@ -23,6 +23,8 @@ public class ParseRuleProfileUpsertCommand {
     private String rowClassifyExpr;
     private String fieldMapExpr;
     private String transformExpr;
+    private List<String> requiredHeaders;
+    private String subjectCodePattern;
     private Boolean traceEnabled;
     private Long timeoutMs;
     private String createdBy;

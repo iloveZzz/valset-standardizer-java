@@ -12,10 +12,9 @@ import java.util.regex.Pattern;
  */
 public final class ExcelParsingSupport {
 
-    public static final List<String> REQUIRED_HEADERS = List.of("科目代码", "科目名称");
     public static final int SUBJECT_CODE_SCAN_LIMIT = 5;
     public static final int SUBJECT_NAME_SCAN_LIMIT = 4;
-    private static final Pattern SUBJECT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]+$");
+    private static final Pattern DEFAULT_SUBJECT_CODE_PATTERN = Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
 
     private ExcelParsingSupport() {
     }
@@ -102,6 +101,10 @@ public final class ExcelParsingSupport {
     }
 
     public static boolean isSubjectCode(String value) {
+        return isSubjectCode(value, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    public static boolean isSubjectCode(String value, Pattern subjectCodePattern) {
         String normalized = normalizeSubjectCode(value);
         if (normalized.isEmpty()) {
             return false;
@@ -109,7 +112,8 @@ public final class ExcelParsingSupport {
         if (containsChineseCharacter(normalized)) {
             return false;
         }
-        if (!SUBJECT_CODE_PATTERN.matcher(normalized).matches()) {
+        Pattern pattern = subjectCodePattern == null ? DEFAULT_SUBJECT_CODE_PATTERN : subjectCodePattern;
+        if (!pattern.matcher(normalized).matches()) {
             return false;
         }
         return true;
@@ -147,11 +151,7 @@ public final class ExcelParsingSupport {
             return String.join("", segments);
         }
 
-        String compact = normalized.replaceAll("[\\s\\.\\p{Punct}]+", "");
-        if (!compact.isEmpty() && compact.chars().allMatch(Character::isDigit) && compact.length() > 4) {
-            return splitCompactNumericCode(compact).replace(".", "");
-        }
-        return compact;
+        return normalized.replaceAll("[\\s\\.\\p{Punct}]+", "");
     }
 
     /**
@@ -201,21 +201,30 @@ public final class ExcelParsingSupport {
     }
 
     public static boolean isSubjectDataRow(List<Object> rowValues) {
-        return findSubjectCodeColumnIndex(rowValues) >= 0;
+        return isSubjectDataRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    public static boolean isSubjectDataRow(List<Object> rowValues, Pattern subjectCodePattern) {
+        return findSubjectCodeColumnIndex(rowValues, subjectCodePattern) >= 0;
     }
 
     public static int findSubjectCodeColumnIndex(List<Object> rowValues) {
+        return findSubjectCodeColumnIndex(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    public static int findSubjectCodeColumnIndex(List<Object> rowValues, Pattern subjectCodePattern) {
         if (rowValues == null || rowValues.isEmpty()) {
             return -1;
         }
         int subjectCodeScanLimit = Math.min(rowValues.size(), SUBJECT_CODE_SCAN_LIMIT);
+        Pattern pattern = subjectCodePattern == null ? DEFAULT_SUBJECT_CODE_PATTERN : subjectCodePattern;
         boolean seenMeaningfulText = false;
         for (int columnIndex = 0; columnIndex < subjectCodeScanLimit; columnIndex++) {
             String candidateCode = textAt(rowValues, columnIndex);
             if (candidateCode.isBlank() || "-".equals(candidateCode)) {
                 continue;
             }
-            if (!isSubjectCode(candidateCode)) {
+            if (!isSubjectCode(candidateCode, pattern)) {
                 seenMeaningfulText = true;
                 continue;
             }
@@ -245,12 +254,16 @@ public final class ExcelParsingSupport {
     }
 
     public static boolean isMetricDataRow(List<Object> rowValues) {
+        return isMetricDataRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    public static boolean isMetricDataRow(List<Object> rowValues, Pattern subjectCodePattern) {
         int labelIndex = findFirstMeaningfulCellIndex(rowValues);
         if (labelIndex < 0) {
             return false;
         }
         String labelText = textAt(rowValues, labelIndex);
-        if (isSubjectCode(labelText)) {
+        if (isSubjectCode(labelText, subjectCodePattern)) {
             return false;
         }
         int valueCount = 0;
@@ -267,12 +280,16 @@ public final class ExcelParsingSupport {
     }
 
     public static boolean isMetricRow(List<Object> rowValues) {
+        return isMetricRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    public static boolean isMetricRow(List<Object> rowValues, Pattern subjectCodePattern) {
         int labelIndex = findFirstMeaningfulCellIndex(rowValues);
         if (labelIndex < 0) {
             return false;
         }
         String labelText = textAt(rowValues, labelIndex);
-        if (isSubjectCode(labelText)) {
+        if (isSubjectCode(labelText, subjectCodePattern)) {
             return false;
         }
         int valueCount = 0;

@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * 解析模板主实体。
  */
@@ -80,6 +82,16 @@ public class ParseRuleProfile {
      * 值转换表达式。
      */
     private String transformExpr;
+
+    /**
+     * 表头必选字段。
+     */
+    private List<String> requiredHeaders;
+
+    /**
+     * 科目代码正则表达式。
+     */
+    private String subjectCodePattern;
 
     /**
      * 是否开启表达式追踪。

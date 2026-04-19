@@ -91,6 +91,42 @@ public final class HeaderMappingRuleSupport {
     }
 
     /**
+     * 判断表头文本是否命中任意分段关键词。
+     */
+    public static boolean headerContainsAnySegment(String headerText, List<String> keywords) {
+        if (headerText == null || headerText.isBlank() || CollectionUtils.isEmpty(keywords)) {
+            return false;
+        }
+        for (String segment : normalizeSegments(keywords)) {
+            if (segment == null || segment.isBlank()) {
+                continue;
+            }
+            if (headerText.contains(segment) || segment.contains(headerText.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断表头文本是否同时命中全部分段关键词。
+     */
+    public static boolean headerContainsAllSegments(String headerText, List<String> keywords) {
+        if (headerText == null || headerText.isBlank() || CollectionUtils.isEmpty(keywords)) {
+            return false;
+        }
+        for (String segment : normalizeSegments(keywords)) {
+            if (segment == null || segment.isBlank()) {
+                continue;
+            }
+            if (!(headerText.contains(segment) || segment.contains(headerText.trim()))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * 已解析的候选对象。
      */
     public record ResolvedHeaderCandidate(HeaderMappingCandidate candidate, String matchedText) {

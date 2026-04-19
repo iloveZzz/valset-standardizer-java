@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS t_file_parse_profile (
     published_time DATETIME COMMENT '发布时间'
 ) COMMENT='文件解析模板主表';
 
+ALTER TABLE t_file_parse_profile
+    ADD UNIQUE KEY uk_file_parse_profile_code_version (profile_code, version);
+ALTER TABLE t_file_parse_profile
+    ADD KEY idx_file_parse_profile_status_modify (status, modify_time);
+
 CREATE TABLE IF NOT EXISTS t_file_parse_rule_step (
     id BIGINT PRIMARY KEY COMMENT '主键',
     profile_id BIGINT NOT NULL COMMENT '模板主表ID',
@@ -45,6 +50,11 @@ CREATE TABLE IF NOT EXISTS t_file_parse_rule_step (
     modify_time DATETIME COMMENT '修改时间'
 ) COMMENT='文件解析规则步骤表';
 
+ALTER TABLE t_file_parse_rule_step
+    ADD UNIQUE KEY uk_file_parse_rule_step_profile_name (profile_id, step_name);
+ALTER TABLE t_file_parse_rule_step
+    ADD KEY idx_file_parse_rule_step_profile_priority (profile_id, priority, id);
+
 CREATE TABLE IF NOT EXISTS t_file_parse_case (
     id BIGINT PRIMARY KEY COMMENT '主键',
     profile_id BIGINT NOT NULL COMMENT '模板主表ID',
@@ -63,6 +73,9 @@ CREATE TABLE IF NOT EXISTS t_file_parse_case (
     modify_time DATETIME COMMENT '修改时间'
 ) COMMENT='文件解析规则回归样例表';
 
+ALTER TABLE t_file_parse_case
+    ADD KEY idx_file_parse_case_profile_sample (profile_id, sample_file_id);
+
 CREATE TABLE IF NOT EXISTS t_file_parse_publish_log (
     id BIGINT PRIMARY KEY COMMENT '主键',
     profile_id BIGINT NOT NULL COMMENT '模板主表ID',
@@ -74,6 +87,33 @@ CREATE TABLE IF NOT EXISTS t_file_parse_publish_log (
     validation_result_json TEXT COMMENT '校验结果',
     rollback_from_version VARCHAR(64) COMMENT '回滚来源版本'
 ) COMMENT='文件解析规则发布日志表';
+
+ALTER TABLE t_file_parse_publish_log
+    ADD KEY idx_file_parse_publish_log_profile_time (profile_id, publish_time, id);
+
+CREATE TABLE IF NOT EXISTS t_file_parse_rule_trace (
+    id BIGINT PRIMARY KEY COMMENT '主键',
+    trace_scope VARCHAR(64) COMMENT '追踪范围',
+    trace_type VARCHAR(64) COMMENT '追踪类型',
+    profile_id BIGINT COMMENT '模板主表ID',
+    profile_code VARCHAR(128) COMMENT '模板编码',
+    version VARCHAR(64) COMMENT '版本号',
+    file_id BIGINT COMMENT '文件主键',
+    task_id BIGINT COMMENT '任务主键',
+    step_name VARCHAR(128) COMMENT '步骤名称',
+    expression TEXT COMMENT '表达式文本',
+    input_json TEXT COMMENT '输入内容',
+    output_json TEXT COMMENT '输出内容',
+    success TINYINT(1) COMMENT '是否成功',
+    cost_ms BIGINT COMMENT '耗时毫秒',
+    error_message VARCHAR(1024) COMMENT '错误信息',
+    trace_time DATETIME COMMENT '追踪时间'
+) COMMENT='文件解析规则追踪表';
+
+ALTER TABLE t_file_parse_rule_trace
+    ADD KEY idx_file_parse_rule_trace_profile_time (profile_id, trace_time, id);
+ALTER TABLE t_file_parse_rule_trace
+    ADD KEY idx_file_parse_rule_trace_file_task_type (file_id, task_id, trace_type, trace_time);
 
 --changeset codex:20260419-01-postgres-qlexpress-rule-engine dbms:postgresql
 CREATE TABLE t_file_parse_profile (
@@ -91,6 +131,8 @@ CREATE TABLE t_file_parse_profile (
     row_classify_expr TEXT,
     field_map_expr TEXT,
     transform_expr TEXT,
+    required_headers_json TEXT,
+    subject_code_pattern TEXT,
     trace_enabled BOOLEAN,
     timeout_ms BIGINT,
     checksum VARCHAR(128),
@@ -150,6 +192,25 @@ CREATE TABLE t_file_parse_publish_log (
     rollback_from_version VARCHAR(64)
 );
 
+CREATE TABLE t_file_parse_rule_trace (
+    id BIGINT PRIMARY KEY,
+    trace_scope VARCHAR(64),
+    trace_type VARCHAR(64),
+    profile_id BIGINT,
+    profile_code VARCHAR(128),
+    version VARCHAR(64),
+    file_id BIGINT,
+    task_id BIGINT,
+    step_name VARCHAR(128),
+    expression TEXT,
+    input_json TEXT,
+    output_json TEXT,
+    success BOOLEAN,
+    cost_ms BIGINT,
+    error_message VARCHAR(1024),
+    trace_time TIMESTAMP
+);
+
 --changeset codex:20260419-01-oracle-qlexpress-rule-engine dbms:oracle
 CREATE TABLE t_file_parse_profile (
     id NUMBER(19) PRIMARY KEY,
@@ -166,6 +227,8 @@ CREATE TABLE t_file_parse_profile (
     row_classify_expr CLOB,
     field_map_expr CLOB,
     transform_expr CLOB,
+    required_headers_json CLOB,
+    subject_code_pattern VARCHAR2(256 CHAR),
     trace_enabled NUMBER(1),
     timeout_ms NUMBER(19),
     checksum VARCHAR2(128 CHAR),
@@ -223,4 +286,23 @@ CREATE TABLE t_file_parse_publish_log (
     publish_comment VARCHAR2(512 CHAR),
     validation_result_json CLOB,
     rollback_from_version VARCHAR2(64 CHAR)
+);
+
+CREATE TABLE t_file_parse_rule_trace (
+    id NUMBER(19) PRIMARY KEY,
+    trace_scope VARCHAR2(64 CHAR),
+    trace_type VARCHAR2(64 CHAR),
+    profile_id NUMBER(19),
+    profile_code VARCHAR2(128 CHAR),
+    version VARCHAR2(64 CHAR),
+    file_id NUMBER(19),
+    task_id NUMBER(19),
+    step_name VARCHAR2(128 CHAR),
+    expression CLOB,
+    input_json CLOB,
+    output_json CLOB,
+    success NUMBER(1),
+    cost_ms NUMBER(19),
+    error_message VARCHAR2(1024 CHAR),
+    trace_time TIMESTAMP
 );

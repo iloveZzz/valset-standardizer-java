@@ -12,8 +12,7 @@ import java.util.regex.Pattern;
  */
 public final class ExcelParsingSupport {
 
-    public static final List<String> REQUIRED_HEADERS = List.of("科目代码", "科目名称");
-    private static final Pattern SUBJECT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9]+$");
+    private static final Pattern DEFAULT_SUBJECT_CODE_PATTERN = Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
 
     private ExcelParsingSupport() {
     }
@@ -118,10 +117,17 @@ public final class ExcelParsingSupport {
      * 检查某个值是否看起来像科目代码。
      */
     public static boolean isSubjectCode(String value) {
+        return isSubjectCode(value, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    /**
+     * 检查某个值是否看起来像科目代码。
+     */
+    public static boolean isSubjectCode(String value, Pattern subjectCodePattern) {
         String normalized = normalizeSubjectCode(value);
         return !normalized.isEmpty()
                 && !containsChineseCharacter(normalized)
-                && SUBJECT_CODE_PATTERN.matcher(normalized).matches();
+                && (subjectCodePattern == null ? DEFAULT_SUBJECT_CODE_PATTERN : subjectCodePattern).matcher(normalized).matches();
     }
 
     /**
@@ -153,19 +159,22 @@ public final class ExcelParsingSupport {
             return String.join("", segments);
         }
 
-        String compact = normalized.replaceAll("[\\s\\.\\p{Punct}]+", "");
-        if (!compact.isEmpty() && compact.chars().allMatch(Character::isDigit) && compact.length() > 4) {
-            return splitCompactNumericCode(compact).replace(".", "");
-        }
-        return compact;
+        return normalized.replaceAll("[\\s\\.\\p{Punct}]+", "");
     }
 
     /**
      * 检查某行是否包含指标数据而不是科目行。
      */
     public static boolean isMetricDataRow(List<Object> rowValues) {
+        return isMetricDataRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    /**
+     * 检查某行是否包含指标数据而不是科目行。
+     */
+    public static boolean isMetricDataRow(List<Object> rowValues, Pattern subjectCodePattern) {
         String firstCell = textAt(rowValues, 0);
-        if (firstCell.isEmpty() || isSubjectCode(firstCell)) {
+        if (firstCell.isEmpty() || isSubjectCode(firstCell, subjectCodePattern)) {
             return false;
         }
         if (textAt(rowValues, 1).isEmpty()) {
@@ -183,8 +192,15 @@ public final class ExcelParsingSupport {
      * 检查某行是指标行还是指标数据行。
      */
     public static boolean isMetricRow(List<Object> rowValues) {
+        return isMetricRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+    }
+
+    /**
+     * 检查某行是指标行还是指标数据行。
+     */
+    public static boolean isMetricRow(List<Object> rowValues, Pattern subjectCodePattern) {
         String firstCell = textAt(rowValues, 0);
-        if (firstCell.isEmpty() || isSubjectCode(firstCell)) {
+        if (firstCell.isEmpty() || isSubjectCode(firstCell, subjectCodePattern)) {
             return false;
         }
         int filledCount = 0;

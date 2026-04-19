@@ -59,6 +59,12 @@ public class ParseRuleProfilePO {
     @TableField("transform_expr")
     private String transformExpr;
 
+    @TableField("required_headers_json")
+    private String requiredHeadersJson;
+
+    @TableField("subject_code_pattern")
+    private String subjectCodePattern;
+
     @TableField("trace_enabled")
     private Boolean traceEnabled;
 

@@ -6,18 +6,24 @@ import com.yss.valset.application.command.ParseRuleRollbackCommand;
 import com.yss.valset.application.dto.ParseRuleBundleViewDTO;
 import com.yss.valset.application.dto.ParseRuleMutationResponse;
 import com.yss.valset.application.dto.ParseRuleProfileViewDTO;
+import com.yss.valset.application.dto.ParseRuleRegressionViewDTO;
+import com.yss.valset.application.dto.ParseRuleTraceViewDTO;
 import com.yss.valset.application.dto.ParseRuleValidationViewDTO;
 import com.yss.valset.application.service.ParseRuleManagementAppService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -67,6 +73,12 @@ public class ParseRuleManagementController {
         return parseRuleManagementAppService.validateProfile(profileId);
     }
 
+    @PostMapping("/profiles/{profileId}/regression")
+    @Operation(summary = "执行解析模板样例回归", description = "基于模板绑定的样例文件执行离线回归并返回每个样例的比对结果。")
+    public ParseRuleRegressionViewDTO runRegression(@PathVariable Long profileId) {
+        return parseRuleManagementAppService.runRegression(profileId);
+    }
+
     @PostMapping("/profiles/{profileId}/publish")
     @Operation(summary = "发布解析模板", description = "将模板置为已发布状态，并写入发布日志。")
     public ParseRuleMutationResponse publishProfile(@PathVariable Long profileId,
@@ -80,4 +92,27 @@ public class ParseRuleManagementController {
                                                      @RequestBody(required = false) ParseRuleRollbackCommand command) {
         return parseRuleManagementAppService.rollbackProfile(profileId, command == null ? new ParseRuleRollbackCommand() : command);
     }
+
+    @PostMapping(value = "/profiles/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "导入解析模板", description = "上传 JSON 模板包，默认作为新模板导入；如指定 overwriteProfileId，则覆盖对应模板。")
+    public ParseRuleMutationResponse importProfile(@RequestPart("file") MultipartFile file,
+                                                   @RequestParam(value = "overwriteProfileId", required = false) Long overwriteProfileId) {
+        try {
+            String bundleJson = new String(file.getBytes(), StandardCharsets.UTF_8);
+            return parseRuleManagementAppService.importProfile(bundleJson, overwriteProfileId);
+        } catch (Exception exception) {
+            throw new IllegalStateException("导入解析模板失败", exception);
+        }
+    }
+
+    @GetMapping("/traces")
+    @Operation(summary = "查询解析规则追踪", description = "按模板、文件、任务和追踪类型查询规则表达式追踪明细。")
+    public List<ParseRuleTraceViewDTO> listTraces(@RequestParam(value = "profileId", required = false) Long profileId,
+                                                  @RequestParam(value = "fileId", required = false) Long fileId,
+                                                  @RequestParam(value = "taskId", required = false) Long taskId,
+                                                  @RequestParam(value = "traceType", required = false) String traceType,
+                                                  @RequestParam(value = "limit", required = false) Integer limit) {
+        return parseRuleManagementAppService.listTraces(profileId, fileId, taskId, traceType, limit);
+    }
+
 }

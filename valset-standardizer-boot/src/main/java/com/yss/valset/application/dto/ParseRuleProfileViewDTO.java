@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 解析模板视图。
@@ -25,6 +26,8 @@ public class ParseRuleProfileViewDTO {
     private String rowClassifyExpr;
     private String fieldMapExpr;
     private String transformExpr;
+    private List<String> requiredHeaders;
+    private String subjectCodePattern;
     private Boolean traceEnabled;
     private Long timeoutMs;
     private String checksum;

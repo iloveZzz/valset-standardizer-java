@@ -17,6 +17,8 @@ import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.domain.parser.ValuationDataParserProvider;
 import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.DataSourceType;
+import com.yss.valset.domain.rule.ParseRuleTraceContext;
+import com.yss.valset.domain.rule.ParseRuleTraceContextHolder;
 import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
@@ -89,87 +91,98 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     public void execute(Long taskId) {
         Span rootSpan = tracer.nextSpan().name("workflow.parse.execute").tag("task.id", String.valueOf(taskId)).start();
         try (Tracer.SpanInScope ws = tracer.withSpan(rootSpan)) {
-            try {
-            long startedAt = System.currentTimeMillis();
-            log.info("开始执行估值数据解析任务，taskId={}", taskId);
-            // Step 1: 加载任务与解析入参，确定本次流程的输入上下文
             TaskInfo taskInfo = taskGateway.findById(taskId);
-            ParseTaskCommand command = objectMapper.readValue(taskInfo.getInputPayload(), ParseTaskCommand.class);
+            ParseRuleTraceContext traceContext = ParseRuleTraceContext.builder()
+                    .profileId(null)
+                    .profileCode("runtime")
+                    .version("runtime")
+                    .fileId(taskInfo == null ? null : taskInfo.getFileId())
+                    .taskId(taskId)
+                    .traceEnabled(Boolean.TRUE)
+                    .traceScope("RUNTIME_PARSE")
+                    .build();
+            try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
+                try {
+                    long startedAt = System.currentTimeMillis();
+                    log.info("开始执行估值数据解析任务，taskId={}", taskId);
+                    // Step 1: 加载任务与解析入参，确定本次流程的输入上下文
+                    ParseTaskCommand command = objectMapper.readValue(taskInfo.getInputPayload(), ParseTaskCommand.class);
 
-            String sourceTypeStr = command.getDataSourceType();
-            DataSourceType type = DataSourceType.EXCEL;
-            if (sourceTypeStr != null && !sourceTypeStr.isBlank()) {
-                type = DataSourceType.valueOf(sourceTypeStr.toUpperCase());
+                    String sourceTypeStr = command.getDataSourceType();
+                    DataSourceType type = DataSourceType.EXCEL;
+                    if (sourceTypeStr != null && !sourceTypeStr.isBlank()) {
+                        type = DataSourceType.valueOf(sourceTypeStr.toUpperCase());
+                    }
+
+                    DataSourceConfig config = buildAnalysisConfig(type, command.getWorkbookPath(), command.getFileId());
+
+                    // Step 2: 路由到对应分析器并执行原始解析
+                    ValuationDataParser parser = parserProvider.getParser(type);
+                    log.debug("解析任务 {} 使用分析器 {}，sourceType={}, sourceUri={}, fileId={}",
+                            taskId,
+                            parser.getClass().getSimpleName(),
+                            type,
+                            command.getWorkbookPath(),
+                            command.getFileId());
+
+                    long parseStartedAt = System.currentTimeMillis();
+                    ParsedValuationData parsedValuationData = traceSpan("workflow.parse.raw_parse", () -> parser.parse(config));
+                    long parseFinishedAt = System.currentTimeMillis();
+                    String fileNameOriginal = resolveFileNameOriginal(taskInfo);
+                    parsedValuationData = parsedValuationData.toBuilder()
+                            .fileNameOriginal(fileNameOriginal)
+                            .build();
+                    final ParsedValuationData parsedValuationDataFinal = parsedValuationData;
+
+                    // Step 3: 保存解析原始明细，确保原始可回溯
+                    traceSpan("workflow.parse.persist_raw_dwd", () ->
+                            dwdExternalValuationGateway.saveDwdExternalValuation(taskId, taskInfo.getFileId(), parsedValuationDataFinal));
+
+                    // Step 4: 执行标准化映射（header/subject/metric）
+                    long standardizeStartedAt = System.currentTimeMillis();
+                    ParsedValuationData standardizedValuationData = traceSpan("workflow.parse.standardize",
+                            () -> standardizationService.standardize(parsedValuationDataFinal));
+                    long standardizeFinishedAt = System.currentTimeMillis();
+                    standardizedValuationData = standardizedValuationData == null ? null : standardizedValuationData.toBuilder()
+                            .fileNameOriginal(fileNameOriginal)
+                            .build();
+
+                    // Step 5: 持久化标准化中间层 + 目标落地表（t_tr_jjhzgzb / t_tr_index）
+                    String sourceSign = fileNameOriginal;
+                    String sourceTypeName = type.name();
+                    ParsedValuationData finalStandardizedValuationData = standardizedValuationData;
+                    traceSpan("workflow.parse.persist_standardized", () -> {
+                        standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, taskInfo.getFileId(), finalStandardizedValuationData);
+                        dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, taskInfo.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
+                        trIndexGateway.saveStandardizedIndex(taskId, taskInfo.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
+                    });
+                    long persistFinishedAt = System.currentTimeMillis();
+
+                    // Step 6: 导出工件并更新任务状态
+                    traceSpan("workflow.parse.export_artifacts", () ->
+                            resultExporter.exportParsedValuationData(taskId, parsedValuationDataFinal));
+                    long exportFinishedAt = System.currentTimeMillis();
+                    long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
+                    taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
+                    String resultPayload = buildResultPayload(taskId, parsedValuationDataFinal);
+                    taskGateway.markSuccess(taskId, resultPayload);
+                    log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
+                            taskId,
+                            parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
+                            parsedValuationDataFinal.getMetrics() == null ? 0 : parsedValuationDataFinal.getMetrics().size());
+                    log.info("解析流程耗时统计，taskId={}, totalMs={}, parseMs={}, standardizeMs={}, persistMs={}, exportMs={}",
+                            taskId,
+                            System.currentTimeMillis() - startedAt,
+                            parseFinishedAt - parseStartedAt,
+                            standardizeFinishedAt - standardizeStartedAt,
+                            persistFinishedAt - standardizeFinishedAt,
+                            exportFinishedAt - persistFinishedAt);
+                } catch (Exception e) {
+                    rootSpan.error(e);
+                    log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
+                    throw new IllegalStateException("Failed to execute parse task " + taskId, e);
+                }
             }
-
-            DataSourceConfig config = buildAnalysisConfig(type, command.getWorkbookPath(), command.getFileId());
-
-            // Step 2: 路由到对应分析器并执行原始解析
-            ValuationDataParser parser = parserProvider.getParser(type);
-            log.debug("解析任务 {} 使用分析器 {}，sourceType={}, sourceUri={}, fileId={}",
-                    taskId,
-                    parser.getClass().getSimpleName(),
-                    type,
-                    command.getWorkbookPath(),
-                    command.getFileId());
-
-            long parseStartedAt = System.currentTimeMillis();
-            ParsedValuationData parsedValuationData = traceSpan("workflow.parse.raw_parse", () -> parser.parse(config));
-            long parseFinishedAt = System.currentTimeMillis();
-            String fileNameOriginal = resolveFileNameOriginal(taskInfo);
-            parsedValuationData = parsedValuationData.toBuilder()
-                    .fileNameOriginal(fileNameOriginal)
-                    .build();
-            final ParsedValuationData parsedValuationDataFinal = parsedValuationData;
-
-            // Step 3: 保存解析原始明细，确保原始可回溯
-            traceSpan("workflow.parse.persist_raw_dwd", () ->
-                    dwdExternalValuationGateway.saveDwdExternalValuation(taskId, taskInfo.getFileId(), parsedValuationDataFinal));
-
-            // Step 4: 执行标准化映射（header/subject/metric）
-            long standardizeStartedAt = System.currentTimeMillis();
-            ParsedValuationData standardizedValuationData = traceSpan("workflow.parse.standardize",
-                    () -> standardizationService.standardize(parsedValuationDataFinal));
-            long standardizeFinishedAt = System.currentTimeMillis();
-            standardizedValuationData = standardizedValuationData == null ? null : standardizedValuationData.toBuilder()
-                    .fileNameOriginal(fileNameOriginal)
-                    .build();
-
-            // Step 5: 持久化标准化中间层 + 目标落地表（t_tr_jjhzgzb / t_tr_index）
-            String sourceSign = fileNameOriginal;
-            String sourceTypeName = type.name();
-            ParsedValuationData finalStandardizedValuationData = standardizedValuationData;
-            traceSpan("workflow.parse.persist_standardized", () -> {
-                standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, taskInfo.getFileId(), finalStandardizedValuationData);
-                dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, taskInfo.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-                trIndexGateway.saveStandardizedIndex(taskId, taskInfo.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-            });
-            long persistFinishedAt = System.currentTimeMillis();
-
-            // Step 6: 导出工件并更新任务状态
-            traceSpan("workflow.parse.export_artifacts", () ->
-                    resultExporter.exportParsedValuationData(taskId, parsedValuationDataFinal));
-            long exportFinishedAt = System.currentTimeMillis();
-            long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
-            taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
-            String resultPayload = buildResultPayload(taskId, parsedValuationDataFinal);
-            taskGateway.markSuccess(taskId, resultPayload);
-            log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
-                    taskId,
-                    parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
-                    parsedValuationDataFinal.getMetrics() == null ? 0 : parsedValuationDataFinal.getMetrics().size());
-            log.info("解析流程耗时统计，taskId={}, totalMs={}, parseMs={}, standardizeMs={}, persistMs={}, exportMs={}",
-                    taskId,
-                    System.currentTimeMillis() - startedAt,
-                    parseFinishedAt - parseStartedAt,
-                    standardizeFinishedAt - standardizeStartedAt,
-                    persistFinishedAt - standardizeFinishedAt,
-                    exportFinishedAt - persistFinishedAt);
-        } catch (Exception e) {
-            rootSpan.error(e);
-            log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
-            throw new IllegalStateException("Failed to execute parse task " + taskId, e);
-        }
         } finally {
             rootSpan.end();
         }

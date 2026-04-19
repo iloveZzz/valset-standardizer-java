@@ -10,5 +10,9 @@ import java.util.Map;
  */
 public interface HeaderMappingEngine {
 
-    Map<Integer, MappingDecision> map(List<HeaderMappingInput> inputs, HeaderMappingLookup lookup);
+    default Map<Integer, MappingDecision> map(List<HeaderMappingInput> inputs, HeaderMappingLookup lookup) {
+        return map(inputs, lookup, null);
+    }
+
+    Map<Integer, MappingDecision> map(List<HeaderMappingInput> inputs, HeaderMappingLookup lookup, String strategyExpr);
 }

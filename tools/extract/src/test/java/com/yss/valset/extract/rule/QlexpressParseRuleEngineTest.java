@@ -27,7 +27,6 @@ class QlexpressParseRuleEngineTest {
         List<Object> subjectRow = List.of("1102", "股票投资", "");
         List<Object> metricRow = List.of("市值", "", "1000");
 
-        assertTrue(engine.matchesHeaderRow(headerRow, ExcelParsingSupport.REQUIRED_HEADERS));
         assertEquals("SUBJECT", engine.classifyRow(subjectRow, List.of("制表", "复核", "打印", "备注")));
         assertEquals("METRIC_ROW", engine.classifyRow(metricRow, List.of("制表", "复核", "打印", "备注")));
     }

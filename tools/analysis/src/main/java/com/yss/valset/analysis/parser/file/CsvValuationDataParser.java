@@ -9,10 +9,12 @@ import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
 import com.yss.valset.domain.parser.ValuationDataParser;
+import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -29,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * CSV 格式估值表数据解析器。
@@ -38,7 +41,6 @@ import java.util.Map;
 public class CsvValuationDataParser implements ValuationDataParser {
 
     private static final String DEFAULT_SHEET_NAME = "CSV_RAW_DATA";
-    private static final List<String> REQUIRED_HEADERS = List.of("科目代码", "科目名称");
     private static final List<String> FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
     private static final Charset[] CANDIDATE_CHARSETS = new Charset[] {
             Charset.forName("UTF-8"),
@@ -47,9 +49,16 @@ public class CsvValuationDataParser implements ValuationDataParser {
     };
 
     private final ObjectMapper objectMapper;
+    private final ParseRuleTemplateResolver parseRuleTemplateResolver;
 
     public CsvValuationDataParser(ObjectMapper objectMapper) {
+        this(objectMapper, null);
+    }
+
+    @Autowired
+    public CsvValuationDataParser(ObjectMapper objectMapper, ParseRuleTemplateResolver parseRuleTemplateResolver) {
         this.objectMapper = objectMapper;
+        this.parseRuleTemplateResolver = parseRuleTemplateResolver;
     }
 
     @Override
@@ -63,10 +72,14 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 log.warn("CSV 估值文件没有可解析行，sourceUri={}", config.getSourceUri());
                 return emptyResult(csvPath);
             }
+            String fileScene = resolveFileScene(config);
+            String fileTypeName = resolveFileTypeName(config);
+            List<String> requiredHeaders = resolveRequiredHeaders(fileScene, fileTypeName);
+            Pattern subjectCodePattern = resolveSubjectCodePattern(fileScene, fileTypeName);
 
             // Step 1: 识别表头和数据起始行
-            int headerRowIndex = findHeaderRow(rows);
-            int dataStartRowIndex = findDataStartRow(rows, headerRowIndex);
+            int headerRowIndex = findHeaderRow(rows, requiredHeaders);
+            int dataStartRowIndex = findDataStartRow(rows, headerRowIndex, subjectCodePattern);
 
             // Step 2: 构建分层表头结构（header/headerDetails/headerColumns）
             List<List<String>> headerBlockRows = extractHeaderBlock(rows, headerRowIndex, dataStartRowIndex);
@@ -76,7 +89,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
             // Step 3: 解析标题与基础信息，拆分科目行和指标行
             TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerRowIndex);
-            SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex);
+            SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex, subjectCodePattern);
             log.info("CSV 估值文件解析完成，sourceUri={}, headerRow={}, dataStartRow={}, headerCount={}, subjectCount={}, metricCount={}, elapsedMs={}",
                     config.getSourceUri(),
                     headerRowIndex + 1,
@@ -151,27 +164,27 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 .build();
     }
 
-    private int findHeaderRow(List<List<Object>> rows) {
+    private int findHeaderRow(List<List<Object>> rows, List<String> requiredHeaders) {
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
             List<String> texts = toRowTexts(rows.get(rowIndex));
-            if (texts.containsAll(REQUIRED_HEADERS)) {
+            if (texts.containsAll(requiredHeaders)) {
                 return rowIndex;
             }
         }
         throw new IllegalArgumentException("未找到包含“科目代码/科目名称”的表头。");
     }
 
-    private int findDataStartRow(List<List<Object>> rows, int headerRowIndex) {
+    private int findDataStartRow(List<List<Object>> rows, int headerRowIndex, Pattern subjectCodePattern) {
         int firstMetricCandidate = -1;
         for (int rowIndex = headerRowIndex + 1; rowIndex < rows.size(); rowIndex++) {
             List<Object> rowValues = rows.get(rowIndex);
             if (isFooterRow(rowValues)) {
                 break;
             }
-            if (ExcelParsingSupport.isSubjectDataRow(rowValues)) {
+            if (ExcelParsingSupport.isSubjectDataRow(rowValues, subjectCodePattern)) {
                 return rowIndex;
             }
-            if (firstMetricCandidate < 0 && isMetricCandidate(rowValues)) {
+            if (firstMetricCandidate < 0 && isMetricCandidate(rowValues, subjectCodePattern)) {
                 firstMetricCandidate = rowIndex;
             }
         }
@@ -297,7 +310,8 @@ public class CsvValuationDataParser implements ValuationDataParser {
             List<List<Object>> rows,
             int dataStartRowIndex,
             List<String> headers,
-            Map<String, Integer> headerIndex
+            Map<String, Integer> headerIndex,
+            Pattern subjectCodePattern
     ) {
         List<SubjectRecord> subjects = new ArrayList<>();
         List<MetricRecord> metrics = new ArrayList<>();
@@ -309,16 +323,34 @@ public class CsvValuationDataParser implements ValuationDataParser {
             if (isFooterRow(rowValues)) {
                 break;
             }
-            if (ExcelParsingSupport.isSubjectDataRow(rowValues)) {
+            if (ExcelParsingSupport.isSubjectDataRow(rowValues, subjectCodePattern)) {
                 subjects.add(extractSubjectRecord(rowIndex, rowValues, headers, headerIndex));
                 continue;
             }
-            if (ExcelParsingSupport.isMetricDataRow(rowValues) || ExcelParsingSupport.isMetricRow(rowValues)) {
-                metrics.add(extractMetricRecord(rowIndex, rowValues, headers, headerIndex));
+            if (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern) || ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern)) {
+                metrics.add(extractMetricRecord(rowIndex, rowValues, headers, headerIndex, subjectCodePattern));
             }
         }
         SubjectHierarchySupport.enrichSubjectHierarchy(subjects);
         return new SplitResult(subjects, metrics);
+    }
+
+    private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
+        if (parseRuleTemplateResolver == null) {
+            return List.of("科目代码", "科目名称");
+        }
+        List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
+        return requiredHeaders == null || requiredHeaders.isEmpty()
+                ? List.of("科目代码", "科目名称")
+                : requiredHeaders;
+    }
+
+    private Pattern resolveSubjectCodePattern(String fileScene, String fileTypeName) {
+        if (parseRuleTemplateResolver == null) {
+            return Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
+        }
+        Pattern pattern = parseRuleTemplateResolver.resolveSubjectCodePattern(fileScene, fileTypeName);
+        return pattern == null ? Pattern.compile("^\\d{4}[A-Za-z0-9]*$") : pattern;
     }
 
     private SubjectRecord extractSubjectRecord(
@@ -351,10 +383,11 @@ public class CsvValuationDataParser implements ValuationDataParser {
             int rowIndex,
             List<Object> rowValues,
             List<String> headers,
-            Map<String, Integer> headerIndex
+            Map<String, Integer> headerIndex,
+            Pattern subjectCodePattern
     ) {
         String metricName = normalizeMetricLabel(rowValues);
-        if (ExcelParsingSupport.isMetricDataRow(rowValues)) {
+        if (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern)) {
             int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
             Object rawValue = findFirstValueAfterLabel(rowValues, labelIndex);
             return MetricRecord.builder()
@@ -446,8 +479,8 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 || header.contains("|" + headerName + "|");
     }
 
-    private boolean isMetricCandidate(List<Object> rowValues) {
-        return (ExcelParsingSupport.isMetricDataRow(rowValues) || ExcelParsingSupport.isMetricRow(rowValues))
+    private boolean isMetricCandidate(List<Object> rowValues, Pattern subjectCodePattern) {
+        return (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern) || ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern))
                 && !isFooterRow(rowValues);
     }
 
@@ -547,6 +580,17 @@ public class CsvValuationDataParser implements ValuationDataParser {
             cause = cause.getCause();
         }
         return false;
+    }
+
+    private String resolveFileScene(DataSourceConfig config) {
+        return "VALSET";
+    }
+
+    private String resolveFileTypeName(DataSourceConfig config) {
+        if (config == null || config.getSourceType() == null) {
+            return null;
+        }
+        return config.getSourceType().name();
     }
 
     private record TitleAndInfo(String title, Map<String, String> basicInfo) {

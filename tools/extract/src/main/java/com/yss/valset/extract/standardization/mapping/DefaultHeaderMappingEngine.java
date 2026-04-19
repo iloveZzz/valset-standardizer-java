@@ -25,7 +25,7 @@ public class DefaultHeaderMappingEngine implements HeaderMappingEngine {
     );
 
     @Override
-    public Map<Integer, MappingDecision> map(List<HeaderMappingInput> inputs, HeaderMappingLookup lookup) {
+    public Map<Integer, MappingDecision> map(List<HeaderMappingInput> inputs, HeaderMappingLookup lookup, String strategyExpr) {
         Map<Integer, MappingDecision> decisions = new LinkedHashMap<>();
         if (inputs == null || inputs.isEmpty()) {
             return decisions;

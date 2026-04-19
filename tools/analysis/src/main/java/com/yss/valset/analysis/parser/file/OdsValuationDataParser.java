@@ -10,8 +10,10 @@ import com.yss.valset.domain.model.SubjectRecord;
 import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
+import com.yss.valset.extract.rule.ParseRuleExpressions;
 import com.yss.valset.analysis.support.ExcelParsingSupport;
 import com.yss.valset.analysis.support.SubjectHierarchySupport;
+import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * 基于 ODS 原始行数据的估值分析器。
@@ -35,20 +38,23 @@ public class OdsValuationDataParser implements ValuationDataParser {
     private final ValuationFileDataMapper valuationFileDataMapper;
     private final ObjectMapper objectMapper;
     private final QlexpressParseRuleEngine parseRuleEngine;
+    private final ParseRuleTemplateResolver parseRuleTemplateResolver;
 
     public OdsValuationDataParser(ValuationFileDataMapper valuationFileDataMapper, ObjectMapper objectMapper) {
-        this(valuationFileDataMapper, objectMapper, new QlexpressParseRuleEngine());
+        this(valuationFileDataMapper, objectMapper, new QlexpressParseRuleEngine(), null);
     }
 
     @Autowired
     public OdsValuationDataParser(
             ValuationFileDataMapper valuationFileDataMapper,
             ObjectMapper objectMapper,
-            QlexpressParseRuleEngine parseRuleEngine
+            QlexpressParseRuleEngine parseRuleEngine,
+            ParseRuleTemplateResolver parseRuleTemplateResolver
     ) {
         this.valuationFileDataMapper = valuationFileDataMapper;
         this.objectMapper = objectMapper;
         this.parseRuleEngine = parseRuleEngine;
+        this.parseRuleTemplateResolver = parseRuleTemplateResolver;
     }
 
     @Override
@@ -78,9 +84,19 @@ public class OdsValuationDataParser implements ValuationDataParser {
         List<List<Object>> rows = rawRows.stream()
                 .map(this::readRowValues)
                 .toList();
+        String fileTypeName = resolveFileTypeName(config);
+        String fileScene = resolveFileScene(config);
+        String headerExpr = parseRuleTemplateResolver == null
+                ? null
+                : parseRuleTemplateResolver.resolveHeaderExpr(fileScene, fileTypeName);
+        String rowClassifyExpr = parseRuleTemplateResolver == null
+                ? null
+                : parseRuleTemplateResolver.resolveRowClassifyExpr(fileScene, fileTypeName);
+        List<String> requiredHeaders = resolveRequiredHeaders(fileScene, fileTypeName);
+        Pattern subjectCodePattern = resolveSubjectCodePattern(fileScene, fileTypeName);
 
-        int headerRowIndex = findHeaderRow(rows);
-        int dataStartRowIndex = findDataStartRow(rows, headerRowIndex);
+        int headerRowIndex = findHeaderRow(rows, headerExpr, requiredHeaders);
+        int dataStartRowIndex = findDataStartRow(rows, headerRowIndex, ParseRuleExpressions.DATA_START_EXPR, subjectCodePattern);
         List<List<String>> headerBlockRows = extractHeaderBlock(rows, headerRowIndex, dataStartRowIndex);
         HeaderLayout headerLayout = buildHeaderLayout(headerBlockRows);
         List<String> headers = headerLayout.headers();
@@ -88,7 +104,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         List<List<String>> headerDetails = headerLayout.headerDetails();
         List<HeaderColumnMeta> headerColumns = headerLayout.headerColumns();
         TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerRowIndex);
-        SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex);
+        SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex, rowClassifyExpr, subjectCodePattern);
 
         log.info("基于原始数据表的估值分析完成，fileId={}, headerRow={}, dataStartRow={}, subjectCount={}, metricCount={}",
                 fileId,
@@ -132,26 +148,26 @@ public class OdsValuationDataParser implements ValuationDataParser {
         }
     }
 
-    private int findHeaderRow(List<List<Object>> rows) {
+    private int findHeaderRow(List<List<Object>> rows, String headerExpr, List<String> requiredHeaders) {
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
-            if (parseRuleEngine.matchesHeaderRow(rows.get(rowIndex), ExcelParsingSupport.REQUIRED_HEADERS)) {
+            if (parseRuleEngine.matchesHeaderRow(rows.get(rowIndex), requiredHeaders, headerExpr)) {
                 return rowIndex;
             }
         }
         throw new IllegalArgumentException("未找到包含“科目代码/科目名称”的表头。");
     }
 
-    private int findDataStartRow(List<List<Object>> rows, int headerRowIndex) {
+    private int findDataStartRow(List<List<Object>> rows, int headerRowIndex, String dataStartExpr, Pattern subjectCodePattern) {
         int firstMetricCandidate = -1;
         for (int rowIndex = headerRowIndex + 1; rowIndex < rows.size(); rowIndex++) {
             List<Object> rowValues = rows.get(rowIndex);
             if (isFooterRow(rowValues)) {
                 break;
             }
-            if (parseRuleEngine.matchesDataStartRow(rowValues) && ExcelParsingSupport.isSubjectDataRow(rowValues)) {
+            if (parseRuleEngine.matchesDataStartRow(rowValues, dataStartExpr) && ExcelParsingSupport.isSubjectDataRow(rowValues, subjectCodePattern)) {
                 return rowIndex;
             }
-            if (firstMetricCandidate < 0 && parseRuleEngine.matchesDataStartRow(rowValues) && isMetricCandidate(rowValues)) {
+            if (firstMetricCandidate < 0 && parseRuleEngine.matchesDataStartRow(rowValues, dataStartExpr) && isMetricCandidate(rowValues, subjectCodePattern)) {
                 firstMetricCandidate = rowIndex;
             }
         }
@@ -277,7 +293,9 @@ public class OdsValuationDataParser implements ValuationDataParser {
             List<List<Object>> rows,
             int dataStartRowIndex,
             List<String> headers,
-            Map<String, Integer> headerIndex
+            Map<String, Integer> headerIndex,
+            String rowClassifyExpr,
+            Pattern subjectCodePattern
     ) {
         List<SubjectRecord> subjects = new ArrayList<>();
         List<MetricRecord> metrics = new ArrayList<>();
@@ -289,20 +307,49 @@ public class OdsValuationDataParser implements ValuationDataParser {
             if (isFooterRow(rowValues)) {
                 break;
             }
-            String rowType = parseRuleEngine.classifyRow(rowValues, List.of("制表", "复核", "打印", "备注"));
-            if ("SUBJECT".equalsIgnoreCase(rowType) || ExcelParsingSupport.isSubjectDataRow(rowValues)) {
+            String rowType = parseRuleEngine.classifyRow(rowValues, List.of("制表", "复核", "打印", "备注"), subjectCodePattern, rowClassifyExpr);
+            if ("SUBJECT".equalsIgnoreCase(rowType) || ExcelParsingSupport.isSubjectDataRow(rowValues, subjectCodePattern)) {
                 subjects.add(extractSubjectRecord(rowIndex, rowValues, headers, headerIndex));
                 continue;
             }
             if ("METRIC_DATA".equalsIgnoreCase(rowType)
                     || "METRIC_ROW".equalsIgnoreCase(rowType)
-                    || ExcelParsingSupport.isMetricDataRow(rowValues)
-                    || ExcelParsingSupport.isMetricRow(rowValues)) {
-                metrics.add(extractMetricRecord(rowIndex, rowValues, headers, headerIndex));
+                    || ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern)
+                    || ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern)) {
+                metrics.add(extractMetricRecord(rowIndex, rowValues, headers, headerIndex, subjectCodePattern));
             }
         }
         SubjectHierarchySupport.enrichSubjectHierarchy(subjects);
         return new SplitResult(subjects, metrics);
+    }
+
+    private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
+        if (parseRuleTemplateResolver == null) {
+            return List.of("科目代码", "科目名称");
+        }
+        List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
+        return requiredHeaders == null || requiredHeaders.isEmpty()
+                ? List.of("科目代码", "科目名称")
+                : requiredHeaders;
+    }
+
+    private Pattern resolveSubjectCodePattern(String fileScene, String fileTypeName) {
+        if (parseRuleTemplateResolver == null) {
+            return Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
+        }
+        Pattern pattern = parseRuleTemplateResolver.resolveSubjectCodePattern(fileScene, fileTypeName);
+        return pattern == null ? Pattern.compile("^\\d{4}[A-Za-z0-9]*$") : pattern;
+    }
+
+    private String resolveFileScene(DataSourceConfig config) {
+        return "VALSET";
+    }
+
+    private String resolveFileTypeName(DataSourceConfig config) {
+        if (config == null || config.getSourceType() == null) {
+            return null;
+        }
+        return config.getSourceType().name();
     }
 
     private SubjectRecord extractSubjectRecord(
@@ -335,10 +382,11 @@ public class OdsValuationDataParser implements ValuationDataParser {
             int rowIndex,
             List<Object> rowValues,
             List<String> headers,
-            Map<String, Integer> headerIndex
+            Map<String, Integer> headerIndex,
+            Pattern subjectCodePattern
     ) {
         String metricName = normalizeMetricLabel(rowValues);
-        if (ExcelParsingSupport.isMetricDataRow(rowValues)) {
+        if (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern)) {
             int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
             Object rawValue = findFirstValueAfterLabel(rowValues, labelIndex);
             return MetricRecord.builder()
@@ -435,8 +483,8 @@ public class OdsValuationDataParser implements ValuationDataParser {
                 || header.contains("|" + headerName + "|");
     }
 
-    private boolean isMetricCandidate(List<Object> rowValues) {
-        return (ExcelParsingSupport.isMetricDataRow(rowValues) || ExcelParsingSupport.isMetricRow(rowValues))
+    private boolean isMetricCandidate(List<Object> rowValues, Pattern subjectCodePattern) {
+        return (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern) || ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern))
                 && !isFooterRow(rowValues);
     }
 

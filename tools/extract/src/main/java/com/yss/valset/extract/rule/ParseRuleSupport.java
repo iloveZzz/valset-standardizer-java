@@ -6,6 +6,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 解析规则共享助手。
@@ -64,6 +65,55 @@ public final class ParseRuleSupport {
     }
 
     /**
+     * 判断行中是否命中任意关键词。
+     */
+    public static boolean rowContainsAny(List<Object> rowValues, List<String> keywords) {
+        if (CollectionUtils.isEmpty(rowValues) || CollectionUtils.isEmpty(keywords)) {
+            return false;
+        }
+        List<String> texts = toTexts(rowValues);
+        for (String keyword : keywords) {
+            if (keyword == null || keyword.isBlank()) {
+                continue;
+            }
+            if (texts.stream().anyMatch(text -> matchesKeyword(text, keyword))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断文本是否命中任意关键词。
+     */
+    public static boolean containsAny(String text, List<String> keywords) {
+        if (text == null || text.isBlank() || CollectionUtils.isEmpty(keywords)) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            if (matchesKeyword(text, keyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断文本是否命中全部关键词。
+     */
+    public static boolean containsAll(String text, List<String> keywords) {
+        if (text == null || text.isBlank() || CollectionUtils.isEmpty(keywords)) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            if (!matchesKeyword(text, keyword)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * 计算第一条非空单元格的索引。
      */
     public static int firstMeaningfulCellIndex(List<Object> rowValues) {
@@ -90,21 +140,82 @@ public final class ParseRuleSupport {
      * 判断是否是科目行。
      */
     public static boolean isSubjectRow(List<Object> rowValues) {
-        int codeIndex = findSubjectCodeColumnIndex(rowValues);
+        return isSubjectRow(rowValues, null);
+    }
+
+    /**
+     * 判断是否是科目行。
+     */
+    public static boolean isSubjectRow(List<Object> rowValues, Pattern subjectCodePattern) {
+        int codeIndex = findSubjectCodeColumnIndex(rowValues, subjectCodePattern);
         return codeIndex >= 0 && hasSubjectNameAfterCode(rowValues, codeIndex);
+    }
+
+    /**
+     * 判断是否是表头行。
+     */
+    public static boolean isHeaderRow(List<Object> rowValues, List<String> requiredHeaders) {
+        return rowContainsAll(rowValues, requiredHeaders);
+    }
+
+    /**
+     * 判断是否是数据起始行。
+     */
+    public static boolean isDataStartRow(List<Object> rowValues) {
+        return isDataStartRow(rowValues, null);
+    }
+
+    /**
+     * 判断是否是数据起始行。
+     */
+    public static boolean isDataStartRow(List<Object> rowValues, Pattern subjectCodePattern) {
+        return isSubjectRow(rowValues, subjectCodePattern) || isMetricCandidate(rowValues, subjectCodePattern);
+    }
+
+    /**
+     * 分类行类型。
+     */
+    public static String classifyRow(List<Object> rowValues, List<String> footerKeywords) {
+        return classifyRow(rowValues, footerKeywords, null);
+    }
+
+    /**
+     * 分类行类型。
+     */
+    public static String classifyRow(List<Object> rowValues, List<String> footerKeywords, Pattern subjectCodePattern) {
+        if (isSubjectRow(rowValues, subjectCodePattern)) {
+            return "SUBJECT";
+        }
+        if (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern)) {
+            return "METRIC_DATA";
+        }
+        if (ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern)) {
+            return "METRIC_ROW";
+        }
+        if (isFooterRow(rowValues, footerKeywords)) {
+            return "FOOTER";
+        }
+        return "IGNORE";
     }
 
     /**
      * 查找科目代码列。
      */
     public static int findSubjectCodeColumnIndex(List<Object> rowValues) {
+        return findSubjectCodeColumnIndex(rowValues, null);
+    }
+
+    /**
+     * 查找科目代码列。
+     */
+    public static int findSubjectCodeColumnIndex(List<Object> rowValues, Pattern subjectCodePattern) {
         if (CollectionUtils.isEmpty(rowValues)) {
             return -1;
         }
         int maxIndex = Math.min(SUBJECT_CODE_SCAN_LIMIT, rowValues.size());
         for (int index = 0; index < maxIndex; index++) {
             String text = ExcelParsingSupport.normalizeText(ExcelParsingSupport.valueAt(rowValues, index));
-            if (ExcelParsingSupport.isSubjectCode(text)) {
+            if (ExcelParsingSupport.isSubjectCode(text, subjectCodePattern)) {
                 return index;
             }
         }
@@ -132,7 +243,14 @@ public final class ParseRuleSupport {
      * 判断是否是指标候选行。
      */
     public static boolean isMetricCandidate(List<Object> rowValues) {
-        return ExcelParsingSupport.isMetricDataRow(rowValues) || ExcelParsingSupport.isMetricRow(rowValues);
+        return isMetricCandidate(rowValues, null);
+    }
+
+    /**
+     * 判断是否是指标候选行。
+     */
+    public static boolean isMetricCandidate(List<Object> rowValues, Pattern subjectCodePattern) {
+        return ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern) || ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern);
     }
 
     /**
@@ -150,6 +268,30 @@ public final class ParseRuleSupport {
             }
         }
         return false;
+    }
+
+    /**
+     * 判断首个有效文本是否命中任意关键词。
+     */
+    public static boolean firstMeaningfulTextContainsAny(List<Object> rowValues, List<String> keywords) {
+        return containsAny(firstMeaningfulText(rowValues), keywords);
+    }
+
+    /**
+     * 判断首个有效文本是否命中全部关键词。
+     */
+    public static boolean firstMeaningfulTextContainsAll(List<Object> rowValues, List<String> keywords) {
+        return containsAll(firstMeaningfulText(rowValues), keywords);
+    }
+
+    /**
+     * 判断有效单元格数量是否达到下限。
+     */
+    public static boolean hasAtLeastNonBlank(List<Object> rowValues, Integer minCount) {
+        if (minCount == null || minCount <= 0) {
+            return false;
+        }
+        return nonBlankCount(rowValues) >= minCount;
     }
 
     /**

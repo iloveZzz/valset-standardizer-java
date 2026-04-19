@@ -39,9 +39,13 @@ public final class SubjectHierarchySupport {
         if (compact.length() <= 4) {
             return List.of(compact);
         }
-        List<String> segments = new ArrayList<>();
-        segments.add(compact.substring(0, 4));
+        String prefix = compact.substring(0, 4);
         String remainder = compact.substring(4);
+        if (!remainder.chars().allMatch(Character::isDigit)) {
+            return List.of(prefix, remainder);
+        }
+        List<String> segments = new ArrayList<>();
+        segments.add(prefix);
         while (!remainder.isEmpty()) {
             if (remainder.length() <= 2) {
                 segments.add(remainder);

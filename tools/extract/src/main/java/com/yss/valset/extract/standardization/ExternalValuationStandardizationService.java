@@ -12,6 +12,7 @@ import com.yss.valset.extract.repository.entity.FileParseRulePO;
 import com.yss.valset.extract.repository.entity.FileParseSourcePO;
 import com.yss.valset.extract.repository.mapper.FileParseRuleRepository;
 import com.yss.valset.extract.repository.mapper.FileParseSourceRepository;
+import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import com.yss.valset.extract.standardization.mapping.BuiltinHeaderAliasCatalog;
 import com.yss.valset.extract.standardization.mapping.BuiltinMetricAliasCatalog;
@@ -46,29 +47,48 @@ public class ExternalValuationStandardizationService {
     private final FileParseSourceRepository parseSourceRepository;
     private final QlexpressParseRuleEngine qlexpressRuleEngine;
     private final HeaderMappingEngine headerMappingEngine;
+    private final ParseRuleTemplateResolver parseRuleTemplateResolver;
     private volatile Dictionary dictionary;
 
     @Autowired
     public ExternalValuationStandardizationService(
             ObjectMapper objectMapper,
             FileParseRuleRepository parseRuleRepository,
-            FileParseSourceRepository parseSourceRepository
-    ) {
-        this(objectMapper, parseRuleRepository, parseSourceRepository, new QlexpressParseRuleEngine(), new QlexpressHeaderMappingEngine());
-    }
-
-    public ExternalValuationStandardizationService(
-            ObjectMapper objectMapper,
-            FileParseRuleRepository parseRuleRepository,
             FileParseSourceRepository parseSourceRepository,
             QlexpressParseRuleEngine qlexpressRuleEngine,
-            HeaderMappingEngine headerMappingEngine
+            HeaderMappingEngine headerMappingEngine,
+            ParseRuleTemplateResolver parseRuleTemplateResolver
     ) {
         this.objectMapper = objectMapper;
         this.parseRuleRepository = parseRuleRepository;
         this.parseSourceRepository = parseSourceRepository;
         this.qlexpressRuleEngine = qlexpressRuleEngine;
         this.headerMappingEngine = headerMappingEngine;
+        this.parseRuleTemplateResolver = parseRuleTemplateResolver;
+    }
+
+    public ExternalValuationStandardizationService(
+            ObjectMapper objectMapper,
+            FileParseRuleRepository parseRuleRepository,
+            FileParseSourceRepository parseSourceRepository
+    ) {
+        this(
+                objectMapper,
+                parseRuleRepository,
+                parseSourceRepository,
+                new QlexpressParseRuleEngine(),
+                new QlexpressHeaderMappingEngine(),
+                null
+        );
+    }
+
+    public ExternalValuationStandardizationService(
+            ObjectMapper objectMapper,
+            FileParseRuleRepository parseRuleRepository,
+            FileParseSourceRepository parseSourceRepository,
+            QlexpressParseRuleEngine qlexpressRuleEngine
+    ) {
+        this(objectMapper, parseRuleRepository, parseSourceRepository, qlexpressRuleEngine, new QlexpressHeaderMappingEngine(), null);
     }
 
     public ParsedValuationData standardize(ParsedValuationData parsedValuationData) {
@@ -81,7 +101,12 @@ public class ExternalValuationStandardizationService {
         List<HeaderColumnMeta> headerColumns = parsedValuationData.getHeaderColumns() == null ? List.of() : parsedValuationData.getHeaderColumns();
 
         // Step 1: 对外部表头进行标准字段映射，输出映射决策明细
-        Map<Integer, MappingDecision> mappingDecisionByIndex = resolveHeaderMappingDecisionByIndex(headers, headerColumns, dictionary);
+        String fileScene = resolveFileScene(parsedValuationData);
+        String fileTypeName = resolveFileTypeName(parsedValuationData);
+        String fieldMapExpr = parseRuleTemplateResolver == null
+                ? null
+                : parseRuleTemplateResolver.resolveFieldMapExpr(fileScene, fileTypeName);
+        Map<Integer, MappingDecision> mappingDecisionByIndex = resolveHeaderMappingDecisionByIndex(headers, headerColumns, dictionary, fieldMapExpr);
         Map<Integer, String> standardColumnByIndex = mappingDecisionByIndex.entrySet().stream()
                 .filter(entry -> Boolean.TRUE.equals(entry.getValue().getMatched()))
                 .filter(entry -> entry.getValue().getStandardCode() != null && !entry.getValue().getStandardCode().isBlank())
@@ -283,7 +308,8 @@ public class ExternalValuationStandardizationService {
     private Map<Integer, MappingDecision> resolveHeaderMappingDecisionByIndex(
             List<String> headers,
             List<HeaderColumnMeta> headerColumns,
-            Dictionary dictionary
+            Dictionary dictionary,
+            String strategyExpr
     ) {
         Map<Integer, List<String>> segmentsByIndex = new LinkedHashMap<>();
         for (HeaderColumnMeta meta : headerColumns) {
@@ -320,7 +346,7 @@ public class ExternalValuationStandardizationService {
                 return BuiltinHeaderAliasCatalog.matchByContains(text);
             }
         };
-        return headerMappingEngine.map(inputs, lookup);
+        return headerMappingEngine.map(inputs, lookup, strategyExpr);
     }
 
     private ParseSourceEntry resolveSource(String text, Dictionary dictionary) {
@@ -491,6 +517,21 @@ public class ExternalValuationStandardizationService {
             strategyCount.merge(decision.getStrategy(), 1, Integer::sum);
         }
         return "Matched " + standardValues.size() + " standard columns, strategies=" + strategyCount;
+    }
+
+    private String resolveFileScene(ParsedValuationData parsedValuationData) {
+        return "VALSET";
+    }
+
+    private String resolveFileTypeName(ParsedValuationData parsedValuationData) {
+        if (parsedValuationData == null || parsedValuationData.getFileNameOriginal() == null) {
+            return null;
+        }
+        String fileName = parsedValuationData.getFileNameOriginal().trim().toLowerCase(java.util.Locale.ROOT);
+        if (fileName.endsWith(".csv")) {
+            return "CSV";
+        }
+        return "EXCEL";
     }
 
     private Double calculateSubjectMappingConfidence(Map<String, Object> standardValues, List<MappingDecision> matchedDecisions) {

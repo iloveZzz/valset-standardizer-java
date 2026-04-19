@@ -1,0 +1,148 @@
+--liquibase formatted sql
+
+--changeset codex:20260419-03-mysql-tr dbms:mysql
+CREATE TABLE IF NOT EXISTS t_tr_jjhzgzb (
+    id BIGINT PRIMARY KEY COMMENT '主键',
+    org_cd VARCHAR(30) COMMENT '机构代码',
+    pd_cd VARCHAR(30) COMMENT '产品代码',
+    biz_date VARCHAR(8) COMMENT '业务日期',
+    subject_cd VARCHAR(100) COMMENT '科目代码',
+    subject_nm VARCHAR(300) COMMENT '科目名称',
+    pa_subject_cd VARCHAR(100) COMMENT '父级科目代码',
+    pa_subject_nm VARCHAR(300) COMMENT '父级科目名称',
+    n_hldamt DECIMAL(26, 4) COMMENT '持仓数量',
+    n_hldcst DECIMAL(26, 4) COMMENT '原币持仓成本',
+    n_hldcst_locl DECIMAL(26, 4) COMMENT '本币持仓成本',
+    n_hldmkv DECIMAL(26, 4) COMMENT '原币持仓市值',
+    n_hldmkv_locl DECIMAL(26, 4) COMMENT '本币持仓市值',
+    n_hldvva DECIMAL(26, 4) COMMENT '原币证券估增',
+    n_hldvva_l DECIMAL(26, 4) COMMENT '本币证券估增',
+    ccy_cd VARCHAR(3) COMMENT '币种',
+    n_valrate DECIMAL(26, 4) COMMENT '汇率',
+    n_price_cost DECIMAL(26, 4) COMMENT '单位成本',
+    n_valprice DECIMAL(26, 4) COMMENT '估值价格',
+    n_cb_jz_bl DECIMAL(26, 4) COMMENT '成本占比',
+    n_sz_jz_bl DECIMAL(26, 4) COMMENT '市值占比',
+    n_zc_bl DECIMAL(26, 8) COMMENT '资产占比',
+    susp_info VARCHAR(300) COMMENT '停牌信息',
+    valuat_equity VARCHAR(30) COMMENT '权益信息',
+    fin_attr_id_d VARCHAR(30) COMMENT '金融属性',
+    fin_mkt_cd VARCHAR(30) COMMENT '交易市场',
+    time_stamp DATETIME COMMENT '时间戳',
+    cons_float_tp_cd VARCHAR(30) COMMENT '浮动类型',
+    source_tp VARCHAR(30) COMMENT '来源类型',
+    source_sign VARCHAR(300) COMMENT '来源标记',
+    sn SMALLINT COMMENT '序号',
+    data_dt VARCHAR(8) COMMENT '数据日期',
+    isin_cd VARCHAR(30) COMMENT 'ISIN代码'
+) COMMENT='基金持仓估值表';
+
+CREATE TABLE IF NOT EXISTS t_tr_index (
+    id BIGINT PRIMARY KEY COMMENT '主键',
+    org_cd VARCHAR(30) COMMENT '机构代码',
+    pd_cd VARCHAR(60) COMMENT '产品代码',
+    biz_date VARCHAR(8) COMMENT '业务日期',
+    indx_nm VARCHAR(300) COMMENT '指标名称',
+    indx_valu VARCHAR(300) COMMENT '指标值',
+    source_tp VARCHAR(30) COMMENT '来源类型',
+    source_sign VARCHAR(300) COMMENT '来源标记',
+    time_stamp DATETIME COMMENT '时间戳'
+) COMMENT='资产估值指标信息（原始数据）';
+
+--changeset codex:20260419-03-postgres-tr dbms:postgresql
+CREATE TABLE t_tr_jjhzgzb (
+    id BIGINT PRIMARY KEY,
+    org_cd VARCHAR(30),
+    pd_cd VARCHAR(30),
+    biz_date VARCHAR(8),
+    subject_cd VARCHAR(100),
+    subject_nm VARCHAR(300),
+    pa_subject_cd VARCHAR(100),
+    pa_subject_nm VARCHAR(300),
+    n_hldamt NUMERIC(26, 4),
+    n_hldcst NUMERIC(26, 4),
+    n_hldcst_locl NUMERIC(26, 4),
+    n_hldmkv NUMERIC(26, 4),
+    n_hldmkv_locl NUMERIC(26, 4),
+    n_hldvva NUMERIC(26, 4),
+    n_hldvva_l NUMERIC(26, 4),
+    ccy_cd VARCHAR(3),
+    n_valrate NUMERIC(26, 4),
+    n_price_cost NUMERIC(26, 4),
+    n_valprice NUMERIC(26, 4),
+    n_cb_jz_bl NUMERIC(26, 4),
+    n_sz_jz_bl NUMERIC(26, 4),
+    n_zc_bl NUMERIC(26, 8),
+    susp_info VARCHAR(300),
+    valuat_equity VARCHAR(30),
+    fin_attr_id_d VARCHAR(30),
+    fin_mkt_cd VARCHAR(30),
+    time_stamp TIMESTAMP,
+    cons_float_tp_cd VARCHAR(30),
+    source_tp VARCHAR(30),
+    source_sign VARCHAR(300),
+    sn SMALLINT,
+    data_dt VARCHAR(8),
+    isin_cd VARCHAR(30)
+);
+
+CREATE TABLE t_tr_index (
+    id BIGINT PRIMARY KEY,
+    org_cd VARCHAR(30),
+    pd_cd VARCHAR(60),
+    biz_date VARCHAR(8),
+    indx_nm VARCHAR(300),
+    indx_valu VARCHAR(300),
+    source_tp VARCHAR(30),
+    source_sign VARCHAR(300),
+    time_stamp TIMESTAMP
+);
+
+--changeset codex:20260419-03-oracle-tr dbms:oracle
+CREATE TABLE t_tr_jjhzgzb (
+    id NUMBER(19) PRIMARY KEY,
+    org_cd VARCHAR2(30 CHAR),
+    pd_cd VARCHAR2(30 CHAR),
+    biz_date VARCHAR2(8 CHAR),
+    subject_cd VARCHAR2(100 CHAR),
+    subject_nm VARCHAR2(300 CHAR),
+    pa_subject_cd VARCHAR2(100 CHAR),
+    pa_subject_nm VARCHAR2(300 CHAR),
+    n_hldamt NUMBER(26, 4),
+    n_hldcst NUMBER(26, 4),
+    n_hldcst_locl NUMBER(26, 4),
+    n_hldmkv NUMBER(26, 4),
+    n_hldmkv_locl NUMBER(26, 4),
+    n_hldvva NUMBER(26, 4),
+    n_hldvva_l NUMBER(26, 4),
+    ccy_cd VARCHAR2(3 CHAR),
+    n_valrate NUMBER(26, 4),
+    n_price_cost NUMBER(26, 4),
+    n_valprice NUMBER(26, 4),
+    n_cb_jz_bl NUMBER(26, 4),
+    n_sz_jz_bl NUMBER(26, 4),
+    n_zc_bl NUMBER(26, 8),
+    susp_info VARCHAR2(300 CHAR),
+    valuat_equity VARCHAR2(30 CHAR),
+    fin_attr_id_d VARCHAR2(30 CHAR),
+    fin_mkt_cd VARCHAR2(30 CHAR),
+    time_stamp TIMESTAMP,
+    cons_float_tp_cd VARCHAR2(30 CHAR),
+    source_tp VARCHAR2(30 CHAR),
+    source_sign VARCHAR2(300 CHAR),
+    sn NUMBER(10),
+    data_dt VARCHAR2(8 CHAR),
+    isin_cd VARCHAR2(30 CHAR)
+);
+
+CREATE TABLE t_tr_index (
+    id NUMBER(19) PRIMARY KEY,
+    org_cd VARCHAR2(30 CHAR),
+    pd_cd VARCHAR2(60 CHAR),
+    biz_date VARCHAR2(8 CHAR),
+    indx_nm VARCHAR2(300 CHAR),
+    indx_valu VARCHAR2(300 CHAR),
+    source_tp VARCHAR2(30 CHAR),
+    source_sign VARCHAR2(300 CHAR),
+    time_stamp TIMESTAMP
+);
