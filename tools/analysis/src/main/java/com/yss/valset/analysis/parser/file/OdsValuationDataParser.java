@@ -12,7 +12,9 @@ import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.valset.analysis.support.ExcelParsingSupport;
 import com.yss.valset.analysis.support.SubjectHierarchySupport;
+import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -29,15 +31,24 @@ import java.util.Map;
 public class OdsValuationDataParser implements ValuationDataParser {
 
     private static final String DEFAULT_SHEET_NAME = "ODS_RAW_DATA";
-    private static final List<String> REQUIRED_HEADERS = List.of("科目代码", "科目名称");
-    private static final List<String> FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
 
     private final ValuationFileDataMapper valuationFileDataMapper;
     private final ObjectMapper objectMapper;
+    private final QlexpressParseRuleEngine parseRuleEngine;
 
     public OdsValuationDataParser(ValuationFileDataMapper valuationFileDataMapper, ObjectMapper objectMapper) {
+        this(valuationFileDataMapper, objectMapper, new QlexpressParseRuleEngine());
+    }
+
+    @Autowired
+    public OdsValuationDataParser(
+            ValuationFileDataMapper valuationFileDataMapper,
+            ObjectMapper objectMapper,
+            QlexpressParseRuleEngine parseRuleEngine
+    ) {
         this.valuationFileDataMapper = valuationFileDataMapper;
         this.objectMapper = objectMapper;
+        this.parseRuleEngine = parseRuleEngine;
     }
 
     @Override
@@ -123,8 +134,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private int findHeaderRow(List<List<Object>> rows) {
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
-            List<String> texts = toRowTexts(rows.get(rowIndex));
-            if (texts.containsAll(REQUIRED_HEADERS)) {
+            if (parseRuleEngine.matchesHeaderRow(rows.get(rowIndex), ExcelParsingSupport.REQUIRED_HEADERS)) {
                 return rowIndex;
             }
         }
@@ -138,10 +148,10 @@ public class OdsValuationDataParser implements ValuationDataParser {
             if (isFooterRow(rowValues)) {
                 break;
             }
-            if (ExcelParsingSupport.isSubjectDataRow(rowValues)) {
+            if (parseRuleEngine.matchesDataStartRow(rowValues) && ExcelParsingSupport.isSubjectDataRow(rowValues)) {
                 return rowIndex;
             }
-            if (firstMetricCandidate < 0 && isMetricCandidate(rowValues)) {
+            if (firstMetricCandidate < 0 && parseRuleEngine.matchesDataStartRow(rowValues) && isMetricCandidate(rowValues)) {
                 firstMetricCandidate = rowIndex;
             }
         }
@@ -279,11 +289,15 @@ public class OdsValuationDataParser implements ValuationDataParser {
             if (isFooterRow(rowValues)) {
                 break;
             }
-            if (ExcelParsingSupport.isSubjectDataRow(rowValues)) {
+            String rowType = parseRuleEngine.classifyRow(rowValues, List.of("制表", "复核", "打印", "备注"));
+            if ("SUBJECT".equalsIgnoreCase(rowType) || ExcelParsingSupport.isSubjectDataRow(rowValues)) {
                 subjects.add(extractSubjectRecord(rowIndex, rowValues, headers, headerIndex));
                 continue;
             }
-            if (ExcelParsingSupport.isMetricDataRow(rowValues) || ExcelParsingSupport.isMetricRow(rowValues)) {
+            if ("METRIC_DATA".equalsIgnoreCase(rowType)
+                    || "METRIC_ROW".equalsIgnoreCase(rowType)
+                    || ExcelParsingSupport.isMetricDataRow(rowValues)
+                    || ExcelParsingSupport.isMetricRow(rowValues)) {
                 metrics.add(extractMetricRecord(rowIndex, rowValues, headers, headerIndex));
             }
         }
@@ -427,17 +441,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private boolean isFooterRow(List<Object> rowValues) {
-        int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
-        if (labelIndex < 0) {
-            return false;
-        }
-        String labelText = ExcelParsingSupport.textAt(rowValues, labelIndex);
-        for (String keyword : FOOTER_KEYWORDS) {
-            if (labelText.contains(keyword)) {
-                return true;
-            }
-        }
-        return false;
+        return parseRuleEngine.matchesFooterRow(rowValues, List.of("制表", "复核", "打印", "备注"));
     }
 
     private String findNextMeaningfulText(List<String> rowTexts, int startIndex) {

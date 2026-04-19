@@ -12,13 +12,14 @@ import com.yss.valset.extract.repository.entity.FileParseRulePO;
 import com.yss.valset.extract.repository.entity.FileParseSourcePO;
 import com.yss.valset.extract.repository.mapper.FileParseRuleRepository;
 import com.yss.valset.extract.repository.mapper.FileParseSourceRepository;
-import com.yss.valset.extract.standardization.mapping.DefaultHeaderMappingEngine;
+import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import com.yss.valset.extract.standardization.mapping.BuiltinHeaderAliasCatalog;
 import com.yss.valset.extract.standardization.mapping.BuiltinMetricAliasCatalog;
 import com.yss.valset.extract.standardization.mapping.HeaderMappingCandidate;
 import com.yss.valset.extract.standardization.mapping.HeaderMappingEngine;
 import com.yss.valset.extract.standardization.mapping.HeaderMappingInput;
 import com.yss.valset.extract.standardization.mapping.HeaderMappingLookup;
+import com.yss.valset.extract.standardization.mapping.QlexpressHeaderMappingEngine;
 import com.yss.valset.extract.support.MatchTextSupport;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,7 @@ public class ExternalValuationStandardizationService {
     private final ObjectMapper objectMapper;
     private final FileParseRuleRepository parseRuleRepository;
     private final FileParseSourceRepository parseSourceRepository;
+    private final QlexpressParseRuleEngine qlexpressRuleEngine;
     private final HeaderMappingEngine headerMappingEngine;
     private volatile Dictionary dictionary;
 
@@ -52,18 +54,20 @@ public class ExternalValuationStandardizationService {
             FileParseRuleRepository parseRuleRepository,
             FileParseSourceRepository parseSourceRepository
     ) {
-        this(objectMapper, parseRuleRepository, parseSourceRepository, new DefaultHeaderMappingEngine());
+        this(objectMapper, parseRuleRepository, parseSourceRepository, new QlexpressParseRuleEngine(), new QlexpressHeaderMappingEngine());
     }
 
     public ExternalValuationStandardizationService(
             ObjectMapper objectMapper,
             FileParseRuleRepository parseRuleRepository,
             FileParseSourceRepository parseSourceRepository,
+            QlexpressParseRuleEngine qlexpressRuleEngine,
             HeaderMappingEngine headerMappingEngine
     ) {
         this.objectMapper = objectMapper;
         this.parseRuleRepository = parseRuleRepository;
         this.parseSourceRepository = parseSourceRepository;
+        this.qlexpressRuleEngine = qlexpressRuleEngine;
         this.headerMappingEngine = headerMappingEngine;
     }
 
@@ -210,6 +214,16 @@ public class ExternalValuationStandardizationService {
         BuiltinMetricAliasCatalog.BuiltinMetricMapping builtinMetric = sourceEntry == null
                 ? BuiltinMetricAliasCatalog.match(metric.getMetricName())
                 : null;
+        Map<String, Object> strategyContext = new HashMap<>();
+        strategyContext.put("sourceEntry", sourceEntry);
+        strategyContext.put("builtinMetric", builtinMetric);
+        strategyContext.put("metricName", metric.getMetricName());
+        String metricStrategy = "fallback";
+        try {
+            metricStrategy = qlexpressRuleEngine.evaluateString(METRIC_STRATEGY_EXPR, strategyContext);
+        } catch (Exception exception) {
+            log.warn("指标映射策略表达式执行失败，将使用回退策略，metricName={}", metric.getMetricName(), exception);
+        }
         String standardCode = ruleEntry != null
                 ? ruleEntry.getColumnMap()
                 : (builtinMetric != null ? builtinMetric.standardCode() : metric.getMetricName());
@@ -237,15 +251,15 @@ public class ExternalValuationStandardizationService {
         metric.setStandardValues(standardValues);
         metric.setMappingRuleId(ruleEntry == null ? null : ruleEntry.getId());
         metric.setMappingSourceId(sourceEntry == null ? null : sourceEntry.getId());
-        if (sourceEntry != null) {
+        if ("source_mapping".equals(metricStrategy) && sourceEntry != null) {
             metric.setMappingStatus("MAPPED");
             metric.setMappingReason("Matched source mapping for " + metric.getMetricName());
             metric.setMappingConfidence(0.92D);
-        } else if (builtinMetric != null) {
+        } else if ("builtin_alias".equals(metricStrategy) && builtinMetric != null) {
             metric.setMappingStatus("MAPPED");
             metric.setMappingReason("Matched builtin metric alias for " + metric.getMetricName());
             metric.setMappingConfidence(0.75D);
-        } else if (metric.getMetricName() != null && !metric.getMetricName().isBlank()) {
+        } else if ("passthrough".equals(metricStrategy) && metric.getMetricName() != null && !metric.getMetricName().isBlank()) {
             metric.setMappingStatus("MAPPED");
             metric.setMappingReason("Fallback passthrough metric name");
             metric.setMappingConfidence(0.55D);
@@ -306,20 +320,12 @@ public class ExternalValuationStandardizationService {
         }
         String trimmedText = text.trim();
         ParseSourceEntry entry = resolveSourceExact(trimmedText, dictionary);
+        ParseSourceEntry segmentEntry = resolveSourceBySegments(trimmedText, dictionary);
         if (entry != null) {
-            return entry;
+            return chooseSourceByRule(trimmedText, entry, segmentEntry, resolveAliasContains(trimmedText, dictionary));
         }
-        for (String segment : trimmedText.split("\\|")) {
-            String segmentText = segment.trim();
-            if (segmentText.isBlank()) {
-                continue;
-            }
-            entry = resolveSourceExact(segmentText, dictionary);
-            if (entry != null) {
-                return entry;
-            }
-        }
-        return resolveAliasContains(trimmedText, dictionary);
+        ParseSourceEntry aliasEntry = resolveAliasContains(trimmedText, dictionary);
+        return chooseSourceByRule(trimmedText, entry, segmentEntry, aliasEntry);
     }
 
     private ParseSourceEntry resolveSourceExact(String text, Dictionary dictionary) {
@@ -333,6 +339,23 @@ public class ExternalValuationStandardizationService {
             return entry;
         }
         return sourceByAlias.get(text);
+    }
+
+    private ParseSourceEntry resolveSourceBySegments(String text, Dictionary dictionary) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        for (String segment : text.split("\\|")) {
+            String segmentText = segment == null ? "" : segment.trim();
+            if (segmentText.isBlank()) {
+                continue;
+            }
+            ParseSourceEntry entry = resolveSourceExact(segmentText, dictionary);
+            if (entry != null) {
+                return entry;
+            }
+        }
+        return null;
     }
 
     private ParseSourceEntry resolveAliasContains(String text, Dictionary dictionary) {
@@ -356,6 +379,41 @@ public class ExternalValuationStandardizationService {
             }
         }
         return bestEntry;
+    }
+
+    private ParseSourceEntry chooseSourceByRule(
+            String metricText,
+            ParseSourceEntry exactEntry,
+            ParseSourceEntry segmentEntry,
+            ParseSourceEntry aliasEntry
+    ) {
+        Map<String, Object> context = new HashMap<>();
+        context.put("metricText", metricText);
+        context.put("exactEntry", exactEntry);
+        context.put("segmentEntry", segmentEntry);
+        context.put("aliasEntry", aliasEntry);
+        String strategy = "fallback";
+        try {
+            strategy = qlexpressRuleEngine.evaluateString(SOURCE_STRATEGY_EXPR, context);
+        } catch (Exception exception) {
+            log.warn("来源映射策略表达式执行失败，将使用回退策略，metricText={}", metricText, exception);
+        }
+        if ("exact_source".equals(strategy) && exactEntry != null) {
+            return exactEntry;
+        }
+        if ("segment_source".equals(strategy) && segmentEntry != null) {
+            return segmentEntry;
+        }
+        if ("alias_source".equals(strategy) && aliasEntry != null) {
+            return aliasEntry;
+        }
+        if (exactEntry != null) {
+            return exactEntry;
+        }
+        if (segmentEntry != null) {
+            return segmentEntry;
+        }
+        return aliasEntry;
     }
 
     private HeaderQualitySummary logHeaderMappingSummary(List<String> headers, Map<Integer, MappingDecision> mappingDecisionByIndex) {
@@ -713,4 +771,18 @@ public class ExternalValuationStandardizationService {
     private boolean isEnabled(FileParseSourcePO po) {
         return po != null && !Boolean.FALSE.equals(po.getStatus());
     }
+
+    /**
+     * 来源映射策略表达式。
+     */
+    private static final String SOURCE_STRATEGY_EXPR = "exactEntry != null ? 'exact_source' : "
+            + "(segmentEntry != null ? 'segment_source' : "
+            + "(aliasEntry != null ? 'alias_source' : 'fallback'))";
+
+    /**
+     * 指标映射策略表达式。
+     */
+    private static final String METRIC_STRATEGY_EXPR = "sourceEntry != null ? 'source_mapping' : "
+            + "(builtinMetric != null ? 'builtin_alias' : "
+            + "(metricName != null && metricName.trim().length() > 0 ? 'passthrough' : 'unmapped'))";
 }

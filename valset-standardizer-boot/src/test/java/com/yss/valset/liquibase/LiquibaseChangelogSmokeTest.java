@@ -27,7 +27,6 @@ class LiquibaseChangelogSmokeTest {
                     "db/changelog/sql/common/ods.sql",
                     "db/changelog/sql/common/dwd.sql",
                     "db/changelog/sql/common/knowledge.sql",
-                    "db/changelog/sql/common/legacy-source.sql",
                     "db/changelog/sql/common/indexes.sql"
             );
         }
