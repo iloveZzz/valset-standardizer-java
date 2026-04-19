@@ -419,41 +419,6 @@ CREATE TABLE IF NOT EXISTS t_tr_index (
     time_stamp TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS tr_spv_jjhzgzb (
-    id BIGINT PRIMARY KEY,
-    org_cd VARCHAR(30),
-    pd_cd VARCHAR(30),
-    biz_date VARCHAR(8),
-    subject_cd VARCHAR(100),
-    subject_nm VARCHAR(300),
-    pa_subject_cd VARCHAR(100),
-    pa_subject_nm VARCHAR(300),
-    n_hldamt DECIMAL(26, 4),
-    n_hldcst DECIMAL(26, 4),
-    n_hldcst_locl DECIMAL(26, 4),
-    n_hldmkv DECIMAL(26, 4),
-    n_hldmkv_locl DECIMAL(26, 4),
-    n_hldvva DECIMAL(26, 4),
-    n_hldvva_l DECIMAL(26, 4),
-    ccy_cd VARCHAR(3),
-    n_valrate DECIMAL(26, 4),
-    n_price_cost DECIMAL(26, 4),
-    n_valprice DECIMAL(26, 4),
-    n_cb_jz_bl DECIMAL(26, 4),
-    n_sz_jz_bl DECIMAL(26, 4),
-    n_zc_bl DECIMAL(26, 8),
-    susp_info VARCHAR(300),
-    valuat_equity VARCHAR(30),
-    fin_attr_id_d VARCHAR(30),
-    fin_mkt_cd VARCHAR(30),
-    time_stamp TIMESTAMP,
-    cons_float_tp_cd VARCHAR(30),
-    source_tp VARCHAR(30),
-    source_sign VARCHAR(300),
-    sn SMALLINT,
-    data_dt VARCHAR(8),
-    isin_cd VARCHAR(30)
-);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);
@@ -489,8 +454,3 @@ CREATE INDEX IF NOT EXISTS idx_t_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
 CREATE INDEX IF NOT EXISTS idx_t_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
 
 CREATE INDEX IF NOT EXISTS idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
-
-CREATE INDEX IF NOT EXISTS idx_tr_spv_jjhzgzb_org ON tr_spv_jjhzgzb(org_cd);
-CREATE INDEX IF NOT EXISTS idx_tr_spv_jjhzgzb_subject ON tr_spv_jjhzgzb(subject_cd);
-CREATE INDEX IF NOT EXISTS idx_tr_spv_jjhzgzb_biz_date ON tr_spv_jjhzgzb(biz_date);
-CREATE INDEX IF NOT EXISTS idx_tr_spv_jjhzgzb_pd ON tr_spv_jjhzgzb(pd_cd);

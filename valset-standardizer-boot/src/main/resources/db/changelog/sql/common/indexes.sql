@@ -79,15 +79,6 @@ CREATE INDEX idx_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_tr_index' AND index_name = 'idx_t_tr_index_date_org_pd'
 CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
 
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'tr_spv_jjhzgzb' AND index_name = 'idx_tr_spv_jjhzgzb_org'
-CREATE INDEX idx_tr_spv_jjhzgzb_org ON tr_spv_jjhzgzb(org_cd);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'tr_spv_jjhzgzb' AND index_name = 'idx_tr_spv_jjhzgzb_subject'
-CREATE INDEX idx_tr_spv_jjhzgzb_subject ON tr_spv_jjhzgzb(subject_cd);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'tr_spv_jjhzgzb' AND index_name = 'idx_tr_spv_jjhzgzb_biz_date'
-CREATE INDEX idx_tr_spv_jjhzgzb_biz_date ON tr_spv_jjhzgzb(biz_date);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'tr_spv_jjhzgzb' AND index_name = 'idx_tr_spv_jjhzgzb_pd'
-CREATE INDEX idx_tr_spv_jjhzgzb_pd ON tr_spv_jjhzgzb(pd_cd);
-
 --changeset codex:20260415-06-postgres-indexes dbms:postgresql
 CREATE UNIQUE INDEX uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
 CREATE INDEX idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);
@@ -131,11 +122,6 @@ CREATE INDEX idx_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
 CREATE INDEX idx_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
 CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
 
-CREATE INDEX idx_tr_spv_jjhzgzb_org ON tr_spv_jjhzgzb(org_cd);
-CREATE INDEX idx_tr_spv_jjhzgzb_subject ON tr_spv_jjhzgzb(subject_cd);
-CREATE INDEX idx_tr_spv_jjhzgzb_biz_date ON tr_spv_jjhzgzb(biz_date);
-CREATE INDEX idx_tr_spv_jjhzgzb_pd ON tr_spv_jjhzgzb(pd_cd);
-
 --changeset codex:20260415-06-oracle-indexes dbms:oracle
 CREATE UNIQUE INDEX uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
 CREATE INDEX idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);
@@ -178,8 +164,3 @@ CREATE INDEX idx_tr_jjhzgzb_subject ON t_tr_jjhzgzb(subject_cd);
 CREATE INDEX idx_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
 CREATE INDEX idx_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
 CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
-
-CREATE INDEX idx_tr_spv_jjhzgzb_org ON tr_spv_jjhzgzb(org_cd);
-CREATE INDEX idx_tr_spv_jjhzgzb_subject ON tr_spv_jjhzgzb(subject_cd);
-CREATE INDEX idx_tr_spv_jjhzgzb_biz_date ON tr_spv_jjhzgzb(biz_date);
-CREATE INDEX idx_tr_spv_jjhzgzb_pd ON tr_spv_jjhzgzb(pd_cd);
