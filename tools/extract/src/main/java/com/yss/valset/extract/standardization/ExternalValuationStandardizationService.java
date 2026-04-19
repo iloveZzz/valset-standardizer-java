@@ -147,6 +147,15 @@ public class ExternalValuationStandardizationService {
                 .build();
     }
 
+    /**
+     * 刷新解析字典缓存。
+     */
+    public void refreshDictionaryCache() {
+        synchronized (this) {
+            dictionary = null;
+        }
+    }
+
     private void logHeaderStrategySummary(Map<Integer, MappingDecision> mappingDecisionByIndex) {
         if (mappingDecisionByIndex == null || mappingDecisionByIndex.isEmpty()) {
             return;
