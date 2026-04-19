@@ -1,6 +1,6 @@
-# subject-match-java
+# valset-standardizer
 
-并行于当前 Python 原型的新 Java 多模块工程，当前已经拆分为“原始数据提取”和“ODS 原始行分析”两段链路。目标技术栈：
+面向外部估值表标准化的新 Java 多模块工程，当前已经拆分为“原始数据提取”和“ODS 原始行分析”两段链路。目标技术栈：
 
 - Spring Boot 3
 - Quartz
@@ -10,14 +10,14 @@
 
 目录说明：
 
-- `subject-match-core`：领域模型、解析/匹配抽象、任务模型
-- `subject-match-tools`：非 DDD 的通用工具库聚合模块
-  - `subject-match-extract`：Excel / CSV 原始数据抽取与 `t_ods_valuation_filedata` 持久化
-  - `subject-match-analysis`：基于 ODS 原始行数据的估值分析
-  - `subject-match-knowledge`：标准科目、历史映射提示和评估样本加载
-  - `subject-match-batch`：Quartz 调度与任务分发
-- `subject-match-infra`：通用基础设施支持代码
-- `subject-match-boot`：启动类、应用服务、控制器
+- `valset-standardizer-core`：领域模型、解析/标准化抽象、任务模型
+- `valset-standardizer-tools`：非 DDD 的通用工具库聚合模块
+  - `valset-standardizer-extract`：Excel / CSV 原始数据抽取与 `t_ods_valuation_filedata` 持久化
+  - `valset-standardizer-analysis`：基于 ODS 原始行数据的估值分析
+  - `valset-standardizer-knowledge`：标准科目、历史映射提示和评估样本加载
+  - `valset-standardizer-batch`：Quartz 调度与任务分发
+- `valset-standardizer-infra`：通用基础设施支持代码
+- `valset-standardizer-boot`：启动类、应用服务、控制器
 
 ## 当前链路
 
@@ -28,7 +28,7 @@
 5. `t_subject_match_task` 记录流程阶段 `task_stage`，并分别记录 `task_start_time`、`parse_task_time_ms`、`standardize_time_ms`、`match_standard_subject_time_ms`，其中三段耗时分别对应文件解析、标准结构化、标准科目匹配。
 6. 同一份文件默认会复用已成功完成的抽取任务、解析任务和匹配任务；如果需要重新执行，可在接口里传入 `forceRebuild=true`。上传返回里会带 `fileFingerprint`，便于排查是否命中同一份文件。
 
-当前版本以“可编译、可运行、可拆分”的多模块实现为目标，便于后续继续扩展分析和匹配能力。
+当前版本以“可编译、可运行、可拆分”的多模块实现为目标，便于后续继续扩展估值表标准化、分析和匹配能力。
 
 ## 全流程接口文档
 

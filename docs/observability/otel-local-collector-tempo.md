@@ -30,7 +30,7 @@ docker compose -f docker/observability/docker-compose.yml ps
 
 ## 2. 启动应用并开启 tracing
 
-本项目已在 `subject-match-boot` 接入 OTEL（Micrometer tracing bridge）。
+本项目已在 `valset-standardizer-boot` 接入 OTEL（Micrometer tracing bridge）。
 
 启动前建议显式设置：
 
@@ -60,13 +60,13 @@ curl -s http://127.0.0.1:30066/actuator/health
 2. 调用解析接口：`POST /api/valuation-workflows/analyze`
 3. 或直接调用全流程：`POST /api/valuation-workflows/full-process`
 
-接口示例见：[valuation-workflow-api.md](/Users/zhudaoming/yss-subject-match/subject-match-java/docs/valuation-workflow-api.md)
+接口示例见：[valuation-workflow-api.md](../valuation-workflow-api.md)
 
 ## 4. 在 Grafana/Tempo 验证 trace（目标 2）
 
 1. 打开 `http://127.0.0.1:3000`，登录 `admin/admin`
 2. 进入 `Explore`，数据源选择 `Tempo`
-3. 按 service name 检索：`subject-match-boot`
+3. 按 service name 检索：`valset-standardizer-boot`
 4. 查看 span 名称，确认包含：
    - `workflow.full.execute`
    - `workflow.full.extract`
@@ -87,7 +87,7 @@ curl -s http://127.0.0.1:30066/actuator/health
 你会在应用日志中看到类似：
 
 ```text
-[traceId=...,spanId=...] com.yss.subjectmatch... - 全流程执行开始...
+[traceId=...,spanId=...] com.yss.valset... - 全流程执行开始...
 ```
 
 验证方式：

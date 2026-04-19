@@ -2,7 +2,7 @@
 <!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
 <configuration>
     <typeAliases>
-        <package name="com.yss.subjectmatch.extract.repository.entity"/>
+        <package name="com.yss.valset.extract.repository.entity"/>
     </typeAliases>
     
     <environments default="development">

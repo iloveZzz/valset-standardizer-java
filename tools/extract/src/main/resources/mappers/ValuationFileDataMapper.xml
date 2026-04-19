@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.yss.subjectmatch.extract.repository.mapper.ValuationFileDataMapper">
+<mapper namespace="com.yss.valset.extract.repository.mapper.ValuationFileDataMapper">
 
     <!-- Result Map for ValuationFileDataPO -->
-    <resultMap id="BaseResultMap" type="com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO">
+    <resultMap id="BaseResultMap" type="com.yss.valset.extract.repository.entity.ValuationFileDataPO">
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="task_id" property="taskId" jdbcType="BIGINT"/>
         <result column="file_id" property="fileId" jdbcType="BIGINT"/>
@@ -11,7 +11,7 @@
         <result column="row_data_json" property="rowDataJson" jdbcType="VARCHAR"/>
     </resultMap>
 
-    <insert id="insert" parameterType="com.yss.subjectmatch.extract.repository.entity.ValuationFileDataPO">
+    <insert id="insert" parameterType="com.yss.valset.extract.repository.entity.ValuationFileDataPO">
         INSERT INTO t_ods_valuation_filedata (
             id,
             task_id,

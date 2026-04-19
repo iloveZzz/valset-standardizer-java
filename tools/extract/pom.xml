@@ -5,23 +5,23 @@
 
     <parent>
         <groupId>com.yss.datamiddle</groupId>
-        <artifactId>subject-match-parent</artifactId>
+        <artifactId>valset-standardizer-tools</artifactId>
         <version>3.0.0-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>subject-match-extract</artifactId>
-    <name>subject-match-extract</name>
+    <artifactId>valset-standardizer-extract</artifactId>
+    <name>valset-standardizer-extract</name>
 
     <dependencies>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
-            <artifactId>subject-match-core</artifactId>
+            <artifactId>valset-standardizer-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
-            <artifactId>subject-match-infra</artifactId>
+            <artifactId>valset-standardizer-infra</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

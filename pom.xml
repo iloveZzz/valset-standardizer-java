@@ -8,18 +8,18 @@
         <version>3.0.0-SNAPSHOT</version>
         <relativePath/>
     </parent>
-    <artifactId>subject-match-parent</artifactId>
+    <artifactId>valset-standardizer-parent</artifactId>
     <packaging>pom</packaging>
 
-    <name>subject-match-parent</name>
-    <description>Java subject match scaffold based on Spring Boot and Quartz</description>
+    <name>valset-standardizer-parent</name>
+    <description>Java 外部估值表标准化工程，基于 Spring Boot 和 Quartz</description>
 
     <modules>
-        <module>subject-match-core</module>
-        <module>subject-match-infra</module>
+        <module>valset-standardizer-core</module>
+        <module>valset-standardizer-infra</module>
         <module>tools</module>
-        <module>subject-match-boot</module>
-        <module>subject-match-e2e</module>
+        <module>valset-standardizer-boot</module>
+        <module>valset-standardizer-e2e</module>
     </modules>
 
     <properties>
@@ -89,6 +89,13 @@
                     <version>3.13.0</version>
                     <configuration>
                         <parameters>true</parameters>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
                     </configuration>
                 </plugin>
                 <plugin>

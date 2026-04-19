@@ -4,13 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.yss.datamiddle</groupId>
-        <artifactId>subject-match-parent</artifactId>
+        <artifactId>valset-standardizer-parent</artifactId>
         <version>3.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>subject-match-tools</artifactId>
-    <name>subject-match-tools</name>
+    <artifactId>valset-standardizer-tools</artifactId>
+    <name>valset-standardizer-tools</name>
     <packaging>pom</packaging>
 
     <modules>
@@ -18,6 +18,5 @@
         <module>extract</module>
         <module>analysis</module>
         <module>batch</module>
-        <module>fileparser</module>
     </modules>
 </project>

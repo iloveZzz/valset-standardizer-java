@@ -1,4 +1,4 @@
--- Generated from PO classes in subject-match-java.
+-- Generated from PO classes in valset-standardizer.
 -- This DDL matches the current workflow task model with task_stage and per-stage timing fields.
 
 CREATE TABLE t_subject_match_file_info (

@@ -6,8 +6,6 @@
     <file url="file://$PROJECT_DIR$/subject-match-analysis/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/subject-match-batch/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/subject-match-batch/src/main/resources" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/subject-match-boot/src/main/java" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/subject-match-boot/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/subject-match-core/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/subject-match-core/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/subject-match-e2e/src/main/java" charset="UTF-8" />
@@ -22,5 +20,10 @@
     <file url="file://$PROJECT_DIR$/tools/knowledge/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/tools/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/tools/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/valset-standardizer-boot/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/valset-standardizer-boot/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/valset-standardizer-core/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/valset-standardizer-e2e/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/valset-standardizer-infra/src/main/java" charset="UTF-8" />
   </component>
 </project>

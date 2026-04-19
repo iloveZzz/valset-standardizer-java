@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.yss.subjectmatch.extract.repository.mapper.ValuationSheetStyleMapper">
+<mapper namespace="com.yss.valset.extract.repository.mapper.ValuationSheetStyleMapper">
 
-    <resultMap id="BaseResultMap" type="com.yss.subjectmatch.extract.repository.entity.ValuationSheetStylePO">
+    <resultMap id="BaseResultMap" type="com.yss.valset.extract.repository.entity.ValuationSheetStylePO">
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="task_id" property="taskId" jdbcType="BIGINT"/>
         <result column="file_id" property="fileId" jdbcType="BIGINT"/>
@@ -13,7 +13,7 @@
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
     </resultMap>
 
-    <insert id="insert" parameterType="com.yss.subjectmatch.extract.repository.entity.ValuationSheetStylePO">
+    <insert id="insert" parameterType="com.yss.valset.extract.repository.entity.ValuationSheetStylePO">
         INSERT INTO t_ods_valuation_sheet_style (
             id,
             task_id,

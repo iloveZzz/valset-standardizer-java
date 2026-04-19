@@ -1,0 +1,82 @@
+spring:
+  application:
+    name: valset-standardizer
+  datasource:
+    primary:
+      url: jdbc:mysql://127.0.0.1:3308/t_datamiddle_subject?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+      username: root
+      password: root
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+  liquibase:
+    enabled: ${LIQUIBASE_ENABLED:false}
+    change-log: ${LIQUIBASE_CHANGE_LOG:classpath:/db/changelog/db.changelog-master.xml}
+  quartz:
+    job-store-type: memory
+    auto-startup: true
+    wait-for-jobs-to-complete-on-shutdown: true
+    properties:
+      org.quartz.scheduler.instanceName: valsetStandardizerScheduler
+      org.quartz.threadPool.threadCount: 5
+  profiles:
+    active: nacos
+  data:
+    redis:
+      client-type: jedis
+      host: localhost
+      port: 30644
+      jedis:
+        pool:
+          enabled: true
+
+server:
+  port: 30066
+
+yss:
+  mybatis:
+    mapper-scan: com.yss.valset.extract.repository.mapper
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  tracing:
+    enabled: ${OTEL_TRACING_ENABLED:true}
+    sampling:
+      probability: ${OTEL_SAMPLING_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://127.0.0.1:4318/v1/traces}
+
+mybatis-plus:
+  mapper-locations: classpath*:/mappers/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: assign_id
+
+logging:
+  level:
+    com.yss.datamiddle.approval: INFO
+    org.springframework.jdbc: INFO
+    io.opentelemetry: INFO
+    io.micrometer.tracing: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [traceId=%X{traceId:-},spanId=%X{spanId:-}] %logger{36} - %msg%n"
+
+subject:
+  match:
+    output-dir: output
+    upload-dir: uploads
+    workflow:
+      skip-excel-style-parsing: false
+      enable-match-process: true
+      persist-standardized-dwd-details: false

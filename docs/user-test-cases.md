@@ -1,6 +1,6 @@
 # 用户测试用例
 
-本文档基于当前 `subject-match-java` 已落地能力整理，覆盖 4 个主流程：
+本文档基于当前 `valset-standardizer` 已落地能力整理，覆盖 4 个主流程：
 
 - 原始数据提取
 - 估值表解析
@@ -13,13 +13,13 @@
 
 当前示例文件：
 
-- 估值表：`/Users/zhudaoming/yss-subject-match/input/20230321基金资产估值表DJ0233.xls`
-- 标准科目：`/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx`
-- 历史映射：`/Users/zhudaoming/yss-subject-match/standard/光大科目映射（解密后）.xlsx`
+- 估值表：`./input/20230321基金资产估值表DJ0233.xls`
+- 标准科目：`./standard/光大标准科目（解密后）.xlsx`
+- 历史映射：`./standard/光大科目映射（解密后）.xlsx`
 
 ## 1. 测试前准备
 
-1. 启动 `subject-match-java` 服务。
+1. 启动 `valset-standardizer` 服务。
 2. 确认端口 `30066` 可访问。
 3. 确认上述 3 个样例文件路径在当前机器存在。
 
@@ -34,7 +34,7 @@
 curl -X POST http://localhost:30066/api/tasks/extract \
   -H 'Content-Type: application/json' \
   -d '{
-    "workbookPath": "/Users/zhudaoming/yss-subject-match/input/20230321基金资产估值表DJ0233.xls",
+    "workbookPath": "./input/20230321基金资产估值表DJ0233.xls",
     "createdBy": "uat-user"
   }'
 ```
@@ -70,7 +70,7 @@ curl http://localhost:30066/api/tasks/{taskId}
 curl -X POST http://localhost:30066/api/tasks/parse \
   -H 'Content-Type: application/json' \
   -d '{
-    "workbookPath": "/Users/zhudaoming/yss-subject-match/input/20230321基金资产估值表DJ0233.xls",
+    "workbookPath": "./input/20230321基金资产估值表DJ0233.xls",
     "fileId": 42,
     "createdBy": "uat-user"
   }'
@@ -94,7 +94,7 @@ curl http://localhost:30066/api/tasks/{taskId}
 - `resultPayload` 非空
 - `inputData.workbookPath` 与请求一致
 - `resultData.outputDir`、`resultData.artifacts` 可直接读取
-- 产物目录存在：`/Users/zhudaoming/yss-subject-match/subject-match-java/output/task-{taskId}` 或运行配置里的输出目录
+- 产物目录存在：`./output/task-{taskId}` 或运行配置里的输出目录
 - 目录中至少包含：
     - `parsed.json`
     - `subjects.csv`
@@ -120,10 +120,10 @@ curl http://localhost:30066/api/tasks/{taskId}
 curl -X POST http://localhost:30066/api/tasks/match \
   -H 'Content-Type: application/json' \
   -d '{
-    "workbookPath": "/Users/zhudaoming/yss-subject-match/input/20230321基金资产估值表DJ0233.xls",
+    "workbookPath": "./input/20230321基金资产估值表DJ0233.xls",
     "fileId": 42,
-    "standardWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx",
-    "mappingWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大科目映射（解密后）.xlsx",
+    "standardWorkbookPath": "./standard/光大标准科目（解密后）.xlsx",
+    "mappingWorkbookPath": "./standard/光大科目映射（解密后）.xlsx",
     "topK": 5,
     "createdBy": "uat-user"
   }'
@@ -168,8 +168,8 @@ curl -X POST http://localhost:30066/api/tasks/match \
 curl -X POST http://localhost:30066/api/tasks/evaluate \
   -H 'Content-Type: application/json' \
   -d '{
-    "mappingWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大科目映射（解密后）.xlsx",
-    "standardWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx",
+    "mappingWorkbookPath": "./standard/光大科目映射（解密后）.xlsx",
+    "standardWorkbookPath": "./standard/光大标准科目（解密后）.xlsx",
     "splitMode": "org_holdout",
     "topK": 5,
     "maxTuningSamples": 1500,
@@ -240,7 +240,7 @@ curl -X POST http://localhost:30066/api/tasks/match \
   -H 'Content-Type: application/json' \
   -d '{
     "workbookPath": "/tmp/not-exists.xls",
-    "standardWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx",
+    "standardWorkbookPath": "./standard/光大标准科目（解密后）.xlsx",
     "topK": 5,
     "createdBy": "uat-user"
   }'
@@ -263,8 +263,8 @@ curl -X POST http://localhost:30066/api/tasks/match \
 curl -X POST http://localhost:30066/api/tasks/evaluate \
   -H 'Content-Type: application/json' \
   -d '{
-    "mappingWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大科目映射（解密后）.xlsx",
-    "standardWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx",
+    "mappingWorkbookPath": "./standard/光大科目映射（解密后）.xlsx",
+    "standardWorkbookPath": "./standard/光大标准科目（解密后）.xlsx",
     "splitMode": "org_holdout",
     "createdBy": "uat-user"
   }'
@@ -276,8 +276,8 @@ curl -X POST http://localhost:30066/api/tasks/evaluate \
 curl -X POST http://localhost:30066/api/tasks/evaluate \
   -H 'Content-Type: application/json' \
   -d '{
-    "mappingWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大科目映射（解密后）.xlsx",
-    "standardWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx",
+    "mappingWorkbookPath": "./standard/光大科目映射（解密后）.xlsx",
+    "standardWorkbookPath": "./standard/光大标准科目（解密后）.xlsx",
     "splitMode": "hash_holdout",
     "createdBy": "uat-user"
   }'
@@ -316,7 +316,7 @@ curl -X POST http://localhost:30066/api/tasks/evaluate \
 如果希望一次性完成解析、匹配、两种评估模式的基本验证，可以直接执行：
 
 ```bash
-bash /Users/zhudaoming/yss-subject-match/scripts/run_subject_match_user_smoke.sh
+bash ./scripts/run_subject_match_user_smoke.sh
 ```
 
 可选环境变量：
@@ -334,5 +334,5 @@ bash /Users/zhudaoming/yss-subject-match/scripts/run_subject_match_user_smoke.sh
 ```bash
 BASE_URL=http://localhost:30066 \
 POLL_TIMEOUT_SECONDS=300 \
-bash /Users/zhudaoming/yss-subject-match/scripts/run_subject_match_user_smoke.sh
+bash ./scripts/run_subject_match_user_smoke.sh
 ```

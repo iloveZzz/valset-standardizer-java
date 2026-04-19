@@ -29,7 +29,7 @@
 
 ```bash
 curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
-  -F "file=@/Users/zhudaoming/yss-subject-match/input/20230321基金资产估值表DJ0233.xls" \
+  -F "file=@./input/20230321基金资产估值表DJ0233.xls" \
   -F "dataSourceType=EXCEL" \
   -F "createdBy=workflow-user"
 ```
@@ -58,7 +58,7 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 ```json
 {
   "dataSourceType": "EXCEL",
-  "workbookPath": "/Users/zhudaoming/yss-subject-match/uploads/2026-04-14/8d3e3f9f_demo.xls",
+  "workbookPath": "./uploads/2026-04-14/8d3e3f9f_demo.xls",
   "fileId": 10001,
   "createdBy": "workflow-user"
 }
@@ -84,10 +84,10 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 ```json
 {
   "dataSourceType": "EXCEL",
-  "workbookPath": "/Users/zhudaoming/yss-subject-match/uploads/2026-04-14/8d3e3f9f_demo.xls",
+  "workbookPath": "./uploads/2026-04-14/8d3e3f9f_demo.xls",
   "fileId": 10001,
-  "standardWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx",
-  "mappingWorkbookPath": "/Users/zhudaoming/yss-subject-match/standard/光大科目映射（解密后）.xlsx",
+  "standardWorkbookPath": "./standard/光大标准科目（解密后）.xlsx",
+  "mappingWorkbookPath": "./standard/光大科目映射（解密后）.xlsx",
   "topK": 5,
   "createdBy": "workflow-user"
 }
@@ -124,10 +124,10 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 
 ```bash
 curl -X POST "http://localhost:8080/api/valuation-workflows/full-process" \
-  -F "file=@/Users/zhudaoming/yss-subject-match/input/20230321基金资产估值表DJ0233.xls" \
+  -F "file=@./input/20230321基金资产估值表DJ0233.xls" \
   -F "dataSourceType=EXCEL" \
-  -F "standardWorkbookPath=/Users/zhudaoming/yss-subject-match/standard/光大标准科目（解密后）.xlsx" \
-  -F "mappingWorkbookPath=/Users/zhudaoming/yss-subject-match/standard/光大科目映射（解密后）.xlsx" \
+  -F "standardWorkbookPath=./standard/光大标准科目（解密后）.xlsx" \
+  -F "mappingWorkbookPath=./standard/光大科目映射（解密后）.xlsx" \
   -F "topK=5" \
   -F "createdBy=workflow-user"
 ```

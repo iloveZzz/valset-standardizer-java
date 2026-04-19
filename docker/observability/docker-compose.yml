@@ -1,7 +1,7 @@
 services:
   tempo:
     image: grafana/tempo:2.5.0
-    container_name: subject-match-tempo
+    container_name: valset-standardizer-tempo
     command: ["-config.file=/etc/tempo/tempo.yaml"]
     volumes:
       - ./tempo.yaml:/etc/tempo/tempo.yaml:ro
@@ -16,7 +16,7 @@ services:
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.127.0
-    container_name: subject-match-otel-collector
+    container_name: valset-standardizer-otel-collector
     command: ["--config=/etc/otelcol-contrib/otel-collector.yaml"]
     volumes:
       - ./otel-collector.yaml:/etc/otelcol-contrib/otel-collector.yaml:ro
@@ -30,7 +30,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.1.0
-    container_name: subject-match-grafana
+    container_name: valset-standardizer-grafana
     ports:
       - "3000:3000"
     environment:
