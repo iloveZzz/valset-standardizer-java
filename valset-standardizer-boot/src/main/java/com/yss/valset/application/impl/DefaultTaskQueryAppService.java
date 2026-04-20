@@ -34,7 +34,8 @@ public class DefaultTaskQueryAppService implements TaskQueryAppService {
     public TaskViewDTO queryTask(Long taskId) {
         TaskInfo taskInfo = taskGateway.findById(taskId);
         String taskStatus = taskInfo.getTaskStatus().name();
-        Map<String, Object> resultData = parsePayload(taskInfo.getResultPayload(), TaskStatus.FAILED.name().equals(taskStatus));
+        boolean failedTask = TaskStatus.FAILED.name().equals(taskStatus);
+        Map<String, Object> resultData = parsePayload(taskInfo.getResultPayload(), failedTask);
         return TaskViewDTO.builder()
                 .taskId(taskInfo.getTaskId())
                 .taskType(taskInfo.getTaskType().name())
@@ -45,6 +46,8 @@ public class DefaultTaskQueryAppService implements TaskQueryAppService {
                 .inputData(parsePayload(taskInfo.getInputPayload(), false))
                 .resultPayload(taskInfo.getResultPayload())
                 .resultData(resultData)
+                .errorMessage(failedTask ? extractErrorMessage(resultData, taskInfo.getResultPayload()) : null)
+                .errorCode(failedTask ? extractErrorCode(resultData) : null)
                 .rowCount(extractLong(taskInfo.getTaskType(), resultData, "rowCount"))
                 .fileSizeBytes(extractLong(taskInfo.getTaskType(), resultData, "fileSizeBytes"))
                 .durationMs(extractLong(taskInfo.getTaskType(), resultData, "durationMs"))
@@ -92,5 +95,37 @@ public class DefaultTaskQueryAppService implements TaskQueryAppService {
             }
         }
         return null;
+    }
+
+    private String extractErrorMessage(Map<String, Object> resultData, String rawPayload) {
+        if (resultData != null) {
+            Object errorMessage = resultData.get("errorMessage");
+            if (errorMessage != null) {
+                String text = String.valueOf(errorMessage).trim();
+                if (!text.isEmpty()) {
+                    return text;
+                }
+            }
+            Object rootCauseMessage = resultData.get("rootCauseMessage");
+            if (rootCauseMessage != null) {
+                String text = String.valueOf(rootCauseMessage).trim();
+                if (!text.isEmpty()) {
+                    return text;
+                }
+            }
+        }
+        return rawPayload == null ? null : rawPayload.trim();
+    }
+
+    private String extractErrorCode(Map<String, Object> resultData) {
+        if (resultData == null) {
+            return null;
+        }
+        Object errorCode = resultData.get("errorCode");
+        if (errorCode == null) {
+            return null;
+        }
+        String text = String.valueOf(errorCode).trim();
+        return text.isEmpty() ? null : text;
     }
 }

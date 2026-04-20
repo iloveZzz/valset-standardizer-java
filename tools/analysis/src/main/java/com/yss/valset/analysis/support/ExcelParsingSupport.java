@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
  */
 public final class ExcelParsingSupport {
 
-    public static final int SUBJECT_CODE_SCAN_LIMIT = 5;
-    public static final int SUBJECT_NAME_SCAN_LIMIT = 4;
     private static final Pattern DEFAULT_SUBJECT_CODE_PATTERN = Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
 
     private ExcelParsingSupport() {
@@ -216,10 +214,9 @@ public final class ExcelParsingSupport {
         if (rowValues == null || rowValues.isEmpty()) {
             return -1;
         }
-        int subjectCodeScanLimit = Math.min(rowValues.size(), SUBJECT_CODE_SCAN_LIMIT);
         Pattern pattern = subjectCodePattern == null ? DEFAULT_SUBJECT_CODE_PATTERN : subjectCodePattern;
         boolean seenMeaningfulText = false;
-        for (int columnIndex = 0; columnIndex < subjectCodeScanLimit; columnIndex++) {
+        for (int columnIndex = 0; columnIndex < rowValues.size(); columnIndex++) {
             String candidateCode = textAt(rowValues, columnIndex);
             if (candidateCode.isBlank() || "-".equals(candidateCode)) {
                 continue;
@@ -242,8 +239,7 @@ public final class ExcelParsingSupport {
         if (rowValues == null || rowValues.isEmpty() || codeColumnIndex < 0) {
             return false;
         }
-        int scanEndIndex = Math.min(rowValues.size(), codeColumnIndex + SUBJECT_NAME_SCAN_LIMIT);
-        for (int columnIndex = codeColumnIndex + 1; columnIndex < scanEndIndex; columnIndex++) {
+        for (int columnIndex = codeColumnIndex + 1; columnIndex < rowValues.size(); columnIndex++) {
             String candidateText = textAt(rowValues, columnIndex);
             if (candidateText.isBlank() || "-".equals(candidateText)) {
                 continue;

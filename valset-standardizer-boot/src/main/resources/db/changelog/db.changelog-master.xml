@@ -14,6 +14,8 @@
     <include file="sql/common/qlexpress-rule-engine.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/qlexpress-rule-engine-mysql-alter.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/qlexpress-rule-engine-init.sql" relativeToChangelogFile="true"/>
+    <include file="sql/common/transfer.sql" relativeToChangelogFile="true"/>
+    <include file="sql/common/transfer-init.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/tr.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/indexes.sql" relativeToChangelogFile="true"/>
 

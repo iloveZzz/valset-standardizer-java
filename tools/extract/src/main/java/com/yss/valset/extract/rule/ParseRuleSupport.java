@@ -13,8 +13,6 @@ import java.util.regex.Pattern;
  */
 public final class ParseRuleSupport {
 
-    public static final int SUBJECT_CODE_SCAN_LIMIT = 5;
-    public static final int SUBJECT_NAME_SCAN_LIMIT = 4;
     public static final List<String> DEFAULT_FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
 
     private ParseRuleSupport() {
@@ -212,8 +210,7 @@ public final class ParseRuleSupport {
         if (CollectionUtils.isEmpty(rowValues)) {
             return -1;
         }
-        int maxIndex = Math.min(SUBJECT_CODE_SCAN_LIMIT, rowValues.size());
-        for (int index = 0; index < maxIndex; index++) {
+        for (int index = 0; index < rowValues.size(); index++) {
             String text = ExcelParsingSupport.normalizeText(ExcelParsingSupport.valueAt(rowValues, index));
             if (ExcelParsingSupport.isSubjectCode(text, subjectCodePattern)) {
                 return index;
@@ -229,8 +226,7 @@ public final class ParseRuleSupport {
         if (CollectionUtils.isEmpty(rowValues) || codeIndex < 0 || codeIndex >= rowValues.size()) {
             return false;
         }
-        int scanLimit = Math.min(rowValues.size(), codeIndex + 1 + SUBJECT_NAME_SCAN_LIMIT);
-        for (int index = codeIndex + 1; index < scanLimit; index++) {
+        for (int index = codeIndex + 1; index < rowValues.size(); index++) {
             String text = ExcelParsingSupport.textAt(rowValues, index);
             if (!text.isBlank()) {
                 return true;

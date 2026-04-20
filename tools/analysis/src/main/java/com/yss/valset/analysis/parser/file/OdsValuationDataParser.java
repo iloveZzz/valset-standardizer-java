@@ -11,6 +11,7 @@ import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.valset.extract.rule.ParseRuleExpressions;
+import com.yss.valset.extract.rule.ParseRuleSupport;
 import com.yss.valset.analysis.support.ExcelParsingSupport;
 import com.yss.valset.analysis.support.SubjectHierarchySupport;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
@@ -18,6 +19,7 @@ import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -95,7 +97,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         List<String> requiredHeaders = resolveRequiredHeaders(fileScene, fileTypeName);
         Pattern subjectCodePattern = resolveSubjectCodePattern(fileScene, fileTypeName);
 
-        int headerRowIndex = findHeaderRow(rows, headerExpr, requiredHeaders);
+        int headerRowIndex = findHeaderRow(rows, headerExpr, requiredHeaders, subjectCodePattern);
         int dataStartRowIndex = findDataStartRow(rows, headerRowIndex, ParseRuleExpressions.DATA_START_EXPR, subjectCodePattern);
         List<List<String>> headerBlockRows = extractHeaderBlock(rows, headerRowIndex, dataStartRowIndex);
         HeaderLayout headerLayout = buildHeaderLayout(headerBlockRows);
@@ -148,13 +150,26 @@ public class OdsValuationDataParser implements ValuationDataParser {
         }
     }
 
-    private int findHeaderRow(List<List<Object>> rows, String headerExpr, List<String> requiredHeaders) {
+    private int findHeaderRow(List<List<Object>> rows, String headerExpr, List<String> requiredHeaders, Pattern subjectCodePattern) {
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
-            if (parseRuleEngine.matchesHeaderRow(rows.get(rowIndex), requiredHeaders, headerExpr)) {
+            List<Object> rowValues = rows.get(rowIndex);
+            if (!CollectionUtils.isEmpty(requiredHeaders) && !ParseRuleSupport.rowContainsAll(rowValues, requiredHeaders)) {
+                continue;
+            }
+            if (parseRuleEngine.matchesHeaderRow(rowValues, requiredHeaders, headerExpr)) {
                 return rowIndex;
             }
         }
-        throw new IllegalArgumentException("未找到包含“科目代码/科目名称”的表头。");
+        throw new IllegalArgumentException("未识别到必选表头" + requiredHeaders + "，无法解析这张表。");
+    }
+
+    private int findPreviousMeaningfulRow(List<List<Object>> rows, int startIndex) {
+        for (int rowIndex = startIndex; rowIndex >= 0; rowIndex--) {
+            if (!isBlankRow(toRowTexts(rows.get(rowIndex)))) {
+                return rowIndex;
+            }
+        }
+        return -1;
     }
 
     private int findDataStartRow(List<List<Object>> rows, int headerRowIndex, String dataStartExpr, Pattern subjectCodePattern) {
@@ -325,11 +340,11 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
         if (parseRuleTemplateResolver == null) {
-            return List.of("科目代码", "科目名称");
+            return List.of("科目代码", "科目名称", "币种");
         }
         List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
         return requiredHeaders == null || requiredHeaders.isEmpty()
-                ? List.of("科目代码", "科目名称")
+                ? List.of("科目代码", "科目名称", "币种")
                 : requiredHeaders;
     }
 

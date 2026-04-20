@@ -3,17 +3,17 @@
 --changeset codex:20260419-02-mysql-qlexpress-rule-engine-init dbms:mysql
 INSERT INTO t_file_parse_profile (
     id, profile_code, profile_name, version, file_scene, file_type_name, source_channel, status, priority,
-    match_expr, header_expr, row_classify_expr, field_map_expr, transform_expr, trace_enabled, timeout_ms,
+    match_expr, header_expr, row_classify_expr, field_map_expr, transform_expr, required_headers_json, subject_code_pattern, trace_enabled, timeout_ms,
     checksum, creater, create_time, modifier, modify_time, published_time
 ) VALUES
 (910000000000000001, 'default-valset-excel-v1', '默认估值模板-Excel', 'v1', 'VALSET', 'EXCEL', 'system', 'PUBLISHED', 1000,
  'containsAny(fileName, [''.xlsx'', ''.xls''])', 'isHeaderRow(row, requiredHeaders)', 'classifyRowWithPattern(row, footerKeywords, subjectCodePattern)',
  'exactCandidate != null ? ''exact_header'' : (segmentCandidate != null ? ''header_segment'' : (aliasCandidate != null ? ''alias_contains'' : ''fallback''))',
- 'value', 1, 3000, 'seed-default-valset-excel-v1', 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+ 'value', '["科目代码","科目名称"]', '^\\d{4}[A-Za-z0-9]*$', 0, 3000, 'seed-default-valset-excel-v1', 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 (910000000000000002, 'default-valset-csv-v1', '默认估值模板-CSV', 'v1', 'VALSET', 'CSV', 'system', 'PUBLISHED', 1000,
  'containsAny(fileName, [''.csv''])', 'isHeaderRow(row, requiredHeaders)', 'classifyRowWithPattern(row, footerKeywords, subjectCodePattern)',
  'exactCandidate != null ? ''exact_header'' : (segmentCandidate != null ? ''header_segment'' : (aliasCandidate != null ? ''alias_contains'' : ''fallback''))',
- 'value', 1, 3000, 'seed-default-valset-csv-v1', 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+ 'value', '["科目代码","科目名称"]', '^\\d{4}[A-Za-z0-9]*$', 0, 3000, 'seed-default-valset-csv-v1', 'system', CURRENT_TIMESTAMP, 'system', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO t_file_parse_rule_step (
     id, profile_id, rule_type, step_name, priority, enabled, expr_text, expr_lang, input_schema_json,

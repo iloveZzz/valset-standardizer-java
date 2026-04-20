@@ -18,5 +18,6 @@
         <module>extract</module>
         <module>analysis</module>
         <module>batch</module>
+        <module>transfer</module>
     </modules>
 </project>

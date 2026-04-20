@@ -9,6 +9,7 @@ import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
 import com.yss.valset.domain.parser.ValuationDataParser;
+import com.yss.valset.extract.rule.ParseRuleSupport;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
@@ -16,6 +17,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -78,7 +80,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
             Pattern subjectCodePattern = resolveSubjectCodePattern(fileScene, fileTypeName);
 
             // Step 1: 识别表头和数据起始行
-            int headerRowIndex = findHeaderRow(rows, requiredHeaders);
+            int headerRowIndex = findHeaderRow(rows, requiredHeaders, subjectCodePattern);
             int dataStartRowIndex = findDataStartRow(rows, headerRowIndex, subjectCodePattern);
 
             // Step 2: 构建分层表头结构（header/headerDetails/headerColumns）
@@ -164,14 +166,27 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 .build();
     }
 
-    private int findHeaderRow(List<List<Object>> rows, List<String> requiredHeaders) {
+    private int findHeaderRow(List<List<Object>> rows, List<String> requiredHeaders, Pattern subjectCodePattern) {
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
-            List<String> texts = toRowTexts(rows.get(rowIndex));
+            List<Object> rowValues = rows.get(rowIndex);
+            if (!CollectionUtils.isEmpty(requiredHeaders) && !ParseRuleSupport.rowContainsAll(rowValues, requiredHeaders)) {
+                continue;
+            }
+            List<String> texts = toRowTexts(rowValues);
             if (texts.containsAll(requiredHeaders)) {
                 return rowIndex;
             }
         }
-        throw new IllegalArgumentException("未找到包含“科目代码/科目名称”的表头。");
+        throw new IllegalArgumentException("未识别到必选表头" + requiredHeaders + "，无法解析这张表。");
+    }
+
+    private int findPreviousMeaningfulRow(List<List<Object>> rows, int startIndex) {
+        for (int rowIndex = startIndex; rowIndex >= 0; rowIndex--) {
+            if (!isBlankRow(toRowTexts(rows.get(rowIndex)))) {
+                return rowIndex;
+            }
+        }
+        return -1;
     }
 
     private int findDataStartRow(List<List<Object>> rows, int headerRowIndex, Pattern subjectCodePattern) {
@@ -337,11 +352,11 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
     private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
         if (parseRuleTemplateResolver == null) {
-            return List.of("科目代码", "科目名称");
+            return List.of("科目代码", "科目名称", "币种");
         }
         List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
         return requiredHeaders == null || requiredHeaders.isEmpty()
-                ? List.of("科目代码", "科目名称")
+                ? List.of("科目代码", "科目名称", "币种")
                 : requiredHeaders;
     }
 

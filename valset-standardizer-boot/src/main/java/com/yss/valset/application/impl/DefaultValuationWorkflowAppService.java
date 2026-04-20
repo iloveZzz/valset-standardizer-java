@@ -23,6 +23,8 @@ import com.yss.valset.domain.model.ValsetFileIngestLog;
 import com.yss.valset.domain.model.ValsetFileSourceChannel;
 import com.yss.valset.domain.model.ValsetFileStatus;
 import com.yss.valset.domain.model.ValsetFileStorageType;
+import com.yss.valset.common.support.TaskFailureClassifier;
+import com.yss.valset.common.exception.TaskExecutionException;
 import com.yss.valset.domain.model.TaskInfo;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskStage;
@@ -304,10 +306,20 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                     taskId, taskType, System.currentTimeMillis() - startedAt);
             return taskQueryAppService.queryTask(taskId);
         } catch (Exception exception) {
-            taskGateway.markFailed(taskId, exception.getMessage());
+            String failurePayload = buildFailurePayload(taskType, exception);
+            String errorCode = TaskFailureClassifier.classify(exception);
+            String errorMessage = TaskFailureClassifier.resolveReadableMessage(exception);
+            taskGateway.markFailed(taskId, failurePayload);
             log.error("同步执行任务失败，taskId={}, taskType={}, elapsedMs={}",
                     taskId, taskType, System.currentTimeMillis() - startedAt, exception);
-            throw new IllegalStateException("执行任务失败，taskType=" + taskType + ", taskId=" + taskId, exception);
+            throw new TaskExecutionException(
+                    taskType == null ? null : taskType.name(),
+                    taskId,
+                    errorCode,
+                    errorMessage,
+                    failurePayload,
+                    exception
+            );
         }
     }
 
@@ -354,6 +366,21 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             }
         }
         return extractTask.getTaskId();
+    }
+
+    private String buildFailurePayload(TaskType taskType, Exception exception) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("taskType", taskType == null ? null : taskType.name());
+        payload.put("errorCode", TaskFailureClassifier.classify(exception));
+        payload.put("errorMessage", TaskFailureClassifier.resolveReadableMessage(exception));
+        payload.put("rootCauseMessage", TaskFailureClassifier.rootCauseMessage(exception));
+        payload.put("errorType", exception == null ? null : exception.getClass().getName());
+        try {
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception jsonException) {
+            log.warn("构建失败任务负载 JSON 失败，taskType={}", taskType, jsonException);
+            return payload.toString();
+        }
     }
 
     private String buildExtractBusinessKey(ExtractDataTaskCommand command) {

@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 @Component
 public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolver {
 
-    private static final List<String> FALLBACK_REQUIRED_HEADERS = List.of("科目代码", "科目名称");
+    private static final List<String> FALLBACK_REQUIRED_HEADERS = List.of("科目代码", "科目名称", "币种");
     private static final Pattern FALLBACK_SUBJECT_CODE_PATTERN = Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
 
     private final ParseRuleProfileRepository profileRepository;

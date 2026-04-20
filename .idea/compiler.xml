@@ -41,6 +41,7 @@
         <module name="subject-match-batch" />
         <module name="valset-standardizer-e2e" />
         <module name="subject-match-analysis" />
+        <module name="valset-standardizer-transfer" />
         <module name="subject-match-core" />
         <module name="valset-standardizer-analysis" />
         <module name="valset-standardizer-extract" />
@@ -77,6 +78,7 @@
       <module name="valset-standardizer-knowledge" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
       <module name="valset-standardizer-parent" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
       <module name="valset-standardizer-tools" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
+      <module name="valset-standardizer-transfer" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
       <module name="yss-component-file-parser" options="-parameters -Amapstruct.suppressGeneratorTimestamp=true -Amapstruct.suppressGeneratorVersionInfoComment=true -Amapstruct.verbose=false" />
     </option>
   </component>

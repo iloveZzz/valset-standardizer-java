@@ -28,6 +28,9 @@ public class ParseRuleProfileViewDTO {
     private String transformExpr;
     private List<String> requiredHeaders;
     private String subjectCodePattern;
+    /**
+     * 是否开启规则追踪，默认关闭。
+     */
     private Boolean traceEnabled;
     private Long timeoutMs;
     private String checksum;

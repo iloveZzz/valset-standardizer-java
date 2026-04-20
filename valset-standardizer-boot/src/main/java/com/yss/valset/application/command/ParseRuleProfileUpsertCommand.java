@@ -25,7 +25,10 @@ public class ParseRuleProfileUpsertCommand {
     private String transformExpr;
     private List<String> requiredHeaders;
     private String subjectCodePattern;
-    private Boolean traceEnabled;
+    /**
+     * 是否开启规则追踪，默认关闭。
+     */
+    private Boolean traceEnabled = Boolean.FALSE;
     private Long timeoutMs;
     private String createdBy;
     private String modifiedBy;

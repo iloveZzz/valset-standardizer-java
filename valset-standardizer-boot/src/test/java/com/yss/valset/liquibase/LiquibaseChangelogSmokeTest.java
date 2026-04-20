@@ -21,12 +21,14 @@ class LiquibaseChangelogSmokeTest {
                     .map(changeSet -> changeSet.getFilePath())
                     .collect(Collectors.toSet());
 
-            assertThat(liquibase.getDatabaseChangeLog().getChangeSets()).hasSize(27);
+            assertThat(liquibase.getDatabaseChangeLog().getChangeSets()).hasSize(35);
             assertThat(changeSetPaths).contains(
                     "db/changelog/sql/common/core.sql",
                     "db/changelog/sql/common/ods.sql",
                     "db/changelog/sql/common/dwd.sql",
                     "db/changelog/sql/common/knowledge.sql",
+                    "db/changelog/sql/common/transfer.sql",
+                    "db/changelog/sql/common/transfer-init.sql",
                     "db/changelog/sql/common/indexes.sql"
             );
         }

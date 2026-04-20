@@ -38,4 +38,27 @@ class DefaultTaskQueryAppServiceTest {
         assertThat(view.getDurationMs()).isEqualTo(1234L);
         assertThat(view.getResultData()).containsEntry("rowCount", 114);
     }
+
+    @Test
+    void exposesReadableErrorMessageForFailedTask() {
+        TaskGateway taskGateway = mock(TaskGateway.class);
+        ObjectMapper objectMapper = new ObjectMapper();
+        DefaultTaskQueryAppService service = new DefaultTaskQueryAppService(taskGateway, objectMapper);
+
+        when(taskGateway.findById(100L)).thenReturn(TaskInfo.builder()
+                .taskId(100L)
+                .taskType(TaskType.PARSE_WORKBOOK)
+                .taskStatus(TaskStatus.FAILED)
+                .taskStage(TaskStage.PARSE)
+                .businessKey("PARSE:/tmp/sample.xlsx")
+                .resultPayload("{\"taskType\":\"PARSE_WORKBOOK\",\"errorCode\":\"HEADER_MISSING\",\"errorMessage\":\"未识别到必选表头[科目代码, 科目名称, 币种]，无法解析这张表。\",\"rootCauseMessage\":\"未识别到必选表头[科目代码, 科目名称, 币种]，无法解析这张表。\"}")
+                .build());
+
+        var view = service.queryTask(100L);
+
+        assertThat(view.getTaskStatus()).isEqualTo("FAILED");
+        assertThat(view.getErrorCode()).isEqualTo("HEADER_MISSING");
+        assertThat(view.getErrorMessage()).isEqualTo("未识别到必选表头[科目代码, 科目名称, 币种]，无法解析这张表。");
+        assertThat(view.getResultData()).containsEntry("errorMessage", "未识别到必选表头[科目代码, 科目名称, 币种]，无法解析这张表。");
+    }
 }

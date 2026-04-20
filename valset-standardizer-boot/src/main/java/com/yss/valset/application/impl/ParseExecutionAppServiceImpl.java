@@ -98,7 +98,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
                     .version("runtime")
                     .fileId(taskInfo == null ? null : taskInfo.getFileId())
                     .taskId(taskId)
-                    .traceEnabled(Boolean.TRUE)
+                    .traceEnabled(Boolean.FALSE)
                     .traceScope("RUNTIME_PARSE")
                     .build();
             try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {

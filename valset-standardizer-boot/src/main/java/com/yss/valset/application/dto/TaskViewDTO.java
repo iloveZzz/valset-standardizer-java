@@ -49,6 +49,14 @@ public class TaskViewDTO {
      */
     private Map<String, Object> resultData;
     /**
+     * 任务失败时的可读原因，优先取结果负载里的 errorMessage。
+     */
+    private String errorMessage;
+    /**
+     * 任务失败时的错误分类码，供前端按固定状态展示。
+     */
+    private String errorCode;
+    /**
      * 提取任务的总行数。
      */
     private Long rowCount;

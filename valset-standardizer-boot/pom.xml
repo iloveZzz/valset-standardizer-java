@@ -46,6 +46,11 @@
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-transfer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
             <artifactId>valset-standardizer-batch</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -83,11 +88,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>com.github.shalousun</groupId>
-            <artifactId>smart-doc</artifactId>
-            <version>yss-4.0.0</version>
-        </dependency>
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -165,6 +165,7 @@
                         <include>com.yss.datamiddle:valset-standardizer-knowledge</include>
                         <include>com.yss.datamiddle:valset-standardizer-analysis</include>
                         <include>com.yss.datamiddle:valset-standardizer-knowledge</include>
+                        <include>com.yss.datamiddle:valset-standardizer-transfer</include>
                         <include>com.yss.datamiddle:valset-standardizer-batch</include>
                     </includes>
                     <projectName>${project.description}</projectName>

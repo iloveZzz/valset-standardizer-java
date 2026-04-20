@@ -75,7 +75,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class DefaultParseRuleManagementAppService implements ParseRuleManagementAppService {
 
     private static final int DEFAULT_LIMIT = 50;
-    private static final List<String> DEFAULT_REQUIRED_HEADERS = List.of("科目代码", "科目名称");
+    private static final List<String> DEFAULT_REQUIRED_HEADERS = List.of("科目代码", "科目名称", "币种");
     private static final String DEFAULT_SUBJECT_CODE_PATTERN = "^\\d{4}[A-Za-z0-9]*$";
 
     private final ParseRuleProfileRepository profileRepository;
@@ -279,7 +279,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                     .version(profile.getVersion())
                     .fileId(parseCase == null ? null : parseCase.getSampleFileId())
                     .taskId(null)
-                    .traceEnabled(Boolean.TRUE)
+                    .traceEnabled(Boolean.TRUE.equals(profile.getTraceEnabled()))
                     .traceScope("REGRESSION")
                     .build();
             try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
@@ -404,7 +404,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         profile.setTransformExpr(command.getTransformExpr());
         profile.setRequiredHeadersJson(writeRequiredHeaders(command.getRequiredHeaders()));
         profile.setSubjectCodePattern(normalizeSubjectCodePattern(command.getSubjectCodePattern()));
-        profile.setTraceEnabled(command.getTraceEnabled());
+        profile.setTraceEnabled(Boolean.TRUE.equals(command.getTraceEnabled()));
         profile.setTimeoutMs(command.getTimeoutMs());
         profile.setChecksum(buildChecksum(command));
         profile.setModifier(firstNonBlank(command.getModifiedBy(), command.getCreatedBy(), "system"));
@@ -511,7 +511,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 .transformExpr(profile.getTransformExpr())
                 .requiredHeaders(normalizeRequiredHeaders(profile.getRequiredHeadersJson()))
                 .subjectCodePattern(profile.getSubjectCodePattern())
-                .traceEnabled(profile.getTraceEnabled())
+                .traceEnabled(Boolean.TRUE.equals(profile.getTraceEnabled()))
                 .timeoutMs(profile.getTimeoutMs())
                 .checksum(profile.getChecksum())
                 .publishedTime(profile.getPublishedTime())
@@ -1094,7 +1094,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         normalized.setTransformExpr(command.getTransformExpr());
         normalized.setRequiredHeaders(normalizeRequiredHeaders(command.getRequiredHeaders()));
         normalized.setSubjectCodePattern(normalizeSubjectCodePattern(command.getSubjectCodePattern()));
-        normalized.setTraceEnabled(command.getTraceEnabled());
+        normalized.setTraceEnabled(Boolean.TRUE.equals(command.getTraceEnabled()));
         normalized.setTimeoutMs(command.getTimeoutMs());
         normalized.setCreatedBy(command.getCreatedBy());
         normalized.setModifiedBy(command.getModifiedBy());

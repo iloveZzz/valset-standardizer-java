@@ -106,7 +106,7 @@ public class ParseRuleManagementController {
     }
 
     @GetMapping("/traces")
-    @Operation(summary = "查询解析规则追踪", description = "按模板、文件、任务和追踪类型查询规则表达式追踪明细。")
+    @Operation(summary = "查询解析规则追踪", description = "按模板、文件、任务和追踪类型查询规则表达式追踪明细。仅在模板显式开启追踪时才会有数据。")
     public List<ParseRuleTraceViewDTO> listTraces(@RequestParam(value = "profileId", required = false) Long profileId,
                                                   @RequestParam(value = "fileId", required = false) Long fileId,
                                                   @RequestParam(value = "taskId", required = false) Long taskId,
