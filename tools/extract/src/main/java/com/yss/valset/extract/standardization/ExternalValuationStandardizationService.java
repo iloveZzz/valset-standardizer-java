@@ -834,5 +834,5 @@ public class ExternalValuationStandardizationService {
      */
     private static final String METRIC_STRATEGY_EXPR = "sourceEntry != null ? 'source_mapping' : "
             + "(builtinMetric != null ? 'builtin_alias' : "
-            + "(metricName != null && metricName.trim().length() > 0 ? 'passthrough' : 'unmapped'))";
+            + "(hasText(metricName) ? 'passthrough' : 'unmapped'))";
 }

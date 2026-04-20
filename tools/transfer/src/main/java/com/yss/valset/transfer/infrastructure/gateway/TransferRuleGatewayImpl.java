@@ -3,18 +3,15 @@ package com.yss.valset.transfer.infrastructure.gateway;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yss.valset.transfer.domain.gateway.TransferRuleGateway;
 import com.yss.valset.transfer.domain.model.RuleDefinition;
-import com.yss.valset.transfer.infrastructure.convertor.TransferJsonMapper;
+import com.yss.valset.transfer.infrastructure.convertor.TransferRuleMapper;
 import com.yss.valset.transfer.infrastructure.entity.TransferRulePO;
 import com.yss.valset.transfer.infrastructure.mapper.TransferRuleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -26,7 +23,7 @@ import java.util.Optional;
 public class TransferRuleGatewayImpl implements TransferRuleGateway {
 
     private final TransferRuleRepository transferRuleRepository;
-    private final TransferJsonMapper transferJsonMapper;
+    private final TransferRuleMapper transferRuleMapper;
 
     @Override
     public List<RuleDefinition> listEnabledRules() {
@@ -59,23 +56,6 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
     }
 
     private RuleDefinition toDomain(TransferRulePO po) {
-        return new RuleDefinition(
-                po.getRuleId(),
-                po.getRuleCode(),
-                po.getRuleName(),
-                po.getRuleVersion(),
-                Boolean.TRUE.equals(po.getEnabled()),
-                po.getPriority() == null ? 0 : po.getPriority(),
-                po.getMatchStrategy(),
-                po.getScriptLanguage(),
-                po.getScriptBody(),
-                toInstant(po.getEffectiveFrom()),
-                toInstant(po.getEffectiveTo()),
-                transferJsonMapper.toMap(po.getRuleMetaJson())
-        );
-    }
-
-    private Instant toInstant(LocalDateTime localDateTime) {
-        return localDateTime == null ? null : localDateTime.atZone(ZoneId.systemDefault()).toInstant();
+        return transferRuleMapper.toDomain(po);
     }
 }

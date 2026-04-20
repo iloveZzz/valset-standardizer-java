@@ -13,6 +13,8 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+
 /**
  * MyBatis 支持的文件投递结果网关。
  */
@@ -27,6 +29,11 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
 
     @Override
     public void recordResult(Long routeId, TransferResult transferResult) {
+        recordResult(routeId, transferResult, 0);
+    }
+
+    @Override
+    public void recordResult(Long routeId, TransferResult transferResult, Integer retryCount) {
         TransferRoute route = transferRouteGateway.findById(routeId).orElse(null);
         TransferDeliveryRecordPO po = new TransferDeliveryRecordPO();
         po.setRouteId(routeId);
@@ -34,10 +41,21 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
         po.setTargetType(route == null || route.targetType() == null ? null : route.targetType().name());
         po.setTargetCode(route == null ? null : route.targetCode());
         po.setExecuteStatus(transferResult.success() ? "SUCCESS" : "FAILED");
-        po.setRetryCount(0);
+        po.setRetryCount(retryCount == null ? 0 : retryCount);
         po.setRequestSnapshotJson(transferJsonMapper.toJson(route));
         po.setResponseSnapshotJson(transferJsonMapper.toJson(transferResult.messages()));
         po.setDeliveredAt(LocalDateTime.now());
         transferDeliveryRecordRepository.insert(po);
+    }
+
+    @Override
+    public long countByRouteId(Long routeId) {
+        if (routeId == null) {
+            return 0L;
+        }
+        return transferDeliveryRecordRepository.selectCount(
+                Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
+                        .eq(TransferDeliveryRecordPO::getRouteId, routeId)
+        );
     }
 }

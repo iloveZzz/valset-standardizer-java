@@ -64,6 +64,15 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
             fileMeta.putIfAbsent("sourceType", source.sourceType() == null ? null : source.sourceType().name());
             fileMeta.putIfAbsent("sourceCode", source.sourceCode());
             fileMeta.putIfAbsent("sourceRef", buildSourceRef(source, context));
+            fileMeta.putIfAbsent("mailId", context.mailId());
+            fileMeta.putIfAbsent("mailFrom", context.sender());
+            fileMeta.putIfAbsent("mailTo", context.recipientsTo());
+            fileMeta.putIfAbsent("mailCc", context.recipientsCc());
+            fileMeta.putIfAbsent("mailBcc", context.recipientsBcc());
+            fileMeta.putIfAbsent("mailSubject", context.subject());
+            fileMeta.putIfAbsent("mailBody", context.body());
+            fileMeta.putIfAbsent("mailProtocol", context.mailProtocol());
+            fileMeta.putIfAbsent("mailFolder", context.mailFolder());
             TransferObject transferObject = new TransferObject(
                     null,
                     source.sourceId(),
@@ -74,6 +83,15 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                     fileSizeOf(context),
                     fingerprint,
                     buildSourceRef(source, context),
+                    context.mailId(),
+                    context.sender(),
+                    context.recipientsTo(),
+                    context.recipientsCc(),
+                    context.recipientsBcc(),
+                    context.subject(),
+                    context.body(),
+                    context.mailProtocol(),
+                    context.mailFolder(),
                     context.path(),
                     TransferStatus.RECEIVED,
                     Instant.now(),
@@ -87,7 +105,39 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     }
 
     private String buildSourceRef(TransferSource source, RecognitionContext context) {
+        if (context.mailId() != null && !context.mailId().isBlank()) {
+            return source.sourceType() + ":" + Objects.toString(source.sourceCode(), "") + ":" + context.mailId() + ":" + Objects.toString(context.fileName(), "");
+        }
+        String stableSourceRef = stableSourceRefFromAttributes(source, context);
+        if (stableSourceRef != null && !stableSourceRef.isBlank()) {
+            return source.sourceType() + ":" + Objects.toString(source.sourceCode(), "") + ":" + stableSourceRef;
+        }
         return source.sourceType() + ":" + Objects.toString(source.sourceCode(), "") + ":" + Objects.toString(context.path(), "");
+    }
+
+    private String stableSourceRefFromAttributes(TransferSource source, RecognitionContext context) {
+        if (context.attributes() != null) {
+            Object remotePath = context.attributes().get("remotePath");
+            if (remotePath != null && !String.valueOf(remotePath).isBlank()) {
+                return String.valueOf(remotePath);
+            }
+            Object objectKey = context.attributes().get("objectKey");
+            if (objectKey != null && !String.valueOf(objectKey).isBlank()) {
+                Object bucket = context.attributes().get("bucket");
+                if (bucket != null && !String.valueOf(bucket).isBlank()) {
+                    return bucket + ":" + objectKey;
+                }
+                return String.valueOf(objectKey);
+            }
+        }
+        if (source.sourceMeta() != null) {
+            Object bucket = source.sourceMeta().get("bucket");
+            Object objectKey = source.sourceMeta().get("objectKey");
+            if (bucket != null && objectKey != null) {
+                return bucket + ":" + objectKey;
+            }
+        }
+        return null;
     }
 
     private Long fileSizeOf(RecognitionContext context) {
@@ -111,11 +161,18 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                 Objects.toString(source.sourceType(), ""),
                 Objects.toString(source.sourceCode(), ""),
                 Objects.toString(context.fileName(), ""),
-                Objects.toString(context.path(), ""),
+                Objects.toString(buildSourceRef(source, context), ""),
                 Objects.toString(context.mimeType(), ""),
                 Objects.toString(context.fileSize(), ""),
                 Objects.toString(context.sender(), ""),
-                Objects.toString(context.subject(), "")
+                Objects.toString(context.recipientsTo(), ""),
+                Objects.toString(context.recipientsCc(), ""),
+                Objects.toString(context.recipientsBcc(), ""),
+                Objects.toString(context.subject(), ""),
+                Objects.toString(context.body(), ""),
+                Objects.toString(context.mailId(), ""),
+                Objects.toString(context.mailProtocol(), ""),
+                Objects.toString(context.mailFolder(), "")
         );
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

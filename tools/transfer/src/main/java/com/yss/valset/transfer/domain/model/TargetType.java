@@ -6,5 +6,6 @@ package com.yss.valset.transfer.domain.model;
 public enum TargetType {
     EMAIL,
     S3,
-    SFTP
+    SFTP,
+    FILESYS
 }

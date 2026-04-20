@@ -8,4 +8,8 @@ import com.yss.valset.transfer.domain.model.TransferResult;
 public interface TransferDeliveryGateway {
 
     void recordResult(Long routeId, TransferResult transferResult);
+
+    void recordResult(Long routeId, TransferResult transferResult, Integer retryCount);
+
+    long countByRouteId(Long routeId);
 }

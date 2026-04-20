@@ -15,57 +15,165 @@ import java.time.LocalDateTime;
 @TableName("t_transfer_object")
 public class TransferObjectPO {
 
+    /**
+     * 文件主键。
+     */
     @TableId(value = "transfer_id", type = IdType.ASSIGN_ID)
     private Long transferId;
 
+    /**
+     * 来源主键。
+     */
     @TableField("source_id")
     private Long sourceId;
 
+    /**
+     * 来源类型。
+     */
     @TableField("source_type")
     private String sourceType;
 
+    /**
+     * 来源编码。
+     */
     @TableField("source_code")
     private String sourceCode;
 
+    /**
+     * 原始文件名。
+     */
     @TableField("original_name")
     private String originalName;
 
+    /**
+     * 规范化文件名。
+     */
     @TableField("normalized_name")
     private String normalizedName;
 
+    /**
+     * 文件扩展名。
+     */
     @TableField("extension")
     private String extension;
 
+    /**
+     * 文件类型。
+     */
     @TableField("mime_type")
     private String mimeType;
 
+    /**
+     * 文件大小，单位字节。
+     */
     @TableField("size_bytes")
     private Long sizeBytes;
 
+    /**
+     * 文件指纹。
+     */
     @TableField("fingerprint")
     private String fingerprint;
 
+    /**
+     * 来源引用标识。
+     */
     @TableField("source_ref")
     private String sourceRef;
 
+    /**
+     * 邮件唯一标识。
+     */
+    @TableField("mail_id")
+    private String mailId;
+
+    /**
+     * 邮件发件人。
+     */
+    @TableField("mail_from")
+    private String mailFrom;
+
+    /**
+     * 邮件收件人。
+     */
+    @TableField("mail_to")
+    private String mailTo;
+
+    /**
+     * 邮件抄送人。
+     */
+    @TableField("mail_cc")
+    private String mailCc;
+
+    /**
+     * 邮件密送人。
+     */
+    @TableField("mail_bcc")
+    private String mailBcc;
+
+    /**
+     * 邮件主题。
+     */
+    @TableField("mail_subject")
+    private String mailSubject;
+
+    /**
+     * 邮件正文。
+     */
+    @TableField("mail_body")
+    private String mailBody;
+
+    /**
+     * 邮件协议。
+     */
+    @TableField("mail_protocol")
+    private String mailProtocol;
+
+    /**
+     * 邮件文件夹。
+     */
+    @TableField("mail_folder")
+    private String mailFolder;
+
+    /**
+     * 本地临时文件路径。
+     */
     @TableField("local_temp_path")
     private String localTempPath;
 
+    /**
+     * 文件状态。
+     */
     @TableField("status")
     private String status;
 
+    /**
+     * 收取时间。
+     */
     @TableField("received_at")
     private LocalDateTime receivedAt;
 
+    /**
+     * 落库时间。
+     */
     @TableField("stored_at")
     private LocalDateTime storedAt;
 
+    /**
+     * 路由主键。
+     */
     @TableField("route_id")
     private Long routeId;
 
+    /**
+     * 错误信息。
+     */
     @TableField("error_message")
     private String errorMessage;
 
+    /**
+     * 文件元数据 JSON。
+     */
     @TableField("file_meta_json")
     private String fileMetaJson;
 }

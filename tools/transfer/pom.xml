@@ -46,6 +46,11 @@
             <version>1.12.450</version>
         </dependency>
         <dependency>
+            <groupId>com.yss.filesys</groupId>
+            <artifactId>yss-filesys-feignsdk</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>qlexpress4</artifactId>
         </dependency>

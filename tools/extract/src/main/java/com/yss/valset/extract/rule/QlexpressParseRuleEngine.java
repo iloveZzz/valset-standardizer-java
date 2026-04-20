@@ -176,6 +176,9 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
                 asString(params, 0, ""),
                 asStringList(params, 1)
         ));
+        runner.addVarArgsFunction("hasText", params -> ParseRuleSupport.hasText(
+                params == null || params.length == 0 ? null : params[0]
+        ));
         runner.addVarArgsFunction("rowHitCount", params -> ParseRuleSupport.rowHitCount(
                 asRow(params, 0),
                 asStringList(params, 1)

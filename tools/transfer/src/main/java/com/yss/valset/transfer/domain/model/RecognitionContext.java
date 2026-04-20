@@ -12,7 +12,14 @@ public record RecognitionContext(
         String mimeType,
         Long fileSize,
         String sender,
+        String recipientsTo,
+        String recipientsCc,
+        String recipientsBcc,
         String subject,
+        String body,
+        String mailId,
+        String mailProtocol,
+        String mailFolder,
         String path,
         Map<String, Object> attributes
 ) {

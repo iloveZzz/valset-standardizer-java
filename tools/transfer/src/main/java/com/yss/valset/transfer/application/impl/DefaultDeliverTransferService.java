@@ -11,7 +11,8 @@ import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferResult;
 import com.yss.valset.transfer.domain.model.TransferRoute;
 import com.yss.valset.transfer.domain.model.TransferTarget;
-import com.yss.valset.transfer.infrastructure.connector.TargetConnectorRegistry;
+import com.yss.valset.transfer.application.port.TransferJobScheduler;
+import com.yss.valset.transfer.infrastructure.plugin.TransferActionPluginRegistry;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -27,20 +28,23 @@ public class DefaultDeliverTransferService implements DeliverTransferUseCase {
     private final TransferObjectGateway transferObjectGateway;
     private final TransferTargetGateway transferTargetGateway;
     private final TransferDeliveryGateway transferDeliveryGateway;
-    private final TargetConnectorRegistry targetConnectorRegistry;
+    private final TransferActionPluginRegistry transferActionPluginRegistry;
+    private final TransferJobScheduler transferJobScheduler;
 
     public DefaultDeliverTransferService(
             TransferRouteGateway transferRouteGateway,
             TransferObjectGateway transferObjectGateway,
             TransferTargetGateway transferTargetGateway,
             TransferDeliveryGateway transferDeliveryGateway,
-            TargetConnectorRegistry targetConnectorRegistry
+            TransferActionPluginRegistry transferActionPluginRegistry,
+            TransferJobScheduler transferJobScheduler
     ) {
         this.transferRouteGateway = transferRouteGateway;
         this.transferObjectGateway = transferObjectGateway;
         this.transferTargetGateway = transferTargetGateway;
         this.transferDeliveryGateway = transferDeliveryGateway;
-        this.targetConnectorRegistry = targetConnectorRegistry;
+        this.transferActionPluginRegistry = transferActionPluginRegistry;
+        this.transferJobScheduler = transferJobScheduler;
     }
 
     @Override
@@ -51,12 +55,36 @@ public class DefaultDeliverTransferService implements DeliverTransferUseCase {
                 .orElseThrow(() -> new IllegalStateException("未找到文件记录，transferId=" + route.transferId()));
         TransferTarget target = transferTargetGateway.findByTargetCode(route.targetCode())
                 .orElseThrow(() -> new IllegalStateException("未找到投递目标，targetCode=" + route.targetCode()));
-        TargetConnector targetConnector = targetConnectorRegistry.getRequired(target);
         TransferContext context = new TransferContext(transferObject, route, target, buildAttributes(route, target));
-        TransferResult result = targetConnector.send(context);
-        transferDeliveryGateway.recordResult(routeId, result);
+        int attemptIndex = (int) transferDeliveryGateway.countByRouteId(routeId);
+        TransferResult result = transferActionPluginRegistry.getRequired(route).execute(context);
+        transferDeliveryGateway.recordResult(routeId, result, attemptIndex);
         if (!result.success()) {
+            scheduleRetryIfNeeded(routeId, route, attemptIndex + 1);
             throw new IllegalStateException("文件投递失败，routeId=" + routeId + ", messages=" + result.messages());
+        }
+    }
+
+    private void scheduleRetryIfNeeded(Long routeId, TransferRoute route, int nextAttempt) {
+        int maxRetryCount = resolveInt(route, "maxRetryCount", 3);
+        int retryDelaySeconds = resolveInt(route, "retryDelaySeconds", 60);
+        if (nextAttempt < maxRetryCount) {
+            transferJobScheduler.scheduleDeliverRetry(routeId, nextAttempt, retryDelaySeconds);
+        }
+    }
+
+    private int resolveInt(TransferRoute route, String key, int defaultValue) {
+        if (route == null || route.routeMeta() == null) {
+            return defaultValue;
+        }
+        Object raw = route.routeMeta().get(key);
+        if (raw == null || String.valueOf(raw).isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(raw));
+        } catch (NumberFormatException ex) {
+            return defaultValue;
         }
     }
 

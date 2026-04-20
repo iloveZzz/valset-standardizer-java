@@ -12,7 +12,10 @@ INSERT INTO t_transfer_target (
  '{"usage":"s3-archive","seed":true}'),
 (920000000000000003, 'default-sftp-archive', '默认SFTP归档目标', 'SFTP', 1, '/transfer/inbox/',
  '{"host":"sftp.example.com","port":22,"username":"transfer","password":"replace-me","privateKeyPath":null,"passphrase":null,"remoteDir":"/transfer/inbox/","recursive":false,"includeHidden":false,"limit":0,"strictHostKeyChecking":false,"connectTimeoutMillis":10000,"channelTimeoutMillis":10000}',
- '{"usage":"sftp-archive","seed":true}');
+ '{"usage":"sftp-archive","seed":true}'),
+(920000000000000004, 'default-filesys-archive', '默认文件服务存储目标', 'FILESYS', 1, NULL,
+ '{"parentId":"replace-me-parent-id","storageSettingId":"replace-me-storage-setting-id","chunkSize":5242880}',
+ '{"usage":"filesys-archive","seed":true}');
 
 --changeset codex:20260420-02-postgres-transfer-init dbms:postgresql
 INSERT INTO t_transfer_target (
@@ -26,4 +29,7 @@ INSERT INTO t_transfer_target (
  '{"usage":"s3-archive","seed":true}'),
 (920000000000000003, 'default-sftp-archive', '默认SFTP归档目标', 'SFTP', TRUE, '/transfer/inbox/',
  '{"host":"sftp.example.com","port":22,"username":"transfer","password":"replace-me","privateKeyPath":null,"passphrase":null,"remoteDir":"/transfer/inbox/","recursive":false,"includeHidden":false,"limit":0,"strictHostKeyChecking":false,"connectTimeoutMillis":10000,"channelTimeoutMillis":10000}',
- '{"usage":"sftp-archive","seed":true}');
+ '{"usage":"sftp-archive","seed":true}'),
+(920000000000000004, 'default-filesys-archive', '默认文件服务存储目标', 'FILESYS', TRUE, NULL,
+ '{"parentId":"replace-me-parent-id","storageSettingId":"replace-me-storage-setting-id","chunkSize":5242880}',
+ '{"usage":"filesys-archive","seed":true}');

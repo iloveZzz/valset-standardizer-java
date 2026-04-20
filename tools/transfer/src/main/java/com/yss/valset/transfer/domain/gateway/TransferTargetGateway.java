@@ -16,5 +16,9 @@ public interface TransferTargetGateway {
 
     List<TransferTarget> listEnabledTargets();
 
+    List<TransferTarget> listTargets(String targetType, String targetCode, Boolean enabled, Integer limit);
+
     TransferTarget save(TransferTarget transferTarget);
+
+    void deleteById(Long targetId);
 }

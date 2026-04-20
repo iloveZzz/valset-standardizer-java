@@ -3,8 +3,7 @@ package com.yss.valset.transfer.infrastructure.gateway;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yss.valset.transfer.domain.gateway.TransferRouteGateway;
 import com.yss.valset.transfer.domain.model.TransferRoute;
-import com.yss.valset.transfer.domain.model.TransferStatus;
-import com.yss.valset.transfer.infrastructure.convertor.TransferJsonMapper;
+import com.yss.valset.transfer.infrastructure.convertor.TransferRouteMapper;
 import com.yss.valset.transfer.infrastructure.entity.TransferRoutePO;
 import com.yss.valset.transfer.infrastructure.mapper.TransferRouteRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +22,7 @@ import java.util.Optional;
 public class TransferRouteGatewayImpl implements TransferRouteGateway {
 
     private final TransferRouteRepository transferRouteRepository;
-    private final TransferJsonMapper transferJsonMapper;
+    private final TransferRouteMapper transferRouteMapper;
 
     @Override
     public Optional<TransferRoute> findById(Long routeId) {
@@ -54,30 +53,10 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
     }
 
     private TransferRoutePO toPO(TransferRoute transferRoute) {
-        TransferRoutePO po = new TransferRoutePO();
-        po.setRouteId(transferRoute.routeId());
-        po.setTransferId(transferRoute.transferId());
-        po.setRuleId(transferRoute.ruleId());
-        po.setTargetType(transferRoute.targetType() == null ? null : transferRoute.targetType().name());
-        po.setTargetCode(transferRoute.targetCode());
-        po.setTargetPath(transferRoute.targetPath());
-        po.setRenamePattern(transferRoute.renamePattern());
-        po.setRouteStatus(transferRoute.routeStatus() == null ? null : transferRoute.routeStatus().name());
-        po.setRouteMetaJson(transferJsonMapper.toJson(transferRoute.routeMeta()));
-        return po;
+        return transferRouteMapper.toPO(transferRoute);
     }
 
     private TransferRoute toDomain(TransferRoutePO po) {
-        return new TransferRoute(
-                po.getRouteId(),
-                po.getTransferId(),
-                po.getRuleId(),
-                po.getTargetType() == null ? null : com.yss.valset.transfer.domain.model.TargetType.valueOf(po.getTargetType()),
-                po.getTargetCode(),
-                po.getTargetPath(),
-                po.getRenamePattern(),
-                po.getRouteStatus() == null ? null : TransferStatus.valueOf(po.getRouteStatus()),
-                transferJsonMapper.toMap(po.getRouteMetaJson())
-        );
+        return transferRouteMapper.toDomain(po);
     }
 }

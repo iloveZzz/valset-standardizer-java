@@ -3,17 +3,14 @@ package com.yss.valset.transfer.application.impl;
 import com.yss.valset.transfer.application.port.RouteTransferUseCase;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferRouteGateway;
-import com.yss.valset.transfer.domain.gateway.TransferRuleGateway;
+import com.yss.valset.transfer.domain.model.MatchResult;
 import com.yss.valset.transfer.domain.model.ProbeResult;
 import com.yss.valset.transfer.domain.model.RecognitionContext;
-import com.yss.valset.transfer.domain.model.RuleContext;
-import com.yss.valset.transfer.domain.model.RuleDefinition;
-import com.yss.valset.transfer.domain.model.RuleEvaluationResult;
-import com.yss.valset.transfer.domain.model.TargetType;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferRoute;
 import com.yss.valset.transfer.domain.model.TransferStatus;
-import com.yss.valset.transfer.domain.rule.RuleEngine;
+import com.yss.valset.transfer.infrastructure.plugin.FileProbePluginRegistry;
+import com.yss.valset.transfer.infrastructure.plugin.RouteMatchPluginRegistry;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,20 +23,20 @@ import java.util.Map;
 public class DefaultRouteTransferService implements RouteTransferUseCase {
 
     private final TransferObjectGateway transferObjectGateway;
-    private final TransferRuleGateway transferRuleGateway;
     private final TransferRouteGateway transferRouteGateway;
-    private final RuleEngine ruleEngine;
+    private final FileProbePluginRegistry fileProbePluginRegistry;
+    private final RouteMatchPluginRegistry routeMatchPluginRegistry;
 
     public DefaultRouteTransferService(
             TransferObjectGateway transferObjectGateway,
-            TransferRuleGateway transferRuleGateway,
             TransferRouteGateway transferRouteGateway,
-            RuleEngine ruleEngine
+            FileProbePluginRegistry fileProbePluginRegistry,
+            RouteMatchPluginRegistry routeMatchPluginRegistry
     ) {
         this.transferObjectGateway = transferObjectGateway;
-        this.transferRuleGateway = transferRuleGateway;
         this.transferRouteGateway = transferRouteGateway;
-        this.ruleEngine = ruleEngine;
+        this.fileProbePluginRegistry = fileProbePluginRegistry;
+        this.routeMatchPluginRegistry = routeMatchPluginRegistry;
     }
 
     @Override
@@ -47,42 +44,25 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
         TransferObject transferObject = transferObjectGateway.findById(transferId)
                 .orElseThrow(() -> new IllegalStateException("未找到文件记录，transferId=" + transferId));
         RecognitionContext context = toRecognitionContext(transferObject);
-        ProbeResult probeResult = new ProbeResult(true, transferObject.extension(), transferObject.fileMeta());
-        List<RuleDefinition> ruleDefinitions = transferRuleGateway.listEnabledRules();
-        for (RuleDefinition ruleDefinition : ruleDefinitions) {
-            RuleContext ruleContext = new RuleContext(context, probeResult, Map.of());
-            RuleEvaluationResult evaluationResult = ruleEngine.evaluate(ruleDefinition, ruleContext);
-            if (!evaluationResult.matched()) {
-                continue;
-            }
-            TransferRoute route = buildRoute(transferObject, ruleDefinition, evaluationResult);
-            transferRouteGateway.save(route);
-            return;
+        ProbeResult probeResult = fileProbePluginRegistry.getRequired(context).probe(context);
+        MatchResult matchResult = routeMatchPluginRegistry.getRequired(context).match(context, probeResult);
+        if (matchResult.routes() == null || matchResult.routes().isEmpty()) {
+            throw new IllegalStateException("未匹配到可用的分拣规则，transferId=" + transferId);
         }
-        throw new IllegalStateException("未匹配到可用的分拣规则，transferId=" + transferId);
-    }
-
-    private TransferRoute buildRoute(
-            TransferObject transferObject,
-            RuleDefinition ruleDefinition,
-            RuleEvaluationResult evaluationResult
-    ) {
-        Map<String, Object> ruleMeta = ruleDefinition.ruleMeta();
-        TargetType targetType = TargetType.valueOf(String.valueOf(ruleMeta.getOrDefault("targetType", TargetType.S3.name())));
-        return new TransferRoute(
-                null,
-                transferObject.transferId(),
-                ruleDefinition.ruleId(),
-                targetType,
-                String.valueOf(ruleMeta.getOrDefault("targetCode", "default-target")),
-                String.valueOf(ruleMeta.getOrDefault("targetPath", "/transfer/inbox")),
-                String.valueOf(ruleMeta.getOrDefault("renamePattern", "${fileName}")),
-                TransferStatus.ROUTED,
-                Map.of(
-                        "ruleMessage", evaluationResult.message(),
-                        "matchStrategy", ruleDefinition.matchStrategy()
-                )
-        );
+        for (TransferRoute route : matchResult.routes()) {
+            TransferRoute routed = new TransferRoute(
+                    null,
+                    transferObject.transferId(),
+                    route.ruleId(),
+                    route.targetType(),
+                    route.targetCode(),
+                    route.targetPath(),
+                    route.renamePattern(),
+                    TransferStatus.ROUTED,
+                    mergeRouteMeta(route, matchResult.reason(), probeResult)
+            );
+            transferRouteGateway.save(routed);
+        }
     }
 
     private RecognitionContext toRecognitionContext(TransferObject transferObject) {
@@ -93,11 +73,26 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
                 transferObject.originalName(),
                 transferObject.mimeType(),
                 transferObject.sizeBytes(),
-                null,
-                null,
+                transferObject.mailFrom(),
+                transferObject.mailTo(),
+                transferObject.mailCc(),
+                transferObject.mailBcc(),
+                transferObject.mailSubject(),
+                transferObject.mailBody(),
+                transferObject.mailId(),
+                transferObject.mailProtocol(),
+                transferObject.mailFolder(),
                 transferObject.localTempPath(),
                 fileMeta
         );
+    }
+
+    private Map<String, Object> mergeRouteMeta(TransferRoute route, String message, ProbeResult probeResult) {
+        Map<String, Object> routeMeta = route.routeMeta() == null ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(route.routeMeta());
+        routeMeta.putIfAbsent("ruleMessage", message);
+        routeMeta.putIfAbsent("probeDetectedType", probeResult == null ? null : probeResult.detectedType());
+        routeMeta.putIfAbsent("probeAttributes", probeResult == null ? null : probeResult.attributes());
+        return routeMeta;
     }
 
     private com.yss.valset.transfer.domain.model.SourceType resolveSourceType(Map<String, Object> fileMeta) {

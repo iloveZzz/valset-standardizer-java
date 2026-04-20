@@ -54,6 +54,7 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.datasource.driver-class-name=org.h2.Driver",
                 "spring.sql.init.mode=always",
                 "spring.sql.init.schema-locations=classpath:schema-e2e.sql",
+                "spring.liquibase.enabled=false",
                 "spring.quartz.auto-startup=false",
                 "subject.match.upload-dir=target/e2e/uploads",
                 "subject.match.output-dir=target/e2e/output",

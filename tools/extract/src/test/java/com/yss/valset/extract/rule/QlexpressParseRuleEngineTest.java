@@ -4,6 +4,7 @@ import com.yss.valset.extract.support.ExcelParsingSupport;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -29,5 +30,16 @@ class QlexpressParseRuleEngineTest {
 
         assertEquals("SUBJECT", engine.classifyRow(subjectRow, List.of("制表", "复核", "打印", "备注")));
         assertEquals("METRIC_ROW", engine.classifyRow(metricRow, List.of("制表", "复核", "打印", "备注")));
+    }
+
+    @Test
+    void shouldEvaluateHasTextSafely() {
+        QlexpressParseRuleEngine engine = new QlexpressParseRuleEngine();
+        Map<String, Object> nullMetricNameContext = new HashMap<>();
+        nullMetricNameContext.put("metricName", null);
+
+        assertTrue(engine.evaluateBoolean("hasText(metricName)", Map.of("metricName", new StringBuilder("损益平准金"))));
+        assertTrue(!engine.evaluateBoolean("hasText(metricName)", Map.of("metricName", "")));
+        assertTrue(!engine.evaluateBoolean("hasText(metricName)", nullMetricNameContext));
     }
 }

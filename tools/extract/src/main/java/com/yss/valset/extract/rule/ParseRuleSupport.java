@@ -112,6 +112,16 @@ public final class ParseRuleSupport {
     }
 
     /**
+     * 判断文本是否有有效内容。
+     */
+    public static boolean hasText(Object value) {
+        if (value == null) {
+            return false;
+        }
+        return !ExcelParsingSupport.normalizeText(value).isBlank();
+    }
+
+    /**
      * 计算第一条非空单元格的索引。
      */
     public static int firstMeaningfulCellIndex(List<Object> rowValues) {

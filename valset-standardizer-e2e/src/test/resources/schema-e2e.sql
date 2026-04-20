@@ -419,6 +419,18 @@ CREATE TABLE IF NOT EXISTS t_tr_index (
     time_stamp TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS t_transfer_target (
+    target_id BIGINT PRIMARY KEY,
+    target_code VARCHAR(128) NOT NULL,
+    target_name VARCHAR(256) NOT NULL,
+    target_type VARCHAR(32) NOT NULL,
+    enabled BOOLEAN NOT NULL,
+    target_path_template VARCHAR(1024),
+    connection_config_json TEXT,
+    target_meta_json TEXT,
+    UNIQUE KEY uk_transfer_target_code (target_code)
+);
+
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
 CREATE INDEX IF NOT EXISTS idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);

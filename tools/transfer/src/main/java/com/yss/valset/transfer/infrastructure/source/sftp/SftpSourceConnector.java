@@ -136,6 +136,13 @@ public class SftpSourceConnector implements SourceConnector {
                                 attrs.getSize(),
                                 null,
                                 null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
                                 tempFile.toAbsolutePath().toString(),
                                 attributes
                         ));

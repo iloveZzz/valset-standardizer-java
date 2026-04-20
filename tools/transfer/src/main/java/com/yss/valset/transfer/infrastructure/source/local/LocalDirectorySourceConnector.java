@@ -71,6 +71,13 @@ public class LocalDirectorySourceConnector implements SourceConnector {
                 Files.size(path),
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 path.toAbsolutePath().toString(),
                 attrs
         );
