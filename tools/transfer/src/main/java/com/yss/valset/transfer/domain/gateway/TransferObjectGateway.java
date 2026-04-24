@@ -1,7 +1,10 @@
 package com.yss.valset.transfer.domain.gateway;
 
 import com.yss.valset.transfer.domain.model.TransferObject;
+import com.yss.valset.transfer.domain.model.TransferObjectAnalysis;
+import com.yss.valset.transfer.domain.model.TransferObjectPage;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -9,9 +12,13 @@ import java.util.Optional;
  */
 public interface TransferObjectGateway {
 
-    Optional<TransferObject> findById(Long transferId);
+    Optional<TransferObject> findById(String transferId);
 
     Optional<TransferObject> findByFingerprint(String fingerprint);
+
+    TransferObjectPage pageObjects(String sourceId, String sourceType, String sourceCode, String status, String mailId, String fingerprint, String routeId, Integer pageIndex, Integer pageSize);
+
+    TransferObjectAnalysis analyzeObjects(String sourceId, String sourceType, String sourceCode, String status, String mailId, String fingerprint, String routeId);
 
     TransferObject save(TransferObject transferObject);
 }

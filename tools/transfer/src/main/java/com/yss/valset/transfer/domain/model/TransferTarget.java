@@ -1,5 +1,6 @@
 package com.yss.valset.transfer.domain.model;
 
+import java.time.Instant;
 import java.util.Map;
 
 /**
@@ -13,6 +14,8 @@ public record TransferTarget(
         boolean enabled,
         String targetPathTemplate,
         Map<String, Object> connectionConfig,
-        Map<String, Object> targetMeta
+        Map<String, Object> targetMeta,
+        Instant createdAt,
+        Instant updatedAt
 ) {
 }

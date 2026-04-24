@@ -20,6 +20,14 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.yss.cloud</groupId>
+            <artifactId>yss-component-dto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.cloud</groupId>
+            <artifactId>yss-component-exception</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.yss.filesys</groupId>
             <artifactId>yss-filesys-feignsdk</artifactId>
             <version>1.0.0-SNAPSHOT</version>
@@ -53,6 +61,11 @@
             <groupId>com.yss.datamiddle</groupId>
             <artifactId>valset-standardizer-batch</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.kagkarlsson</groupId>
+            <artifactId>db-scheduler-spring-boot-starter</artifactId>
+            <version>16.7.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

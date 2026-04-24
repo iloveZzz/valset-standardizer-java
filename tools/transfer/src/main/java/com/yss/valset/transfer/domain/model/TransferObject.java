@@ -7,10 +7,11 @@ import java.util.Map;
  * 已收取的文件主对象。
  */
 public record TransferObject(
-        Long transferId,
-        Long sourceId,
+        String transferId,
+        String sourceId,
+        String sourceType,
+        String sourceCode,
         String originalName,
-        String normalizedName,
         String extension,
         String mimeType,
         Long sizeBytes,
@@ -29,8 +30,137 @@ public record TransferObject(
         TransferStatus status,
         Instant receivedAt,
         Instant storedAt,
-        Long routeId,
+        String routeId,
         String errorMessage,
+        ProbeResult probeResult,
         Map<String, Object> fileMeta
 ) {
+
+    public TransferObject withLocalTempPath(String localTempPath) {
+        return new TransferObject(
+                transferId,
+                sourceId,
+                sourceType,
+                sourceCode,
+                originalName,
+                extension,
+                mimeType,
+                sizeBytes,
+                fingerprint,
+                sourceRef,
+                mailId,
+                mailFrom,
+                mailTo,
+                mailCc,
+                mailBcc,
+                mailSubject,
+                mailBody,
+                mailProtocol,
+                mailFolder,
+                localTempPath,
+                status,
+                receivedAt,
+                storedAt,
+                routeId,
+                errorMessage,
+                probeResult,
+                fileMeta
+        );
+    }
+
+    public TransferObject withRouteId(String routeId) {
+        return new TransferObject(
+                transferId,
+                sourceId,
+                sourceType,
+                sourceCode,
+                originalName,
+                extension,
+                mimeType,
+                sizeBytes,
+                fingerprint,
+                sourceRef,
+                mailId,
+                mailFrom,
+                mailTo,
+                mailCc,
+                mailBcc,
+                mailSubject,
+                mailBody,
+                mailProtocol,
+                mailFolder,
+                localTempPath,
+                status,
+                receivedAt,
+                storedAt,
+                routeId,
+                errorMessage,
+                probeResult,
+                fileMeta
+        );
+    }
+
+    public TransferObject withStatus(TransferStatus status, String errorMessage) {
+        return new TransferObject(
+                transferId,
+                sourceId,
+                sourceType,
+                sourceCode,
+                originalName,
+                extension,
+                mimeType,
+                sizeBytes,
+                fingerprint,
+                sourceRef,
+                mailId,
+                mailFrom,
+                mailTo,
+                mailCc,
+                mailBcc,
+                mailSubject,
+                mailBody,
+                mailProtocol,
+                mailFolder,
+                localTempPath,
+                status,
+                receivedAt,
+                storedAt,
+                routeId,
+                errorMessage,
+                probeResult,
+                fileMeta
+        );
+    }
+
+    public TransferObject withProbeResult(ProbeResult probeResult) {
+        return new TransferObject(
+                transferId,
+                sourceId,
+                sourceType,
+                sourceCode,
+                originalName,
+                extension,
+                mimeType,
+                sizeBytes,
+                fingerprint,
+                sourceRef,
+                mailId,
+                mailFrom,
+                mailTo,
+                mailCc,
+                mailBcc,
+                mailSubject,
+                mailBody,
+                mailProtocol,
+                mailFolder,
+                localTempPath,
+                status,
+                receivedAt,
+                storedAt,
+                routeId,
+                errorMessage,
+                probeResult,
+                fileMeta
+        );
+    }
 }

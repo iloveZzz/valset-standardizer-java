@@ -19,13 +19,13 @@ public class TransferObjectPO {
      * 文件主键。
      */
     @TableId(value = "transfer_id", type = IdType.ASSIGN_ID)
-    private Long transferId;
+    private String transferId;
 
     /**
      * 来源主键。
      */
     @TableField("source_id")
-    private Long sourceId;
+    private String sourceId;
 
     /**
      * 来源类型。
@@ -44,12 +44,6 @@ public class TransferObjectPO {
      */
     @TableField("original_name")
     private String originalName;
-
-    /**
-     * 规范化文件名。
-     */
-    @TableField("normalized_name")
-    private String normalizedName;
 
     /**
      * 文件扩展名。
@@ -163,13 +157,19 @@ public class TransferObjectPO {
      * 路由主键。
      */
     @TableField("route_id")
-    private Long routeId;
+    private String routeId;
 
     /**
      * 错误信息。
      */
     @TableField("error_message")
     private String errorMessage;
+
+    /**
+     * 探测结果 JSON。
+     */
+    @TableField("probe_result_json")
+    private String probeResultJson;
 
     /**
      * 文件元数据 JSON。

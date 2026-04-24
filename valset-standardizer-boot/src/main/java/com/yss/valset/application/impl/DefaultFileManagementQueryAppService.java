@@ -102,12 +102,12 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
 
     private ValsetFileInfoViewDTO toView(ValsetFileInfo fileInfo) {
         return ValsetFileInfoViewDTO.builder()
-                .fileId(fileInfo.getFileId())
+                .fileId(fileInfo.getFileId() == null ? null : String.valueOf(fileInfo.getFileId()))
                 .fileNameOriginal(fileInfo.getFileNameOriginal())
                 .fileNameNormalized(fileInfo.getFileNameNormalized())
                 .fileExtension(fileInfo.getFileExtension())
                 .mimeType(fileInfo.getMimeType())
-                .fileSizeBytes(fileInfo.getFileSizeBytes())
+                .fileSizeBytes(fileInfo.getFileSizeBytes() == null ? null : String.valueOf(fileInfo.getFileSizeBytes()))
                 .fileFingerprint(fileInfo.getFileFingerprint())
                 .sourceChannel(fileInfo.getSourceChannel() == null ? null : fileInfo.getSourceChannel().name())
                 .sourceUri(fileInfo.getSourceUri())
@@ -119,7 +119,7 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
                 .receivedAt(fileInfo.getReceivedAt())
                 .storedAt(fileInfo.getStoredAt())
                 .lastProcessedAt(fileInfo.getLastProcessedAt())
-                .lastTaskId(fileInfo.getLastTaskId())
+                .lastTaskId(fileInfo.getLastTaskId() == null ? null : String.valueOf(fileInfo.getLastTaskId()))
                 .errorMessage(fileInfo.getErrorMessage())
                 .sourceMetaJson(fileInfo.getSourceMetaJson())
                 .storageMetaJson(fileInfo.getStorageMetaJson())
@@ -129,8 +129,8 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
 
     private ValsetFileIngestLogViewDTO toView(ValsetFileIngestLog ingestLog) {
         return ValsetFileIngestLogViewDTO.builder()
-                .ingestId(ingestLog.getIngestId())
-                .fileId(ingestLog.getFileId())
+                .ingestId(ingestLog.getIngestId() == null ? null : String.valueOf(ingestLog.getIngestId()))
+                .fileId(ingestLog.getFileId() == null ? null : String.valueOf(ingestLog.getFileId()))
                 .sourceChannel(ingestLog.getSourceChannel() == null ? null : ingestLog.getSourceChannel().name())
                 .sourceUri(ingestLog.getSourceUri())
                 .channelMessageId(ingestLog.getChannelMessageId())
@@ -146,9 +146,9 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
         Map<String, Object> parsed = parseMap(stylePO.getSheetStyleJson());
         List<Map<String, Object>> rows = extractRows(parsed);
         return ValuationSheetStyleViewDTO.builder()
-                .id(stylePO.getId())
-                .taskId(stylePO.getTaskId())
-                .fileId(stylePO.getFileId())
+                .id(stylePO.getId() == null ? null : String.valueOf(stylePO.getId()))
+                .taskId(stylePO.getTaskId() == null ? null : String.valueOf(stylePO.getTaskId()))
+                .fileId(stylePO.getFileId() == null ? null : String.valueOf(stylePO.getFileId()))
                 .sheetName(stylePO.getSheetName())
                 .styleScope(stylePO.getStyleScope())
                 .sheetStyleJson(stylePO.getSheetStyleJson())

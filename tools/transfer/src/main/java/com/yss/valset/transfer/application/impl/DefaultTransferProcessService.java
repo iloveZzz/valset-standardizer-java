@@ -24,12 +24,12 @@ public class DefaultTransferProcessService implements TransferProcessUseCase {
     }
 
     @Override
-    public void route(Long transferId) {
+    public void route(String transferId) {
         routeTransferUseCase.execute(transferId);
     }
 
     @Override
-    public void deliver(Long routeId) {
-        deliverTransferUseCase.execute(routeId);
+    public void deliver(String routeId, String transferId) {
+        deliverTransferUseCase.execute(routeId, transferId);
     }
 }

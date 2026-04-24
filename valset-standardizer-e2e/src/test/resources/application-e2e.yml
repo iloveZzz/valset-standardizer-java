@@ -1,0 +1,14 @@
+management:
+  tracing:
+    enabled: false
+  otlp:
+    tracing:
+      endpoint: http://127.0.0.1:4318/v1/traces
+
+db-scheduler:
+  enabled: false
+
+logging:
+  level:
+    io.opentelemetry: WARN
+    io.micrometer.tracing: WARN

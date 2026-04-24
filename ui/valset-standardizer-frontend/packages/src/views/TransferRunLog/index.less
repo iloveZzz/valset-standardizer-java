@@ -1,0 +1,150 @@
+@import "../TransferSource/index.less";
+
+.workspace-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.workspace-summary-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+  color: rgba(15, 23, 42, 0.62);
+  font-size: 13px;
+}
+
+.workspace-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analysis-card-shell {
+  min-width: 0;
+  cursor: pointer;
+}
+
+.analysis-card {
+  height: 100%;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.analysis-card-shell:hover .analysis-card {
+  transform: translateY(-2px);
+  border-color: rgba(22, 119, 255, 0.18);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.analysis-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.analysis-card-label {
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.analysis-card-desc {
+  margin-top: 6px;
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.analysis-card-status-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.analysis-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(22, 119, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(22, 119, 255, 0.05);
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.analysis-status-chip--success {
+  border-color: rgba(82, 196, 26, 0.22);
+  background: rgba(82, 196, 26, 0.08);
+}
+
+.analysis-status-chip--success:hover {
+  border-color: rgba(82, 196, 26, 0.32);
+  background: rgba(82, 196, 26, 0.14);
+}
+
+.analysis-status-chip--success .analysis-status-chip-value {
+  color: #52c41a;
+}
+
+.analysis-status-chip--failure {
+  border-color: rgba(255, 77, 79, 0.22);
+  background: rgba(255, 77, 79, 0.08);
+}
+
+.analysis-status-chip--failure:hover {
+  border-color: rgba(255, 77, 79, 0.32);
+  background: rgba(255, 77, 79, 0.14);
+}
+
+.analysis-status-chip--failure .analysis-status-chip-value {
+  color: #ff4d4f;
+}
+
+.analysis-status-chip--default {
+  border-color: rgba(22, 119, 255, 0.14);
+  background: rgba(22, 119, 255, 0.05);
+}
+
+.analysis-status-chip:hover {
+  border-color: rgba(22, 119, 255, 0.28);
+  background: rgba(22, 119, 255, 0.1);
+}
+
+.analysis-status-chip-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.68);
+}
+
+.analysis-status-chip-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1677ff;
+}
+
+.analysis-card-empty {
+  color: rgba(15, 23, 42, 0.45);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1200px) {
+  .workspace-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+}

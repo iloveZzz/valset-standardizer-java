@@ -12,7 +12,16 @@ import java.util.List;
 @Data
 @Builder
 public class MatchResultViewDTO {
-    private Long fileId;
+    /**
+     * 文件主键。
+     */
+    private String fileId;
+    /**
+     * 已匹配条数。
+     */
     private Integer matchedCount;
+    /**
+     * 匹配结果列表。
+     */
     private List<ValsetMatchResult> results;
 }

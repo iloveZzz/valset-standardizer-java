@@ -8,9 +8,11 @@ import java.util.Map;
  * 收取文件命令。
  */
 public record IngestTransferSourceCommand(
-        Long sourceId,
+        String sourceId,
         SourceType sourceType,
         String sourceCode,
-        Map<String, Object> parameters
+        String triggerType,
+        Map<String, Object> parameters,
+        String ingestLockToken
 ) {
 }

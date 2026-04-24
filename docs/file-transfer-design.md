@@ -14,7 +14,7 @@
 - 支持规则可扩展、插件可扩展
 - 支持脚本规则引擎，语法风格类似 QLExpress4
 
-设计目标不是把这些能力拆成多个微服务，而是继续沿用当前项目“模块化单体 + Quartz 调度 + 领域分层”的风格，在 `tools` 下形成一个可独立演进的能力模块。
+设计目标不是把这些能力拆成多个微服务，而是继续沿用当前项目“模块化单体 + 领域分层 + 轻量持久化调度”的风格，在 `tools` 下形成一个可独立演进的能力模块。
 
 ## 设计目标
 
@@ -23,7 +23,7 @@
 3. 统一投递出口，支持邮箱、S3、SFTP 等目标。
 4. 支持幂等处理，避免重复收取、重复分拣、重复转发。
 5. 支持配置化、规则化、版本化，便于运维和扩展。
-6. 与当前 Quartz 调度体系兼容，支持周期扫描和定时转发。
+6. 与当前 db-scheduler 调度体系兼容，支持周期扫描和定时转发。
 
 ## 模块建议
 
@@ -36,7 +36,7 @@
 - `domain`：领域模型、规则模型、领域服务、网关接口
 - `application`：用例编排、命令对象、应用服务
 - `infrastructure`：邮件、S3、SFTP、本地目录、数据库、缓存、规则引擎适配器
-- `batch`：Quartz 调度、任务执行器、任务分派
+- `batch`：调度、任务执行器、任务分派
 
 建议 `tools/pom.xml` 增加新模块，但不改变现有模块的职责边界。
 
@@ -55,8 +55,9 @@
 - `enabled`
 - `pollCron`
 - `connectionConfig`
-- `checkpointConfig`
 - `sourceMetaJson`
+
+建议同时为来源配置建立持久化实体 `TransferSourcePO`，表名可使用 `t_transfer_source`，用于保存后台维护的来源配置、轮询表达式和连接参数。
 
 `sourceType` 建议包括：
 
@@ -74,7 +75,6 @@
 - `transferId`
 - `sourceId`
 - `originalName`
-- `normalizedName`
 - `extension`
 - `mimeType`
 - `sizeBytes`
@@ -115,6 +115,9 @@
 
 - `routeId`
 - `transferId`
+- `sourceId`
+- `sourceType`
+- `sourceCode`
 - `ruleId`
 - `targetType`
 - `targetCode`
@@ -123,6 +126,12 @@
 - `archiveAction`
 - `routeStatus`
 - `routeMetaJson`
+
+说明：
+
+- 如果路由只用于运行时结果记录，`transferId` 可以作为文件主键。
+- 如果同一张表同时承载“路由配置”和“路由结果”，建议把 `sourceId/sourceType/sourceCode` 提升为显式字段，`routeMetaJson` 只放重试、分组、探测结果等扩展信息。
+- 目前实现已经按“配置 + 结果共用”方向补齐了来源字段，但如果后续要把配置和结果彻底分离，建议再拆 `t_transfer_route_config`。
 
 `targetType` 建议包括：
 
@@ -389,7 +398,7 @@ public interface RuleEngine {
 
 推荐的完整链路如下：
 
-1. Quartz 定时触发某个 `TransferSource`
+1. 调度器定时触发某个 `TransferSource`
 2. 源适配器扫描增量文件
 3. 生成 `RecognitionContext`
 4. `ProbePlugin` 采集文件特征
@@ -492,7 +501,7 @@ public interface RuleEngine {
 
 ## 调度设计
 
-建议继续使用 Quartz，理由是当前项目已经在沿用这套方式，迁移成本最低，且支持后续扩展。
+建议继续使用轻量级持久化调度器，当前实现已切换到 db-scheduler，理由是它更贴近 transfer 的“周期扫描 + 立即触发 + 延迟重试”模型，且比 Quartz 更轻。
 
 建议按以下粒度调度：
 
@@ -503,7 +512,6 @@ public interface RuleEngine {
 
 建议仍然保留：
 
-- `DispatchJob`
 - `TaskDispatcher`
 - `TaskExecutor`
 
@@ -540,7 +548,7 @@ tools/transfer
 - S3 和 SFTP 作为投递目标
 - 规则插件化
 - 脚本规则引擎接入
-- Quartz 定时扫描
+- db-scheduler 定时扫描
 - 投递日志和失败重试
 
 这一阶段不建议同时做：
@@ -565,7 +573,7 @@ tools/transfer
 
 ## 总结
 
-这个文件收发分拣系统建议按“模块化单体 + 插件化识别 + 脚本规则引擎 + Quartz 调度”来实现。
+这个文件收发分拣系统建议按“模块化单体 + 插件化识别 + 脚本规则引擎 + db-scheduler 调度”来实现。
 
 核心不是把协议做复杂，而是把边界收清楚：
 
@@ -573,6 +581,6 @@ tools/transfer
 - 规则引擎负责“判”
 - 动作插件负责“发”
 - 数据模型负责“记”
-- Quartz 负责“跑”
+- 调度器负责“跑”
 
 这样后续新增一个邮件服务、一个 S3 桶、一个 SFTP 目录，通常只需要新增配置和插件实现，不需要改主流程。

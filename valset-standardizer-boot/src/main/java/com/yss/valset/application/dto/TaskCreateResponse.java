@@ -12,7 +12,7 @@ public class TaskCreateResponse {
     /**
      * 唯一的任务标识符。
      */
-    private Long taskId;
+    private String taskId;
     /**
      * 任务类型名称。
      */

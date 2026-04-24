@@ -118,26 +118,34 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                         extractDataExecutionUseCase::execute
                 );
         Long fileId = extractFileId(extractTask);
-        subjectMatchFileInfoGateway.updateStatus(
-                fileInfo.getFileId(),
-                ValsetFileStatus.EXTRACTED,
-                extractTask.getTaskId(),
-                LocalDateTime.now(),
-                null
-        );
-        log.info("全流程-上传与提取完成，fileId={}, extractTaskId={}, reusedTask={}",
-                fileInfo.getFileId() == null ? fileId : fileInfo.getFileId(),
-                extractTask.getTaskId(),
-                reusedExistingTask);
-        return UploadValuationFileResponse.builder()
-                .fileId(fileInfo.getFileId() == null ? fileId : fileInfo.getFileId())
-                .workbookPath(fileInfo.getStorageUri())
-                .dataSourceType(storedFile.getDataSourceType())
-                .fileSizeBytes(storedFile.getFileSizeBytes())
-                .fileFingerprint(storedFile.getFileFingerprint())
-                .reusedExistingExtractTask(reusedExistingTask)
-                .extractTask(extractTask)
-                .build();
+        try {
+            subjectMatchFileInfoGateway.updateStatus(
+                    fileInfo.getFileId(),
+                    ValsetFileStatus.EXTRACTED,
+                    toLong(extractTask.getTaskId()),
+                    LocalDateTime.now(),
+                    null
+            );
+            log.info("全流程-上传与提取完成，fileId={}, extractTaskId={}, reusedTask={}",
+                    fileInfo.getFileId() == null ? fileId : fileInfo.getFileId(),
+                    extractTask.getTaskId(),
+                    reusedExistingTask);
+            return UploadValuationFileResponse.builder()
+                    .fileId(toStringValue(fileInfo.getFileId() == null ? fileId : fileInfo.getFileId()))
+                    .workbookPath(fileInfo.getStorageUri())
+                    .dataSourceType(storedFile.getDataSourceType())
+                    .fileSizeBytes(storedFile.getFileSizeBytes() == null ? null : String.valueOf(storedFile.getFileSizeBytes()))
+                    .fileFingerprint(storedFile.getFileFingerprint())
+                    .filesysTaskId(storedFile.getFilesysTaskId())
+                    .filesysFileId(storedFile.getFilesysFileId())
+                    .filesysObjectKey(storedFile.getFilesysObjectKey())
+                    .filesysInstantUpload(storedFile.getFilesysInstantUpload())
+                    .reusedExistingExtractTask(reusedExistingTask)
+                    .extractTask(extractTask)
+                    .build();
+        } finally {
+            uploadedFileStorageService.deleteStoredFile(storedFile.getAbsolutePath());
+        }
     }
 
     @Override
@@ -153,10 +161,10 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 command,
                 parseExecutionUseCase::execute
         );
-        subjectMatchFileInfoGateway.updateStatus(
+            subjectMatchFileInfoGateway.updateStatus(
                 command.getFileId(),
                 ValsetFileStatus.PARSED,
-                taskViewDTO.getTaskId(),
+                toLong(taskViewDTO.getTaskId()),
                 LocalDateTime.now(),
                 null
         );
@@ -183,7 +191,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         subjectMatchFileInfoGateway.updateStatus(
                 command.getFileId(),
                 ValsetFileStatus.MATCHED,
-                taskViewDTO.getTaskId(),
+                toLong(taskViewDTO.getTaskId()),
                 LocalDateTime.now(),
                 null
         );
@@ -215,7 +223,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             ParseTaskCommand parseTaskCommand = new ParseTaskCommand();
             parseTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
             parseTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
-            parseTaskCommand.setFileId(uploadResponse.getFileId());
+            parseTaskCommand.setFileId(toLong(uploadResponse.getFileId()));
             parseTaskCommand.setFileNameOriginal(file.getOriginalFilename());
             parseTaskCommand.setCreatedBy(createdBy);
             parseTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
@@ -225,7 +233,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             MatchTaskCommand matchTaskCommand = new MatchTaskCommand();
             matchTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
             matchTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
-            matchTaskCommand.setFileId(uploadResponse.getFileId());
+            matchTaskCommand.setFileId(toLong(uploadResponse.getFileId()));
             matchTaskCommand.setTopK(topK == null ? 5 : topK);
             matchTaskCommand.setCreatedBy(createdBy);
             matchTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
@@ -245,6 +253,10 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                     .workbookPath(uploadResponse.getWorkbookPath())
                     .dataSourceType(uploadResponse.getDataSourceType())
                     .fileFingerprint(uploadResponse.getFileFingerprint())
+                    .filesysTaskId(uploadResponse.getFilesysTaskId())
+                    .filesysFileId(uploadResponse.getFilesysFileId())
+                    .filesysObjectKey(uploadResponse.getFilesysObjectKey())
+                    .filesysInstantUpload(uploadResponse.getFilesysInstantUpload())
                     .extractTask(uploadResponse.getExtractTask())
                     .parseTask(parseTask)
                     .matchTask(matchTask)
@@ -365,7 +377,18 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 return Long.parseLong(text);
             }
         }
-        return extractTask.getTaskId();
+        return toLong(extractTask.getTaskId());
+    }
+
+    private Long toLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Long.parseLong(value);
+    }
+
+    private String toStringValue(Long value) {
+        return value == null ? null : String.valueOf(value);
     }
 
     private String buildFailurePayload(TaskType taskType, Exception exception) {
@@ -399,7 +422,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             subjectMatchFileIngestLogGateway.save(ValsetFileIngestLog.builder()
                     .fileId(existingFile.getFileId())
                     .sourceChannel(ValsetFileSourceChannel.MANUAL_UPLOAD)
-                    .sourceUri(storedFile.getAbsolutePath())
+                    .sourceUri(resolveSourceUri(storedFile))
                     .channelMessageId(storedFile.getFileFingerprint())
                     .ingestStatus("REUSED")
                     .ingestTime(now)
@@ -415,7 +438,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 .fileSizeBytes(storedFile.getFileSizeBytes())
                 .fileFingerprint(storedFile.getFileFingerprint())
                 .sourceChannel(ValsetFileSourceChannel.MANUAL_UPLOAD)
-                .sourceUri(storedFile.getAbsolutePath())
+                .sourceUri(resolveSourceUri(storedFile))
                 .storageType(ValsetFileStorageType.LOCAL)
                 .storageUri(storedFile.getAbsolutePath())
                 .fileFormat(normalizeDataSourceType(storedFile.getDataSourceType()))
@@ -423,18 +446,60 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 .createdBy(createdBy)
                 .receivedAt(now)
                 .storedAt(now)
+                .sourceMetaJson(buildSourceMetaJson(storedFile))
+                .storageMetaJson(buildStorageMetaJson(storedFile))
                 .build();
         subjectMatchFileInfoGateway.save(fileInfo);
         subjectMatchFileIngestLogGateway.save(ValsetFileIngestLog.builder()
                 .fileId(fileInfo.getFileId())
                 .sourceChannel(ValsetFileSourceChannel.MANUAL_UPLOAD)
-                .sourceUri(storedFile.getAbsolutePath())
+                .sourceUri(resolveSourceUri(storedFile))
                 .channelMessageId(storedFile.getFileFingerprint())
                 .ingestStatus("SUCCESS")
                 .ingestTime(now)
                 .createdBy(createdBy)
                 .build());
         return fileInfo;
+    }
+
+    private String resolveSourceUri(StoredFileDTO storedFile) {
+        if (storedFile.getFilesysObjectKey() != null && !storedFile.getFilesysObjectKey().isBlank()) {
+            return storedFile.getFilesysObjectKey();
+        }
+        if (storedFile.getFilesysFileId() != null && !storedFile.getFilesysFileId().isBlank()) {
+            return "filesys:" + storedFile.getFilesysFileId();
+        }
+        return storedFile.getAbsolutePath();
+    }
+
+    private String buildSourceMetaJson(StoredFileDTO storedFile) {
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("filesysTaskId", storedFile.getFilesysTaskId());
+        meta.put("filesysFileId", storedFile.getFilesysFileId());
+        meta.put("filesysObjectKey", storedFile.getFilesysObjectKey());
+        meta.put("filesysOriginalName", storedFile.getFilesysOriginalName());
+        meta.put("filesysMimeType", storedFile.getFilesysMimeType());
+        meta.put("filesysInstantUpload", storedFile.getFilesysInstantUpload());
+        meta.put("filesysParentId", storedFile.getFilesysParentId());
+        meta.put("filesysStorageSettingId", storedFile.getFilesysStorageSettingId());
+        try {
+            return objectMapper.writeValueAsString(meta);
+        } catch (Exception exception) {
+            log.warn("构建 filesys 源元数据失败，originalFilename={}", storedFile.getOriginalFilename(), exception);
+            return meta.toString();
+        }
+    }
+
+    private String buildStorageMetaJson(StoredFileDTO storedFile) {
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("absolutePath", storedFile.getAbsolutePath());
+        meta.put("storedFilename", storedFile.getStoredFilename());
+        try {
+            return objectMapper.writeValueAsString(meta);
+        } catch (Exception exception) {
+            log.warn("构建临时存储元数据失败，originalFilename={}", storedFile.getOriginalFilename(), exception);
+            return meta.toString();
+        }
     }
 
     private String normalizeFilename(String filename) {

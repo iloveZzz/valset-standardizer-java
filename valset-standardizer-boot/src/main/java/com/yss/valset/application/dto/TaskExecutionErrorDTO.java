@@ -9,10 +9,28 @@ import lombok.Data;
 @Data
 @Builder
 public class TaskExecutionErrorDTO {
+    /**
+     * 错误编码。
+     */
     private String code;
+    /**
+     * 错误消息。
+     */
     private String message;
+    /**
+     * 任务类型。
+     */
     private String taskType;
-    private Long taskId;
+    /**
+     * 任务主键。
+     */
+    private String taskId;
+    /**
+     * 任务错误码。
+     */
     private String errorCode;
+    /**
+     * 失败载荷。
+     */
     private String failurePayload;
 }

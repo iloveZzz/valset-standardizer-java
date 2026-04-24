@@ -17,19 +17,31 @@ public class TransferRoutePO {
      * 路由主键。
      */
     @TableId(value = "route_id", type = IdType.ASSIGN_ID)
-    private Long routeId;
+    private String routeId;
 
     /**
-     * 文件主键。
+     * 来源主键。
      */
-    @TableField("transfer_id")
-    private Long transferId;
+    @TableField("source_id")
+    private String sourceId;
+
+    /**
+     * 来源类型。
+     */
+    @TableField("source_type")
+    private String sourceType;
+
+    /**
+     * 来源编码。
+     */
+    @TableField("source_code")
+    private String sourceCode;
 
     /**
      * 规则主键。
      */
     @TableField("rule_id")
-    private Long ruleId;
+    private String ruleId;
 
     /**
      * 目标类型。

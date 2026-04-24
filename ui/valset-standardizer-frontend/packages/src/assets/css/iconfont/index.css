@@ -1,0 +1,67 @@
+@font-face {
+  font-family: "iconfont"; /* Project id 4577948 */
+  src:
+    url("iconfont.woff2?t=1733305679364") format("woff2"),
+    url("iconfont.woff?t=1733305679364") format("woff"),
+    url("iconfont.ttf?t=1733305679364") format("truetype");
+}
+
+.iconfont {
+  font-family: "iconfont" !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-left-arrow:before {
+  content: "\e727";
+}
+
+.icon-right-arrow:before {
+  content: "\e728";
+}
+
+.icon-apiGateway:before {
+  content: "\e635";
+}
+
+.icon-dataSource:before {
+  content: "\e662";
+}
+
+.icon-dataServer:before {
+  content: "\e998";
+}
+
+.icon-client:before {
+  content: "\e643";
+}
+
+.icon-dataset:before {
+  content: "\e6ad";
+}
+
+.icon-copy:before {
+  content: "\e617";
+}
+
+.icon-field:before {
+  content: "\e697";
+}
+
+.icon-table:before {
+  content: "\e6d7";
+}
+
+.icon-add-data:before {
+  content: "\e634";
+}
+
+.icon-api-test:before {
+  content: "\e669";
+}
+
+.icon-save:before {
+  content: "\e625";
+}

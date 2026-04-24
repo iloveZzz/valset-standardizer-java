@@ -37,7 +37,7 @@ public class DefaultTaskQueryAppService implements TaskQueryAppService {
         boolean failedTask = TaskStatus.FAILED.name().equals(taskStatus);
         Map<String, Object> resultData = parsePayload(taskInfo.getResultPayload(), failedTask);
         return TaskViewDTO.builder()
-                .taskId(taskInfo.getTaskId())
+                .taskId(taskInfo.getTaskId() == null ? null : String.valueOf(taskInfo.getTaskId()))
                 .taskType(taskInfo.getTaskType().name())
                 .taskStage(taskInfo.getTaskStage() == null ? null : taskInfo.getTaskStage().name())
                 .taskStatus(taskStatus)
@@ -48,13 +48,13 @@ public class DefaultTaskQueryAppService implements TaskQueryAppService {
                 .resultData(resultData)
                 .errorMessage(failedTask ? extractErrorMessage(resultData, taskInfo.getResultPayload()) : null)
                 .errorCode(failedTask ? extractErrorCode(resultData) : null)
-                .rowCount(extractLong(taskInfo.getTaskType(), resultData, "rowCount"))
-                .fileSizeBytes(extractLong(taskInfo.getTaskType(), resultData, "fileSizeBytes"))
-                .durationMs(extractLong(taskInfo.getTaskType(), resultData, "durationMs"))
+                .rowCount(toStringValue(extractLong(taskInfo.getTaskType(), resultData, "rowCount")))
+                .fileSizeBytes(toStringValue(extractLong(taskInfo.getTaskType(), resultData, "fileSizeBytes")))
+                .durationMs(toStringValue(extractLong(taskInfo.getTaskType(), resultData, "durationMs")))
                 .taskStartTime(taskInfo.getTaskStartTime())
-                .parseTaskTimeMs(taskInfo.getParseTaskTimeMs())
-                .standardizeTimeMs(taskInfo.getStandardizeTimeMs())
-                .matchStandardSubjectTimeMs(taskInfo.getMatchStandardSubjectTimeMs())
+                .parseTaskTimeMs(toStringValue(taskInfo.getParseTaskTimeMs()))
+                .standardizeTimeMs(toStringValue(taskInfo.getStandardizeTimeMs()))
+                .matchStandardSubjectTimeMs(toStringValue(taskInfo.getMatchStandardSubjectTimeMs()))
                 .build();
     }
 
@@ -127,5 +127,9 @@ public class DefaultTaskQueryAppService implements TaskQueryAppService {
         }
         String text = String.valueOf(errorCode).trim();
         return text.isEmpty() ? null : text;
+    }
+
+    private String toStringValue(Long value) {
+        return value == null ? null : String.valueOf(value);
     }
 }

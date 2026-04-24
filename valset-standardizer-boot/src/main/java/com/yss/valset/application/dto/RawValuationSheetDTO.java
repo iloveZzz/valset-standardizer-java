@@ -11,6 +11,12 @@ import java.util.Map;
 @Data
 @Builder
 public class RawValuationSheetDTO {
+    /**
+     * 工作表名称。
+     */
     private String sheetName;
+    /**
+     * 表头元数据。
+     */
     private Map<String, Object> headerMeta;
 }

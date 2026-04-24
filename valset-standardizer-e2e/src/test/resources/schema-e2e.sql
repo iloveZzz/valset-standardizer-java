@@ -99,6 +99,59 @@ CREATE TABLE IF NOT EXISTS t_subject_match_file_ingest_log (
     error_message VARCHAR(1024)
 );
 
+CREATE TABLE IF NOT EXISTS t_transfer_run_log (
+    run_log_id BIGINT PRIMARY KEY,
+    source_id BIGINT,
+    source_type VARCHAR(32),
+    source_code VARCHAR(128),
+    source_name VARCHAR(256),
+    transfer_id BIGINT,
+    route_id BIGINT,
+    trigger_type VARCHAR(32),
+    run_stage VARCHAR(32) NOT NULL,
+    run_status VARCHAR(32) NOT NULL,
+    log_message VARCHAR(1024),
+    error_message VARCHAR(2048),
+    created_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_source_checkpoint (
+    checkpoint_id BIGINT PRIMARY KEY,
+    source_id BIGINT NOT NULL,
+    source_type VARCHAR(32) NOT NULL,
+    checkpoint_key VARCHAR(128) NOT NULL,
+    checkpoint_value VARCHAR(1024),
+    checkpoint_json TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uk_transfer_source_checkpoint_source_key UNIQUE (source_id, checkpoint_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transfer_source_checkpoint_source_id ON t_transfer_source_checkpoint(source_id);
+CREATE INDEX IF NOT EXISTS idx_transfer_source_checkpoint_source_type ON t_transfer_source_checkpoint(source_type);
+
+CREATE TABLE IF NOT EXISTS t_transfer_source_checkpoint_item (
+    checkpoint_item_id BIGINT PRIMARY KEY,
+    source_id BIGINT NOT NULL,
+    source_type VARCHAR(32) NOT NULL,
+    item_key VARCHAR(512) NOT NULL,
+    item_ref VARCHAR(1024),
+    item_name VARCHAR(512),
+    item_size BIGINT,
+    item_mime_type VARCHAR(512),
+    item_fingerprint VARCHAR(128),
+    item_meta_json TEXT,
+    trigger_type VARCHAR(32),
+    processed_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uk_transfer_source_checkpoint_item_source_key UNIQUE (source_id, item_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transfer_source_checkpoint_item_source_id ON t_transfer_source_checkpoint_item(source_id);
+CREATE INDEX IF NOT EXISTS idx_transfer_source_checkpoint_item_source_type ON t_transfer_source_checkpoint_item(source_type);
+CREATE INDEX IF NOT EXISTS idx_transfer_source_checkpoint_item_processed_at ON t_transfer_source_checkpoint_item(processed_at);
+
 CREATE TABLE IF NOT EXISTS t_ods_valuation_filedata (
     id BIGINT PRIMARY KEY,
     task_id BIGINT NOT NULL,
@@ -261,6 +314,106 @@ CREATE TABLE IF NOT EXISTS t_dwd_external_valuation_metric (
     mapping_reason VARCHAR(512),
     mapping_confidence DECIMAL(10, 6),
     raw_values_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_object (
+    transfer_id BIGINT PRIMARY KEY,
+    source_id BIGINT,
+    source_type VARCHAR(32),
+    source_code VARCHAR(128),
+    original_name VARCHAR(512) NOT NULL,
+    normalized_name VARCHAR(512),
+    extension VARCHAR(32),
+    mime_type VARCHAR(512),
+    size_bytes BIGINT,
+    fingerprint VARCHAR(128) NOT NULL,
+    source_ref VARCHAR(1024),
+    mail_id VARCHAR(256),
+    mail_from VARCHAR(512),
+    mail_to VARCHAR(2048),
+    mail_cc VARCHAR(2048),
+    mail_bcc VARCHAR(2048),
+    mail_subject VARCHAR(1024),
+    mail_body TEXT,
+    mail_protocol VARCHAR(32),
+    mail_folder VARCHAR(256),
+    local_temp_path VARCHAR(1024),
+    status VARCHAR(32) NOT NULL,
+    received_at TIMESTAMP,
+    stored_at TIMESTAMP,
+    route_id BIGINT,
+    error_message VARCHAR(1024),
+    file_meta_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_source (
+    source_id BIGINT PRIMARY KEY,
+    source_code VARCHAR(128) NOT NULL,
+    source_name VARCHAR(256) NOT NULL,
+    source_type VARCHAR(32) NOT NULL,
+    enabled BOOLEAN NOT NULL,
+    poll_cron VARCHAR(128),
+    connection_config_json TEXT,
+    source_meta_json TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uk_transfer_source_code UNIQUE (source_code)
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_rule (
+    rule_id BIGINT PRIMARY KEY,
+    rule_code VARCHAR(128) NOT NULL,
+    rule_name VARCHAR(256) NOT NULL,
+    rule_version VARCHAR(64),
+    enabled BOOLEAN NOT NULL,
+    priority INT NOT NULL,
+    match_strategy VARCHAR(64),
+    script_language VARCHAR(64),
+    script_body TEXT,
+    effective_from TIMESTAMP,
+    effective_to TIMESTAMP,
+    rule_meta_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_route (
+    route_id BIGINT PRIMARY KEY,
+    source_id BIGINT,
+    source_type VARCHAR(32),
+    source_code VARCHAR(128),
+    rule_id BIGINT NOT NULL,
+    target_type VARCHAR(32) NOT NULL,
+    target_code VARCHAR(128) NOT NULL,
+    target_path VARCHAR(1024),
+    rename_pattern VARCHAR(512),
+    route_status VARCHAR(32) NOT NULL,
+    route_meta_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_delivery_record (
+    delivery_id BIGINT PRIMARY KEY,
+    route_id BIGINT NOT NULL,
+    transfer_id BIGINT,
+    target_type VARCHAR(32) NOT NULL,
+    target_code VARCHAR(128) NOT NULL,
+    execute_status VARCHAR(32) NOT NULL,
+    retry_count INT NOT NULL DEFAULT 0,
+    request_snapshot_json TEXT,
+    response_snapshot_json TEXT,
+    error_message VARCHAR(1024),
+    delivered_at TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_target (
+    target_id BIGINT PRIMARY KEY,
+    target_code VARCHAR(128) NOT NULL,
+    target_name VARCHAR(256) NOT NULL,
+    target_type VARCHAR(32) NOT NULL,
+    enabled BOOLEAN NOT NULL,
+    target_path_template VARCHAR(1024),
+    connection_config_json TEXT,
+    target_meta_json TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS t_file_parse_rule (

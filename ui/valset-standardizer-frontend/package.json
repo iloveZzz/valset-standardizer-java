@@ -1,0 +1,50 @@
+{
+  "name": "yss-fs-workspace",
+  "version": "1.0.0",
+  "description": "文件存储微应用工作区 - 基于 Vue3 + TypeScript 的 qiankun 子应用",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cd packages && pnpm dev",
+    "build": "cd packages && pnpm build",
+    "build:jsp": "cd packages && pnpm build:jsp",
+    "build:standalone": "cd packages && pnpm build:standalone",
+    "preview": "cd packages && pnpm preview",
+    "lint": "eslint packages/src --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
+    "lint:fix": "eslint packages/src --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
+    "lint:check": "eslint packages/src --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",
+    "generate:api": "orval && node cleanup-schemas.cjs && pnpm format:generated",
+    "format:generated": "prettier --write packages/src/api/generated/**/*.ts",
+    "format": "prettier --write packages/src/",
+    "format:check": "prettier --check packages/src/",
+    "type-check": "cd packages && vue-tsc --noEmit",
+    "commit-check": "npm run lint:check && npm run format:check && npm run type-check",
+    "postinstall": "cd packages && pnpm install"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.37",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "@vue/tsconfig": "^0.5.1",
+    "eslint": "^8.57.1",
+    "eslint-import-resolver-alias": "^1.1.2",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-vue": "^9.33.0",
+    "husky": "^9.1.7",
+    "less": "^4.6.4",
+    "orval": "^6.31.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.5",
+    "vue-tsc": "^2.2.12"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@10.28.2"
+}

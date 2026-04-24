@@ -240,7 +240,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         }
 
         return ParseRuleValidationViewDTO.builder()
-                .profileId(profile.getId())
+                .profileId(profile.getId() == null ? null : String.valueOf(profile.getId()))
                 .profileCode(profile.getProfileCode())
                 .version(profile.getVersion())
                 .publishable(issues.isEmpty())
@@ -259,7 +259,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         if (cases.isEmpty()) {
             issues.add("模板未配置样例，无法执行回归");
             return ParseRuleRegressionViewDTO.builder()
-                    .profileId(profile.getId())
+                    .profileId(profile.getId() == null ? null : String.valueOf(profile.getId()))
                     .profileCode(profile.getProfileCode())
                     .version(profile.getVersion())
                     .passed(Boolean.FALSE)
@@ -292,7 +292,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         }
 
         return ParseRuleRegressionViewDTO.builder()
-                .profileId(profile.getId())
+                .profileId(profile.getId() == null ? null : String.valueOf(profile.getId()))
                 .profileCode(profile.getProfileCode())
                 .version(profile.getVersion())
                 .passed(issues.isEmpty() && passedCases == cases.size())
@@ -495,7 +495,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         List<ParseRuleDefinitionPO> rules = loadRules(profile.getId());
         List<ParseRuleCasePO> cases = loadCases(profile.getId());
         return ParseRuleProfileViewDTO.builder()
-                .id(profile.getId())
+                .id(profile.getId() == null ? null : String.valueOf(profile.getId()))
                 .profileCode(profile.getProfileCode())
                 .profileName(profile.getProfileName())
                 .version(profile.getVersion())
@@ -512,7 +512,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 .requiredHeaders(normalizeRequiredHeaders(profile.getRequiredHeadersJson()))
                 .subjectCodePattern(profile.getSubjectCodePattern())
                 .traceEnabled(Boolean.TRUE.equals(profile.getTraceEnabled()))
-                .timeoutMs(profile.getTimeoutMs())
+                .timeoutMs(profile.getTimeoutMs() == null ? null : String.valueOf(profile.getTimeoutMs()))
                 .checksum(profile.getChecksum())
                 .publishedTime(profile.getPublishedTime())
                 .ruleCount(rules.size())
@@ -522,8 +522,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     private ParseRuleDefinitionViewDTO toRuleView(ParseRuleDefinitionPO rule) {
         return ParseRuleDefinitionViewDTO.builder()
-                .id(rule.getId())
-                .profileId(rule.getProfileId())
+                .id(rule.getId() == null ? null : String.valueOf(rule.getId()))
+                .profileId(rule.getProfileId() == null ? null : String.valueOf(rule.getProfileId()))
                 .ruleType(rule.getRuleType())
                 .stepName(rule.getStepName())
                 .priority(rule.getPriority())
@@ -533,15 +533,15 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 .inputSchemaJson(rule.getInputSchemaJson())
                 .outputSchemaJson(rule.getOutputSchemaJson())
                 .errorPolicy(rule.getErrorPolicy())
-                .timeoutMs(rule.getTimeoutMs())
+                .timeoutMs(rule.getTimeoutMs() == null ? null : String.valueOf(rule.getTimeoutMs()))
                 .build();
     }
 
     private ParseRuleCaseViewDTO toCaseView(ParseRuleCasePO parseCase) {
         return ParseRuleCaseViewDTO.builder()
-                .id(parseCase.getId())
-                .profileId(parseCase.getProfileId())
-                .sampleFileId(parseCase.getSampleFileId())
+                .id(parseCase.getId() == null ? null : String.valueOf(parseCase.getId()))
+                .profileId(parseCase.getProfileId() == null ? null : String.valueOf(parseCase.getProfileId()))
+                .sampleFileId(parseCase.getSampleFileId() == null ? null : String.valueOf(parseCase.getSampleFileId()))
                 .sampleFileName(parseCase.getSampleFileName())
                 .expectedSheetName(parseCase.getExpectedSheetName())
                 .expectedHeaderRow(parseCase.getExpectedHeaderRow())
@@ -555,8 +555,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     private ParseRulePublishLogViewDTO toPublishLogView(ParseRulePublishLogPO publishLog) {
         return ParseRulePublishLogViewDTO.builder()
-                .id(publishLog.getId())
-                .profileId(publishLog.getProfileId())
+                .id(publishLog.getId() == null ? null : String.valueOf(publishLog.getId()))
+                .profileId(publishLog.getProfileId() == null ? null : String.valueOf(publishLog.getProfileId()))
                 .version(publishLog.getVersion())
                 .publishStatus(publishLog.getPublishStatus())
                 .publishTime(publishLog.getPublishTime())
@@ -569,20 +569,20 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     private ParseRuleTraceViewDTO toTraceView(ParseRuleTracePO tracePO) {
         return ParseRuleTraceViewDTO.builder()
-                .id(tracePO.getId())
+                .id(tracePO.getId() == null ? null : String.valueOf(tracePO.getId()))
                 .traceScope(tracePO.getTraceScope())
                 .traceType(tracePO.getTraceType())
-                .profileId(tracePO.getProfileId())
+                .profileId(tracePO.getProfileId() == null ? null : String.valueOf(tracePO.getProfileId()))
                 .profileCode(tracePO.getProfileCode())
                 .version(tracePO.getVersion())
-                .fileId(tracePO.getFileId())
-                .taskId(tracePO.getTaskId())
+                .fileId(tracePO.getFileId() == null ? null : String.valueOf(tracePO.getFileId()))
+                .taskId(tracePO.getTaskId() == null ? null : String.valueOf(tracePO.getTaskId()))
                 .stepName(tracePO.getStepName())
                 .expression(tracePO.getExpression())
                 .inputJson(tracePO.getInputJson())
                 .outputJson(tracePO.getOutputJson())
                 .success(tracePO.getSuccess())
-                .costMs(tracePO.getCostMs())
+                .costMs(tracePO.getCostMs() == null ? null : String.valueOf(tracePO.getCostMs()))
                 .errorMessage(tracePO.getErrorMessage())
                 .traceTime(tracePO.getTraceTime())
                 .build();
@@ -705,8 +705,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 issues.add("样例回归未通过，caseId=" + parseCase.getId() + ", reason=" + reason);
             }
             return ParseRuleRegressionCaseViewDTO.builder()
-                    .caseId(parseCase.getId())
-                    .sampleFileId(parseCase.getSampleFileId())
+                    .caseId(parseCase.getId() == null ? null : String.valueOf(parseCase.getId()))
+                    .sampleFileId(parseCase.getSampleFileId() == null ? null : String.valueOf(parseCase.getSampleFileId()))
                     .sampleFileName(parseCase.getSampleFileName())
                     .expectedOutputHash(parseCase.getExpectedOutputHash())
                     .actualOutputHash(actualHash)
@@ -1009,8 +1009,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                                                              Integer actualDataStartRow,
                                                              Integer actualCount) {
         return ParseRuleRegressionCaseViewDTO.builder()
-                .caseId(parseCase.getId())
-                .sampleFileId(parseCase.getSampleFileId())
+                .caseId(parseCase.getId() == null ? null : String.valueOf(parseCase.getId()))
+                .sampleFileId(parseCase.getSampleFileId() == null ? null : String.valueOf(parseCase.getSampleFileId()))
                 .sampleFileName(parseCase.getSampleFileName())
                 .expectedOutputHash(parseCase.getExpectedOutputHash())
                 .actualOutputHash(actualHash)

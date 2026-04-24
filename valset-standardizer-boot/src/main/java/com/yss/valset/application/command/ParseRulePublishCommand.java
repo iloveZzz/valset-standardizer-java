@@ -7,6 +7,12 @@ import lombok.Data;
  */
 @Data
 public class ParseRulePublishCommand {
+    /**
+     * 发布人。
+     */
     private String publisher;
+    /**
+     * 发布说明。
+     */
     private String publishComment;
 }

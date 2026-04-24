@@ -3,6 +3,7 @@ package com.yss.valset.transfer.infrastructure.plugin;
 import com.yss.valset.transfer.domain.model.ProbeResult;
 import com.yss.valset.transfer.domain.model.RecognitionContext;
 import com.yss.valset.transfer.domain.plugin.FileProbePlugin;
+import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -37,12 +38,12 @@ public class DefaultFileProbePlugin implements FileProbePlugin {
         }
         attributes.putIfAbsent("fileName", context.fileName());
         attributes.putIfAbsent("mimeType", context.mimeType());
-        attributes.putIfAbsent("sourceType", context.sourceType() == null ? null : context.sourceType().name());
+        attributes.putIfAbsent(TransferConfigKeys.SOURCE_TYPE, context.sourceType() == null ? null : context.sourceType().name());
         attributes.putIfAbsent("sender", context.sender());
         attributes.putIfAbsent("subject", context.subject());
-        attributes.putIfAbsent("mailId", context.mailId());
-        attributes.putIfAbsent("mailProtocol", context.mailProtocol());
-        attributes.putIfAbsent("mailFolder", context.mailFolder());
+        attributes.putIfAbsent(TransferConfigKeys.MAIL_ID, context.mailId());
+        attributes.putIfAbsent(TransferConfigKeys.MAIL_PROTOCOL, context.mailProtocol());
+        attributes.putIfAbsent(TransferConfigKeys.MAIL_FOLDER, context.mailFolder());
         return new ProbeResult(true, detectType(context), attributes);
     }
 

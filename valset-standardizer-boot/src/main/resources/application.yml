@@ -14,15 +14,8 @@ spring:
         idle-timeout: 600000
         max-lifetime: 1800000
   liquibase:
-    enabled: ${LIQUIBASE_ENABLED:false}
+    enabled: ${LIQUIBASE_ENABLED:true}
     change-log: ${LIQUIBASE_CHANGE_LOG:classpath:/db/changelog/db.changelog-master.xml}
-  quartz:
-    job-store-type: memory
-    auto-startup: true
-    wait-for-jobs-to-complete-on-shutdown: true
-    properties:
-      org.quartz.scheduler.instanceName: valsetStandardizerScheduler
-      org.quartz.threadPool.threadCount: 5
   profiles:
     active: nacos
   data:
@@ -33,6 +26,18 @@ spring:
       jedis:
         pool:
           enabled: true
+
+db-scheduler:
+  enabled: true
+  threads: 30
+  polling-interval: 10s
+  heartbeat-interval: 5m
+  missed-heartbeats-limit: 6
+  table-name: scheduled_tasks
+  immediate-execution-enabled: true
+  delay-startup-until-context-ready: false
+  shutdown-max-wait: 30m
+  always-persist-timestamp-in-utc: true
 
 server:
   port: 30066
@@ -74,8 +79,15 @@ logging:
 
 subject:
   match:
+    transfer:
+      crypto:
+        secret-key: ${TRANSFER_CRYPTO_SECRET_KEY:valset-standardizer-transfer-secret-v1}
+    filesys:
+      parent-id: ${FILESYS_PARENT_ID:283e6c2a0fcf4b1488db5856ad074806}
+      storage-setting-id: ${FILESYS_STORAGE_SETTING_ID:9a4350d87d4b4085a5fa1a4e8038e09d}
+      chunk-size: ${FILESYS_CHUNK_SIZE:102400000}
     output-dir: output
-    upload-dir: uploads
+    upload-dir: ${user.home}/.tmp/valset-standardizer/uploads
     workflow:
       skip-excel-style-parsing: false
       enable-match-process: true

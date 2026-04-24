@@ -12,12 +12,14 @@ import org.mapstruct.Mapping;
 public interface TransferRuleMapper extends TransferMapstructSupport {
 
     @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(ruleDefinition.enabled()))")
+    @Mapping(target = "ruleId", expression = "java(ruleDefinition.ruleId())")
     @Mapping(target = "effectiveFrom", expression = "java(toLocalDateTime(ruleDefinition.effectiveFrom()))")
     @Mapping(target = "effectiveTo", expression = "java(toLocalDateTime(ruleDefinition.effectiveTo()))")
     @Mapping(target = "ruleMetaJson", source = "ruleMeta")
     TransferRulePO toPO(RuleDefinition ruleDefinition);
 
     @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(po.getEnabled()))")
+    @Mapping(target = "ruleId", expression = "java(stringValue(po.getRuleId()))")
     @Mapping(target = "effectiveFrom", expression = "java(toInstant(po.getEffectiveFrom()))")
     @Mapping(target = "effectiveTo", expression = "java(toInstant(po.getEffectiveTo()))")
     @Mapping(target = "ruleMeta", source = "ruleMetaJson")

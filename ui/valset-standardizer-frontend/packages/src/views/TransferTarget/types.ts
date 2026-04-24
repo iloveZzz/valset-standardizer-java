@@ -1,0 +1,62 @@
+import type { YTablePagination } from "@yss-ui/components";
+
+export interface TargetPage {
+  loading: boolean;
+  rows: any[];
+  tableData: any[];
+  total: number;
+  pageSize: number;
+  pagination: YTablePagination;
+  query: {
+    targetType: string;
+    targetCode: string;
+    enabled: string;
+    limit: number;
+  };
+  targetTypeOptions: Array<{ label: string; value: string }>;
+  templateNamePreview: string;
+  templateDescription: string;
+  templateVersion: string;
+  templateMode: 0 | 1 | 2;
+  templateReadPretty: boolean;
+  templateSchema: any | null;
+  templateInitialValues: Record<string, any>;
+  templateValues: Record<string, any>;
+  templateScope: Record<string, any>;
+  templateLoading: boolean;
+  enabledUpdatingIds: Record<number, boolean>;
+  templateDetailOptions: Record<string, any>;
+  templateGridDefaults: Record<string, any>;
+  setTemplateFormRef: (instance: any) => void;
+  isEnabledUpdating: (targetId?: number) => boolean;
+  toggleEnabled: (row: any, checked: boolean) => Promise<void>;
+  enabledCount: number;
+  templateBoundCount: number;
+  targetTypeCount: number;
+  formVisible: boolean;
+  formMode: "create" | "edit";
+  formState: {
+    targetId?: number;
+    targetCode: string;
+    targetName: string;
+    targetType: string;
+    enabled: boolean;
+    targetPathTemplate: string;
+    connectionConfigText: string;
+    targetMetaText: string;
+  };
+  detailVisible: boolean;
+  selectedRow: any | null;
+  formSubmitting: boolean;
+  openCreateDialog: () => void;
+  openEditDialog: (row: any) => void;
+  openDetailDrawer: (row: any) => void;
+  confirmDelete: (row: any) => void;
+  runQuery: () => void;
+  resetQuery: () => void;
+  submitForm: () => Promise<void> | void;
+  closeForm: () => void;
+  closeDetail: () => void;
+  formatEnabled: (value: boolean | undefined) => string;
+  handlePageChange: (params: { current: number; pageSize: number }) => void;
+}

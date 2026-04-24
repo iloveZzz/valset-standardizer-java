@@ -15,7 +15,7 @@ public class TaskViewDTO {
     /**
      * 唯一的任务标识符。
      */
-    private Long taskId;
+    private String taskId;
     /**
      * 任务类型名称。
      */
@@ -59,15 +59,15 @@ public class TaskViewDTO {
     /**
      * 提取任务的总行数。
      */
-    private Long rowCount;
+    private String rowCount;
     /**
      * 提取任务的源文件大小，单位字节。
      */
-    private Long fileSizeBytes;
+    private String fileSizeBytes;
     /**
      * 提取任务耗时，单位毫秒。
      */
-    private Long durationMs;
+    private String durationMs;
     /**
      * 任务开始时间。
      */
@@ -75,13 +75,13 @@ public class TaskViewDTO {
     /**
      * 文件解析耗时，单位毫秒。
      */
-    private Long parseTaskTimeMs;
+    private String parseTaskTimeMs;
     /**
      * 结构标准化耗时，单位毫秒。
      */
-    private Long standardizeTimeMs;
+    private String standardizeTimeMs;
     /**
      * 匹配标准科目耗时，单位毫秒。
      */
-    private Long matchStandardSubjectTimeMs;
+    private String matchStandardSubjectTimeMs;
 }

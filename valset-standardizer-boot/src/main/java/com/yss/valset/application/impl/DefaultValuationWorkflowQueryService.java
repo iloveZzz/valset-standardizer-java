@@ -75,7 +75,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
                 .toList();
         List<RawValuationSheetDTO> sheetViews = buildSheetViews(fileId);
         return RawValuationDataViewDTO.builder()
-                .fileId(fileId)
+                .fileId(fileId == null ? null : String.valueOf(fileId))
                 .totalRows(rows.size())
                 .sheets(sheetViews)
                 .rows(rowViews)
@@ -89,7 +89,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
             throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的 STG 外部估值数据");
         }
         return StgExternalValuationViewDTO.builder()
-                .fileId(fileId)
+                .fileId(fileId == null ? null : String.valueOf(fileId))
                 .workbookPath(stgValuationData.getWorkbookPath())
                 .sheetName(stgValuationData.getSheetName())
                 .headerRowNumber(stgValuationData.getHeaderRowNumber())
@@ -114,7 +114,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
         }
         ParsedValuationData viewData = standardizedValuationData == null ? stgValuationData : standardizedValuationData;
         return DwdExternalValuationViewDTO.builder()
-                .fileId(fileId)
+                .fileId(fileId == null ? null : String.valueOf(fileId))
                 .workbookPath(stgValuationData == null ? null : stgValuationData.getWorkbookPath())
                 .sheetName(stgValuationData == null ? null : stgValuationData.getSheetName())
                 .headerRowNumber(stgValuationData == null ? null : stgValuationData.getHeaderRowNumber())
@@ -137,7 +137,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
             throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的匹配结果");
         }
         return MatchResultViewDTO.builder()
-                .fileId(fileId)
+                .fileId(fileId == null ? null : String.valueOf(fileId))
                 .matchedCount(results.size())
                 .results(results)
                 .build();

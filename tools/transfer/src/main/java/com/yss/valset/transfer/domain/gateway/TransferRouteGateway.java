@@ -10,9 +10,22 @@ import java.util.Optional;
  */
 public interface TransferRouteGateway {
 
-    Optional<TransferRoute> findById(Long routeId);
+    Optional<TransferRoute> findById(String routeId);
 
     TransferRoute save(TransferRoute transferRoute);
 
-    List<TransferRoute> listByTransferId(Long transferId);
+    long countBySourceId(String sourceId);
+
+    long countByTargetCode(String targetCode);
+
+    List<TransferRoute> listRoutes(String sourceId,
+                                   String sourceType,
+                                   String sourceCode,
+                                   String ruleId,
+                                   String targetType,
+                                   String targetCode,
+                                   String routeStatus,
+                                   Integer limit);
+
+    void deleteById(String routeId);
 }

@@ -11,8 +11,20 @@ import java.util.List;
 @Data
 @Builder
 public class RawValuationDataViewDTO {
-    private Long fileId;
+    /**
+     * 文件主键。
+     */
+    private String fileId;
+    /**
+     * 原始行总数。
+     */
     private Integer totalRows;
+    /**
+     * 原始 sheet 列表。
+     */
     private List<RawValuationSheetDTO> sheets;
+    /**
+     * 原始行明细。
+     */
     private List<RawValuationRowDTO> rows;
 }

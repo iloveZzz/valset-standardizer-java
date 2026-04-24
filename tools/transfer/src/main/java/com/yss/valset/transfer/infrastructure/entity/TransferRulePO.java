@@ -19,7 +19,7 @@ public class TransferRulePO {
      * 规则主键。
      */
     @TableId(value = "rule_id", type = IdType.ASSIGN_ID)
-    private Long ruleId;
+    private String ruleId;
 
     /**
      * 规则编码。

@@ -1,6 +1,7 @@
 --liquibase formatted sql
 
 --changeset codex:20260419-02-mysql-qlexpress-rule-engine-init dbms:mysql
+--validCheckSum 1:047036eb20d7be0cf42e5886f6ef0e76
 INSERT INTO t_file_parse_profile (
     id, profile_code, profile_name, version, file_scene, file_type_name, source_channel, status, priority,
     match_expr, header_expr, row_classify_expr, field_map_expr, transform_expr, required_headers_json, subject_code_pattern, trace_enabled, timeout_ms,

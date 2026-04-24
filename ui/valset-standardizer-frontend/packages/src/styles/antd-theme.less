@@ -1,0 +1,222 @@
+@charset "UTF-8";
+// Ant Design 5.0 设计规范主题配置
+// 参考：https://ant.design/docs/spec/colors-cn
+
+// ==================== 色彩系统 ====================
+// 品牌色 - Ant Design 5.0 主色调
+// 主色改为读取 CSS 变量，便于运行时动态切换
+@primary-color-var: ~"var(--primary-color, #3177ff)";
+@ant-primary-1: ~"var(--primary-1, rgba(22, 119, 255, 0.1))";
+@ant-primary-2: #d6e4ff;
+@ant-primary-3: #adc6ff;
+@ant-primary-4: #85a5ff;
+@ant-primary-5: #597ef7;
+@ant-primary-6: @primary-color-var; // 主品牌色（跟随 CSS 变量）
+@ant-primary-7: ~"var(--primary-7, #0958d9)";
+@ant-primary-8: #003eb3;
+@ant-primary-9: #002c8c;
+@ant-primary-10: #001d66;
+
+// 功能色
+@ant-success-1: #f6ffed;
+@ant-success-2: #d9f7be;
+@ant-success-3: #b7eb8f;
+@ant-success-4: #95de64;
+@ant-success-5: #73d13d;
+@ant-success-6: #52c41a; // 成功色
+@ant-success-7: #389e0d;
+@ant-success-8: #237804;
+@ant-success-9: #135200;
+@ant-success-10: #092b00;
+
+@ant-warning-1: #fffbe6;
+@ant-warning-2: #fff1b8;
+@ant-warning-3: #ffe58f;
+@ant-warning-4: #ffd666;
+@ant-warning-5: #ffc53d;
+@ant-warning-6: #faad14; // 警告色
+@ant-warning-7: #d48806;
+@ant-warning-8: #ad6800;
+@ant-warning-9: #874d00;
+@ant-warning-10: #613400;
+
+@ant-error-1: #fff2f0;
+@ant-error-2: #ffccc7;
+@ant-error-3: #ffa39e;
+@ant-error-4: #ff7875;
+@ant-error-5: #ff4d4f;
+@ant-error-6: #f5222d; // 错误色
+@ant-error-7: #cf1322;
+@ant-error-8: #a8071a;
+@ant-error-9: #820014;
+@ant-error-10: #5c0011;
+
+@ant-info-1: #e6f4ff;
+@ant-info-2: #bae0ff;
+@ant-info-3: #91caff;
+@ant-info-4: #69b1ff;
+@ant-info-5: #4096ff;
+@ant-info-6: #3371ff; // 信息色
+@ant-info-7: #0958d9;
+@ant-info-8: #003eb3;
+@ant-info-9: #002c8c;
+@ant-info-10: #001d66;
+
+// ==================== 中性色 ====================
+@ant-gray-1: #ffffff;
+@ant-gray-2: #f0f2f5;
+@ant-gray-3: #f5f5f5;
+@ant-gray-4: #f0f0f0;
+@ant-gray-5: #d9d9d9;
+@ant-gray-6: #bfbfbf;
+@ant-gray-7: #8c8c8c;
+@ant-gray-8: #595959;
+@ant-gray-9: #434343;
+@ant-gray-10: #262626;
+@ant-gray-11: #1f1f1f;
+@ant-gray-12: #141414;
+@ant-gray-13: #000000;
+
+// ==================== 语义化颜色映射 ====================
+// 主题色
+@primary-color: @ant-primary-6;
+@primary-color-hover: @ant-primary-5;
+@primary-color-active: @ant-primary-7;
+// 注意：@ant-primary-6 现在来源于 CSS 变量，不能再用 less 的 fade()
+// 使用与默认主色 #3371ff 等效的透明色作为兜底
+@primary-color-outline: rgba(51, 113, 255, 0.2);
+
+// 功能色
+@success-color: @ant-success-6;
+@success-color-hover: @ant-success-5;
+@success-color-active: @ant-success-7;
+@success-color-outline: rgba(82, 196, 26, 0.2);
+
+@warning-color: @ant-warning-6;
+@warning-color-hover: @ant-warning-5;
+@warning-color-active: @ant-warning-7;
+@warning-color-outline: rgba(250, 173, 20, 0.2);
+
+@error-color: @ant-error-6;
+@error-color-hover: @ant-error-5;
+@error-color-active: @ant-error-7;
+@error-color-outline: rgba(245, 34, 45, 0.2);
+
+@info-color: @ant-info-6;
+@info-color-hover: @ant-info-5;
+@info-color-active: @ant-info-7;
+@info-color-outline: rgba(51, 113, 255, 0.2);
+
+// ==================== 文本颜色 ====================
+@text-color: ~"var(--text-color, rgba(0, 0, 0, 0.88))"; // 主要文本
+@text-color-primary: ~"var(--text-color, rgba(0, 0, 0, 0.88))"; // 主要文本
+@text-color-secondary: ~"var(--text-color-secondary, rgba(0, 0, 0, 0.65))"; // 次要文本
+@text-color-tertiary: @ant-gray-7; // 第三级文本
+@text-color-quaternary: @ant-gray-6; // 第四级文本
+@text-color-disabled: @ant-gray-5; // 禁用文本
+@text-color-inverse: @ant-gray-1; // 反色文本
+
+// ==================== 背景颜色 ====================
+@background-color-base: ~"var(--bg-color, #f0f2f5)"; // 基础背景
+@background-color-light: ~"var(--bg-color, #f0f2f5)"; // 浅色背景
+@background-color-container: ~"var(--bg-color-container, #ffffff)"; // 容器背景
+@background-color-elevated: ~"var(--bg-color-container, #ffffff)"; // 悬浮背景
+@background-color-spotlight: @ant-gray-3; // 高亮背景
+
+// ==================== 边框颜色 ====================
+@border-color-base: ~"var(--border-color, #d9d9d9)"; // 基础边框
+@border-color-split: ~"var(--border-color-split, #f0f0f0)"; // 分割线
+@border-color-inverse: @ant-gray-1; // 反色边框
+
+// ==================== 阴影 ====================
+@shadow-1-up:
+  0 -6px 16px 0 rgba(0, 0, 0, 0.08),
+  0 -3px 6px -4px rgba(0, 0, 0, 0.12),
+  0 -9px 28px 8px rgba(0, 0, 0, 0.05);
+@shadow-1-down:
+  0 6px 16px 0 rgba(0, 0, 0, 0.08),
+  0 3px 6px -4px rgba(0, 0, 0, 0.12),
+  0 9px 28px 8px rgba(0, 0, 0, 0.05);
+@shadow-1-left:
+  -6px 0 16px 0 rgba(0, 0, 0, 0.08),
+  -3px 0 6px -4px rgba(0, 0, 0, 0.12),
+  -9px 0 28px 8px rgba(0, 0, 0, 0.05);
+@shadow-1-right:
+  6px 0 16px 0 rgba(0, 0, 0, 0.08),
+  3px 0 6px -4px rgba(0, 0, 0, 0.12),
+  9px 0 28px 8px rgba(0, 0, 0, 0.05);
+@shadow-2:
+  0 6px 16px 0 rgba(0, 0, 0, 0.08),
+  0 3px 6px -4px rgba(0, 0, 0, 0.12),
+  0 9px 28px 8px rgba(0, 0, 0, 0.05);
+
+// ==================== 圆角 ====================
+@border-radius-xs: 2px;
+@border-radius-sm: 4px;
+@border-radius-base: 4px;
+@border-radius-lg: 8px;
+@border-radius-xl: 12px;
+@border-radius-xxl: 16px;
+
+// ==================== 字体 ====================
+@font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+  "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+@font-family-code: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+
+@font-size-xs: 12px;
+@font-size-sm: 14px;
+@font-size-base: 14px;
+@font-size-lg: 16px;
+@font-size-xl: 20px;
+@font-size-xxl: 24px;
+
+@line-height-xs: 1.5;
+@line-height-sm: 1.5714285714285714;
+@line-height-base: 1.5714285714285714;
+@line-height-lg: 1.5;
+@line-height-xl: 1.2;
+@line-height-xxl: 1.1666666666666667;
+
+@font-weight-normal: 400;
+@font-weight-medium: 500;
+@font-weight-semibold: 600;
+@font-weight-bold: 700;
+
+// ==================== 间距 ====================
+@space-xs: 4px;
+@space-sm: 8px;
+@space-base: 12px;
+@space-lg: 16px;
+@space-xl: 20px;
+@space-xxl: 24px;
+@space-xxxl: 32px;
+
+// ==================== 尺寸 ====================
+@size-xs: 16px;
+@size-sm: 20px;
+@size-base: 24px;
+@size-lg: 32px;
+@size-xl: 40px;
+@size-xxl: 48px;
+
+// ==================== 控件高度 ====================
+@control-height-xs: 24px;
+@control-height-sm: 32px;
+@control-height-base: 32px;
+@control-height-lg: 40px;
+@control-height-xl: 48px;
+
+// ==================== 动画 ====================
+@motion-duration-fast: 0.1s;
+@motion-duration-mid: 0.2s;
+@motion-duration-slow: 0.3s;
+
+@motion-ease-out: cubic-bezier(0.215, 0.61, 0.355, 1);
+@motion-ease-in: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+@motion-ease-in-out: cubic-bezier(0.645, 0.045, 0.355, 1);
+@motion-ease-out-back: cubic-bezier(0.12, 0.4, 0.29, 1.46);
+@motion-ease-in-back: cubic-bezier(0.71, -0.46, 0.88, 0.6);
+@motion-ease-in-out-back: cubic-bezier(0.71, -0.46, 0.29, 1.46);
+@motion-ease-out-circ: cubic-bezier(0.08, 0.82, 0.17, 1);
+@motion-ease-in-circ: cubic-bezier(0.6, 0.04, 0.98, 0.34);
+@motion-ease-in-out-circ: cubic-bezier(0.78, 0.14, 0.15, 0.86);

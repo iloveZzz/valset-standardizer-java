@@ -10,8 +10,12 @@
     </option>
     <option name="enabledProfiles">
       <list>
-        <option value="internal-only" />
         <option value="nacos" />
+      </list>
+    </option>
+    <option name="disabledProfiles">
+      <list>
+        <option value="internal-only" />
       </list>
     </option>
   </component>

@@ -16,10 +16,14 @@ import java.util.Map;
 public class TransferJsonMapper {
 
     private final ObjectMapper objectMapper;
+    private final TransferSecretCodec transferSecretCodec;
 
     public String toJson(Object value) {
         if (value == null) {
             return null;
+        }
+        if (value instanceof Map<?, ?> map) {
+            value = transferSecretCodec.encryptMap(castMap(map));
         }
         if (value instanceof CharSequence charSequence) {
             return charSequence.toString();
@@ -36,9 +40,19 @@ public class TransferJsonMapper {
             return null;
         }
         try {
-            return objectMapper.readValue(value, new TypeReference<Map<String, Object>>() {});
+            Map<String, Object> map = objectMapper.readValue(value, new TypeReference<Map<String, Object>>() {});
+            return transferSecretCodec.decryptMap(map);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("JSON 反序列化失败", e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> castMap(Map<?, ?> source) {
+        Map<String, Object> target = new java.util.LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : source.entrySet()) {
+            target.put(String.valueOf(entry.getKey()), entry.getValue());
+        }
+        return target;
     }
 }

@@ -1,0 +1,264 @@
+.transfer-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.workspace-header,
+.workspace-body,
+.overview-metric-panel,
+.overview-trend-panel,
+.overview-table-panel,
+.workspace-preview-card {
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
+}
+
+.workspace-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.9)),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.12), transparent 35%);
+  overflow: hidden;
+}
+
+.workspace-header-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workspace-header-copy h1 {
+  margin: 6px 0 8px;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+
+.workspace-header-copy p,
+.workspace-kicker,
+.section-title p {
+  color: rgba(15, 23, 42, 0.62);
+}
+
+.workspace-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workspace-stat-row {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workspace-stat-card {
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.96));
+}
+
+.workspace-stat-label {
+  color: rgba(15, 23, 42, 0.52);
+  font-size: 12px;
+}
+
+.workspace-stat-value {
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.workspace-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.workspace-body > .workspace-panel--table {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.workspace-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.overview-metric-grid,
+.source-card-grid,
+.template-summary-grid,
+.retry-detail-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-section--overview {
+  gap: 18px;
+}
+
+.overview-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.overview-metric-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.06), rgba(22, 119, 255, 0.02));
+}
+
+.overview-metric-label {
+  color: rgba(15, 23, 42, 0.52);
+  font-size: 12px;
+}
+
+.overview-metric-value {
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.overview-metric-desc {
+  margin-top: 8px;
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.trend-window-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trend-window-button {
+  min-width: 92px;
+}
+
+.trend-chart-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.98));
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.trend-chart-shell--echarts {
+  padding: 12px;
+}
+
+.trend-chart-canvas {
+  display: block;
+  width: 100%;
+  height: 280px;
+}
+
+.trend-chart-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 12px;
+}
+
+.overview-recent-table {
+  min-width: 0;
+}
+
+.section-title,
+.section-title-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-title-inline p {
+  margin: 4px 0 0;
+}
+
+.workspace-preview-card {
+  padding: 8px;
+}
+
+.workspace-panel--table .ant-table-wrapper {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.workspace-panel--table .ant-table-wrapper > * {
+  width: 100%;
+  min-height: 0;
+}
+
+.workspace-panel--table .ant-table,
+.workspace-panel--table .ant-table-container {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .transfer-workspace {
+    --workspace-header-height: auto;
+  }
+
+  .workspace-header {
+    flex: 0 0 auto;
+    height: auto;
+  }
+
+  .workspace-stat-row,
+  .overview-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trend-chart {
+    height: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .workspace-stat-row,
+  .overview-metric-grid,
+  .source-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trend-chart-footer {
+    flex-direction: column;
+  }
+}
+
+.snapshot-code {
+  margin: 0;
+  max-height: 520px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.6;
+}

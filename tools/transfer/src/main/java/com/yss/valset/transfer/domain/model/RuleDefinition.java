@@ -7,7 +7,7 @@ import java.util.Map;
  * 规则定义。
  */
 public record RuleDefinition(
-        Long ruleId,
+        String ruleId,
         String ruleCode,
         String ruleName,
         String ruleVersion,

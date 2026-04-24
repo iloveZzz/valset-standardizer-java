@@ -37,8 +37,12 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 返回重点字段：
 
 - `fileId`: 后续分析、匹配、查询都使用这个标识，来源于 `t_subject_match_file_info`
-- `workbookPath`: 文件落盘路径
+- `workbookPath`: 仅用于本次抽取的临时落盘路径，抽取完成后会清理
 - `fileFingerprint`: 文件内容指纹，同一份文件再次上传会复用该指纹对应的成功任务
+- `filesysTaskId`: `yss-filesys-feignsdk` 创建的上传任务标识
+- `filesysFileId`: `yss-filesys-feignsdk` 返回的文件标识
+- `filesysObjectKey`: `yss-filesys-feignsdk` 返回的对象键
+- `filesysInstantUpload`: 是否命中 instant upload
 - `extractTask`: 抽取任务结果
 - `reusedExistingExtractTask`: 是否复用了已有的抽取任务
 - `extractTask.taskStage`: 任务阶段，固定为 `EXTRACT`
@@ -48,6 +52,7 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 说明：
 
 - 现在也可以直接调用 `POST /api/files/upload` 完成同样的文件接入和 ODS 提取流程。
+- filesys 上传依赖 `subject.match.filesys.parent-id` 与 `subject.match.filesys.storage-setting-id`，如果未配置会退回为仅生成本地临时抽取副本。
 
 ## 2. 生成 DWD 外部估值标准数据
 

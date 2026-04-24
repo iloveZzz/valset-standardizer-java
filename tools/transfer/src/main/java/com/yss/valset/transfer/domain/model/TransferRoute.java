@@ -6,9 +6,11 @@ import java.util.Map;
  * 文件路由结果。
  */
 public record TransferRoute(
-        Long routeId,
-        Long transferId,
-        Long ruleId,
+        String routeId,
+        String sourceId,
+        SourceType sourceType,
+        String sourceCode,
+        String ruleId,
         TargetType targetType,
         String targetCode,
         String targetPath,

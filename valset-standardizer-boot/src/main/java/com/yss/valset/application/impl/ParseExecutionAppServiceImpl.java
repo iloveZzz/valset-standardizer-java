@@ -3,7 +3,6 @@ package com.yss.valset.application.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.port.ParseExecutionUseCase;
-import com.yss.valset.domain.exporter.ResultExporter;
 import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
 import com.yss.valset.domain.gateway.DwdJjhzgzbGateway;
 import com.yss.valset.domain.gateway.TrIndexGateway;
@@ -24,14 +23,10 @@ import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -50,9 +45,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     private final TrIndexGateway trIndexGateway;
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final ExternalValuationStandardizationService standardizationService;
-    private final ResultExporter resultExporter;
     private final ObjectMapper objectMapper;
-    private final String outputRoot;
     private final Tracer tracer;
 
     public ParseExecutionAppServiceImpl(
@@ -64,10 +57,8 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             TrIndexGateway trIndexGateway,
             ValsetFileInfoGateway subjectMatchFileInfoGateway,
             ExternalValuationStandardizationService standardizationService,
-            ResultExporter resultExporter,
             ObjectMapper objectMapper,
-            Tracer tracer,
-            @Value("${subject.match.output-dir:output}") String outputRoot
+            Tracer tracer
     ) {
         this.taskGateway = taskGateway;
         this.parserProvider = parserProvider;
@@ -77,10 +68,8 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
         this.trIndexGateway = trIndexGateway;
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.standardizationService = standardizationService;
-        this.resultExporter = resultExporter;
         this.objectMapper = objectMapper;
         this.tracer = tracer;
-        this.outputRoot = outputRoot;
     }
 
     /**
@@ -158,25 +147,21 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
                     });
                     long persistFinishedAt = System.currentTimeMillis();
 
-                    // Step 6: 导出工件并更新任务状态
-                    traceSpan("workflow.parse.export_artifacts", () ->
-                            resultExporter.exportParsedValuationData(taskId, parsedValuationDataFinal));
-                    long exportFinishedAt = System.currentTimeMillis();
+                    // Step 6: 直接更新任务状态，不再落盘标准化工件目录
                     long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
                     taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
-                    String resultPayload = buildResultPayload(taskId, parsedValuationDataFinal);
+                    String resultPayload = buildResultPayload(parsedValuationDataFinal);
                     taskGateway.markSuccess(taskId, resultPayload);
                     log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
                             taskId,
                             parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
                             parsedValuationDataFinal.getMetrics() == null ? 0 : parsedValuationDataFinal.getMetrics().size());
-                    log.info("解析流程耗时统计，taskId={}, totalMs={}, parseMs={}, standardizeMs={}, persistMs={}, exportMs={}",
+                    log.info("解析流程耗时统计，taskId={}, totalMs={}, parseMs={}, standardizeMs={}, persistMs={}",
                             taskId,
                             System.currentTimeMillis() - startedAt,
                             parseFinishedAt - parseStartedAt,
                             standardizeFinishedAt - standardizeStartedAt,
-                            persistFinishedAt - standardizeFinishedAt,
-                            exportFinishedAt - persistFinishedAt);
+                            persistFinishedAt - standardizeFinishedAt);
                 } catch (Exception e) {
                     rootSpan.error(e);
                     log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
@@ -245,7 +230,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     /**
      * 为解析任务构建结构化结果有效负载。
      */
-    private String buildResultPayload(Long taskId, ParsedValuationData parsedValuationData) {
+    private String buildResultPayload(ParsedValuationData parsedValuationData) {
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("workbookPath", parsedValuationData.getWorkbookPath());
@@ -253,26 +238,9 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             payload.put("fileNameOriginal", parsedValuationData.getFileNameOriginal());
             payload.put("subjectCount", parsedValuationData.getSubjects() == null ? 0 : parsedValuationData.getSubjects().size());
             payload.put("metricCount", parsedValuationData.getMetrics() == null ? 0 : parsedValuationData.getMetrics().size());
-            payload.put("outputDir", resolveTaskOutputDirectory(taskId).toString());
-            payload.put("artifacts", List.of(
-                    "parsed.json",
-                    "subjects.csv",
-                    "subject_relations.csv",
-                    "subject_tree.json",
-                    "metrics.csv",
-                    "summary.json",
-                    "parsed.duckdb"
-            ));
             return objectMapper.writeValueAsString(payload);
         } catch (Exception exception) {
             return "Parsed workbook: " + parsedValuationData.getWorkbookPath();
         }
-    }
-
-    /**
-     * 解析任务输出目录。
-     */
-    private Path resolveTaskOutputDirectory(Long taskId) {
-        return Path.of(outputRoot).toAbsolutePath().resolve("task-" + taskId);
     }
 }

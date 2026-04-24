@@ -10,7 +10,20 @@ import lombok.Data;
 @Builder
 public class TransferTargetMutationResponse {
 
+    /**
+     * 操作类型。
+     */
     private String operation;
+    /**
+     * 提示消息。
+     */
     private String message;
+    /**
+     * 关联的表单模板名。
+     */
+    private String formTemplateName;
+    /**
+     * 投递目标详情。
+     */
     private TransferTargetViewDTO target;
 }

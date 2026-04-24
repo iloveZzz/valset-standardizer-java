@@ -1,0 +1,6 @@
+{
+  "name": "yss-fs-frontend",
+  "activeRule": "/",
+  "entry": "http://localhost:8082",
+  "container": "#app"
+}

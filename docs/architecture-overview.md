@@ -13,7 +13,7 @@
 5. 将外部科目与内部标准科目进行匹配
 6. 按 `fileId` 回查各阶段结果
 
-这个工程更适合被理解为“模块化单体 + Quartz 任务编排 + 分层数据落地”的组合，而不是微服务化架构。
+这个工程更适合被理解为“模块化单体 + 轻量任务编排 + 分层数据落地”的组合，而不是微服务化架构。
 
 ## 2. 模块边界
 
@@ -48,7 +48,7 @@
 - `knowledge`：标准科目、历史映射、评估样本等知识加载
 - `extract`：原始数据抽取、标准化辅助、匹配引擎
 - `analysis`：基于 ODS 原始行数据的结构化解析
-- `batch`：Quartz 调度、任务路由、执行器分派
+- `batch`：任务调度、任务路由、执行器分派
 
 ### 2.5 `boot`
 
@@ -64,7 +64,7 @@ flowchart LR
     C --> A["应用编排层<br/>DefaultValuationWorkflowAppService"]
     A --> F["文件主数据与接入日志"]
     A --> T["任务服务<br/>TaskAppServiceImpl / TaskReuseService"]
-    T --> Q["Quartz 调度<br/>DispatchJob / DefaultTaskDispatcher"]
+    T --> Q["db-scheduler 调度<br/>DefaultTaskDispatcher"]
     Q --> E1["原始抽取执行器<br/>ExtractDataExecutionAppServiceImpl"]
     Q --> E2["解析执行器<br/>ParseExecutionAppServiceImpl"]
     Q --> E3["匹配执行器<br/>MatchExecutionAppServiceImpl"]
@@ -91,7 +91,7 @@ flowchart LR
 ### 4.2 原始抽取
 
 1. 为文件创建 `EXTRACT_DATA` 任务。
-2. Quartz 触发 `DispatchJob`。
+2. 调度器触发任务分发。
 3. `DefaultTaskDispatcher` 找到 `ExtractDataTaskExecutor`。
 4. `ExtractDataExecutionAppServiceImpl` 按行写入 `t_ods_valuation_filedata`。
 5. 同时保存 sheet 样式等原始辅助信息。
@@ -166,7 +166,7 @@ flowchart LR
 
 - `TaskAppServiceImpl` 创建任务并立即触发
 - `TaskReuseService` 根据 `businessKey` 和 `forceRebuild` 决定是否复用成功任务
-- `QuartzSchedulerService` 只负责触发，不承载业务逻辑
+- 调度服务只负责触发，不承载业务逻辑
 - `DefaultTaskDispatcher` 按 `TaskType` 路由到执行器
 
 ## 6. 数据分层
@@ -352,4 +352,3 @@ flowchart LR
 - 解析、标准化、匹配、评估都已具备工程入口。
 - 现在更适合继续做规则沉淀、文件治理、任务治理和回放能力。
 - 从架构上看，继续保持“模块化单体 + 批处理编排”的方向是合理的。
-

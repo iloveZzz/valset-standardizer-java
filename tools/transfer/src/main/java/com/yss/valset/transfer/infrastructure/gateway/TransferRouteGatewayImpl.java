@@ -25,8 +25,8 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
     private final TransferRouteMapper transferRouteMapper;
 
     @Override
-    public Optional<TransferRoute> findById(Long routeId) {
-        return Optional.ofNullable(transferRouteRepository.selectById(routeId)).map(this::toDomain);
+    public Optional<TransferRoute> findById(String routeId) {
+        return Optional.ofNullable(transferRouteRepository.selectById(parseLong(routeId))).map(this::toDomain);
     }
 
     @Override
@@ -41,15 +41,65 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
     }
 
     @Override
-    public List<TransferRoute> listByTransferId(Long transferId) {
-        return transferRouteRepository.selectList(
+    public long countBySourceId(String sourceId) {
+        Long id = parseLong(sourceId);
+        if (id == null) {
+            return 0L;
+        }
+        return transferRouteRepository.selectCount(
+                Wrappers.lambdaQuery(TransferRoutePO.class)
+                        .eq(TransferRoutePO::getSourceId, id)
+        );
+    }
+
+    @Override
+    public long countByTargetCode(String targetCode) {
+        if (targetCode == null || targetCode.isBlank()) {
+            return 0L;
+        }
+        return transferRouteRepository.selectCount(
+                Wrappers.lambdaQuery(TransferRoutePO.class)
+                        .eq(TransferRoutePO::getTargetCode, targetCode)
+        );
+    }
+
+    @Override
+    public List<TransferRoute> listRoutes(String sourceId,
+                                          String sourceType,
+                                          String sourceCode,
+                                          String ruleId,
+                                          String targetType,
+                                          String targetCode,
+                                          String routeStatus,
+                                          Integer limit) {
+        Long sourceIdValue = parseLong(sourceId);
+        Long ruleIdValue = parseLong(ruleId);
+        List<TransferRoute> routes = transferRouteRepository.selectList(
                         Wrappers.lambdaQuery(TransferRoutePO.class)
-                                .eq(TransferRoutePO::getTransferId, transferId)
-                                .orderByAsc(TransferRoutePO::getRouteId)
+                                .eq(sourceIdValue != null, TransferRoutePO::getSourceId, sourceIdValue)
+                                .eq(sourceType != null && !sourceType.isBlank(), TransferRoutePO::getSourceType, sourceType)
+                                .eq(sourceCode != null && !sourceCode.isBlank(), TransferRoutePO::getSourceCode, sourceCode)
+                                .eq(ruleIdValue != null, TransferRoutePO::getRuleId, ruleIdValue)
+                                .eq(targetType != null && !targetType.isBlank(), TransferRoutePO::getTargetType, targetType)
+                                .eq(targetCode != null && !targetCode.isBlank(), TransferRoutePO::getTargetCode, targetCode)
+                                .eq(routeStatus != null && !routeStatus.isBlank(), TransferRoutePO::getRouteStatus, routeStatus)
+                                .orderByDesc(TransferRoutePO::getRouteId)
                 )
                 .stream()
                 .map(this::toDomain)
                 .toList();
+        if (limit == null || limit <= 0 || routes.size() <= limit) {
+            return routes;
+        }
+        return routes.subList(0, limit);
+    }
+
+    @Override
+    public void deleteById(String routeId) {
+        Long id = parseLong(routeId);
+        if (id != null) {
+            transferRouteRepository.deleteById(id);
+        }
     }
 
     private TransferRoutePO toPO(TransferRoute transferRoute) {
@@ -58,5 +108,12 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
 
     private TransferRoute toDomain(TransferRoutePO po) {
         return transferRouteMapper.toDomain(po);
+    }
+
+    private Long parseLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Long.valueOf(value);
     }
 }

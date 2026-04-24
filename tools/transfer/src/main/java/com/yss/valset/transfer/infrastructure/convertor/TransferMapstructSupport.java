@@ -56,6 +56,21 @@ public interface TransferMapstructSupport {
         return value == null ? null : String.valueOf(value);
     }
 
+    default String stringValue(String value) {
+        return value;
+    }
+
+    default Long longValue(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Long.valueOf(value);
+    }
+
+    default String stringValue(Long value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
     default Map<String, Object> safeMap(Map<String, Object> source) {
         return source == null ? new LinkedHashMap<>() : new LinkedHashMap<>(source);
     }

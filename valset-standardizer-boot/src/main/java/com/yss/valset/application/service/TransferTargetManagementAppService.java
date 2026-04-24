@@ -13,9 +13,9 @@ public interface TransferTargetManagementAppService {
 
     List<TransferTargetViewDTO> listTargets(String targetType, String targetCode, Boolean enabled, Integer limit);
 
-    TransferTargetViewDTO getTarget(Long targetId);
+    TransferTargetViewDTO getTarget(String targetId);
 
     TransferTargetMutationResponse upsertTarget(TransferTargetUpsertCommand command);
 
-    TransferTargetMutationResponse deleteTarget(Long targetId);
+    TransferTargetMutationResponse deleteTarget(String targetId);
 }

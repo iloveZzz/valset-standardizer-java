@@ -19,19 +19,19 @@ public class TransferDeliveryRecordPO {
      * 投递记录主键。
      */
     @TableId(value = "delivery_id", type = IdType.ASSIGN_ID)
-    private Long deliveryId;
+    private String deliveryId;
 
     /**
      * 路由主键。
      */
     @TableField("route_id")
-    private Long routeId;
+    private String routeId;
 
     /**
      * 文件主键。
      */
     @TableField("transfer_id")
-    private Long transferId;
+    private String transferId;
 
     /**
      * 目标类型。

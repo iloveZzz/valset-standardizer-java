@@ -1,0 +1,10 @@
+package com.yss.valset.transfer.infrastructure.mapper;
+
+import com.yss.cloud.mybatis.support.BasePlusRepository;
+import com.yss.valset.transfer.infrastructure.entity.TransferSourcePO;
+
+/**
+ * 文件来源仓储。
+ */
+public interface TransferSourceRepository extends BasePlusRepository<TransferSourcePO> {
+}

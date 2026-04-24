@@ -5,11 +5,15 @@ package com.yss.valset.transfer.application.port;
  */
 public interface TransferJobScheduler {
 
-    void triggerIngest(Long sourceId, String sourceType, String sourceCode, java.util.Map<String, Object> parameters);
+    String triggerIngest(String sourceId, String sourceType, String sourceCode, java.util.Map<String, Object> parameters, String ingestLockToken);
 
-    void triggerRoute(Long transferId);
+    void scheduleIngestCron(String sourceId, String sourceType, String sourceCode, java.util.Map<String, Object> parameters, String cronExpression);
 
-    void triggerDeliver(Long routeId);
+    void unscheduleIngest(String sourceId);
 
-    void scheduleDeliverRetry(Long routeId, int retryCount, int delaySeconds);
+    void triggerRoute(String transferId);
+
+    void triggerDeliver(String routeId, String transferId);
+
+    void scheduleDeliverRetry(String routeId, String transferId, int retryCount, int delaySeconds);
 }

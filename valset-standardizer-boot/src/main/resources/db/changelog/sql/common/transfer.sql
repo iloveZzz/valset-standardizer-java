@@ -159,3 +159,11 @@ CREATE TABLE t_transfer_target (
     target_meta_json TEXT,
     CONSTRAINT uk_transfer_target_code UNIQUE (target_code)
 );
+
+--changeset codex:20260424-01-mysql-transfer-probe-result dbms:mysql
+ALTER TABLE t_transfer_object
+    ADD COLUMN probe_result_json TEXT AFTER error_message;
+
+--changeset codex:20260424-01-postgres-transfer-probe-result dbms:postgresql
+ALTER TABLE t_transfer_object
+    ADD COLUMN probe_result_json TEXT;

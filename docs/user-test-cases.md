@@ -56,13 +56,14 @@ curl http://localhost:30066/api/tasks/{taskId}
 - 最终 `taskStatus=SUCCESS`
 - `resultPayload` 中包含 `rowCount`、`fileSizeBytes`、`durationMs`
 - `rowCount` 与 `t_ods_valuation_filedata` 中对应 `task_id` 的行数一致
-- `resultPayload.outputDir` 存在
+- 上传流程会先走 `yss-filesys-feignsdk`，并保留 filesys 返回的任务与文件标识
+- 本地临时副本仅用于抽取阶段，执行完成后会清理
 - 可记录本次提取得到的 `fileId`，供后续解析和匹配任务使用
 
 ## 3. 用例 2：解析估值表成功
 
 目的：
-验证 `/api/tasks/parse` 能正确创建解析任务，并输出解析结果文件。
+验证 `/api/tasks/parse` 能正确创建解析任务并完成解析结果返回。
 
 请求：
 
@@ -93,16 +94,8 @@ curl http://localhost:30066/api/tasks/{taskId}
 - 最终 `taskStatus=SUCCESS`
 - `resultPayload` 非空
 - `inputData.workbookPath` 与请求一致
-- `resultData.outputDir`、`resultData.artifacts` 可直接读取
-- 产物目录存在：`./output/task-{taskId}` 或运行配置里的输出目录
-- 目录中至少包含：
-    - `parsed.json`
-    - `subjects.csv`
-    - `subject_relations.csv`
-    - `subject_tree.json`
-    - `metrics.csv`
-    - `summary.json`
-    - `parsed.duckdb`
+- 解析完成后不再输出 `output/task-{taskId}` 工件目录
+- `resultData` 里保留业务结果字段即可，不再依赖 `outputDir` 或 `artifacts`
 
 重点核查：
 
@@ -149,7 +142,7 @@ curl -X POST http://localhost:30066/api/tasks/match \
 - `match_top1.csv` 行数大于 0
 - `match_candidates.csv` 中每个外部科目最多保留 `topK` 个候选
 - `match_summary.json` 中 `subject_count` 大于 0
-- 查询任务返回的 `resultData.reviewQueueCount`、`resultData.highConfidenceCount`、`resultData.outputDir` 有值
+- 查询任务返回的 `resultData.reviewQueueCount`、`resultData.highConfidenceCount` 有值
 - `review_queue.csv` 存在待人工复核记录时，`review_status` 默认值为 `PENDING_REVIEW`
 
 建议抽查：

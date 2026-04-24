@@ -9,7 +9,7 @@ public interface TransferProcessUseCase {
 
     void ingest(IngestTransferSourceCommand command);
 
-    void route(Long transferId);
+    void route(String transferId);
 
-    void deliver(Long routeId);
+    void deliver(String routeId, String transferId);
 }

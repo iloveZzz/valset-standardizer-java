@@ -87,7 +87,7 @@ public class TaskAppServiceImpl implements TaskAppService {
             if (reusableTask != null) {
                 log.info("任务复用成功，taskType={}, businessKey={}, taskId={}", taskType, businessKey, reusableTask.getTaskId());
                 return TaskCreateResponse.builder()
-                        .taskId(reusableTask.getTaskId())
+                        .taskId(reusableTask.getTaskId() == null ? null : String.valueOf(reusableTask.getTaskId()))
                         .taskType(reusableTask.getTaskType().name())
                         .taskStatus(reusableTask.getTaskStatus().name())
                         .businessKey(reusableTask.getBusinessKey())
@@ -107,7 +107,7 @@ public class TaskAppServiceImpl implements TaskAppService {
             schedulerService.triggerNow(taskId);
             log.info("任务创建并触发成功，taskId={}, taskType={}, businessKey={}", taskId, taskType, businessKey);
             return TaskCreateResponse.builder()
-                    .taskId(taskId)
+                    .taskId(taskId == null ? null : String.valueOf(taskId))
                     .taskType(taskType.name())
                     .taskStatus(TaskStatus.PENDING.name())
                     .businessKey(businessKey)

@@ -3,7 +3,7 @@
 面向外部估值表标准化的新 Java 多模块工程，当前已经拆分为“原始数据提取”和“ODS 原始行分析”两段链路。目标技术栈：
 
 - Spring Boot 3
-- Quartz
+- db-scheduler
 - MyBatis
 - Apache POI
 - Apache Commons CSV
@@ -15,7 +15,8 @@
   - `valset-standardizer-extract`：Excel / CSV 原始数据抽取与 `t_ods_valuation_filedata` 持久化
   - `valset-standardizer-analysis`：基于 ODS 原始行数据的估值分析
   - `valset-standardizer-knowledge`：标准科目、历史映射提示和评估样本加载
-  - `valset-standardizer-batch`：Quartz 调度与任务分发
+  - `valset-standardizer-batch`：基于 db-scheduler 的任务调度与分发
+  - `valset-standardizer-transfer`：文件收发分拣调度与任务分发，当前基于 db-scheduler
 - `valset-standardizer-infra`：通用基础设施支持代码
 - `valset-standardizer-boot`：启动类、应用服务、控制器
 

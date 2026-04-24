@@ -1,5 +1,7 @@
 package com.yss.valset.controller;
 
+import com.yss.cloud.dto.response.MultiResult;
+import com.yss.cloud.dto.response.SingleResult;
 import com.yss.valset.application.dto.ValsetFileIngestLogViewDTO;
 import com.yss.valset.application.dto.ValsetFileInfoViewDTO;
 import com.yss.valset.application.dto.UploadValuationFileResponse;
@@ -21,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-
 /**
  * 文件信息管理接口。
  */
@@ -41,53 +41,74 @@ public class FileManagementController {
 
     /**
      * 手动上传文件并执行 ODS 提取。
+     *
+     * @param file 上传的源文件
+     * @param dataSourceType 数据源类型
+     * @param createdBy 创建人
+     * @param forceRebuild 是否强制重建
+     * @return 上传并提取后的结果
      */
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "手动上传文件并执行 ODS 提取", description = "与 valuation-workflows/upload 等价，但归属于文件管理入口。")
-    public UploadValuationFileResponse upload(@RequestPart("file") MultipartFile file,
-                                              @RequestParam(value = "dataSourceType", required = false) String dataSourceType,
-                                              @RequestParam(value = "createdBy", required = false) String createdBy,
-                                              @RequestParam(value = "forceRebuild", required = false, defaultValue = "false") Boolean forceRebuild) {
-        return valuationWorkflowAppService.uploadAndExtract(file, dataSourceType, createdBy, forceRebuild);
+    public SingleResult<UploadValuationFileResponse> upload(@RequestPart("file") MultipartFile file,
+                                                            @RequestParam(value = "dataSourceType", required = false) String dataSourceType,
+                                                            @RequestParam(value = "createdBy", required = false) String createdBy,
+                                                            @RequestParam(value = "forceRebuild", required = false, defaultValue = "false") Boolean forceRebuild) {
+        return SingleResult.of(valuationWorkflowAppService.uploadAndExtract(file, dataSourceType, createdBy, forceRebuild));
     }
 
     /**
      * 查询文件主数据。
+     *
+     * @param fileId 文件主键
+     * @return 文件主数据
      */
     @GetMapping("/{fileId}")
     @Operation(summary = "查询文件主数据")
-    public ValsetFileInfoViewDTO queryFileInfo(@PathVariable Long fileId) {
-        return fileManagementQueryAppService.queryFileInfo(fileId);
+    public SingleResult<ValsetFileInfoViewDTO> queryFileInfo(@PathVariable Long fileId) {
+        return SingleResult.of(fileManagementQueryAppService.queryFileInfo(fileId));
     }
 
     /**
      * 按条件搜索文件主数据。
+     *
+     * @param sourceChannel 来源渠道
+     * @param fileStatus 文件状态
+     * @param fileFingerprint 文件指纹
+     * @param limit 查询上限
+     * @return 文件主数据列表
      */
     @GetMapping
     @Operation(summary = "搜索文件主数据", description = "支持按 sourceChannel、fileStatus、fingerprint 搜索，limit 默认 50。")
-    public List<ValsetFileInfoViewDTO> searchFileInfos(@RequestParam(value = "sourceChannel", required = false) String sourceChannel,
-                                                             @RequestParam(value = "fileStatus", required = false) String fileStatus,
-                                                             @RequestParam(value = "fingerprint", required = false) String fileFingerprint,
-                                                             @RequestParam(value = "limit", required = false) Integer limit) {
-        return fileManagementQueryAppService.searchFileInfos(sourceChannel, fileStatus, fileFingerprint, limit);
+    public MultiResult<ValsetFileInfoViewDTO> searchFileInfos(@RequestParam(value = "sourceChannel", required = false) String sourceChannel,
+                                                              @RequestParam(value = "fileStatus", required = false) String fileStatus,
+                                                              @RequestParam(value = "fingerprint", required = false) String fileFingerprint,
+                                                              @RequestParam(value = "limit", required = false) Integer limit) {
+        return MultiResult.of(fileManagementQueryAppService.searchFileInfos(sourceChannel, fileStatus, fileFingerprint, limit));
     }
 
     /**
      * 查询文件接入日志。
+     *
+     * @param fileId 文件主键
+     * @return 文件接入日志列表
      */
     @GetMapping("/{fileId}/ingest-logs")
     @Operation(summary = "查询文件接入日志")
-    public List<ValsetFileIngestLogViewDTO> queryIngestLogs(@PathVariable Long fileId) {
-        return fileManagementQueryAppService.queryIngestLogs(fileId);
+    public MultiResult<ValsetFileIngestLogViewDTO> queryIngestLogs(@PathVariable Long fileId) {
+        return MultiResult.of(fileManagementQueryAppService.queryIngestLogs(fileId));
     }
 
     /**
      * 查询文件对应的 Excel sheet 样式快照。
+     *
+     * @param fileId 文件主键
+     * @return sheet 样式快照列表
      */
     @GetMapping("/{fileId}/sheet-styles")
     @Operation(summary = "查询文件对应的 Excel sheet 样式快照",
             description = "仅 Excel 文件会写入 sheet 样式快照，返回标题、header 与合并区域相关的 Univer 结构。")
-    public List<ValuationSheetStyleViewDTO> querySheetStyles(@PathVariable Long fileId) {
-        return fileManagementQueryAppService.querySheetStyles(fileId);
+    public MultiResult<ValuationSheetStyleViewDTO> querySheetStyles(@PathVariable Long fileId) {
+        return MultiResult.of(fileManagementQueryAppService.querySheetStyles(fileId));
     }
 }

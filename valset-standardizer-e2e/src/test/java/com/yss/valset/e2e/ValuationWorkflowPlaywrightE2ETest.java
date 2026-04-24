@@ -8,7 +8,6 @@ import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.FormData;
 import com.microsoft.playwright.options.RequestOptions;
-import com.yss.valset.ValsetStandardizerBootApplication;
 import com.yss.valset.domain.model.TaskStage;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -40,7 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @ActiveProfiles("e2e")
 @SpringBootTest(
-        classes = ValsetStandardizerBootApplication.class,
+        classes = ValsetStandardizerBootApplicationTest.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
                 "server.port=0",
@@ -55,13 +54,13 @@ import static org.assertj.core.api.Assertions.assertThat;
                 "spring.sql.init.mode=always",
                 "spring.sql.init.schema-locations=classpath:schema-e2e.sql",
                 "spring.liquibase.enabled=false",
-                "spring.quartz.auto-startup=false",
                 "subject.match.upload-dir=target/e2e/uploads",
                 "subject.match.output-dir=target/e2e/output",
                 "spring.cloud.discovery.enabled=false",
                 "spring.cloud.service-registry.auto-registration.enabled=false",
                 "spring.cloud.nacos.discovery.enabled=false",
                 "spring.cloud.nacos.config.enabled=false",
+                "yss.mybatis.mapper-scan=com.yss.valset.extract.repository.mapper,com.yss.valset.transfer.infrastructure.mapper",
                 "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
         }
 )

@@ -43,8 +43,24 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
             variables.putIfAbsent("mimeType", context.recognitionContext().mimeType());
             variables.putIfAbsent("fileSize", context.recognitionContext().fileSize());
             variables.putIfAbsent("sender", context.recognitionContext().sender());
+            variables.putIfAbsent("recipientsTo", context.recognitionContext().recipientsTo());
+            variables.putIfAbsent("recipientsCc", context.recognitionContext().recipientsCc());
+            variables.putIfAbsent("recipientsBcc", context.recognitionContext().recipientsBcc());
             variables.putIfAbsent("subject", context.recognitionContext().subject());
+            variables.putIfAbsent("body", context.recognitionContext().body());
+            variables.putIfAbsent("mailId", context.recognitionContext().mailId());
+            variables.putIfAbsent("mailProtocol", context.recognitionContext().mailProtocol());
+            variables.putIfAbsent("mailFolder", context.recognitionContext().mailFolder());
             variables.putIfAbsent("path", context.recognitionContext().path());
+            if (context.recognitionContext().attributes() != null) {
+                variables.putIfAbsent("attachmentName", context.recognitionContext().attributes().get("attachmentName"));
+                variables.putIfAbsent("attachmentIndex", context.recognitionContext().attributes().get("attachmentIndex"));
+                variables.putIfAbsent("attachmentContentType", context.recognitionContext().attributes().get("attachmentContentType"));
+                variables.putIfAbsent("attachmentSize", context.recognitionContext().attributes().get("attachmentSize"));
+                variables.putIfAbsent("attachmentCount", context.recognitionContext().attributes().get("attachmentCount"));
+                variables.putIfAbsent("attachmentNames", context.recognitionContext().attributes().get("attachmentNames"));
+                variables.putIfAbsent("attributes", context.recognitionContext().attributes());
+            }
         }
         variables.putIfAbsent("fn", transferRuleFunctions);
         variables.putIfAbsent("rule", ruleDefinition);

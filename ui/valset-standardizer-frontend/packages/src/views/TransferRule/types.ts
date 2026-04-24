@@ -1,0 +1,61 @@
+import type { YTablePagination } from "@yss-ui/components";
+
+export interface RulePage {
+  loading: boolean;
+  rows: any[];
+  tableData: any[];
+  total: number;
+  pageSize: number;
+  pagination: YTablePagination;
+  query: {
+    ruleCode: string;
+    enabled: string;
+    limit: number;
+  };
+  templateNamePreview: string;
+  templateDescription: string;
+  templateVersion: string;
+  templateMode: 0 | 1 | 2;
+  templateReadPretty: boolean;
+  templateSchema: any | null;
+  templateInitialValues: Record<string, any>;
+  templateValues: Record<string, any>;
+  templateScope: Record<string, any>;
+  templateLoading: boolean;
+  enabledUpdatingIds: Record<number, boolean>;
+  templateDetailOptions: Record<string, any>;
+  templateGridDefaults: Record<string, any>;
+  setTemplateFormRef: (instance: any) => void;
+  isEnabledUpdating: (ruleId?: number) => boolean;
+  toggleEnabled: (row: any, checked: boolean) => Promise<void>;
+  enabledCount: number;
+  scriptBoundCount: number;
+  strategyCount: number;
+  formVisible: boolean;
+  formMode: "create" | "edit";
+  formState: {
+    ruleId?: number;
+    ruleCode: string;
+    ruleName: string;
+    ruleVersion: string;
+    enabled: boolean;
+    priority: number | undefined;
+    matchStrategy: string;
+    scriptLanguage: string;
+    scriptBody: string;
+  };
+  detailVisible: boolean;
+  selectedRow: any | null;
+  formSubmitting: boolean;
+  openCreateDialog: () => void;
+  openEditDialog: (row: any) => void;
+  openDetailDrawer: (row: any) => void;
+  confirmDelete: (row: any) => void;
+  runQuery: () => void;
+  resetQuery: () => void;
+  submitForm: () => Promise<void> | void;
+  closeForm: () => void;
+  closeDetail: () => void;
+  formatEnabled: (value: boolean | undefined) => string;
+  handlePageChange: (params: { current: number; pageSize: number }) => void;
+}

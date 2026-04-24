@@ -5,5 +5,5 @@ package com.yss.valset.transfer.application.port;
  */
 public interface RouteTransferUseCase {
 
-    void execute(Long transferId);
+    void execute(String transferId);
 }

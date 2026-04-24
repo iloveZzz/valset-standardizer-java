@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * 投递目标持久化实体。
  */
@@ -60,4 +62,16 @@ public class TransferTargetPO {
      */
     @TableField("target_meta_json")
     private String targetMetaJson;
+
+    /**
+     * 创建时间。
+     */
+    @TableField("created_at")
+    private LocalDateTime createdAt;
+
+    /**
+     * 修改时间。
+     */
+    @TableField("updated_at")
+    private LocalDateTime updatedAt;
 }

@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
@@ -64,9 +65,15 @@ public class TransferTargetGatewayImpl implements TransferTargetGateway {
     @Override
     public TransferTarget save(TransferTarget transferTarget) {
         TransferTargetPO po = toPO(transferTarget);
+        LocalDateTime now = LocalDateTime.now();
         if (po.getTargetId() == null) {
+            po.setCreatedAt(now);
+            po.setUpdatedAt(now);
             transferTargetRepository.insert(po);
         } else {
+            TransferTargetPO existing = transferTargetRepository.selectById(po.getTargetId());
+            po.setCreatedAt(existing == null ? now : existing.getCreatedAt());
+            po.setUpdatedAt(now);
             transferTargetRepository.updateById(po);
         }
         return toDomain(po);

@@ -11,6 +11,12 @@ import java.util.List;
 @Data
 @Builder
 public class RawValuationRowDTO {
+    /**
+     * 行号。
+     */
     private Integer rowDataNumber;
+    /**
+     * 行数据。
+     */
     private List<Object> rowData;
 }
