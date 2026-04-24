@@ -52,28 +52,6 @@ export const useTransferSourceColumns = () =>
       title: "轮询表达式",
       width: 180,
     },
-    {
-      field: "ingestStatus",
-      title: "收取状态",
-      width: 120,
-      formatter: (params: any) => {
-        const value = String(params?.cellValue ?? "")
-          .trim()
-          .toUpperCase();
-        if (!value) {
-          return "-";
-        }
-        if (value === "RUNNING") return "收取中";
-        if (value === "IDLE") return "可收取";
-        if (value === "STOPPING") return "停止中";
-        if (value === "STOPPED") return "已停止";
-        if (value === "SUCCESS") return "收取成功";
-        if (value === "FAILED") return "收取失败";
-        if (value === "SKIPPED") return "已跳过";
-        if (value === "REUSED") return "复用";
-        return value;
-      },
-    },
   ]);
 
 export const useTransferTargetColumns = () =>
@@ -106,7 +84,7 @@ export const useTransferTargetColumns = () =>
     },
     {
       field: "targetPathTemplate",
-      title: "投递路径模板",
+      title: "目标目录/路径",
       width: 260,
     },
     {
@@ -267,9 +245,10 @@ export const useTransferRunLogColumns = () =>
       fixed: "left" as const,
     },
     {
-      field: "runLogId",
-      title: "日志ID",
-      width: 120,
+      field: "logMessage",
+      title: "运行说明",
+      minWidth: 260,
+      ellipsis: true,
     },
     {
       field: "sourceName",
@@ -280,11 +259,6 @@ export const useTransferRunLogColumns = () =>
       field: "routeName",
       title: "路由名称",
       width: 240,
-    },
-    {
-      field: "targetName",
-      title: "目标名称",
-      width: 180,
     },
     {
       field: "sourceType",
@@ -308,7 +282,7 @@ export const useTransferRunLogColumns = () =>
     },
     {
       field: "originalName",
-      title: "原始文件名",
+      title: "分拣文件",
       width: 140,
     },
   ]);

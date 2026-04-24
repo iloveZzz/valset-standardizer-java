@@ -226,7 +226,13 @@ const actionConfig = useTableActionConfig({
           <a-descriptions-item label="启用状态">
             {{ page.formatEnabled(page.selectedRow.enabled) }}
           </a-descriptions-item>
-          <a-descriptions-item label="投递路径模板">
+          <a-descriptions-item
+            :label="
+              page.selectedRow.targetType === 'FILESYS'
+                ? '目录路径'
+                : '投递路径模板'
+            "
+          >
             {{ page.selectedRow.targetPathTemplate || "-" }}
           </a-descriptions-item>
         </a-descriptions>

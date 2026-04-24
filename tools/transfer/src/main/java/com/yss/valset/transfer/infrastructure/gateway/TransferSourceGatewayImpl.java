@@ -90,7 +90,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
     }
 
     @Override
-    public boolean tryAcquireIngestLock(String sourceId, String lockToken, Instant startedAt) {
+    public boolean tryAcquireIngestLock(String sourceId, String lockToken, Instant startedAt, String triggerType) {
         Long id = parseLong(sourceId);
         if (id == null || startedAt == null) {
             return false;
@@ -105,8 +105,10 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
                                 .or()
                                 .eq(TransferSourcePO::getIngestStatus, "STOPPED"))
                         .set(TransferSourcePO::getIngestStatus, "RUNNING")
+                        .set(TransferSourcePO::getIngestTriggerType, triggerType)
                         .set(TransferSourcePO::getIngestStartedAt, toLocalDateTime(startedAt))
                         .set(TransferSourcePO::getIngestFinishedAt, null)
+                        .set(TransferSourcePO::getUpdatedAt, toLocalDateTime(startedAt))
         );
         return updated > 0;
     }
@@ -174,6 +176,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
                         .eq(TransferSourcePO::getSourceId, id)
                         .set(TransferSourcePO::getIngestStatus, finalStatus)
                         .set(TransferSourcePO::getIngestFinishedAt, toLocalDateTime(finishedAt))
+                        .set(TransferSourcePO::getUpdatedAt, toLocalDateTime(finishedAt))
         );
         return updated > 0;
     }

@@ -1,6 +1,7 @@
 package com.yss.valset.application.impl;
 
-import com.yss.valset.application.command.TransferRunLogRedeliverCommand;
+import com.yss.valset.transfer.application.command.TransferRunLogRedeliverCommand;
+import com.yss.valset.transfer.application.impl.management.DefaultTransferRunLogManagementAppService;
 import com.yss.valset.transfer.application.port.TransferProcessUseCase;
 import com.yss.valset.transfer.domain.gateway.TransferRunLogGateway;
 import com.yss.valset.transfer.domain.model.TransferRunLog;

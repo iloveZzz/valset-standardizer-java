@@ -6,6 +6,7 @@ import type {
 
 export const mailConditionFieldOptions: OptionItem[] = [
   { label: "文件类型", value: "attachmentFileType" },
+  { label: "文件大小", value: "attachmentSize" },
   { label: "邮箱主题", value: "mailSubject" },
   { label: "收取上限", value: "limit" },
   { label: "发件人", value: "mailFrom" },

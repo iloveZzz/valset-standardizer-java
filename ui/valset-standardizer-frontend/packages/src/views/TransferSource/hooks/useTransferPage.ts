@@ -177,7 +177,6 @@ export const useTransferPage = (): { page: SourcePage } => {
   const listLoading = ref(false);
   const formSubmitting = ref(false);
   const enabledUpdatingIds = reactive<Record<string, boolean>>({});
-  const triggeringIds = reactive<Record<string, boolean>>({});
   let listRequestId = 0;
   let detailRequestId = 0;
   let templateRequestId = 0;
@@ -479,65 +478,6 @@ export const useTransferPage = (): { page: SourcePage } => {
     });
   };
 
-  const triggerSource = async (row: TransferSourceViewDTO) => {
-    if (!row.sourceId) {
-      message.error("来源主键缺失，无法收取");
-      return;
-    }
-
-    if (isIngestBusy(row) || isTriggering(row)) {
-      message.warning("该来源正在收取中，请等待当前收取完成后再触发");
-      return;
-    }
-
-    triggeringIds[row.sourceId] = true;
-    try {
-      await api.triggerSource(row.sourceId);
-      message.success("已触发来源收取");
-      await loadList();
-    } catch (error) {
-      console.error("触发来源收取失败:", error);
-      message.error(
-        error instanceof Error ? error.message : "触发来源收取失败",
-      );
-    } finally {
-      delete triggeringIds[row.sourceId];
-    }
-  };
-
-  const stopSource = async (row: TransferSourceViewDTO) => {
-    const sourceId = row.sourceId;
-    if (!sourceId) {
-      message.error("来源主键缺失，无法停止");
-      return;
-    }
-
-    if (!isIngestBusy(row)) {
-      message.warning("该来源当前未在收取中");
-      return;
-    }
-
-    Modal.confirm({
-      title: "停止收取",
-      content: `确认停止来源「${row.sourceName || row.sourceCode || row.sourceId}」当前正在进行的收取吗？停止后本轮收取会在下一个检查点退出。`,
-      okText: "停止",
-      okButtonProps: { danger: true },
-      cancelText: "取消",
-      onOk: async () => {
-        try {
-          await api.stopSource(sourceId);
-          message.success("已提交停止请求");
-          await loadList();
-        } catch (error) {
-          console.error("停止来源收取失败:", error);
-          message.error(
-            error instanceof Error ? error.message : "停止来源收取失败",
-          );
-        }
-      },
-    });
-  };
-
   const buildPayload = (): TransferSourceUpsertCommand => {
     const templateConfig = extractTemplateConfigValues(templateValues.value);
 
@@ -577,13 +517,6 @@ export const useTransferPage = (): { page: SourcePage } => {
 
   const isIngestBusy = (row?: TransferSourceViewDTO | null) => {
     return Boolean(row?.ingestBusy);
-  };
-
-  const isTriggering = (row?: TransferSourceViewDTO | null) => {
-    if (!row?.sourceId) {
-      return false;
-    }
-    return Boolean(triggeringIds[row.sourceId]);
   };
 
   const formatIngestStatus = (value?: string) => {
@@ -765,11 +698,9 @@ export const useTransferPage = (): { page: SourcePage } => {
     },
     templateLoading,
     enabledUpdatingIds,
-    triggeringIds,
     isEnabledUpdating,
     isIngestRunning: isIngestBusy,
     isIngestBusy,
-    isTriggering,
     formatIngestStatus,
     toggleEnabled,
     formVisible,
@@ -786,8 +717,6 @@ export const useTransferPage = (): { page: SourcePage } => {
     openEditDialog,
     openDetailDrawer,
     confirmDelete,
-    triggerSource,
-    stopSource,
     runQuery,
     resetQuery,
     submitForm,

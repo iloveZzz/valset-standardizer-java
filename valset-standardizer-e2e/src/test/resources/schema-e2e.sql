@@ -343,6 +343,7 @@ CREATE TABLE IF NOT EXISTS t_transfer_object (
     stored_at TIMESTAMP,
     route_id BIGINT,
     error_message VARCHAR(1024),
+    probe_result_json TEXT,
     file_meta_json TEXT
 );
 
@@ -355,6 +356,10 @@ CREATE TABLE IF NOT EXISTS t_transfer_source (
     poll_cron VARCHAR(128),
     connection_config_json TEXT,
     source_meta_json TEXT,
+    ingest_trigger_type VARCHAR(32),
+    ingest_status VARCHAR(32),
+    ingest_started_at TIMESTAMP,
+    ingest_finished_at TIMESTAMP,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     CONSTRAINT uk_transfer_source_code UNIQUE (source_code)

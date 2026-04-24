@@ -195,7 +195,6 @@ public class FilesysTransferTargetE2ETest {
                 SourceType.LOCAL_DIR.name(),
                 "e2e-local",
                 tempFile.getFileName().toString(),
-                tempFile.getFileName().toString(),
                 "txt",
                 "text/plain",
                 Files.size(tempFile),
@@ -214,6 +213,7 @@ public class FilesysTransferTargetE2ETest {
                 TransferStatus.RECEIVED,
                 Instant.now(),
                 Instant.now(),
+                null,
                 null,
                 null,
                 fileMeta

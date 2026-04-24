@@ -16,6 +16,7 @@ public final class TransferFormTemplateNames {
     public static final String TRANSFER_TARGET_EMAIL = "transfer_target_email";
     public static final String TRANSFER_TARGET_S3 = "transfer_target_s3";
     public static final String TRANSFER_TARGET_SFTP = "transfer_target_sftp";
+    public static final String TRANSFER_TARGET_LOCAL = "transfer_target_local";
     public static final String TRANSFER_TARGET_FILESYS = "transfer_target_filesys";
     public static final String TRANSFER_RULE = "transfer_rule";
     public static final String TRANSFER_ROUTE = "transfer_route";
@@ -55,6 +56,7 @@ public final class TransferFormTemplateNames {
             case EMAIL -> TRANSFER_TARGET_EMAIL;
             case S3 -> TRANSFER_TARGET_S3;
             case SFTP -> TRANSFER_TARGET_SFTP;
+            case LOCAL_DIR -> TRANSFER_TARGET_LOCAL;
             case FILESYS -> TRANSFER_TARGET_FILESYS;
         };
     }

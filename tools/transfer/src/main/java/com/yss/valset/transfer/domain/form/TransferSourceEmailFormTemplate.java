@@ -25,6 +25,7 @@ public class TransferSourceEmailFormTemplate extends FormTemplate {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put(TransferConfigKeys.PROTOCOL, "imap");
         values.put(TransferConfigKeys.FOLDER, "INBOX");
+        values.put(TransferConfigKeys.MAIL_TIME_RANGE_DAYS, "0");
         values.put(TransferConfigKeys.SSL, Boolean.FALSE);
         values.put(TransferConfigKeys.START_TLS, Boolean.FALSE);
         values.put(TransferConfigKeys.LIMIT, 100);
@@ -71,6 +72,16 @@ public class TransferSourceEmailFormTemplate extends FormTemplate {
                         YssFormilyDsl.input(TransferConfigKeys.USERNAME, "用户名").required().placeholder("mail-user").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.PASSWORD, "密码").required().componentProp("type", "password").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.FOLDER, "文件夹").required().placeholder("INBOX").gridSpan(1),
+                        YssFormilyDsl.select(TransferConfigKeys.MAIL_TIME_RANGE_DAYS, "收取时间范围")
+                                .required()
+                                .options(
+                                        YssFormilyDsl.option("0", "全部邮件"),
+                                        YssFormilyDsl.option("7", "近7天"),
+                                        YssFormilyDsl.option("15", "近15天"),
+                                        YssFormilyDsl.option("30", "近30天"),
+                                        YssFormilyDsl.option("90", "近90天")
+                                )
+                                .gridSpan(1),
                         YssFormilyDsl.switchField(TransferConfigKeys.SSL, "SSL").gridSpan(1),
                         YssFormilyDsl.switchField(TransferConfigKeys.START_TLS, "STARTTLS").gridSpan(1),
                         YssFormilyDsl.groupHeader("header2", "收取规则配置"),

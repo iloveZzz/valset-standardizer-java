@@ -18,6 +18,7 @@ public interface TransferSourceMapper extends TransferMapstructSupport {
     @Mapping(target = "sourceId", expression = "java(transferSource.sourceId())")
     @Mapping(target = "connectionConfigJson", source = "connectionConfig")
     @Mapping(target = "sourceMetaJson", source = "sourceMeta")
+    @Mapping(target = "ingestTriggerType", expression = "java(transferSource.ingestTriggerType())")
     @Mapping(target = "createdAt", expression = "java(toLocalDateTime(transferSource.createdAt()))")
     @Mapping(target = "updatedAt", expression = "java(toLocalDateTime(transferSource.updatedAt()))")
     TransferSourcePO toPO(TransferSource transferSource);
@@ -28,6 +29,7 @@ public interface TransferSourceMapper extends TransferMapstructSupport {
     @Mapping(target = "connectionConfig", source = "connectionConfigJson")
     @Mapping(target = "sourceMeta", source = "sourceMetaJson")
     @Mapping(target = "ingestStatus", expression = "java(po.getIngestStatus())")
+    @Mapping(target = "ingestTriggerType", expression = "java(po.getIngestTriggerType())")
     @Mapping(target = "ingestStartedAt", expression = "java(toInstant(po.getIngestStartedAt()))")
     @Mapping(target = "ingestFinishedAt", expression = "java(toInstant(po.getIngestFinishedAt()))")
     @Mapping(target = "createdAt", expression = "java(toInstant(po.getCreatedAt()))")

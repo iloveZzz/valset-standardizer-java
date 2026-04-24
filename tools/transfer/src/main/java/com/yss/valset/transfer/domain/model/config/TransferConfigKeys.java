@@ -31,6 +31,8 @@ public final class TransferConfigKeys {
     public static final String PASSWORD = "password";
     /** 邮件文件夹名称。 */
     public static final String FOLDER = "folder";
+    /** 邮件收取时间范围，单位天，0 表示全部。 */
+    public static final String MAIL_TIME_RANGE_DAYS = "mailTimeRangeDays";
     /** 是否启用 SSL。 */
     public static final String SSL = "ssl";
     /** 是否启用 STARTTLS。 */

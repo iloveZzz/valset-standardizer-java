@@ -43,14 +43,23 @@ const TARGET_TEMPLATE_BASE_KEYS = [
   "targetCode",
   "targetName",
   "enabled",
+  "directory",
   "targetPathTemplate",
 ] as const;
 
 const api = getJavaSpringBootQuartzApi();
 
+const TARGET_TYPE_LABELS: Record<string, string> = {
+  EMAIL: "邮件",
+  S3: "S3",
+  SFTP: "SFTP",
+  LOCAL_DIR: "本地目录",
+  FILESYS: "文件服务",
+};
+
 const targetTypeOptions = Object.values(GetTemplateName2TargetType).map(
   (value) => ({
-    label: value,
+    label: TARGET_TYPE_LABELS[value] ?? value,
     value,
   }),
 );
@@ -184,6 +193,10 @@ export const useTransferPage = (): { page: TargetPage } => {
   };
 
   const hydrateTemplateValuesFromRow = (row?: TransferTargetViewDTO) => {
+    const directoryValue =
+      row?.targetType === GetTemplateName2TargetType.FILESYS
+        ? row?.targetPathTemplate ?? templateValues.value.directory ?? ""
+        : templateValues.value.directory ?? "";
     templateValues.value = {
       ...templateInitialValues.value,
       ...extractTemplateConfigValues(templateValues.value),
@@ -195,6 +208,11 @@ export const useTransferPage = (): { page: TargetPage } => {
       targetPathTemplate:
         row?.targetPathTemplate ??
         templateValues.value.targetPathTemplate ??
+        "",
+      directory:
+        directoryValue ||
+        templateValues.value.directory ||
+        row?.targetPathTemplate ||
         "",
     };
   };
@@ -424,6 +442,14 @@ export const useTransferPage = (): { page: TargetPage } => {
 
   const buildPayload = (): TransferTargetUpsertCommand => {
     const templateConfig = extractTemplateConfigValues(templateValues.value);
+    const targetPathTemplateValue =
+      formState.targetType === GetTemplateName2TargetType.FILESYS
+        ? String(
+            templateValues.value.directory ??
+              templateValues.value.targetPathTemplate ??
+              "",
+          ).trim()
+        : String(templateValues.value.targetPathTemplate ?? "").trim();
 
     return {
       targetId: formState.targetId,
@@ -431,9 +457,7 @@ export const useTransferPage = (): { page: TargetPage } => {
       targetName: String(templateValues.value.targetName ?? "").trim(),
       targetType: String(formState.targetType ?? "").trim(),
       enabled: Boolean(templateValues.value.enabled),
-      targetPathTemplate:
-        String(templateValues.value.targetPathTemplate ?? "").trim() ||
-        undefined,
+      targetPathTemplate: targetPathTemplateValue || undefined,
       connectionConfig:
         Object.keys(templateConfig).length > 0 ? templateConfig : undefined,
       targetMeta: undefined,

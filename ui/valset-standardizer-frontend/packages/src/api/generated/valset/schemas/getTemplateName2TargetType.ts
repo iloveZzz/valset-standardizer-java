@@ -13,5 +13,6 @@ export const GetTemplateName2TargetType = {
   EMAIL: "EMAIL",
   S3: "S3",
   SFTP: "SFTP",
+  LOCAL_DIR: "LOCAL_DIR",
   FILESYS: "FILESYS",
 } as const;

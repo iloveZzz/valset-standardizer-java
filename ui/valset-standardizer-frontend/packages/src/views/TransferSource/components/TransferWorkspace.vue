@@ -116,21 +116,6 @@ const actionConfig = useTableActionConfig({
   displayLimit: 4,
   buttons: [
     {
-      text: "收取",
-      key: "trigger",
-      type: "link",
-      disabledFn: ({ row }: any) =>
-        page.isIngestBusy(row) || page.isTriggering(row),
-      clickFn: ({ row }: any) => page.triggerSource(row),
-    },
-    {
-      text: "停止",
-      key: "stop",
-      type: "link",
-      disabledFn: ({ row }: any) => !page.isIngestBusy(row),
-      clickFn: ({ row }: any) => page.stopSource(row),
-    },
-    {
       text: "详情",
       key: "detail",
       type: "link",

@@ -81,6 +81,7 @@ public class TransferRouteFormTemplate extends FormTemplate {
                                         YssFormilyDsl.option(TargetType.EMAIL.name(), "邮件"),
                                         YssFormilyDsl.option(TargetType.S3.name(), "S3"),
                                         YssFormilyDsl.option(TargetType.SFTP.name(), "SFTP"),
+                                        YssFormilyDsl.option(TargetType.LOCAL_DIR.name(), "本地目录"),
                                         YssFormilyDsl.option(TargetType.FILESYS.name(), "文件服务")
                                 )
                                 .gridSpan(1),

@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { YButton, YCard, YTable } from "@yss-ui/components";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons-vue";
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  LoadingOutlined,
+  MinusCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons-vue";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import { useTransferRouteConfigColumns } from "../hooks/useTransferTableColumns";
+import { formatDateTime } from "@/utils/format";
 import type { RouteConfigPage } from "../types";
 
 const { page } = defineProps<{
@@ -12,10 +20,33 @@ const { page } = defineProps<{
 
 const columns = useTransferRouteConfigColumns();
 
+const getChainIcon = (statusKey: string) => {
+  if (statusKey === "success") return CheckCircleOutlined;
+  if (statusKey === "error") return CloseCircleOutlined;
+  if (statusKey === "loading") return LoadingOutlined;
+  return MinusCircleOutlined;
+};
+
 const actionConfig = useTableActionConfig({
-  width: 240,
-  displayLimit: 3,
+  width: 420,
+  displayLimit: 5,
   buttons: [
+    {
+      text: "手动收取",
+      key: "trigger",
+      type: "link",
+      disabledFn: ({ row }: any) =>
+        !page.canTriggerSource(row) || page.isSourceTriggering(row.sourceId),
+      clickFn: ({ row }: any) => page.triggerSource(row),
+    },
+    {
+      text: "停止",
+      key: "stop",
+      type: "link",
+      disabledFn: ({ row }: any) =>
+        !page.canStopSource(row) || page.isSourceStopping(row.sourceId),
+      clickFn: ({ row }: any) => page.stopSource(row),
+    },
     {
       text: "详情",
       key: "detail",
@@ -45,11 +76,12 @@ const actionConfig = useTableActionConfig({
         <div class="workspace-header-copy">
           <h1>分拣路由映射配置</h1>
           <p>
-            统一维护来源、规则与目标之间的路由映射，新增页使用普通 Ant Design
-            Vue 表单完成配置。
+            统一维护来源、规则与目标之间的路由映射，并在映射页直接发起来源收取、
+            停止收取和配置维护。
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">来源 → 路由映射 → 目标</span>
+            <span class="workspace-pill">支持手动收取 / 停止收取</span>
             <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
             <span class="workspace-pill">详情抽屉展示流向与 JSON</span>
           </div>
@@ -77,7 +109,7 @@ const actionConfig = useTableActionConfig({
         :loading="page.loading"
         :row-config="{ keyField: 'routeId' }"
         :pageable="true"
-        :cell-config="{ height: 162 }"
+        :cell-config="{ height: 320 }"
         :header-height="40"
         v-model:pagination="page.pagination"
         :toolbar-config="{ custom: false }"
@@ -195,7 +227,7 @@ const actionConfig = useTableActionConfig({
             </div>
             <div class="route-summary-segment route-summary-segment--route">
               <span>规则匹配</span>
-              <strong>{{ row.ruleId ?? "-" }}</strong>
+              <strong>{{ page.getRuleDisplayName(row.ruleId) }}</strong>
               <small>{{ row.renamePattern || "默认命名" }}</small>
               <a-button
                 type="link"
@@ -222,52 +254,54 @@ const actionConfig = useTableActionConfig({
           </div>
         </template>
 
-        <template #sourceCode="{ row }">
-          <div
-            class="route-cell route-cell--source"
-            :class="{
-              'route-cell--active': page.selectedRow?.routeId === row.routeId,
-            }"
-          >
-            <strong>{{ row.sourceCode || "-" }}</strong>
-            <span>{{ row.sourceType || "-" }}</span>
-          </div>
-        </template>
-
-        <template #ruleId="{ row }">
-          <div
-            class="route-cell route-cell--route"
-            :class="{
-              'route-cell--active': page.selectedRow?.routeId === row.routeId,
-            }"
-          >
-            <strong>{{ row.ruleId ?? "-" }}</strong>
-            <span>{{ page.formatRouteMetaSummary(row) }}</span>
-          </div>
-        </template>
-
-        <template #targetCode="{ row }">
-          <div
-            class="route-cell route-cell--target"
-            :class="{
-              'route-cell--active': page.selectedRow?.routeId === row.routeId,
-            }"
-          >
-            <strong>{{ row.targetCode || "-" }}</strong>
-            <span>{{ row.targetType || "-" }}</span>
-          </div>
-        </template>
-
-        <template #targetPath="{ row }">
-          <div
-            class="route-path-cell"
-            :class="{
-              'route-path-cell--active':
-                page.selectedRow?.routeId === row.routeId,
-            }"
-          >
-            <strong>{{ row.targetPath || "-" }}</strong>
-            <span>{{ row.renamePattern || "默认命名" }}</span>
+        <template #sourceIngestStatus="{ row }">
+          <div class="route-thought-chain">
+            <div
+              v-for="(node, index) in page.getSourceIngestChainItems(row)"
+              :key="node.key"
+              class="route-thought-chain-item"
+              :class="`route-thought-chain-item--${node.statusKey}`"
+            >
+              <div class="route-thought-chain-rail">
+                <span
+                  v-if="index > 0"
+                  class="route-thought-chain-rail__line route-thought-chain-rail__line--top"
+                />
+                <span
+                  class="route-thought-chain-rail__icon"
+                  :class="`route-thought-chain-rail__icon--${node.statusKey}`"
+                >
+                  <component :is="getChainIcon(node.statusKey)" />
+                </span>
+                <span
+                  v-if="index < page.getSourceIngestChainItems(row).length - 1"
+                  class="route-thought-chain-rail__line route-thought-chain-rail__line--bottom"
+                />
+              </div>
+              <div class="route-thought-chain-content">
+                <div class="route-thought-chain-content__head">
+                  <strong>{{ node.title }}</strong>
+                  <span>{{ node.timeText }}</span>
+                </div>
+                <div class="route-thought-chain-content__status">
+                  status: {{ node.statusLabel }}
+                </div>
+                <div
+                  v-if="node.key === 'source-status'"
+                  class="route-ingest-progress-cell"
+                >
+                  <a-progress
+                    :percent="page.getSourceIngestProgressPercent(row)"
+                    :show-info="false"
+                    :stroke-width="6"
+                  />
+                  <div class="route-ingest-progress-cell__text">
+                    {{ page.getSourceIngestProgressText(row) }}
+                  </div>
+                </div>
+                <p>{{ node.content }}</p>
+              </div>
+            </div>
           </div>
         </template>
       </YTable>
@@ -447,9 +481,7 @@ const actionConfig = useTableActionConfig({
               "路由详情"
             }}
           </div>
-          <div class="source-detail-banner-meta">
-            配置详情
-          </div>
+          <div class="source-detail-banner-meta">配置详情</div>
         </div>
 
         <div class="route-detail-flow">
@@ -497,6 +529,26 @@ const actionConfig = useTableActionConfig({
               <a-descriptions-item label="来源编码">
                 {{ page.selectedRow.sourceCode || "-" }}
               </a-descriptions-item>
+              <a-descriptions-item label="触发方式">
+                {{
+                  page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
+                    ? page.getSourceIngestState(page.selectedRow)?.ingestTriggerType === "CRON"
+                      ? "cron 定时"
+                      : page.getSourceIngestState(page.selectedRow)?.ingestTriggerType === "MANUAL"
+                        ? "手动触发"
+                        : page.getSourceIngestState(page.selectedRow)?.ingestTriggerType === "SYSTEM"
+                          ? "系统触发"
+                          : page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
+                    : "-"
+                }}
+              </a-descriptions-item>
+              <a-descriptions-item label="触发时间">
+                {{
+                  page.getSourceIngestState(page.selectedRow)?.ingestStartedAt
+                    ? formatDateTime(page.getSourceIngestState(page.selectedRow)?.ingestStartedAt)
+                    : "-"
+                }}
+              </a-descriptions-item>
             </a-descriptions>
           </section>
 
@@ -518,6 +570,9 @@ const actionConfig = useTableActionConfig({
               </a-descriptions-item>
               <a-descriptions-item label="规则主键">
                 {{ page.selectedRow.ruleId ?? "-" }}
+              </a-descriptions-item>
+              <a-descriptions-item label="规则名称">
+                {{ page.getRuleDisplayName(page.selectedRow.ruleId) }}
               </a-descriptions-item>
             </a-descriptions>
           </section>

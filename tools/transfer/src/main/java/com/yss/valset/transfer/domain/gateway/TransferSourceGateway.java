@@ -23,7 +23,7 @@ public interface TransferSourceGateway {
 
     void deleteById(String sourceId);
 
-    boolean tryAcquireIngestLock(String sourceId, String lockToken, Instant startedAt);
+    boolean tryAcquireIngestLock(String sourceId, String lockToken, Instant startedAt, String triggerType);
 
     boolean requestIngestStop(String sourceId, Instant requestedAt);
 

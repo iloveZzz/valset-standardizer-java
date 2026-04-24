@@ -26,17 +26,13 @@ export interface SourcePage {
   templateScope: Record<string, any>;
   templateLoading: boolean;
   enabledUpdatingIds: Record<string, boolean>;
-  triggeringIds: Record<string, boolean>;
   templateDetailOptions: Record<string, any>;
   templateGridDefaults: Record<string, any>;
   setTemplateFormRef: (instance: any) => void;
   isEnabledUpdating: (sourceId?: string) => boolean;
   isIngestRunning: (row?: any | null) => boolean;
   isIngestBusy: (row?: any | null) => boolean;
-  isTriggering: (row?: any | null) => boolean;
   formatIngestStatus: (value?: string) => string;
-  triggerSource: (row: any) => Promise<void> | void;
-  stopSource: (row: any) => Promise<void> | void;
   toggleEnabled: (row: any, checked: boolean) => Promise<void>;
   enabledCount: number;
   templateBoundCount: number;

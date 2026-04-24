@@ -16,6 +16,7 @@ public record TransferSource(
         Map<String, Object> connectionConfig,
         Map<String, Object> sourceMeta,
         String ingestStatus,
+        String ingestTriggerType,
         Instant ingestStartedAt,
         Instant ingestFinishedAt,
         Instant createdAt,

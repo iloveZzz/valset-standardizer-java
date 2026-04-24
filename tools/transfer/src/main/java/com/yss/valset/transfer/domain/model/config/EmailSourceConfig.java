@@ -14,6 +14,7 @@ public record EmailSourceConfig(
         String username,
         String password,
         String folder,
+        int mailTimeRangeDays,
         boolean ssl,
         boolean startTls,
         int limit,
@@ -29,16 +30,21 @@ public record EmailSourceConfig(
         String username = requiredString(config, TransferConfigKeys.USERNAME);
         String password = requiredString(config, TransferConfigKeys.PASSWORD);
         String folder = stringValue(config, TransferConfigKeys.FOLDER, "INBOX");
+        int mailTimeRangeDays = Math.max(0, intValue(config, TransferConfigKeys.MAIL_TIME_RANGE_DAYS, 0));
         boolean ssl = booleanValue(config, TransferConfigKeys.SSL, protocol.endsWith("s"));
         boolean startTls = booleanValue(config, TransferConfigKeys.START_TLS, false);
         int limit = intValue(config, TransferConfigKeys.LIMIT, 0);
         int timeoutMillis = intValue(config, TransferConfigKeys.TIMEOUT_MILLIS, 30000);
         String sourceCode = source.sourceCode() == null || source.sourceCode().isBlank() ? username : source.sourceCode();
-        return new EmailSourceConfig(protocol, host, port, username, password, folder, ssl, startTls, limit, timeoutMillis, sourceCode);
+        return new EmailSourceConfig(protocol, host, port, username, password, folder, mailTimeRangeDays, ssl, startTls, limit, timeoutMillis, sourceCode);
     }
 
     public int effectiveLimit() {
         return limit <= 0 ? 50 : Math.min(limit, 50);
+    }
+
+    public boolean shouldApplyMailTimeRange() {
+        return mailTimeRangeDays > 0;
     }
 
     private static String normalizeProtocol(String protocol) {
@@ -53,7 +59,8 @@ public record EmailSourceConfig(
 
     private static int defaultPort(String protocol) {
         return switch (protocol.toLowerCase()) {
-            case "imaps", "pop3s" -> 993;
+            case "imaps" -> 993;
+            case "pop3s" -> 995;
             case "pop3" -> 110;
             default -> 143;
         };

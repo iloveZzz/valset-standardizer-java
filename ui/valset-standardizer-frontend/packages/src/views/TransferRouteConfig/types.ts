@@ -47,6 +47,22 @@ export interface RouteFlowAnchor {
   detail: string;
 }
 
+export interface RouteFlowFactMessage {
+  stage: "source" | "route" | "target";
+  title: string;
+  content: string;
+  timeText: string;
+}
+
+export interface RouteFlowChainNode {
+  key: string;
+  title: string;
+  statusKey: "success" | "error" | "loading" | "pending";
+  statusLabel: string;
+  content: string;
+  timeText: string;
+}
+
 export interface RouteConfigPage {
   loading: boolean;
   rows: TransferRouteViewDTO[];
@@ -76,6 +92,25 @@ export interface RouteConfigPage {
   targetOptions: RouteSelectOption[];
   ruleOptions: RouteSelectOption[];
   selectLoading: boolean;
+  sourceActionLoadingIds: Record<string, boolean>;
+  sourceIngestStates: Record<
+    string,
+    {
+      ingestBusy?: boolean;
+      ingestFinishedAt?: string;
+      ingestStartedAt?: string;
+      ingestTriggerType?: string;
+      ingestStatus?: string;
+      processedCount?: number;
+      progressPercent?: number;
+      statusMessage?: string;
+      totalCount?: number;
+    }
+  >;
+  routeFlowFactMessages: Record<string, RouteFlowFactMessage[]>;
+  getSourceIngestChainItems: (
+    row: TransferRouteViewDTO | null,
+  ) => RouteFlowChainNode[];
   formVisible: boolean;
   formMode: "create" | "edit";
   formState: RouteFormState;
@@ -86,6 +121,28 @@ export interface RouteConfigPage {
   openEditDialog: (row: TransferRouteViewDTO) => Promise<void> | void;
   openDetailDrawer: (row: TransferRouteViewDTO) => Promise<void> | void;
   confirmDelete: (row: TransferRouteViewDTO) => void;
+  getSourceIngestState: (row: TransferRouteViewDTO | null) => {
+    ingestBusy?: boolean;
+    ingestFinishedAt?: string;
+    ingestStartedAt?: string;
+    ingestTriggerType?: string;
+    ingestStatus?: string;
+    processedCount?: number;
+    progressPercent?: number;
+    statusMessage?: string;
+    totalCount?: number;
+  } | null;
+  getSourceIngestStatusText: (row: TransferRouteViewDTO | null) => string;
+  canTriggerSource: (row: TransferRouteViewDTO | null) => boolean;
+  canStopSource: (row: TransferRouteViewDTO | null) => boolean;
+  getSourceIngestProgressPercent: (row: TransferRouteViewDTO | null) => number;
+  getSourceIngestProgressText: (row: TransferRouteViewDTO | null) => string;
+  getRouteFlowFactMessages: (row: TransferRouteViewDTO | null) => RouteFlowFactMessage[];
+  getRuleDisplayName: (ruleId?: string | number | null) => string;
+  triggerSource: (row: TransferRouteViewDTO) => Promise<void> | void;
+  stopSource: (row: TransferRouteViewDTO) => Promise<void> | void;
+  isSourceTriggering: (sourceId?: string) => boolean;
+  isSourceStopping: (sourceId?: string) => boolean;
   runQuery: () => Promise<void> | void;
   resetQuery: () => Promise<void> | void;
   submitForm: () => Promise<void> | void;

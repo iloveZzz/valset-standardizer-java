@@ -21,6 +21,8 @@ export interface TransferSourceViewDTO {
   ingestFinishedAt?: string;
   /** 收取开始时间。 */
   ingestStartedAt?: string;
+  /** 收取触发类型。 */
+  ingestTriggerType?: string;
   /** 收取状态。 */
   ingestStatus?: string;
   /** 轮询表达式。 */

@@ -7,5 +7,6 @@ public enum TargetType {
     EMAIL,
     S3,
     SFTP,
+    LOCAL_DIR,
     FILESYS
 }

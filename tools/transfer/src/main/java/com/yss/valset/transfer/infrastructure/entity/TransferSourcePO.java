@@ -70,6 +70,12 @@ public class TransferSourcePO {
     private String ingestStatus;
 
     /**
+     * 收取触发类型。
+     */
+    @TableField("ingest_trigger_type")
+    private String ingestTriggerType;
+
+    /**
      * 收取开始时间。
      */
     @TableField("ingest_started_at")
