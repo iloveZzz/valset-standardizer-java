@@ -84,7 +84,7 @@ export const useTransferTargetColumns = () =>
     },
     {
       field: "targetPathTemplate",
-      title: "目标目录/路径",
+      title: "目标路径模板",
       width: 260,
     },
     {
