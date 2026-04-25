@@ -20,6 +20,7 @@ public final class TransferFormTemplateNames {
     public static final String TRANSFER_TARGET_FILESYS = "transfer_target_filesys";
     public static final String TRANSFER_RULE = "transfer_rule";
     public static final String TRANSFER_ROUTE = "transfer_route";
+    public static final String TRANSFER_TAG = "transfer_tag";
 
     private TransferFormTemplateNames() {
     }

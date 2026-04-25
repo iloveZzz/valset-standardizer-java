@@ -2,6 +2,7 @@
 import {
   YButton,
   YCard,
+  YMonaco,
   YssFormily,
   YTable,
 } from "@yss-ui/components";
@@ -153,7 +154,9 @@ const actionConfig = useTableActionConfig({
     >
       <template #meta>
         <span v-if="page.templateVersion">版本 {{ page.templateVersion }}</span>
-        <span v-if="page.templateDescription">{{ page.templateDescription }}</span>
+        <span v-if="page.templateDescription">{{
+          page.templateDescription
+        }}</span>
       </template>
       <YssFormily
         :ref="page.setTemplateFormRef"
@@ -166,7 +169,16 @@ const actionConfig = useTableActionConfig({
         :read-pretty="page.templateReadPretty"
         :detail-options="page.templateDetailOptions"
         :grid-defaults="page.templateGridDefaults"
-      />
+      >
+        <template #scriptBody="{ value, onChange }">
+          <YMonaco
+            :model-value="value"
+            :language="page.resolveScriptEditorLanguage(page.templateValues.scriptLanguage)"
+            height="360px"
+            @update:model-value="onChange"
+          />
+        </template>
+      </YssFormily>
     </TransferTemplateDialog>
 
     <a-drawer
@@ -229,7 +241,9 @@ const actionConfig = useTableActionConfig({
         </div>
         <div class="detail-json-block">
           <h4>扩展信息</h4>
-          <pre>{{ JSON.stringify(page.selectedRow.ruleMeta || {}, null, 2) }}</pre>
+          <pre>{{
+            JSON.stringify(page.selectedRow.ruleMeta || {}, null, 2)
+          }}</pre>
         </div>
       </template>
     </a-drawer>

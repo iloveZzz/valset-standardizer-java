@@ -5,6 +5,7 @@ import com.yss.valset.transfer.domain.model.SourceType;
 import com.yss.valset.transfer.domain.model.TransferSource;
 import com.yss.valset.transfer.domain.model.config.EmailSourceConfig;
 import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
+import com.yss.valset.transfer.application.service.TransferIngestProgressAppService;
 import com.yss.valset.transfer.domain.rule.ConditionRuleParser;
 import com.yss.valset.transfer.domain.rule.JSONUtils;
 import com.yss.valset.transfer.domain.rule.ScriptRuleEngineAdapter;
@@ -51,9 +52,12 @@ public class EmailAttachmentProcessor {
     private static final int ATTACHMENT_BUFFER_SIZE = 128 * 1024;
 
     private final ScriptRuleEngineAdapter scriptRuleEngineAdapter;
+    private final TransferIngestProgressAppService transferIngestProgressAppService;
 
-    public EmailAttachmentProcessor(ScriptRuleEngineAdapter scriptRuleEngineAdapter) {
+    public EmailAttachmentProcessor(ScriptRuleEngineAdapter scriptRuleEngineAdapter,
+                                    TransferIngestProgressAppService transferIngestProgressAppService) {
         this.scriptRuleEngineAdapter = scriptRuleEngineAdapter;
+        this.transferIngestProgressAppService = transferIngestProgressAppService;
     }
 
     /**
@@ -75,6 +79,7 @@ public class EmailAttachmentProcessor {
                 RecognitionContext context = buildAttachmentContextIfAccepted(
                         config,
                         mailSnapshot,
+                        source == null ? null : source.sourceId(),
                         mailId,
                         attachmentCount,
                         attachmentNames,
@@ -137,6 +142,7 @@ public class EmailAttachmentProcessor {
     private RecognitionContext buildAttachmentContextIfAccepted(
             EmailSourceConfig config,
             MailMessageSnapshot mailSnapshot,
+            String sourceId,
             String mailId,
             int attachmentCount,
             List<String> attachmentNames,
@@ -169,11 +175,13 @@ public class EmailAttachmentProcessor {
                     fileName,
                     attachmentFileType,
                     attachmentCount,
-                    attachmentCount);
+                    config.effectiveLimit());
+            transferIngestProgressAppService.publishMessage(sourceId,
+                    "邮件附件未命中收取条件，mailId=" + mailId + "，附件名=" + fileName + "，attachmentFileType=" + attachmentFileType + "，attachmentCount=" + attachmentCount + "，limit=" + config.effectiveLimit() + "，跳过接收");
             return null;
         }
         try {
-            AttachmentMaterializationResult materializedAttachment = writeAttachmentToTempFile(bodyPart, fileName);
+            AttachmentMaterializationResult materializedAttachment = writeAttachmentToTempFile(sourceId, bodyPart, fileName);
             tempFile = materializedAttachment.tempFile();
             contentFingerprint = materializedAttachment.fingerprint();
             attachmentSize = materializedAttachment.size();
@@ -181,6 +189,8 @@ public class EmailAttachmentProcessor {
             attrs.put(TransferConfigKeys.ATTACHMENT_SIZE, attachmentSize);
             attrs.put("fileSize", attachmentSize);
             log.info("邮件附件已落本地临时文件，mailId={}，附件名={}，tempPath={}，size={}", mailId, fileName, tempFile.toAbsolutePath(), attachmentSize);
+            transferIngestProgressAppService.publishMessage(sourceId,
+                    "邮件附件已落本地临时文件，mailId=" + mailId + "，附件名=" + fileName + "，tempPath=" + tempFile.toAbsolutePath() + "，size=" + attachmentSize);
         } catch (Exception materializeException) {
             attrs.put("attachmentMaterializeFailed", true);
             attrs.put("attachmentMaterializeError", materializeException.getMessage());
@@ -189,6 +199,8 @@ public class EmailAttachmentProcessor {
                     fileName,
                     materializeException.getMessage(),
                     materializeException);
+            transferIngestProgressAppService.publishMessage(sourceId,
+                    "邮件附件临时落盘失败，继续按元数据处理，mailId=" + mailId + "，附件名=" + fileName + "，reason=" + materializeException.getMessage());
         }
         return new RecognitionContext(
                 SourceType.EMAIL,
@@ -298,7 +310,7 @@ public class EmailAttachmentProcessor {
                 int attachmentIndex = resolveAttachmentIndex(fileMeta);
                 String attachmentName = resolveAttachmentName(fileMeta, transferObject.originalName());
                 ResolvedAttachment resolvedAttachment = resolveTargetAttachment(message, transferObject.mailId(), attachmentIndex, attachmentName);
-                return writeAttachmentToTempFile(resolvedAttachment.bodyPart(), resolvedAttachment.attachmentName()).tempFile().toAbsolutePath();
+                return writeAttachmentToTempFile(transferObject.sourceId(), resolvedAttachment.bodyPart(), resolvedAttachment.attachmentName()).tempFile().toAbsolutePath();
             }
         }
     }
@@ -623,7 +635,7 @@ public class EmailAttachmentProcessor {
         }
     }
 
-    private AttachmentMaterializationResult writeAttachmentToTempFile(BodyPart bodyPart, String attachmentName) {
+    private AttachmentMaterializationResult writeAttachmentToTempFile(String sourceId, BodyPart bodyPart, String attachmentName) {
         if (bodyPart == null) {
             throw new IllegalStateException("邮件附件为空，无法转存");
         }
@@ -634,6 +646,8 @@ public class EmailAttachmentProcessor {
                     attachmentName));
             tempFile = Files.createTempFile("transfer-email-", tempSuffix);
             log.info("邮件附件准备转存，attachmentName={}，tempFile={}", attachmentName, tempFile);
+            transferIngestProgressAppService.publishMessage(sourceId,
+                    "邮件附件准备转存，attachmentName=" + attachmentName + "，tempFile=" + tempFile);
             long size = 0L;
             InputStream inputStream;
             try {
@@ -644,6 +658,8 @@ public class EmailAttachmentProcessor {
             try (InputStream openedInputStream = inputStream;
                  java.io.OutputStream outputStream = Files.newOutputStream(tempFile)) {
                 log.info("邮件附件开始写入临时文件，attachmentName={}，tempFile={}", attachmentName, tempFile);
+                transferIngestProgressAppService.publishMessage(sourceId,
+                        "邮件附件开始写入临时文件，attachmentName=" + attachmentName + "，tempFile=" + tempFile);
                 byte[] buffer = new byte[ATTACHMENT_BUFFER_SIZE];
                 int read;
                 while ((read = openedInputStream.read(buffer)) >= 0) {
@@ -655,6 +671,8 @@ public class EmailAttachmentProcessor {
                 }
             }
             log.info("邮件附件写入临时文件完成，attachmentName={}，tempFile={}，size={}", attachmentName, tempFile, size);
+            transferIngestProgressAppService.publishMessage(sourceId,
+                    "邮件附件写入临时文件完成，attachmentName=" + attachmentName + "，tempFile=" + tempFile + "，size=" + size);
             return new AttachmentMaterializationResult(tempFile, nameAndSizeFingerprint(attachmentName, size), size);
         } catch (Exception e) {
             try {

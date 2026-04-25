@@ -57,5 +57,6 @@ export interface RulePage {
   closeForm: () => void;
   closeDetail: () => void;
   formatEnabled: (value: boolean | undefined) => string;
+  resolveScriptEditorLanguage: (value: string | undefined) => string;
   handlePageChange: (params: { current: number; pageSize: number }) => void;
 }

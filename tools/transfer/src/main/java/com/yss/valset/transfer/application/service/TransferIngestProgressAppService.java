@@ -48,6 +48,14 @@ public interface TransferIngestProgressAppService {
     void publishProgress(String sourceId, long processedCount, long totalCount, String message);
 
     /**
+     * 推送普通消息事件。
+     *
+     * @param sourceId 来源主键
+     * @param message 消息内容
+     */
+    void publishMessage(String sourceId, String message);
+
+    /**
      * 推送完成事件。
      *
      * @param sourceId 来源主键

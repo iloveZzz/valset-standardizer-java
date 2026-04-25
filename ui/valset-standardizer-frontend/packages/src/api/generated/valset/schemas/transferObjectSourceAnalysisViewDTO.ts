@@ -4,9 +4,12 @@
  * Java 外部估值表标准化工程，基于 Spring Boot 和 Quartz
  * OpenAPI spec version: v1.0.0
  */
+import type { TransferObjectMailFolderCountViewDTO } from "./transferObjectMailFolderCountViewDTO";
 import type { TransferObjectStatusCountViewDTO } from "./transferObjectStatusCountViewDTO";
 
 export interface TransferObjectSourceAnalysisViewDTO {
+  /** 邮件文件夹统计列表。 */
+  mailFolderCounts?: TransferObjectMailFolderCountViewDTO[];
   /** 来源类型。 */
   sourceType?: string;
   /** 状态统计列表。 */

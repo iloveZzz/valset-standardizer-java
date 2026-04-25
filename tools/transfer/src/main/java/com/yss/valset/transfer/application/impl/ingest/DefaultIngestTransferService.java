@@ -3,6 +3,7 @@ package com.yss.valset.transfer.application.impl.ingest;
 import com.yss.valset.transfer.application.command.IngestTransferSourceCommand;
 import com.yss.valset.transfer.application.port.IngestTransferUseCase;
 import com.yss.valset.transfer.application.service.TransferIngestProgressAppService;
+import com.yss.valset.transfer.application.service.TransferTaggingUseCase;
 import com.yss.valset.transfer.domain.gateway.TransferRunLogGateway;
 import com.yss.valset.transfer.domain.gateway.TransferSourceCheckpointGateway;
 import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
@@ -67,6 +68,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     private final ObjectProvider<TransferJobScheduler> transferJobSchedulerProvider;
     private final FileProbePluginRegistry fileProbePluginRegistry;
     private final TransferIngestProgressAppService transferIngestProgressAppService;
+    private final TransferTaggingUseCase transferTaggingUseCase;
     private final String uploadRoot;
 
     public DefaultIngestTransferService(TransferSourceGateway transferSourceGateway,
@@ -77,6 +79,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                                         ObjectProvider<TransferJobScheduler> transferJobSchedulerProvider,
                                         FileProbePluginRegistry fileProbePluginRegistry,
                                         TransferIngestProgressAppService transferIngestProgressAppService,
+                                        TransferTaggingUseCase transferTaggingUseCase,
                                         @Value("${subject.match.upload-dir:${user.home}/.tmp/valset-standardizer/uploads}") String uploadRoot) {
         this.transferSourceGateway = transferSourceGateway;
         this.sourceConnectorRegistry = sourceConnectorRegistry;
@@ -86,6 +89,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         this.transferJobSchedulerProvider = transferJobSchedulerProvider;
         this.fileProbePluginRegistry = fileProbePluginRegistry;
         this.transferIngestProgressAppService = transferIngestProgressAppService;
+        this.transferTaggingUseCase = transferTaggingUseCase;
         this.uploadRoot = resolveUploadRoot(uploadRoot);
     }
 
@@ -257,6 +261,25 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                 Path storedPath = storeReceivedFile(source, analysisContext, draftTransferObject);
                 TransferObject transferObject = draftTransferObject.withLocalTempPath(storedPath == null ? null : storedPath.toAbsolutePath().toString());
                 TransferObject savedTransfer = transferObjectGateway.save(transferObject);
+                try {
+                    transferTaggingUseCase.tag(savedTransfer, analysisContext, probeResult);
+                } catch (Exception tagException) {
+                    log.warn("文件对象打标失败，继续执行路由，transferId={}，sourceId={}，sourceCode={}",
+                            savedTransfer.transferId(),
+                            source.sourceId(),
+                            source.sourceCode(),
+                            tagException);
+                    saveRunLog(
+                            source,
+                            savedTransfer.transferId(),
+                            null,
+                            triggerType,
+                            TransferRunStage.INGEST.name(),
+                            TransferRunStatus.FAILED.name(),
+                            "文件对象打标失败，transferId=" + savedTransfer.transferId(),
+                            tagException
+                    );
+                }
                 recordCheckpointItemIfNeeded(source, context, triggerType, processedCheckpointKeys);
                 recordCheckpointCursorIfNeeded(source, context, triggerType);
                 createdCount++;

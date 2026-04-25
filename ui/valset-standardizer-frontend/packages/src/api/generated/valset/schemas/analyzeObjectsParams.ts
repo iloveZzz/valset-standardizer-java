@@ -34,4 +34,16 @@ export type AnalyzeObjectsParams = {
    * 路由主键
    */
   routeId?: string;
+  /**
+   * 标签主键
+   */
+  tagId?: string;
+  /**
+   * 标签编码
+   */
+  tagCode?: string;
+  /**
+   * 标签值
+   */
+  tagValue?: string;
 };

@@ -107,7 +107,7 @@ const actionConfig = useTableActionConfig({
         :action-config="actionConfig"
         :data="page.tableData"
         :loading="page.loading"
-        :row-config="{ keyField: 'routeId' }"
+        :row-config="{ keyField: 'routeId', isCurrent: false, isHover: false }"
         :pageable="true"
         :cell-config="{ height: 320 }"
         :header-height="40"
@@ -213,43 +213,19 @@ const actionConfig = useTableActionConfig({
             @keydown.enter.stop="page.openDetailDrawer(row)"
           >
             <div class="route-summary-segment route-summary-segment--source">
-              <span>来源</span>
+              <span>来源:</span>
               <strong>{{ row.sourceCode || "-" }}</strong>
               <small>{{ row.sourceType || "-" }}</small>
-              <a-button
-                type="link"
-                size="small"
-                class="route-copy-button"
-                @click.stop="page.copyRouteField(row.sourceCode, '来源编码')"
-              >
-                复制编码
-              </a-button>
             </div>
             <div class="route-summary-segment route-summary-segment--route">
-              <span>规则匹配</span>
+              <span>路由:</span>
               <strong>{{ page.getRuleDisplayName(row.ruleId) }}</strong>
               <small>{{ row.renamePattern || "默认命名" }}</small>
-              <a-button
-                type="link"
-                size="small"
-                class="route-copy-button"
-                @click.stop="page.copyRouteField(row.ruleId, '规则ID')"
-              >
-                复制规则
-              </a-button>
             </div>
             <div class="route-summary-segment route-summary-segment--target">
-              <span>目标</span>
+              <span>目标:</span>
               <strong>{{ row.targetCode || "-" }}</strong>
               <small>{{ row.targetPath || "-" }}</small>
-              <a-button
-                type="link"
-                size="small"
-                class="route-copy-button"
-                @click.stop="page.copyRouteField(row.targetPath, '目标路径')"
-              >
-                复制路径
-              </a-button>
             </div>
           </div>
         </template>
@@ -310,7 +286,6 @@ const actionConfig = useTableActionConfig({
     <a-modal
       class="source-modal"
       :open="page.formVisible"
-      :title="page.formMode === 'create' ? '新建路由配置' : '编辑路由配置'"
       :width="1040"
       :confirm-loading="page.formSubmitting"
       destroy-on-close
@@ -319,13 +294,9 @@ const actionConfig = useTableActionConfig({
     >
       <div class="source-form-banner route-form-banner">
         <div>
-          <div class="source-form-banner-label">路由配置</div>
-          <div class="source-form-banner-value">
-            {{ page.formMode === "create" ? "新建路由" : "编辑路由" }}
+          <div class="source-form-banner-label">
+            路由配置：连接来源获取数据，通过规则识别定位目标，完成转发
           </div>
-        </div>
-        <div class="source-form-banner-hint">
-          选择来源、目标和分拣规则后，系统会自动回显编码、类型和路径，便于快速核对。
         </div>
       </div>
 
@@ -492,7 +463,7 @@ const actionConfig = useTableActionConfig({
           </div>
           <div class="route-detail-arrow" aria-hidden="true">→</div>
           <div class="route-detail-stage route-detail-stage--route">
-            <span>规则匹配</span>
+            <span>规则</span>
             <strong>{{ page.flowPreview.ruleTitle }}</strong>
             <small>{{ page.flowPreview.ruleMeta }}</small>
           </div>
@@ -532,24 +503,56 @@ const actionConfig = useTableActionConfig({
               <a-descriptions-item label="触发方式">
                 {{
                   page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
-                    ? page.getSourceIngestState(page.selectedRow)?.ingestTriggerType === "CRON"
+                    ? page.getSourceIngestState(page.selectedRow)
+                        ?.ingestTriggerType === "CRON"
                       ? "cron 定时"
-                      : page.getSourceIngestState(page.selectedRow)?.ingestTriggerType === "MANUAL"
+                      : page.getSourceIngestState(page.selectedRow)
+                            ?.ingestTriggerType === "MANUAL"
                         ? "手动触发"
-                        : page.getSourceIngestState(page.selectedRow)?.ingestTriggerType === "SYSTEM"
+                        : page.getSourceIngestState(page.selectedRow)
+                              ?.ingestTriggerType === "SYSTEM"
                           ? "系统触发"
-                          : page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
+                          : page.getSourceIngestState(page.selectedRow)
+                              ?.ingestTriggerType
                     : "-"
                 }}
               </a-descriptions-item>
               <a-descriptions-item label="触发时间">
                 {{
                   page.getSourceIngestState(page.selectedRow)?.ingestStartedAt
-                    ? formatDateTime(page.getSourceIngestState(page.selectedRow)?.ingestStartedAt)
+                    ? formatDateTime(
+                        page.getSourceIngestState(page.selectedRow)
+                          ?.ingestStartedAt,
+                      )
                     : "-"
                 }}
               </a-descriptions-item>
             </a-descriptions>
+          </section>
+
+          <section class="route-detail-panel">
+            <div class="route-detail-panel-header">
+              <h4>收取消息</h4>
+            </div>
+            <div
+              v-if="page.getSourceIngestMessages(page.selectedRow).length"
+              class="route-message-list"
+            >
+              <div
+                v-for="(item, index) in page.getSourceIngestMessages(page.selectedRow)"
+                :key="`${item.timeText}-${index}`"
+                class="route-message-item"
+              >
+                <div class="route-message-item__head">
+                  <strong>{{ item.title }}</strong>
+                  <span>{{ item.timeText }}</span>
+                </div>
+                <div class="route-message-item__content">
+                  {{ item.content }}
+                </div>
+              </div>
+            </div>
+            <a-empty v-else description="暂无收取消息" />
           </section>
 
           <section class="route-detail-panel">

@@ -2,6 +2,7 @@ package com.yss.valset.transfer.infrastructure.source.email;
 
 import com.yss.valset.transfer.domain.gateway.TransferSourceCheckpointGateway;
 import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
+import com.yss.valset.transfer.application.service.TransferIngestProgressAppService;
 import com.yss.valset.transfer.domain.model.SourceType;
 import com.yss.valset.transfer.domain.model.TransferSource;
 import com.yss.valset.transfer.domain.model.config.EmailSourceConfig;
@@ -23,7 +24,8 @@ class EmailMailScannerTest {
     private final EmailMailScanner emailMailScanner = new EmailMailScanner(
             mock(TransferSourceCheckpointGateway.class),
             mock(TransferSourceGateway.class),
-            mock(EmailAttachmentProcessor.class)
+            mock(EmailAttachmentProcessor.class),
+            mock(TransferIngestProgressAppService.class)
     );
 
     @Test

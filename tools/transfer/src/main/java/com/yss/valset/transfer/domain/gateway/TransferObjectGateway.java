@@ -16,9 +16,29 @@ public interface TransferObjectGateway {
 
     Optional<TransferObject> findByFingerprint(String fingerprint);
 
-    TransferObjectPage pageObjects(String sourceId, String sourceType, String sourceCode, String status, String mailId, String fingerprint, String routeId, Integer pageIndex, Integer pageSize);
+    TransferObjectPage pageObjects(String sourceId,
+                                   String sourceType,
+                                   String sourceCode,
+                                   String status,
+                                   String mailId,
+                                   String fingerprint,
+                                   String routeId,
+                                   String tagId,
+                                   String tagCode,
+                                   String tagValue,
+                                   Integer pageIndex,
+                                   Integer pageSize);
 
-    TransferObjectAnalysis analyzeObjects(String sourceId, String sourceType, String sourceCode, String status, String mailId, String fingerprint, String routeId);
+    TransferObjectAnalysis analyzeObjects(String sourceId,
+                                          String sourceType,
+                                          String sourceCode,
+                                          String status,
+                                          String mailId,
+                                          String fingerprint,
+                                          String routeId,
+                                          String tagId,
+                                          String tagCode,
+                                          String tagValue);
 
     TransferObject save(TransferObject transferObject);
 }

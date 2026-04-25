@@ -34,7 +34,18 @@ public interface TransferObjectQueryService {
      * @param pageSize 每页条数
      * @return 文件主对象分页结果
      */
-    PageResult<TransferObjectViewDTO> pageObjects(String sourceId, String sourceType, String sourceCode, String status, String mailId, String fingerprint, String routeId, Integer pageIndex, Integer pageSize);
+    PageResult<TransferObjectViewDTO> pageObjects(String sourceId,
+                                                  String sourceType,
+                                                  String sourceCode,
+                                                  String status,
+                                                  String mailId,
+                                                  String fingerprint,
+                                                  String routeId,
+                                                  String tagId,
+                                                  String tagCode,
+                                                  String tagValue,
+                                                  Integer pageIndex,
+                                                  Integer pageSize);
 
     /**
      * 统计分析文件主对象。
@@ -54,5 +65,8 @@ public interface TransferObjectQueryService {
                                                  String status,
                                                  String mailId,
                                                  String fingerprint,
-                                                 String routeId);
+                                                 String routeId,
+                                                 String tagId,
+                                                 String tagCode,
+                                                 String tagValue);
 }

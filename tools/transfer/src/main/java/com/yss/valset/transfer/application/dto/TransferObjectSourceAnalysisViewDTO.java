@@ -26,4 +26,9 @@ public class TransferObjectSourceAnalysisViewDTO {
      * 状态统计列表。
      */
     private List<TransferObjectStatusCountViewDTO> statusCounts;
+
+    /**
+     * 邮件文件夹统计列表。
+     */
+    private List<TransferObjectMailFolderCountViewDTO> mailFolderCounts;
 }

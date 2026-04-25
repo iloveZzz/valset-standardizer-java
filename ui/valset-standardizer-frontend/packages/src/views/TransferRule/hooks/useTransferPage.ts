@@ -51,6 +51,13 @@ const RULE_TEMPLATE_BASE_KEYS = [
   "effectiveFrom",
   "effectiveTo",
 ] as const;
+const RULE_TEMPLATE_DEPRECATED_KEYS = [
+  "groupStrategy",
+  "groupField",
+  "groupTargetMapping",
+  "groupExpression",
+  "regGroup",
+] as const;
 
 const api = getJavaSpringBootQuartzApi();
 
@@ -74,6 +81,17 @@ const defaultForm = (): RuleFormState => ({
 const extractTemplateConfigValues = (values: Record<string, any>) => {
   const next = { ...values };
   RULE_TEMPLATE_BASE_KEYS.forEach((key) => {
+    delete next[key];
+  });
+  RULE_TEMPLATE_DEPRECATED_KEYS.forEach((key) => {
+    delete next[key];
+  });
+  return next;
+};
+
+const stripDeprecatedTemplateValues = (values: Record<string, any>) => {
+  const next = { ...values };
+  RULE_TEMPLATE_DEPRECATED_KEYS.forEach((key) => {
     delete next[key];
   });
   return next;
@@ -149,7 +167,7 @@ export const useTransferPage = (): { page: RulePage } => {
     templateValues.value = {
       ...templateInitialValues.value,
       ...extractTemplateConfigValues(templateValues.value),
-      ...normalizeFormilyValues(row?.ruleMeta),
+      ...stripDeprecatedTemplateValues(normalizeFormilyValues(row?.ruleMeta)),
       ruleCode: row?.ruleCode ?? templateValues.value.ruleCode ?? "",
       ruleName: row?.ruleName ?? templateValues.value.ruleName ?? "",
       ruleVersion:
@@ -397,28 +415,31 @@ export const useTransferPage = (): { page: RulePage } => {
   };
 
   const buildPayload = (): TransferRuleUpsertCommand => {
-    const templateConfig = extractTemplateConfigValues(templateValues.value);
+    const normalizedTemplateValues = stripDeprecatedTemplateValues(
+      templateValues.value,
+    );
+    const templateConfig = extractTemplateConfigValues(normalizedTemplateValues);
     return {
       ruleId: formState.ruleId,
-      ruleCode: String(templateValues.value.ruleCode ?? "").trim(),
-      ruleName: String(templateValues.value.ruleName ?? "").trim(),
+      ruleCode: String(normalizedTemplateValues.ruleCode ?? "").trim(),
+      ruleName: String(normalizedTemplateValues.ruleName ?? "").trim(),
       ruleVersion:
-        String(templateValues.value.ruleVersion ?? "").trim() || undefined,
-      enabled: Boolean(templateValues.value.enabled),
+        String(normalizedTemplateValues.ruleVersion ?? "").trim() || undefined,
+      enabled: Boolean(normalizedTemplateValues.enabled),
       priority:
-        templateValues.value.priority === undefined ||
-        templateValues.value.priority === null
+        normalizedTemplateValues.priority === undefined ||
+        normalizedTemplateValues.priority === null
           ? undefined
-          : Number(templateValues.value.priority),
+          : Number(normalizedTemplateValues.priority),
       matchStrategy:
-        String(templateValues.value.matchStrategy ?? "").trim() || undefined,
+        String(normalizedTemplateValues.matchStrategy ?? "").trim() || undefined,
       scriptLanguage:
-        String(templateValues.value.scriptLanguage ?? "").trim() || undefined,
+        String(normalizedTemplateValues.scriptLanguage ?? "").trim() || undefined,
       effectiveFrom:
-        String(templateValues.value.effectiveFrom ?? "").trim() || undefined,
+        String(normalizedTemplateValues.effectiveFrom ?? "").trim() || undefined,
       effectiveTo:
-        String(templateValues.value.effectiveTo ?? "").trim() || undefined,
-      scriptBody: String(templateValues.value.scriptBody ?? "").trim(),
+        String(normalizedTemplateValues.effectiveTo ?? "").trim() || undefined,
+      scriptBody: String(normalizedTemplateValues.scriptBody ?? "").trim(),
       ruleMeta:
         Object.keys(templateConfig).length > 0
           ? (templateConfig as JsonObject)
@@ -444,7 +465,9 @@ export const useTransferPage = (): { page: RulePage } => {
     effectiveFrom: String(row.effectiveFrom ?? "").trim() || undefined,
     effectiveTo: String(row.effectiveTo ?? "").trim() || undefined,
     scriptBody: String(row.scriptBody ?? "").trim(),
-    ruleMeta: row.ruleMeta,
+    ruleMeta: stripDeprecatedTemplateValues(
+      (row.ruleMeta ?? {}) as Record<string, any>,
+    ),
   });
 
   const isEnabledUpdating = (ruleId?: number) => {
@@ -558,6 +581,24 @@ export const useTransferPage = (): { page: RulePage } => {
     return "-";
   };
 
+  const resolveScriptEditorLanguage = (value: string | undefined) => {
+    const normalized = String(value ?? "").trim().toLowerCase();
+    if (!normalized) {
+      return "javascript";
+    }
+
+    if (
+      normalized === "qlexpress4" ||
+      normalized === "qlexpress" ||
+      normalized === "javascript" ||
+      normalized === "js"
+    ) {
+      return "javascript";
+    }
+
+    return normalized;
+  };
+
   watch(
     () => formVisible.value,
     async (visible) => {
@@ -621,6 +662,7 @@ export const useTransferPage = (): { page: RulePage } => {
       detailVisible.value = false;
     },
     formatEnabled,
+    resolveScriptEditorLanguage,
   }) as RulePage;
 
   return {

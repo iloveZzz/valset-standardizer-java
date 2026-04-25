@@ -20,8 +20,6 @@ public interface TransferRuleMapper extends TransferMapstructSupport {
 
     @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(po.getEnabled()))")
     @Mapping(target = "ruleId", expression = "java(stringValue(po.getRuleId()))")
-    @Mapping(target = "effectiveFrom", expression = "java(toInstant(po.getEffectiveFrom()))")
-    @Mapping(target = "effectiveTo", expression = "java(toInstant(po.getEffectiveTo()))")
     @Mapping(target = "ruleMeta", source = "ruleMetaJson")
     RuleDefinition toDomain(TransferRulePO po);
 }

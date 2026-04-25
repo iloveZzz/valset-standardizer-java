@@ -30,6 +30,7 @@ import type {
   RouteFlowFactMessage,
   RouteFlowPreview,
   RouteFlowStats,
+  SourceIngestMessage,
 } from "../types";
 
 type QueryState = {
@@ -460,6 +461,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const routeFlowFactMessages = reactive<
     Record<string, RouteFlowFactMessage[]>
   >({});
+  const sourceIngestMessages = reactive<Record<string, SourceIngestMessage[]>>({});
   const sourceTypeOptions = Object.values(GetTemplateName1SourceType).map(
     (value) => ({
       label: value,
@@ -513,6 +515,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const clearTrackedSourceState = (sourceId: string) => {
     delete sourceIngestStates[sourceId];
     delete routeFlowFactMessages[sourceId];
+    delete sourceIngestMessages[sourceId];
   };
 
   const updateRouteFlowFactsForSource = (sourceId: string) => {
@@ -528,6 +531,21 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
       getRuleDisplayName(row.ruleId),
       routeIssue,
     );
+  };
+
+  const appendSourceIngestMessage = (sourceId: string, content: string) => {
+    if (!sourceId || !content) {
+      return;
+    }
+    const history = sourceIngestMessages[sourceId] ?? [];
+    sourceIngestMessages[sourceId] = [
+      ...history,
+      {
+        title: "邮件收取消息",
+        content,
+        timeText: getCurrentTimeText(),
+      },
+    ].slice(-20);
   };
 
   const updateRouteFlowFactsForRoute = (routeId: string) => {
@@ -656,6 +674,25 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
                 sourceIngestStates[sourceId]?.ingestStartedAt ??
                 getCurrentTimeText(),
             });
+            return;
+          }
+
+          if (message.type === "message") {
+            const text = String(message.data.message ?? "").trim();
+            if (!text) {
+              return;
+            }
+            appendSourceIngestMessage(sourceId, text);
+            patchSourceIngestState(sourceId, {
+              ingestBusy: true,
+              ingestStatus:
+                sourceIngestStates[sourceId]?.ingestStatus || "RUNNING",
+              statusMessage: text,
+              ingestStartedAt:
+                sourceIngestStates[sourceId]?.ingestStartedAt ??
+                getCurrentTimeText(),
+            });
+            updateRouteFlowFactsForSource(sourceId);
             return;
           }
 
@@ -1128,6 +1165,13 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
       return [];
     }
     return routeFlowFactMessages[row.sourceId] ?? [];
+  };
+
+  const getSourceIngestMessages = (row: TransferRouteViewDTO | null) => {
+    if (!row?.sourceId) {
+      return [];
+    }
+    return sourceIngestMessages[row.sourceId] ?? [];
   };
 
   const getSourceIngestChainItems = (
@@ -1626,6 +1670,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     sourceActionLoadingIds,
     sourceIngestStates,
     routeFlowFactMessages,
+    sourceIngestMessages,
     formVisible,
     formMode,
     formState,
@@ -1644,6 +1689,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     getSourceIngestProgressPercent,
     getSourceIngestProgressText,
     getRouteFlowFactMessages,
+    getSourceIngestMessages,
     getSourceIngestChainItems,
     getRuleDisplayName,
     triggerSource,

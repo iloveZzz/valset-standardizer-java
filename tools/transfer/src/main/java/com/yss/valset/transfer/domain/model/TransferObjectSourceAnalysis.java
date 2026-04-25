@@ -8,6 +8,7 @@ import java.util.List;
 public record TransferObjectSourceAnalysis(
         String sourceType,
         Long totalCount,
-        List<TransferObjectStatusCount> statusCounts
+        List<TransferObjectStatusCount> statusCounts,
+        List<TransferObjectMailFolderCount> mailFolderCounts
 ) {
 }

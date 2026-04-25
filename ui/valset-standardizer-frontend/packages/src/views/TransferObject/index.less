@@ -1,1 +1,57 @@
 @import "../TransferRunLog/index.less";
+
+.object-tag-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.object-tag-list--wrap {
+  flex-wrap: wrap;
+}
+
+.object-tag-empty {
+  color: var(--yss-text-tertiary, rgba(0, 0, 0, 0.45));
+}
+
+.workspace-tag-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.workspace-tag-filters-label {
+  font-size: 13px;
+  color: var(--yss-text-secondary, rgba(0, 0, 0, 0.65));
+  font-weight: 600;
+}
+
+.workspace-tag-filter-chip {
+  cursor: pointer;
+}
+
+.workspace-tag-filter-count {
+  margin-left: 4px;
+  opacity: 0.72;
+}
+
+.workspace-tag-empty {
+  font-size: 13px;
+  color: var(--yss-text-tertiary, rgba(0, 0, 0, 0.45));
+}
+
+.workspace-tag-clear {
+  padding-left: 4px;
+}
+
+.workspace-active-tag-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--yss-text-secondary, rgba(0, 0, 0, 0.65));
+}

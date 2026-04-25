@@ -80,6 +80,7 @@ public class DefaultTransferFormTemplateQueryService implements TransferFormTemp
             case "transfer_target" -> "目标";
             case "transfer_rule" -> "路由规则";
             case "transfer_route" -> "路由配置";
+            case "transfer_tag" -> "标签管理";
             case "storage" -> "存储";
             default -> category;
         };

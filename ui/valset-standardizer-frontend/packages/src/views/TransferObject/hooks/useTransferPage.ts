@@ -5,13 +5,33 @@ import type {
   AnalyzeObjectsParams,
   PageObjectsParams,
   TransferObjectAnalysisViewDTO,
+  TransferObjectExtensionCountViewDTO,
+  TransferObjectMailFolderCountViewDTO,
   TransferObjectSourceAnalysisViewDTO,
   TransferObjectStatusCountViewDTO,
-  TransferObjectViewDTO,
+  TransferObjectSizeAnalysisViewDTO,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
 import { unwrapSingleResult } from "@/utils/api-response";
-import type { ObjectAnalysis, ObjectPage, ObjectQueryState } from "../types";
+import type {
+  ObjectAnalysis,
+  ObjectPage,
+  ObjectTagFilter,
+  ObjectQueryState,
+  TransferObjectViewDTO,
+} from "../types";
+
+type PageObjectsRequestParams = PageObjectsParams & {
+  tagId?: string;
+  tagCode?: string;
+  tagValue?: string;
+};
+
+type AnalyzeObjectsRequestParams = AnalyzeObjectsParams & {
+  tagId?: string;
+  tagCode?: string;
+  tagValue?: string;
+};
 
 const api = getJavaSpringBootQuartzApi();
 
@@ -36,6 +56,9 @@ const defaultQuery = (): ObjectQueryState => ({
   mailId: "",
   fingerprint: "",
   routeId: "",
+  tagId: "",
+  tagCode: "",
+  tagValue: "",
 });
 
 const safeJson = (value: unknown) => {
@@ -111,14 +134,43 @@ const normalizeStatusCounts = (
   return [...orderedStatusCounts, ...remainingStatusCounts];
 };
 
-  const normalizeAnalysis = (
-    value: TransferObjectAnalysisViewDTO | undefined,
-  ): ObjectAnalysis => {
+const normalizeFolderCounts = (
+  folderCounts: TransferObjectMailFolderCountViewDTO[] | undefined,
+): ObjectAnalysis["sourceAnalyses"][number]["mailFolderCounts"] => {
+  return (folderCounts ?? []).map((item) => ({
+    mailFolder: item.mailFolder,
+    mailFolderLabel: item.mailFolderLabel || item.mailFolder || "未分类",
+    count: Number(item.count ?? 0),
+  }));
+};
+
+const normalizeExtensionCounts = (
+  extensionCounts: TransferObjectExtensionCountViewDTO[] | undefined,
+): ObjectAnalysis["sizeAnalysis"]["extensionCounts"] => {
+  return (extensionCounts ?? []).map((item) => ({
+    extension: item.extension,
+    extensionLabel: item.extensionLabel || item.extension || "无后缀",
+    count: Number(item.count ?? 0),
+  }));
+};
+
+const normalizeSizeAnalysis = (
+  value: TransferObjectSizeAnalysisViewDTO | undefined,
+): ObjectAnalysis["sizeAnalysis"] => ({
+  totalCount: Number(value?.totalCount ?? 0),
+  totalSizeBytes: Number(value?.totalSizeBytes ?? 0),
+  extensionCounts: normalizeExtensionCounts(value?.extensionCounts),
+});
+
+const normalizeAnalysis = (
+  value: TransferObjectAnalysisViewDTO | undefined,
+): ObjectAnalysis => {
   const sourceAnalyses = (value?.sourceAnalyses ?? [])
     .map((item: TransferObjectSourceAnalysisViewDTO) => ({
       sourceType: item.sourceType,
       totalCount: Number(item.totalCount ?? 0),
       statusCounts: normalizeStatusCounts(item.statusCounts),
+      mailFolderCounts: normalizeFolderCounts(item.mailFolderCounts),
     }))
     .sort((left, right) => {
       const countCompare = right.totalCount - left.totalCount;
@@ -133,6 +185,7 @@ const normalizeStatusCounts = (
   return {
     totalCount: Number(value?.totalCount ?? 0),
     sourceAnalyses,
+    sizeAnalysis: normalizeSizeAnalysis(value?.sizeAnalysis),
   };
 };
 
@@ -153,6 +206,11 @@ export const useTransferPage = () => {
   const analysis = ref<ObjectAnalysis>({
     totalCount: 0,
     sourceAnalyses: [],
+    sizeAnalysis: {
+      totalCount: 0,
+      totalSizeBytes: 0,
+      extensionCounts: [],
+    },
   });
 
   const listLoading = ref(false);
@@ -184,11 +242,45 @@ export const useTransferPage = () => {
   const statusCount = computed(
     () => new Set(rows.value.map((row) => row.status).filter(Boolean)).size,
   );
+  const tagFilters = computed<ObjectTagFilter[]>(() => {
+    const tagMap = new Map<string, ObjectTagFilter>();
+    rows.value.forEach((row) => {
+      (row.tags ?? []).forEach((tag) => {
+        const key =
+          tag.tagId ||
+          `${String(tag.tagCode ?? "").trim()}::${String(tag.tagValue ?? "").trim()}`;
+        if (!key) {
+          return;
+        }
+        const current = tagMap.get(key);
+        if (current) {
+          current.count += 1;
+          return;
+        }
+        tagMap.set(key, {
+          tagId: tag.tagId,
+          tagCode: tag.tagCode,
+          tagName: tag.tagName,
+          tagValue: tag.tagValue,
+          count: 1,
+        });
+      });
+    });
+    return [...tagMap.values()].sort((left, right) => {
+      const countCompare = right.count - left.count;
+      if (countCompare !== 0) {
+        return countCompare;
+      }
+      return String(left.tagName || left.tagCode || left.tagValue || "").localeCompare(
+        String(right.tagName || right.tagCode || right.tagValue || ""),
+      );
+    });
+  });
 
   const mapQuery = (
     pageIndex = pagination.value.current || 1,
     pageSizeValue = pagination.value.pageSize || 10,
-  ): PageObjectsParams => ({
+  ): PageObjectsRequestParams => ({
     sourceId: query.sourceId || undefined,
     sourceType: query.sourceType || undefined,
     sourceCode: query.sourceCode || undefined,
@@ -196,11 +288,14 @@ export const useTransferPage = () => {
     mailId: query.mailId || undefined,
     fingerprint: query.fingerprint || undefined,
     routeId: query.routeId || undefined,
+    tagId: query.tagId || undefined,
+    tagCode: query.tagCode || undefined,
+    tagValue: query.tagValue || undefined,
     pageIndex: Math.max(pageIndex - 1, 0),
     pageSize: pageSizeValue,
   });
 
-  const mapAnalysisQuery = (): AnalyzeObjectsParams => ({
+  const mapAnalysisQuery = (): AnalyzeObjectsRequestParams => ({
     sourceId: query.sourceId || undefined,
     sourceType: query.sourceType || undefined,
     sourceCode: query.sourceCode || undefined,
@@ -208,6 +303,9 @@ export const useTransferPage = () => {
     mailId: query.mailId || undefined,
     fingerprint: query.fingerprint || undefined,
     routeId: query.routeId || undefined,
+    tagId: query.tagId || undefined,
+    tagCode: query.tagCode || undefined,
+    tagValue: query.tagValue || undefined,
   });
 
   const loadList = async (
@@ -260,6 +358,11 @@ export const useTransferPage = () => {
       analysis.value = {
         totalCount: 0,
         sourceAnalyses: [],
+        sizeAnalysis: {
+          totalCount: 0,
+          totalSizeBytes: 0,
+          extensionCounts: [],
+        },
       };
     } finally {
       if (requestId === analysisRequestId) {
@@ -316,6 +419,25 @@ export const useTransferPage = () => {
     const text = String(value ?? "").trim();
     return text || "-";
   };
+  const formatTagLabel = (value: string | undefined) => {
+    const text = String(value ?? "").trim();
+    return text || "-";
+  };
+  const formatBytes = (value: number | undefined) => {
+    const size = Number(value ?? 0);
+    if (!Number.isFinite(size) || size <= 0) {
+      return "0 B";
+    }
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let current = size;
+    let unitIndex = 0;
+    while (current >= 1024 && unitIndex < units.length - 1) {
+      current /= 1024;
+      unitIndex += 1;
+    }
+    const precision = unitIndex === 0 ? 0 : current >= 10 ? 1 : 2;
+    return `${current.toFixed(precision)} ${units[unitIndex]}`;
+  };
 
   const applySourceFilter = (sourceType?: string) => {
     query.sourceType = sourceType ?? "";
@@ -327,6 +449,22 @@ export const useTransferPage = () => {
   const applySourceStatusFilter = (sourceType?: string, status?: string) => {
     query.sourceType = sourceType ?? "";
     query.status = status ?? "";
+    pagination.value.current = 1;
+    void runQuery();
+  };
+
+  const applyTagFilter = (filter: ObjectTagFilter) => {
+    query.tagId = filter.tagId ?? "";
+    query.tagCode = filter.tagCode ?? "";
+    query.tagValue = filter.tagValue ?? "";
+    pagination.value.current = 1;
+    void runQuery();
+  };
+
+  const clearTagFilter = () => {
+    query.tagId = "";
+    query.tagCode = "";
+    query.tagValue = "";
     pagination.value.current = 1;
     void runQuery();
   };
@@ -346,6 +484,7 @@ export const useTransferPage = () => {
     routeCount,
     sourceCount,
     statusCount,
+    tagFilters,
     query,
     selectedRow,
     detailVisible,
@@ -355,12 +494,16 @@ export const useTransferPage = () => {
     resetQuery,
     applySourceFilter,
     applySourceStatusFilter,
+    applyTagFilter,
+    clearTagFilter,
     closeDetail: () => {
       detailVisible.value = false;
     },
     formatStatus,
     formatSourceTypeLabel,
     formatStatusLabel,
+    formatTagLabel,
+    formatBytes,
     safeJson,
   }) as unknown as ObjectPage;
 

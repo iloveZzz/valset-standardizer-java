@@ -4,6 +4,7 @@
  * Java 外部估值表标准化工程，基于 Spring Boot 和 Quartz
  * OpenAPI spec version: v1.0.0
  */
+import type { TransferObjectTagViewDTO } from "./transferObjectTagViewDTO";
 
 export interface TransferObjectViewDTO {
   /** 错误信息。 */
@@ -56,6 +57,8 @@ export interface TransferObjectViewDTO {
   status?: string;
   /** 落库时间。 */
   storedAt?: string;
+  /** 文件标签列表。 */
+  tags?: TransferObjectTagViewDTO[];
   /** 文件主键。 */
   transferId?: string;
 }

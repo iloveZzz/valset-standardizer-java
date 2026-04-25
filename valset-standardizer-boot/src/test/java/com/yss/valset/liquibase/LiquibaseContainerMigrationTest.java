@@ -42,7 +42,7 @@ class LiquibaseContainerMigrationTest {
                 MYSQL.getJdbcUrl(),
                 MYSQL.getUsername(),
                 MYSQL.getPassword(),
-                "select count(*) from information_schema.tables where table_schema = database() and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_stg_external_valuation','t_dwd_external_valuation_subject','t_dwd_external_valuation_metric','t_ods_standard_subject','t_transfer_object','t_transfer_rule','t_transfer_route','t_transfer_delivery_record','t_transfer_target','scheduled_tasks')",
+                "select count(*) from information_schema.tables where table_schema = database() and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_stg_external_valuation','t_dwd_external_valuation_subject','t_dwd_external_valuation_metric','t_ods_standard_subject','t_transfer_object','t_transfer_rule','t_transfer_route','t_transfer_delivery_record','t_transfer_target','t_transfer_tag','t_transfer_object_tag','scheduled_tasks')",
                 "select count(*) from information_schema.statistics where table_schema = database() and table_name = 't_transfer_object' and index_name = 'uk_transfer_object_fingerprint'",
                 "select count(*) from information_schema.columns where table_schema = database() and table_name = 't_transfer_object' and column_name = 'mail_subject'",
                 "select count(*) from t_transfer_target",
@@ -56,7 +56,7 @@ class LiquibaseContainerMigrationTest {
                 POSTGRES.getJdbcUrl(),
                 POSTGRES.getUsername(),
                 POSTGRES.getPassword(),
-                "select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_stg_external_valuation','t_dwd_external_valuation_subject','t_dwd_external_valuation_metric','t_ods_standard_subject','t_transfer_object','t_transfer_rule','t_transfer_route','t_transfer_delivery_record','t_transfer_target','scheduled_tasks')",
+                "select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('leaf_alloc','t_subject_match_file_info','t_ods_valuation_sheet_style','t_stg_external_valuation','t_dwd_external_valuation_subject','t_dwd_external_valuation_metric','t_ods_standard_subject','t_transfer_object','t_transfer_rule','t_transfer_route','t_transfer_delivery_record','t_transfer_target','t_transfer_tag','t_transfer_object_tag','scheduled_tasks')",
                 "select count(*) from pg_indexes where schemaname = 'public' and tablename = 't_transfer_object' and indexname = 'uk_transfer_object_fingerprint'",
                 "select count(*) from information_schema.columns where table_schema = 'public' and table_name = 't_transfer_object' and column_name = 'mail_subject'",
                 "select count(*) from t_transfer_target",
@@ -73,11 +73,11 @@ class LiquibaseContainerMigrationTest {
         }
 
         try (Connection verifyConnection = DriverManager.getConnection(jdbcUrl, username, password)) {
-            assertThat(scalarCount(verifyConnection, tableCountSql)).isGreaterThanOrEqualTo(23);
+            assertThat(scalarCount(verifyConnection, tableCountSql)).isEqualTo(15);
             assertThat(scalarCount(verifyConnection, indexCountSql)).isEqualTo(1);
             assertThat(scalarCount(verifyConnection, mailColumnSql)).isGreaterThanOrEqualTo(1);
-            assertThat(scalarCount(verifyConnection, targetCountSql)).isEqualTo(6);
-            assertThat(scalarCount(verifyConnection, ruleCountSql)).isEqualTo(3);
+            assertThat(scalarCount(verifyConnection, targetCountSql)).isEqualTo(1);
+            assertThat(scalarCount(verifyConnection, ruleCountSql)).isEqualTo(1);
         }
     }
 

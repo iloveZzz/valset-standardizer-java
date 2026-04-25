@@ -49,7 +49,7 @@ const actionConfig = useTableActionConfig({
         <div class="workspace-header-copy">
           <h1>文件投递目标配置</h1>
           <p>
-            统一维护投递目标编码、名称、类型、路径模板与扩展配置，面向收发分拣的出站投递管理。
+            统一维护投递目标编码、名称、类型、目录根路径、子路径模板与扩展配置，面向收发分拣的出站投递管理。
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
@@ -152,7 +152,7 @@ const actionConfig = useTableActionConfig({
     <TransferTemplateDialog
       :open="page.formVisible"
       :title="page.formMode === 'create' ? '新建目标' : '编辑目标'"
-      hint="目标类型变更后会自动刷新模板名，便于提前核对后端约定。"
+      hint="目标类型变更后会自动刷新模板名；本地目录目标请单独填写目录根路径，子路径模板仅用于追加相对路径。"
       panel-title="目标模板表单"
       :panel-subtitle="page.templateNamePreview || '未选择目标类型'"
       :loading="page.templateLoading"
@@ -226,11 +226,18 @@ const actionConfig = useTableActionConfig({
           <a-descriptions-item label="启用状态">
             {{ page.formatEnabled(page.selectedRow.enabled) }}
           </a-descriptions-item>
-          <a-descriptions-item label="投递路径模板">
+          <a-descriptions-item label="目标子路径模板">
             {{ page.selectedRow.targetPathTemplate || "-" }}
           </a-descriptions-item>
         </a-descriptions>
 
+        <div
+          v-if="page.selectedRow.targetType === 'LOCAL_DIR' && page.getLocalTargetDirectory(page.selectedRow)"
+          class="detail-json-block"
+        >
+          <h4>目标目录根路径</h4>
+          <pre>{{ page.getLocalTargetDirectory(page.selectedRow) }}</pre>
+        </div>
         <div class="detail-json-block">
           <h4>连接配置</h4>
           <pre>{{

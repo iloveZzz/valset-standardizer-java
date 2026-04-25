@@ -16,12 +16,14 @@
     <include file="sql/common/qlexpress-rule-engine-init.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/db-scheduler.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer.sql" relativeToChangelogFile="true"/>
+    <include file="sql/common/transfer-tag.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-drop-normalized-name.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-extensions.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-source-ingest-lock.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-source-ingest-task-id.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-source-ingest-columns-drop.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-init.sql" relativeToChangelogFile="true"/>
+    <include file="sql/common/transfer-init-fix.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-email.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/tr.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/indexes.sql" relativeToChangelogFile="true"/>

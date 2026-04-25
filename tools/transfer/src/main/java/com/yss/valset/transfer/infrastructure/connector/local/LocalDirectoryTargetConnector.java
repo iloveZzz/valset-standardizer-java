@@ -85,14 +85,14 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
 
     private Path resolveTargetPath(TransferContext context, LocalDirectoryTargetConfig config, TransferObject transferObject) {
         String directoryText = resolveTemplate(config.directory(), context, transferObject);
-        Path directory = Paths.get(directoryText);
+        Path directory = Paths.get(expandHomeDirectory(directoryText));
         String targetPathTemplate = firstNonBlank(
                 attributeText(context, TransferConfigKeys.TARGET_PATH),
                 context.transferTarget() == null ? null : context.transferTarget().targetPathTemplate()
         );
         if (targetPathTemplate != null && !targetPathTemplate.isBlank()) {
             String resolvedTargetPath = resolveTemplate(targetPathTemplate, context, transferObject);
-            Path targetPath = Paths.get(resolvedTargetPath);
+            Path targetPath = Paths.get(expandHomeDirectory(resolvedTargetPath));
             if (!targetPath.isAbsolute()) {
                 directory = directory.resolve(targetPath);
             } else {
@@ -108,6 +108,19 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
             resolvedFileName = transferObject.originalName();
         }
         return directory.resolve(resolvedFileName).normalize();
+    }
+
+    private String expandHomeDirectory(String pathText) {
+        if (pathText == null || pathText.isBlank()) {
+            return pathText;
+        }
+        if ("~".equals(pathText)) {
+            return System.getProperty("user.home");
+        }
+        if (pathText.startsWith("~/")) {
+            return Paths.get(System.getProperty("user.home"), pathText.substring(2)).toString();
+        }
+        return pathText;
     }
 
     private String resolveTemplate(String template, TransferContext context, TransferObject transferObject) {

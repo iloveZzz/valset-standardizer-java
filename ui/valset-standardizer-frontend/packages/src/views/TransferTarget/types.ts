@@ -58,5 +58,6 @@ export interface TargetPage {
   closeForm: () => void;
   closeDetail: () => void;
   formatEnabled: (value: boolean | undefined) => string;
+  getLocalTargetDirectory: (row?: any | null) => string;
   handlePageChange: (params: { current: number; pageSize: number }) => void;
 }

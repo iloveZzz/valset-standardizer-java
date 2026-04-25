@@ -54,6 +54,12 @@ export interface RouteFlowFactMessage {
   timeText: string;
 }
 
+export interface SourceIngestMessage {
+  title: string;
+  content: string;
+  timeText: string;
+}
+
 export interface RouteFlowChainNode {
   key: string;
   title: string;
@@ -108,6 +114,7 @@ export interface RouteConfigPage {
     }
   >;
   routeFlowFactMessages: Record<string, RouteFlowFactMessage[]>;
+  sourceIngestMessages: Record<string, SourceIngestMessage[]>;
   getSourceIngestChainItems: (
     row: TransferRouteViewDTO | null,
   ) => RouteFlowChainNode[];
@@ -138,6 +145,7 @@ export interface RouteConfigPage {
   getSourceIngestProgressPercent: (row: TransferRouteViewDTO | null) => number;
   getSourceIngestProgressText: (row: TransferRouteViewDTO | null) => string;
   getRouteFlowFactMessages: (row: TransferRouteViewDTO | null) => RouteFlowFactMessage[];
+  getSourceIngestMessages: (row: TransferRouteViewDTO | null) => SourceIngestMessage[];
   getRuleDisplayName: (ruleId?: string | number | null) => string;
   triggerSource: (row: TransferRouteViewDTO) => Promise<void> | void;
   stopSource: (row: TransferRouteViewDTO) => Promise<void> | void;

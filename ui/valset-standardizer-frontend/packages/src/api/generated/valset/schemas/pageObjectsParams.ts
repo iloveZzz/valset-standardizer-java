@@ -35,6 +35,18 @@ export type PageObjectsParams = {
    */
   routeId?: string;
   /**
+   * 标签主键
+   */
+  tagId?: string;
+  /**
+   * 标签编码
+   */
+  tagCode?: string;
+  /**
+   * 标签值
+   */
+  tagValue?: string;
+  /**
    * 页码
    */
   pageIndex?: number;

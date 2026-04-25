@@ -40,6 +40,32 @@ const actionConfig = useTableActionConfig({
             <span class="workspace-pill">详情查看完整文件元数据</span>
             <span class="workspace-pill">只读查询，无编辑操作</span>
           </div>
+          <div class="workspace-tag-filters">
+            <span class="workspace-tag-filters-label">快捷标签筛选</span>
+            <a-tag
+              v-for="filter in page.tagFilters"
+              :key="filter.tagId || `${filter.tagCode}-${filter.tagValue}`"
+              class="workspace-tag-filter-chip"
+              color="cyan"
+              @click="page.applyTagFilter(filter)"
+            >
+              {{ filter.tagName || filter.tagCode || filter.tagValue || "-" }}
+              <span v-if="filter.tagValue">：{{ filter.tagValue }}</span>
+              <span class="workspace-tag-filter-count">({{ filter.count }})</span>
+            </a-tag>
+            <a-button
+              v-if="page.query.tagCode || page.query.tagValue || page.query.tagId"
+              size="small"
+              type="link"
+              class="workspace-tag-clear"
+              @click="page.clearTagFilter"
+            >
+              清除标签
+            </a-button>
+            <span v-if="!page.tagFilters.length" class="workspace-tag-empty">
+              当前页暂无标签可筛选
+            </span>
+          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
@@ -55,56 +81,121 @@ const actionConfig = useTableActionConfig({
         </div>
       </div>
       <div class="workspace-summary">
-        <div class="workspace-summary-title">
-          <strong>来源类型统计</strong>
-          <span>按来源类型展示文件状态个数，点击卡片或状态可直接筛选</span>
-        </div>
+        <div class="workspace-summary-title"></div>
         <a-spin :spinning="page.analysisLoading">
-          <div class="workspace-analysis-grid">
-            <div
-              v-for="sourceItem in page.analysis.sourceAnalyses"
-              :key="sourceItem.sourceType"
-              class="analysis-card-shell"
-              @click="page.applySourceFilter(sourceItem.sourceType)"
-            >
-              <YCard class="analysis-card" :bordered="false" :padding="18">
-                <div class="analysis-card-header">
-                  <div>
-                    <div class="analysis-card-label">
-                      {{ page.formatSourceTypeLabel(sourceItem.sourceType) }}
+          <div class="workspace-analysis-layout">
+            <div class="workspace-analysis-grid workspace-analysis-grid--fill">
+              <div
+                v-for="sourceItem in page.analysis.sourceAnalyses"
+                :key="sourceItem.sourceType"
+                class="analysis-card-shell"
+                @click="page.applySourceFilter(sourceItem.sourceType)"
+              >
+                <YCard class="analysis-card" :bordered="false" :padding="18">
+                  <div class="analysis-card-header">
+                    <div>
+                      <div class="analysis-card-label">
+                        {{ page.formatSourceTypeLabel(sourceItem.sourceType) }}
+                      </div>
+                      <div class="analysis-card-desc">来源类型文件状态统计</div>
                     </div>
-                    <div class="analysis-card-desc">来源类型文件状态统计</div>
+                    <a-tag color="blue">{{ sourceItem.totalCount }} 条</a-tag>
                   </div>
-                  <a-tag color="blue">{{ sourceItem.totalCount }} 条</a-tag>
-                </div>
-                <div class="analysis-card-status-list">
-                  <button
-                    v-for="statusItem in sourceItem.statusCounts"
-                    :key="`${sourceItem.sourceType}-${statusItem.status}`"
-                    type="button"
-                    class="analysis-status-chip"
-                    @click.stop="
-                      page.applySourceStatusFilter(
-                        sourceItem.sourceType,
-                        statusItem.status,
-                      )
-                    "
-                  >
-                    <span class="analysis-status-chip-label">
-                      {{ statusItem.statusLabel }}
-                    </span>
-                    <span class="analysis-status-chip-value">
-                      {{ statusItem.count }}
-                    </span>
-                  </button>
                   <div
-                    v-if="!sourceItem.statusCounts.length"
-                    class="analysis-card-empty"
+                    class="analysis-card-status-list analysis-card-status-list--nowrap"
                   >
-                    当前筛选下暂无对象
+                    <button
+                      v-for="statusItem in sourceItem.statusCounts"
+                      :key="`${sourceItem.sourceType}-${statusItem.status}`"
+                      type="button"
+                      class="analysis-status-chip"
+                      @click.stop="
+                        page.applySourceStatusFilter(
+                          sourceItem.sourceType,
+                          statusItem.status,
+                        )
+                      "
+                    >
+                      <span class="analysis-status-chip-label">
+                        {{ statusItem.statusLabel }}
+                      </span>
+                      <span class="analysis-status-chip-value">
+                        {{ statusItem.count }}
+                      </span>
+                    </button>
+                      <span
+                        v-for="folderItem in sourceItem.mailFolderCounts"
+                        :key="`${sourceItem.sourceType}-${folderItem.mailFolder}`"
+                        class="analysis-status-chip analysis-status-chip--default"
+                      >
+                        <span class="analysis-status-chip-label">
+                          {{ folderItem.mailFolderLabel }}
+                        </span>
+                        <span class="analysis-status-chip-value">
+                          {{ folderItem.count }}
+                        </span>
+                      </span>
+                    <div
+                      v-if="!sourceItem.statusCounts.length"
+                      class="analysis-card-empty"
+                    >
+                      当前筛选下暂无对象
+                    </div>
                   </div>
-                </div>
-              </YCard>
+                </YCard>
+              </div>
+              <div class="analysis-card-shell analysis-card-shell--static">
+                <YCard
+                  class="analysis-card workspace-size-card"
+                  :bordered="false"
+                  :padding="18"
+                >
+                  <div class="analysis-card-header">
+                    <div>
+                      <div class="analysis-card-label">
+                        收取文件大小统计：{{
+                          page.formatBytes(
+                            page.analysis.sizeAnalysis.totalSizeBytes,
+                          )
+                        }}
+                      </div>
+                      <div class="analysis-card-desc">
+                        共
+                        {{ page.analysis.sizeAnalysis.totalCount }}
+                        个文件，按后缀统计展示
+                      </div>
+                    </div>
+                    <a-tag color="blue"
+                      >{{ page.analysis.sizeAnalysis.totalCount }} 条</a-tag
+                    >
+                  </div>
+                  <div
+                    class="analysis-card-status-list analysis-card-status-list--nowrap"
+                  >
+                    <span
+                      v-for="extensionItem in page.analysis.sizeAnalysis
+                        .extensionCounts"
+                      :key="
+                        extensionItem.extension || extensionItem.extensionLabel
+                      "
+                      class="analysis-status-chip analysis-status-chip--default"
+                    >
+                      <span class="analysis-status-chip-label">
+                        {{ extensionItem.extensionLabel }}
+                      </span>
+                      <span class="analysis-status-chip-value">
+                        {{ extensionItem.count }}
+                      </span>
+                    </span>
+                    <div
+                      v-if="!page.analysis.sizeAnalysis.extensionCounts.length"
+                      class="analysis-card-empty"
+                    >
+                      当前筛选下暂无后缀统计
+                    </div>
+                  </div>
+                </YCard>
+              </div>
             </div>
           </div>
         </a-spin>
@@ -145,6 +236,22 @@ const actionConfig = useTableActionConfig({
                   v-model:value="page.query.routeId"
                   style="width: 140px"
                   placeholder="路由ID"
+                  allow-clear
+                />
+              </a-form-item>
+              <a-form-item label="标签编码">
+                <a-input
+                  v-model:value="page.query.tagCode"
+                  style="width: 180px"
+                  placeholder="标签编码"
+                  allow-clear
+                />
+              </a-form-item>
+              <a-form-item label="标签值">
+                <a-input
+                  v-model:value="page.query.tagValue"
+                  style="width: 160px"
+                  placeholder="标签值"
                   allow-clear
                 />
               </a-form-item>
@@ -193,6 +300,17 @@ const actionConfig = useTableActionConfig({
                 <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
+            <div
+              v-if="page.query.tagCode || page.query.tagValue || page.query.tagId"
+              class="workspace-active-tag-filter"
+            >
+              当前标签筛选：
+              <a-tag color="cyan">
+                {{ page.query.tagCode || page.query.tagId || "标签" }}
+                <span v-if="page.query.tagValue">：{{ page.query.tagValue }}</span>
+              </a-tag>
+              <a-button type="link" @click="page.clearTagFilter">清除</a-button>
+            </div>
           </WorkspaceTableToolbar>
         </template>
 
@@ -203,6 +321,23 @@ const actionConfig = useTableActionConfig({
         </template>
         <template #sizeBytes="{ row }">
           {{ row.sizeBytes ?? 0 }}
+        </template>
+        <template #tags="{ row }">
+          <div class="object-tag-list">
+            <template v-if="row.tags?.length">
+              <a-tag
+                v-for="tag in row.tags.slice(0, 3)"
+                :key="tag.id || `${tag.tagCode}-${tag.tagValue}`"
+                color="blue"
+              >
+                {{ tag.tagName || tag.tagCode || tag.tagValue || "-" }}
+              </a-tag>
+              <a-tag v-if="row.tags.length > 3" color="default">
+                +{{ row.tags.length - 3 }}
+              </a-tag>
+            </template>
+            <span v-else class="object-tag-empty">-</span>
+          </div>
         </template>
       </YTable>
     </div>
@@ -267,6 +402,21 @@ const actionConfig = useTableActionConfig({
           </a-descriptions-item>
           <a-descriptions-item label="邮件ID">
             {{ page.selectedRow.mailId || "-" }}
+          </a-descriptions-item>
+          <a-descriptions-item label="标签">
+            <div class="object-tag-list object-tag-list--wrap">
+              <template v-if="page.selectedRow.tags?.length">
+                <a-tag
+                  v-for="tag in page.selectedRow.tags"
+                  :key="tag.id || `${tag.tagCode}-${tag.tagValue}`"
+                  color="blue"
+                >
+                  {{ page.formatTagLabel(tag.tagName || tag.tagCode) }}
+                  <span v-if="tag.tagValue">：{{ tag.tagValue }}</span>
+                </a-tag>
+              </template>
+              <span v-else>-</span>
+            </div>
           </a-descriptions-item>
         </a-descriptions>
 

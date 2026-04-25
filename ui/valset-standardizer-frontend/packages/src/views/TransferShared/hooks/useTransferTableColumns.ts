@@ -194,6 +194,11 @@ export const useTransferObjectColumns = () =>
       title: "收取时间",
       width: 180,
     },
+    {
+      field: "tags",
+      title: "标签",
+      width: 260,
+    },
   ]);
 
 export const useTransferLogColumns = () =>

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 文件主对象查询视图。
@@ -119,4 +120,9 @@ public class TransferObjectViewDTO {
      * 文件元数据 JSON。
      */
     private String fileMetaJson;
+
+    /**
+     * 文件标签列表。
+     */
+    private List<TransferObjectTagViewDTO> tags;
 }

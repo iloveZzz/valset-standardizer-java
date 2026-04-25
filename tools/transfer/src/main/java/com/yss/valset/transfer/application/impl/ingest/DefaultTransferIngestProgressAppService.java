@@ -50,6 +50,11 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
     }
 
     @Override
+    public void publishMessage(String sourceId, String message) {
+        send(sourceId, "message", new MessageData(message));
+    }
+
+    @Override
     public void publishComplete(String sourceId, String message) {
         send(sourceId, "complete", new CompleteData(message));
     }
@@ -116,6 +121,9 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
     private record ProgressData(long processedCount,
                                 long totalCount,
                                 String message) {
+    }
+
+    private record MessageData(String message) {
     }
 
     private record StatusData(String status, String message, String triggerType, String triggeredAt) {

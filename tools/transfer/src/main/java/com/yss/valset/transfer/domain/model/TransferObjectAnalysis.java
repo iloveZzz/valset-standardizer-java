@@ -7,6 +7,7 @@ import java.util.List;
  */
 public record TransferObjectAnalysis(
         Long totalCount,
-        List<TransferObjectSourceAnalysis> sourceAnalyses
+        List<TransferObjectSourceAnalysis> sourceAnalyses,
+        TransferObjectSizeAnalysis sizeAnalysis
 ) {
 }

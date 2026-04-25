@@ -8,6 +8,7 @@ import {
   InboxOutlined,
   SwapOutlined,
   ThunderboltOutlined,
+  TagsOutlined,
 } from "@ant-design/icons-vue";
 import type { Component } from "vue";
 import type { RouteRecordRaw } from "vue-router";
@@ -24,6 +25,7 @@ export const workspaceNav: Array<{
     source: InboxOutlined,
     target: ApiOutlined,
     rule: ThunderboltOutlined,
+    tag: TagsOutlined,
     "route-config": ApartmentOutlined,
     log: SwapOutlined,
     "run-log": HistoryOutlined,
@@ -42,6 +44,7 @@ const transferPageComponentMap = {
   source: () => import("@/views/TransferSource/index.vue"),
   target: () => import("@/views/TransferTarget/index.vue"),
   rule: () => import("@/views/TransferRule/index.vue"),
+  tag: () => import("@/views/TransferTag/index.vue"),
   "route-config": () => import("@/views/TransferRouteConfig/index.vue"),
   log: () => import("@/views/TransferLog/index.vue"),
   "run-log": () => import("@/views/TransferRunLog/index.vue"),

@@ -46,10 +46,14 @@ ALTER TABLE t_transfer_target
     ADD COLUMN updated_at TIMESTAMP NULL;
 
 --changeset codex:20260424-02-mysql-transfer-source-drop-checkpoint-config dbms:mysql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_source' AND column_name = 'checkpoint_config_json'
 ALTER TABLE t_transfer_source
     DROP COLUMN checkpoint_config_json;
 
 --changeset codex:20260424-02-postgres-transfer-source-drop-checkpoint-config dbms:postgresql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 't_transfer_source' AND column_name = 'checkpoint_config_json'
 ALTER TABLE t_transfer_source
     DROP COLUMN checkpoint_config_json;
 

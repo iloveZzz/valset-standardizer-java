@@ -16,9 +16,14 @@ class DbTransferJobSchedulerTest {
     }
 
     @Test
-    void normalizeCronExpressionShouldRejectQuartzYearField() {
+    void normalizeCronExpressionShouldDropWildcardQuartzYearField() {
+        assertEquals("0 */5 * * * ?", DbTransferJobScheduler.normalizeCronExpression("0 */5 * * * ? *"));
+    }
+
+    @Test
+    void normalizeCronExpressionShouldRejectQuartzYearFieldWithConcreteYear() {
         assertThrows(IllegalArgumentException.class,
-                () -> DbTransferJobScheduler.normalizeCronExpression("0 */5 * * * ? *"));
+                () -> DbTransferJobScheduler.normalizeCronExpression("0 */5 * * * ? 2026"));
     }
 
     @Test

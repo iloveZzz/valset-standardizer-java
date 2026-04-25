@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.scheduler;
 
 import com.github.kagkarlsson.scheduler.SchedulerClient;
+import com.github.kagkarlsson.scheduler.exceptions.TaskInstanceCurrentlyExecutingException;
 import com.github.kagkarlsson.scheduler.exceptions.TaskInstanceNotFoundException;
 import com.github.kagkarlsson.scheduler.task.SchedulableInstance;
 import com.github.kagkarlsson.scheduler.task.schedule.Schedules;
@@ -102,12 +103,30 @@ public class DbTransferJobScheduler implements TransferJobScheduler {
         log.info("取消来源轮询任务，sourceId={}", sourceId);
         try {
             schedulerClient.cancel(TransferSchedulerTasks.INGEST_CRON_TASK.instanceId(sourceId));
-        } catch (TaskInstanceNotFoundException exception) {
+        } catch (RuntimeException exception) {
+            if (!handleUnscheduleException(sourceId, exception)) {
+                throw exception;
+            }
+        }
+    }
+
+    private boolean handleUnscheduleException(String sourceId, RuntimeException exception) {
+        if (exception instanceof TaskInstanceNotFoundException) {
             log.info("来源轮询任务不存在，视为已取消，sourceId={}，taskName={}，instanceId={}",
                     sourceId,
                     "transfer-ingest-cron",
                     TransferSchedulerTasks.INGEST_CRON_TASK.instanceId(sourceId));
+            return true;
         }
+        if (exception instanceof TaskInstanceCurrentlyExecutingException) {
+            log.warn("来源轮询任务正在执行，跳过取消以避免更新源配置失败，sourceId={}，taskName={}，instanceId={}，message={}",
+                    sourceId,
+                    "transfer-ingest-cron",
+                    TransferSchedulerTasks.INGEST_CRON_TASK.instanceId(sourceId),
+                    exception.getMessage());
+            return true;
+        }
+        return false;
     }
 
     @Override

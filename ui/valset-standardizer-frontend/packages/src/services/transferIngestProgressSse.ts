@@ -1,4 +1,9 @@
-type TransferIngestProgressSseEventType = "status" | "progress" | "complete" | "error";
+type TransferIngestProgressSseEventType =
+  | "status"
+  | "progress"
+  | "message"
+  | "complete"
+  | "error";
 
 export interface TransferIngestProgressStatusData {
   status: string;
@@ -13,6 +18,10 @@ export interface TransferIngestProgressData {
   message?: string;
 }
 
+export interface TransferIngestMessageData {
+  message: string;
+}
+
 export interface TransferIngestCompleteData {
   message?: string;
 }
@@ -25,6 +34,7 @@ export interface TransferIngestErrorData {
 export type TransferIngestProgressMessage =
   | { type: "status"; sourceId: string; data: TransferIngestProgressStatusData }
   | { type: "progress"; sourceId: string; data: TransferIngestProgressData }
+  | { type: "message"; sourceId: string; data: TransferIngestMessageData }
   | { type: "complete"; sourceId: string; data: TransferIngestCompleteData }
   | { type: "error"; sourceId: string; data: TransferIngestErrorData };
 
@@ -103,6 +113,14 @@ function parseMessage(
         },
       };
     }
+    case "message":
+      return {
+        type: "message",
+        sourceId,
+        data: {
+          message: String(data.message ?? ""),
+        },
+      };
     case "complete":
       return {
         type: "complete",
@@ -181,9 +199,14 @@ class TransferIngestProgressSseService {
         dispatch("status", event);
       }
     });
-    eventSource.addEventListener("progress", (event) => {
+  eventSource.addEventListener("progress", (event) => {
       if (event instanceof MessageEvent) {
         dispatch("progress", event);
+      }
+    });
+    eventSource.addEventListener("message", (event) => {
+      if (event instanceof MessageEvent) {
+        dispatch("message", event);
       }
     });
     eventSource.addEventListener("complete", (event) => {
@@ -205,7 +228,7 @@ class TransferIngestProgressSseService {
         return;
       }
       const type = String(parsed.type) as TransferIngestProgressSseEventType;
-      if (!["status", "progress", "complete", "error"].includes(type)) {
+      if (!["status", "progress", "message", "complete", "error"].includes(type)) {
         return;
       }
       dispatch(type, event);

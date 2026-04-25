@@ -17,7 +17,6 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,38 +87,30 @@ public class TransferRuleManagementE2ETest {
     }
 
     @Test
-    void should_manage_grouping_rule_crud_via_api() throws Exception {
+    void should_manage_rule_crud_via_api() throws Exception {
         APIResponse templateNameResponse = requestContext.get("/api/transfer-rules/template-name");
         assertThat(templateNameResponse.status()).isEqualTo(200);
         assertThat(readJson(templateNameResponse).get("data").asText()).isEqualTo("transfer_rule");
-
-        Map<String, Object> ruleMeta = new LinkedHashMap<>();
-        ruleMeta.put("targetType", "FILESYS");
-        ruleMeta.put("targetCode", "finance-filesys-archive");
-        ruleMeta.put("targetPath", "/mail/${groupKey}");
-        ruleMeta.put("renamePattern", "${mailSubject}_${fileName}");
-        ruleMeta.put("groupStrategy", "MAIL_FROM");
-        ruleMeta.put("groupField", "sender");
-        ruleMeta.put("groupTargetMapping", Map.of(
-                "finance@example.com", "finance-filesys-archive",
-                "ops@example.com", "ops-filesys-archive"
-        ));
-        ruleMeta.put("defaultTargetCode", "default-filesys-archive");
-        ruleMeta.put("maxRetryCount", 3);
-        ruleMeta.put("retryDelaySeconds", 60);
 
         APIResponse createResponse = requestContext.post(
                 "/api/transfer-rules",
                 RequestOptions.create().setData(Map.of(
                         "ruleCode", "EMAIL_ATTACHMENT_GROUP_BY_SENDER_E2E",
-                        "ruleName", "按发件人分组路由测试",
+                        "ruleName", "规则CRUD测试",
                         "ruleVersion", "1.0.0",
                         "enabled", true,
                         "priority", 12,
                         "matchStrategy", "SCRIPT_RULE",
                         "scriptLanguage", "qlexpress4",
-                        "scriptBody", "sourceType != null && sourceType.name().equals(\"EMAIL\") && fn.isExcel(fileName)",
-                        "ruleMeta", ruleMeta
+                        "scriptBody", "sourceType != null && sourceType.name().equals(\"EMAIL\") && isExcel(fileName)",
+                        "ruleMeta", Map.of(
+                                "targetType", "FILESYS",
+                                "targetCode", "finance-filesys-archive",
+                                "targetPath", "/mail/${fileName}",
+                                "renamePattern", "${mailSubject}_${fileName}",
+                                "maxRetryCount", 3,
+                                "retryDelaySeconds", 60
+                        )
                 ))
         );
         assertThat(createResponse.status()).isEqualTo(201);
@@ -129,8 +120,7 @@ public class TransferRuleManagementE2ETest {
         String ruleId = createdRule.get("ruleId").asText();
         assertThat(ruleId).isNotNull();
         assertThat(createdRule.get("formTemplateName").asText()).isEqualTo("transfer_rule");
-        assertThat(createdRule.get("ruleMeta").get("groupStrategy").asText()).isEqualTo("MAIL_FROM");
-        assertThat(createdRule.get("ruleMeta").get("groupTargetMapping").get("finance@example.com").asText()).isEqualTo("finance-filesys-archive");
+        assertNoGroupingKeys(createdRule.get("ruleMeta"));
 
         assertThat(transferRuleGateway.findById(ruleId)).isPresent();
         Integer ruleCount = jdbcTemplate.queryForObject(
@@ -144,7 +134,7 @@ public class TransferRuleManagementE2ETest {
         assertThat(getResponse.status()).isEqualTo(200);
         JsonNode detail = readJson(getResponse).get("data");
         assertThat(detail.get("ruleCode").asText()).isEqualTo("EMAIL_ATTACHMENT_GROUP_BY_SENDER_E2E");
-        assertThat(detail.get("ruleMeta").get("defaultTargetCode").asText()).isEqualTo("default-filesys-archive");
+        assertNoGroupingKeys(detail.get("ruleMeta"));
 
         APIResponse listResponse = requestContext.get(
                 "/api/transfer-rules",
@@ -169,19 +159,12 @@ public class TransferRuleManagementE2ETest {
                         "priority", 18,
                         "matchStrategy", "SCRIPT_RULE",
                         "scriptLanguage", "qlexpress4",
-                        "scriptBody", "sourceType != null && sourceType.name().equals(\"EMAIL\") && fn.containsIgnoreCase(subject, \"日报\")",
+                        "scriptBody", "sourceType != null && sourceType.name().equals(\"EMAIL\") && containsIgnoreCase(subject, \"日报\")",
                         "ruleMeta", Map.of(
                                 "targetType", "FILESYS",
                                 "targetCode", "ops-filesys-archive",
-                                "targetPath", "/mail/${groupKey}",
+                                "targetPath", "/mail/${fileName}",
                                 "renamePattern", "${mailSubject}_${fileName}",
-                                "groupStrategy", "MAIL_FROM",
-                                "groupField", "sender",
-                                "groupTargetMapping", Map.of(
-                                        "finance@example.com", "finance-filesys-archive",
-                                        "ops@example.com", "ops-filesys-archive"
-                                ),
-                                "defaultTargetCode", "ops-filesys-archive",
                                 "maxRetryCount", 5,
                                 "retryDelaySeconds", 120
                         )
@@ -191,7 +174,7 @@ public class TransferRuleManagementE2ETest {
         JsonNode updatedRule = readJson(updateResponse).get("data").get("rule");
         assertThat(updatedRule.get("enabled").asBoolean()).isFalse();
         assertThat(updatedRule.get("priority").asInt()).isEqualTo(18);
-        assertThat(updatedRule.get("ruleMeta").get("defaultTargetCode").asText()).isEqualTo("ops-filesys-archive");
+        assertNoGroupingKeys(updatedRule.get("ruleMeta"));
 
         APIResponse disabledListResponse = requestContext.get(
                 "/api/transfer-rules",
@@ -223,5 +206,13 @@ public class TransferRuleManagementE2ETest {
 
     private JsonNode readJson(APIResponse response) throws Exception {
         return OBJECT_MAPPER.readTree(response.text());
+    }
+
+    private static void assertNoGroupingKeys(JsonNode ruleMeta) {
+        assertThat(ruleMeta.has("groupStrategy")).isFalse();
+        assertThat(ruleMeta.has("groupField")).isFalse();
+        assertThat(ruleMeta.has("groupTargetMapping")).isFalse();
+        assertThat(ruleMeta.has("groupExpression")).isFalse();
+        assertThat(ruleMeta.has("regGroup")).isFalse();
     }
 }

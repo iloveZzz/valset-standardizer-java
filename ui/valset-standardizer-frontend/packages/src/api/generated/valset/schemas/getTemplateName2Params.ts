@@ -4,11 +4,11 @@
  * Java 外部估值表标准化工程，基于 Spring Boot 和 Quartz
  * OpenAPI spec version: v1.0.0
  */
-import type { GetTemplateName2TargetType } from "./getTemplateName2TargetType";
+import type { GetTemplateName2SourceType } from "./getTemplateName2SourceType";
 
 export type GetTemplateName2Params = {
   /**
-   * 目标类型<br/>(See: 文件投递目标类型。)
+   * 来源类型<br/>(See: 文件来源类型。)
    */
-  targetType: GetTemplateName2TargetType;
+  sourceType: GetTemplateName2SourceType;
 };

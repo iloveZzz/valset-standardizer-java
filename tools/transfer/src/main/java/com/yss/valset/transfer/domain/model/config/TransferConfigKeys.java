@@ -82,20 +82,6 @@ public final class TransferConfigKeys {
     public static final String PROBE_ATTRIBUTES = "probeAttributes";
     /** 文件是否已经完成探测。 */
     public static final String PROBE_DETECTED = "probeDetected";
-    /** 路由分组策略。 */
-    public static final String GROUP_STRATEGY = "groupStrategy";
-    /** 路由分组字段。 */
-    public static final String GROUP_FIELD = "groupField";
-    /** 路由分组表达式。 */
-    public static final String GROUP_EXPRESSION = "groupExpression";
-    /** 路由分组键。 */
-    public static final String GROUP_KEY = "groupKey";
-    /** 路由分组名称。 */
-    public static final String GROUP_NAME = "groupName";
-    /** 路由分组目标映射。 */
-    public static final String GROUP_TARGET_MAPPING = "groupTargetMapping";
-    /** 分组路由默认目标编码。 */
-    public static final String DEFAULT_TARGET_CODE = "defaultTargetCode";
     /** 目标标识。 */
     public static final String TARGET_ID = "targetId";
     /** 目标编码。 */

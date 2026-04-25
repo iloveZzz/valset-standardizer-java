@@ -23,7 +23,8 @@ public class TransferTargetLocalFormTemplate extends FormTemplate {
     @Override
     public Map<String, Object> initialValues() {
         Map<String, Object> values = new LinkedHashMap<>();
-        values.put("targetPathTemplate", "/tmp/yss-transfer/outbox");
+        values.put("directory", "~/.tmp/yss-transfer/outbox/");
+        values.put("targetPathTemplate", "");
         values.put("createParentDirectories", Boolean.TRUE);
         values.put("enabled", Boolean.FALSE);
         return values;
@@ -52,7 +53,8 @@ public class TransferTargetLocalFormTemplate extends FormTemplate {
                         YssFormilyDsl.input("targetCode", "目标编码").required().placeholder("例如：local-outbox").gridSpan(1),
                         YssFormilyDsl.input("targetName", "目标名称").required().placeholder("例如：本地目录归档").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
-                        YssFormilyDsl.input("targetPathTemplate", "目标路径模板").placeholder("可选，支持 ${yyyyMMdd} 等变量").gridSpan(1),
+                        YssFormilyDsl.input("directory", "目标目录根路径").required().placeholder("例如：~/.tmp/yss-transfer/outbox/").gridSpan(2),
+                        YssFormilyDsl.input("targetPathTemplate", "目标子路径模板").placeholder("可选，支持 ${yyyyMMdd} 等变量").gridSpan(2),
                         YssFormilyDsl.switchField("createParentDirectories", "自动创建父目录").gridSpan(1)
                 )
                 .build();

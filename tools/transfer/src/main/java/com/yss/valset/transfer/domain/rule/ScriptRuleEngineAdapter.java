@@ -100,6 +100,7 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
             variables.putIfAbsent("mailProtocol", context.recognitionContext().mailProtocol());
             variables.putIfAbsent("mailFolder", context.recognitionContext().mailFolder());
             variables.putIfAbsent("path", context.recognitionContext().path());
+            variables.putIfAbsent("filePath", context.recognitionContext().path());
             if (context.recognitionContext().attributes() != null) {
                 variables.putIfAbsent("attachmentName", context.recognitionContext().attributes().get("attachmentName"));
                 variables.putIfAbsent("attachmentIndex", context.recognitionContext().attributes().get("attachmentIndex"));

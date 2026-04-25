@@ -7,6 +7,7 @@ import com.yss.valset.transfer.domain.model.TransferSource;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpoint;
 import com.yss.valset.transfer.domain.model.config.EmailSourceConfig;
 import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
+import com.yss.valset.transfer.application.service.TransferIngestProgressAppService;
 import com.yss.valset.transfer.infrastructure.source.support.SourceFetchLogSupport;
 import jakarta.mail.Folder;
 import jakarta.mail.Message;
@@ -40,6 +41,7 @@ public class EmailMailScanner {
     private final TransferSourceCheckpointGateway transferSourceCheckpointGateway;
     private final TransferSourceGateway transferSourceGateway;
     private final EmailAttachmentProcessor emailAttachmentProcessor;
+    private final TransferIngestProgressAppService transferIngestProgressAppService;
 
     /**
      * 邮件扫描主流程：建立会话、打开文件夹、按游标顺序扫描邮件并生成识别上下文。
@@ -56,9 +58,11 @@ public class EmailMailScanner {
             try (Folder folder = store.getFolder(config.folder())) {
                 folder.open(Folder.READ_ONLY);
                 UIDFolder uidFolder = folder instanceof UIDFolder ? (UIDFolder) folder : null;
-                Message[] messages = folder.getMessages();
-                SourceFetchLogSupport.logStart(log, "邮件", source, "folder", config.folder(), "邮件总数", messages.length);
-                result.addAll(scanMailFolder(source, config, messages, uidFolder, mailTimeLowerBound));
+            Message[] messages = folder.getMessages();
+            SourceFetchLogSupport.logStart(log, "邮件", source, "folder", config.folder(), "邮件总数", messages.length);
+            transferIngestProgressAppService.publishMessage(source.sourceId(),
+                    "邮件收取开始，folder=" + config.folder() + "，邮件总数=" + messages.length);
+            result.addAll(scanMailFolder(source, config, messages, uidFolder, mailTimeLowerBound));
             }
         } catch (Exception e) {
             throw new IllegalStateException("收取邮件附件失败，folder=" + config.folder() + ", protocol=" + config.protocol(), e);
@@ -96,9 +100,13 @@ public class EmailMailScanner {
                         mailId,
                         safeSubject(message),
                         config.mailTimeRangeDays());
+                transferIngestProgressAppService.publishMessage(source.sourceId(),
+                        "邮件超出收取时间范围，跳过处理，mailId=" + mailId + "，主题=" + safeSubject(message) + "，收取范围=近" + config.mailTimeRangeDays() + "天");
                 continue;
             }
             emailSequence++;
+            transferIngestProgressAppService.publishMessage(source.sourceId(),
+                    "收取邮件第" + emailSequence + "封，mailId=" + mailId + "，主题=" + safeSubject(message));
             result.addAll(processSingleMail(source, config, message, mailId, emailSequence, processedInThisRun));
         }
         return result;
@@ -123,6 +131,8 @@ public class EmailMailScanner {
             recordScanCursor(source, config, mailId, subject, emailSequence, reason);
         }
         log.info("邮件收取完成，第{}封，mailId={}，主题={}，附件数={}", emailSequence, mailId, subject, extractionResult.acceptedCount());
+        transferIngestProgressAppService.publishMessage(source.sourceId(),
+                "邮件收取完成，第" + emailSequence + "封，mailId=" + mailId + "，主题=" + subject + "，附件数=" + extractionResult.acceptedCount());
         return result;
     }
 

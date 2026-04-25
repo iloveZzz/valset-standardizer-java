@@ -4,9 +4,12 @@
  * Java 外部估值表标准化工程，基于 Spring Boot 和 Quartz
  * OpenAPI spec version: v1.0.0
  */
+import type { TransferObjectSizeAnalysisViewDTO } from "./transferObjectSizeAnalysisViewDTO";
 import type { TransferObjectSourceAnalysisViewDTO } from "./transferObjectSourceAnalysisViewDTO";
 
 export interface TransferObjectAnalysisViewDTO {
+  /** 文件大小统计。(object) */
+  sizeAnalysis?: TransferObjectSizeAnalysisViewDTO;
   /** 按来源类型统计列表。 */
   sourceAnalyses?: TransferObjectSourceAnalysisViewDTO[];
   /** 总数。 */

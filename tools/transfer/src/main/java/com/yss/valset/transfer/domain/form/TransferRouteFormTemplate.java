@@ -7,7 +7,6 @@ import com.yss.valset.transfer.domain.model.SourceType;
 import com.yss.valset.transfer.domain.model.TargetType;
 import com.yss.valset.transfer.domain.model.TransferStatus;
 import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
-import com.yss.valset.transfer.domain.model.config.TransferRouteGroupStrategy;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -36,8 +35,6 @@ public class TransferRouteFormTemplate extends FormTemplate {
         values.put(TransferConfigKeys.TARGET_PATH, "/transfer/inbox");
         values.put(TransferConfigKeys.RENAME_PATTERN, "${fileName}");
         values.put(TransferConfigKeys.RETRY_DELAY_SECONDS, 60);
-        values.put(TransferConfigKeys.GROUP_STRATEGY, TransferRouteGroupStrategy.NONE.name());
-        values.put(TransferConfigKeys.GROUP_TARGET_MAPPING, "{\n  \"finance@example.com\": \"filesys-finance\",\n  \"ops@example.com\": \"filesys-ops\"\n}");
         return values;
     }
 
@@ -100,23 +97,7 @@ public class TransferRouteFormTemplate extends FormTemplate {
                                 .gridSpan(1),
                         YssFormilyDsl.groupHeader("header3", "投递策略"),
                         YssFormilyDsl.inputNumber(TransferConfigKeys.MAX_RETRY_COUNT, "最大重试次数").placeholder("3").gridSpan(1),
-                        YssFormilyDsl.inputNumber(TransferConfigKeys.RETRY_DELAY_SECONDS, "重试间隔(秒)").placeholder("60").gridSpan(1),
-                        YssFormilyDsl.select(TransferConfigKeys.GROUP_STRATEGY, "分组策略")
-                                .required()
-                                .options(
-                                        YssFormilyDsl.option(TransferRouteGroupStrategy.NONE.name(), "不分组"),
-                                        YssFormilyDsl.option(TransferRouteGroupStrategy.FILE_TYPE.name(), "按文件类型"),
-                                        YssFormilyDsl.option(TransferRouteGroupStrategy.FILE_NAME.name(), "按文件名称"),
-                                        YssFormilyDsl.option(TransferRouteGroupStrategy.MAIL_FROM.name(), "按邮件发件人"),
-                                        YssFormilyDsl.option(TransferRouteGroupStrategy.MAIL_TO.name(), "按邮件收件人"),
-                                        YssFormilyDsl.option(TransferRouteGroupStrategy.CUSTOM.name(), "自定义字段")
-                                )
-                                .gridSpan(1),
-                        YssFormilyDsl.input(TransferConfigKeys.GROUP_FIELD, "分组字段").placeholder("自定义分组时使用").gridSpan(1),
-                        YssFormilyDsl.input(TransferConfigKeys.DEFAULT_TARGET_CODE, "默认目标编码").placeholder("可选").gridSpan(1),
-                        YssFormilyDsl.textArea(TransferConfigKeys.GROUP_TARGET_MAPPING, "分组目标映射")
-                                .placeholder("{\"finance@example.com\":\"filesys-finance\"}")
-                                .gridSpan(2)
+                        YssFormilyDsl.inputNumber(TransferConfigKeys.RETRY_DELAY_SECONDS, "重试间隔(秒)").placeholder("60").gridSpan(1)
                 )
                 .build();
     }

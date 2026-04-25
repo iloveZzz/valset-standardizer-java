@@ -31,6 +31,10 @@
       "description": "分拣路由查询接口。"
     },
     {
+      "name": "TransferTagController",
+      "description": "标签管理接口。"
+    },
+    {
       "name": "KnowledgeImportController",
       "description": "知识库导入接口。"
     },
@@ -68,12 +72,12 @@
     }
   ],
   "paths": {
-    "/api/transfer-objects/{transferId}": {
+    "/api/transfer-routes": {
       "get": {
-        "summary": "查询文件主对象详情。",
+        "summary": "查询分拣路由配置列表。",
         "deprecated": false,
         "tags": [
-          "TransferObjectController"
+          "TransferRouteController"
         ],
         "responses": {
           "200": {
@@ -81,13 +85,111 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferObjectViewDTO"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransferRouteViewDTO"
+                  }
                 }
               }
             }
           }
         },
-        "operationId": "getObject",
+        "operationId": "listRoutes",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源主键",
+            "required": false,
+            "name": "sourceId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源类型",
+            "required": false,
+            "name": "sourceType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源编码",
+            "required": false,
+            "name": "sourceCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "规则主键",
+            "required": false,
+            "name": "ruleId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "目标类型",
+            "required": false,
+            "name": "targetType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "目标编码",
+            "required": false,
+            "name": "targetCode"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "查询上限",
+            "required": false,
+            "example": 0,
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/api/transfer-routes/{routeId}": {
+      "get": {
+        "summary": "根据路由主键查询分拣路由详情。",
+        "deprecated": false,
+        "tags": [
+          "TransferRouteController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferRouteViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getRoute",
         "parameters": [
           {
             "schema": {
@@ -95,218 +197,8 @@
               "type": "string"
             },
             "in": "path",
-            "description": "文件主键",
+            "description": "路由主键",
             "required": true,
-            "name": "transferId"
-          }
-        ]
-      }
-    },
-    "/api/transfer-objects": {
-      "get": {
-        "summary": "分页查询文件主对象列表。",
-        "deprecated": false,
-        "tags": [
-          "TransferObjectController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageResultTransferObjectViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "pageObjects",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "来源主键",
-            "required": false,
-            "name": "sourceId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "来源类型",
-            "required": false,
-            "name": "sourceType"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "来源编码",
-            "required": false,
-            "name": "sourceCode"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件状态",
-            "required": false,
-            "name": "status"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "邮件唯一标识",
-            "required": false,
-            "name": "mailId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件指纹",
-            "required": false,
-            "name": "fingerprint"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "路由主键",
-            "required": false,
-            "name": "routeId"
-          },
-          {
-            "schema": {
-              "format": "int32",
-              "type": "integer"
-            },
-            "in": "query",
-            "description": "页码",
-            "required": false,
-            "example": 0,
-            "name": "pageIndex"
-          },
-          {
-            "schema": {
-              "format": "int32",
-              "type": "integer"
-            },
-            "in": "query",
-            "description": "每页条数",
-            "required": false,
-            "example": 0,
-            "name": "pageSize"
-          }
-        ]
-      }
-    },
-    "/api/transfer-objects/analysis": {
-      "get": {
-        "summary": "统计分析文件主对象。",
-        "deprecated": false,
-        "tags": [
-          "TransferObjectController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferObjectAnalysisViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "analyzeObjects",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "来源主键",
-            "required": false,
-            "name": "sourceId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "来源类型",
-            "required": false,
-            "name": "sourceType"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "来源编码",
-            "required": false,
-            "name": "sourceCode"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件状态",
-            "required": false,
-            "name": "status"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "邮件唯一标识",
-            "required": false,
-            "name": "mailId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件指纹",
-            "required": false,
-            "name": "fingerprint"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "路由主键",
-            "required": false,
             "name": "routeId"
           }
         ]
@@ -471,6 +363,331 @@
             "required": true,
             "example": 0,
             "name": "taskId"
+          }
+        ]
+      }
+    },
+    "/api/transfer-form-templates": {
+      "get": {
+        "summary": "查询 Transfer 表单模板列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferFormTemplateController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultTransferFormTemplateViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listTemplates",
+        "parameters": []
+      }
+    },
+    "/api/transfer-form-templates/grouped": {
+      "get": {
+        "summary": "查询 Transfer 表单模板分组。",
+        "deprecated": false,
+        "tags": [
+          "TransferFormTemplateController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultTransferFormTemplateGroupDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listGroupedTemplates",
+        "parameters": []
+      }
+    },
+    "/api/transfer-form-templates/{name}": {
+      "get": {
+        "summary": "查询 Transfer 表单模板详情。",
+        "deprecated": false,
+        "tags": [
+          "TransferFormTemplateController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferFormTemplateViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getTemplate",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "模板名称",
+            "required": true,
+            "name": "name"
+          }
+        ]
+      }
+    },
+    "/api/transfer-targets": {
+      "post": {
+        "summary": "创建投递目标。",
+        "deprecated": false,
+        "tags": [
+          "TransferTargetController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferTargetUpsertCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTargetMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createTarget",
+        "parameters": []
+      },
+      "get": {
+        "summary": "查询投递目标列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferTargetController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultTransferTargetViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listTargets",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "目标类型",
+            "required": false,
+            "name": "targetType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "目标编码",
+            "required": false,
+            "name": "targetCode"
+          },
+          {
+            "schema": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "in": "query",
+            "description": "是否启用",
+            "required": false,
+            "example": true,
+            "name": "enabled"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "查询上限",
+            "required": false,
+            "example": 0,
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/api/transfer-targets/{targetId}": {
+      "get": {
+        "summary": "查询投递目标详情。",
+        "deprecated": false,
+        "tags": [
+          "TransferTargetController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTargetViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getTarget",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "目标主键",
+            "required": true,
+            "name": "targetId"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "删除投递目标。",
+        "deprecated": false,
+        "tags": [
+          "TransferTargetController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTargetMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteTarget",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "目标主键",
+            "required": true,
+            "name": "targetId"
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新投递目标。",
+        "deprecated": false,
+        "tags": [
+          "TransferTargetController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferTargetUpsertCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTargetMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateTarget",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "目标主键",
+            "required": true,
+            "name": "targetId"
+          }
+        ]
+      }
+    },
+    "/api/transfer-targets/template-name": {
+      "get": {
+        "summary": "查询投递目标对应表单模板名。",
+        "deprecated": false,
+        "tags": [
+          "TransferTargetController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultString"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getTemplateName",
+        "parameters": [
+          {
+            "schema": {
+              "format": "enum",
+              "type": "string",
+              "enum": [
+                "EMAIL",
+                "S3",
+                "SFTP",
+                "LOCAL_DIR",
+                "FILESYS"
+              ]
+            },
+            "in": "query",
+            "description": "目标类型<br/>(See: 文件投递目标类型。)",
+            "required": true,
+            "example": "EMAIL",
+            "name": "targetType"
           }
         ]
       }
@@ -687,7 +904,7 @@
             }
           }
         },
-        "operationId": "getTemplateName",
+        "operationId": "getTemplateName_1",
         "parameters": []
       }
     },
@@ -741,6 +958,112 @@
           }
         },
         "operationId": "listSources",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源类型",
+            "required": false,
+            "name": "sourceType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源编码",
+            "required": false,
+            "name": "sourceCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源名称",
+            "required": false,
+            "name": "sourceName"
+          },
+          {
+            "schema": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "in": "query",
+            "description": "是否启用",
+            "required": false,
+            "example": true,
+            "name": "enabled"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "查询上限",
+            "required": false,
+            "example": 0,
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/transfer-sources": {
+      "post": {
+        "summary": "创建文件来源。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferSourceUpsertCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createSource_1",
+        "parameters": []
+      },
+      "get": {
+        "summary": "查询文件来源列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultTransferSourceViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listSources_1",
         "parameters": [
           {
             "schema": {
@@ -904,6 +1227,113 @@
         ]
       }
     },
+    "/transfer-sources/{sourceId}": {
+      "get": {
+        "summary": "查询文件来源详情。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getSource_1",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "来源主键",
+            "required": true,
+            "name": "sourceId"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "删除文件来源。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteSource_1",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "来源主键",
+            "required": true,
+            "name": "sourceId"
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新文件来源。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferSourceUpsertCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateSource_1",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "来源主键",
+            "required": true,
+            "name": "sourceId"
+          }
+        ]
+      }
+    },
     "/api/transfer-sources/template-name": {
       "get": {
         "summary": "查询来源对应表单模板名。",
@@ -923,7 +1353,48 @@
             }
           }
         },
-        "operationId": "getTemplateName_1",
+        "operationId": "getTemplateName_2",
+        "parameters": [
+          {
+            "schema": {
+              "format": "enum",
+              "type": "string",
+              "enum": [
+                "LOCAL_DIR",
+                "EMAIL",
+                "S3",
+                "SFTP"
+              ]
+            },
+            "in": "query",
+            "description": "来源类型<br/>(See: 文件来源类型。)",
+            "required": true,
+            "example": "LOCAL_DIR",
+            "name": "sourceType"
+          }
+        ]
+      }
+    },
+    "/transfer-sources/template-name": {
+      "get": {
+        "summary": "查询来源对应表单模板名。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultString"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getTemplateName_3",
         "parameters": [
           {
             "schema": {
@@ -988,6 +1459,49 @@
         ]
       }
     },
+    "/transfer-sources/{sourceId}/trigger": {
+      "post": {
+        "summary": "立即触发一次文件来源收取。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "triggerSource_1",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "来源主键",
+            "required": true,
+            "name": "sourceId"
+          }
+        ]
+      }
+    },
     "/api/transfer-sources/{sourceId}/stop": {
       "post": {
         "summary": "停止文件来源收取。",
@@ -1031,9 +1545,52 @@
         ]
       }
     },
+    "/transfer-sources/{sourceId}/stop": {
+      "post": {
+        "summary": "停止文件来源收取。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "stopSource_1",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "来源主键",
+            "required": true,
+            "name": "sourceId"
+          }
+        ]
+      }
+    },
     "/api/transfer-sources/{sourceId}/checkpoint/processed-mail-ids/clear": {
       "post": {
-        "summary": "清空来源已处理邮件标识。",
+        "summary": "清空来源检查点记录。",
         "deprecated": false,
         "tags": [
           "TransferSourceController"
@@ -1074,6 +1631,49 @@
         ]
       }
     },
+    "/transfer-sources/{sourceId}/checkpoint/processed-mail-ids/clear": {
+      "post": {
+        "summary": "清空来源检查点记录。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "clearProcessedMailIds_1",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "来源主键",
+            "required": true,
+            "name": "sourceId"
+          }
+        ]
+      }
+    },
     "/api/transfer-sources/{sourceId}/checkpoints": {
       "get": {
         "summary": "查询来源检查点列表。",
@@ -1094,6 +1694,51 @@
           }
         },
         "operationId": "listCheckpoints",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "来源主键",
+            "required": true,
+            "name": "sourceId"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "查询上限",
+            "required": false,
+            "example": 0,
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/transfer-sources/{sourceId}/checkpoints": {
+      "get": {
+        "summary": "查询来源检查点列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultTransferSourceCheckpointViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listCheckpoints_1",
         "parameters": [
           {
             "schema": {
@@ -1164,12 +1809,12 @@
         ]
       }
     },
-    "/api/transfer-run-logs": {
+    "/transfer-sources/{sourceId}/checkpoint-items": {
       "get": {
-        "summary": "查询文件收发运行日志列表。",
+        "summary": "查询来源检查点去重记录。",
         "deprecated": false,
         "tags": [
-          "TransferRunLogController"
+          "TransferSourceController"
         ],
         "responses": {
           "200": {
@@ -1177,73 +1822,23 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/MultiResultTransferRunLogViewDTO"
+                  "$ref": "#/components/schemas/MultiResultTransferSourceCheckpointItemViewDTO"
                 }
               }
             }
           }
         },
-        "operationId": "listLogs",
+        "operationId": "listCheckpointItems_1",
         "parameters": [
           {
             "schema": {
               "format": "string",
               "type": "string"
             },
-            "in": "query",
+            "in": "path",
             "description": "来源主键",
-            "required": false,
+            "required": true,
             "name": "sourceId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件主键",
-            "required": false,
-            "name": "transferId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "路由主键",
-            "required": false,
-            "name": "routeId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "运行阶段",
-            "required": false,
-            "name": "runStage"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "运行状态",
-            "required": false,
-            "name": "runStatus"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "触发类型",
-            "required": false,
-            "name": "triggerType"
           },
           {
             "schema": {
@@ -1259,12 +1854,12 @@
         ]
       }
     },
-    "/api/transfer-run-logs/page": {
+    "/api/transfer-sources/{sourceId}/progress/stream": {
       "get": {
-        "summary": "分页查询文件收发运行日志。",
+        "summary": "订阅来源收取进度。",
         "deprecated": false,
         "tags": [
-          "TransferRunLogController"
+          "TransferSourceController"
         ],
         "responses": {
           "200": {
@@ -1272,115 +1867,33 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/PageResultTransferRunLogViewDTO"
+                  "$ref": "#/components/schemas/SseEmitter"
                 }
               }
             }
           }
         },
-        "operationId": "pageLogs",
+        "operationId": "subscribeProgress",
         "parameters": [
           {
             "schema": {
               "format": "string",
               "type": "string"
             },
-            "in": "query",
+            "in": "path",
             "description": "来源主键",
-            "required": false,
+            "required": true,
             "name": "sourceId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件主键",
-            "required": false,
-            "name": "transferId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "路由主键",
-            "required": false,
-            "name": "routeId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "运行阶段",
-            "required": false,
-            "name": "runStage"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "运行状态",
-            "required": false,
-            "name": "runStatus"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "触发类型",
-            "required": false,
-            "name": "triggerType"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "关键字",
-            "required": false,
-            "name": "keyword"
-          },
-          {
-            "schema": {
-              "format": "int32",
-              "type": "integer"
-            },
-            "in": "query",
-            "description": "页码",
-            "required": false,
-            "example": 0,
-            "name": "pageIndex"
-          },
-          {
-            "schema": {
-              "format": "int32",
-              "type": "integer"
-            },
-            "in": "query",
-            "description": "每页条数",
-            "required": false,
-            "example": 0,
-            "name": "pageSize"
           }
         ]
       }
     },
-    "/api/transfer-run-logs/analysis": {
+    "/transfer-sources/{sourceId}/progress/stream": {
       "get": {
-        "summary": "统计分析文件收发运行日志。",
+        "summary": "订阅来源收取进度。",
         "deprecated": false,
         "tags": [
-          "TransferRunLogController"
+          "TransferSourceController"
         ],
         "responses": {
           "200": {
@@ -1388,117 +1901,25 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferRunLogAnalysisViewDTO"
+                  "$ref": "#/components/schemas/SseEmitter"
                 }
               }
             }
           }
         },
-        "operationId": "analyzeLogs",
+        "operationId": "subscribeProgress_1",
         "parameters": [
           {
             "schema": {
               "format": "string",
               "type": "string"
             },
-            "in": "query",
+            "in": "path",
             "description": "来源主键",
-            "required": false,
+            "required": true,
             "name": "sourceId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件主键",
-            "required": false,
-            "name": "transferId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "路由主键",
-            "required": false,
-            "name": "routeId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "运行阶段",
-            "required": false,
-            "name": "runStage"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "运行状态",
-            "required": false,
-            "name": "runStatus"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "触发类型",
-            "required": false,
-            "name": "triggerType"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "关键字",
-            "required": false,
-            "name": "keyword"
           }
         ]
-      }
-    },
-    "/api/transfer-run-logs/redeliver": {
-      "post": {
-        "summary": "批量重新投递失败的文件收发运行日志。",
-        "deprecated": false,
-        "tags": [
-          "TransferRunLogController"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransferRunLogRedeliverCommand"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferRunLogRedeliverResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "redeliver",
-        "parameters": []
       }
     },
     "/api/knowledge/standard-subjects/import": {
@@ -1617,12 +2038,44 @@
         "parameters": []
       }
     },
-    "/api/transfer-routes": {
-      "get": {
-        "summary": "查询分拣路由配置列表。",
+    "/api/transfer-tags": {
+      "post": {
+        "summary": "createTag",
         "deprecated": false,
+        "description": "",
         "tags": [
-          "TransferRouteController"
+          "TransferTagController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferTagUpsertCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTagMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "createTag",
+        "parameters": []
+      },
+      "get": {
+        "summary": "pageTags",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "TransferTagController"
         ],
         "responses": {
           "200": {
@@ -1630,16 +2083,13 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TransferRouteViewDTO"
-                  }
+                  "$ref": "#/components/schemas/PageResultTransferTagViewDTO"
                 }
               }
             }
           }
         },
-        "operationId": "listRoutes",
+        "operationId": "pageTags",
         "parameters": [
           {
             "schema": {
@@ -1647,9 +2097,9 @@
               "type": "string"
             },
             "in": "query",
-            "description": "来源主键",
+            "description": "No comments found.",
             "required": false,
-            "name": "sourceId"
+            "name": "tagCode"
           },
           {
             "schema": {
@@ -1657,49 +2107,20 @@
               "type": "string"
             },
             "in": "query",
-            "description": "来源类型",
+            "description": "No comments found.",
             "required": false,
-            "name": "sourceType"
+            "name": "matchStrategy"
           },
           {
             "schema": {
-              "format": "string",
-              "type": "string"
+              "format": "boolean",
+              "type": "boolean"
             },
             "in": "query",
-            "description": "来源编码",
+            "description": "No comments found.",
             "required": false,
-            "name": "sourceCode"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "规则主键",
-            "required": false,
-            "name": "ruleId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "目标类型",
-            "required": false,
-            "name": "targetType"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "目标编码",
-            "required": false,
-            "name": "targetCode"
+            "example": true,
+            "name": "enabled"
           },
           {
             "schema": {
@@ -1707,191 +2128,7 @@
               "type": "integer"
             },
             "in": "query",
-            "description": "查询上限",
-            "required": false,
-            "example": 0,
-            "name": "limit"
-          }
-        ]
-      }
-    },
-    "/api/transfer-routes/{routeId}": {
-      "get": {
-        "summary": "根据路由主键查询分拣路由详情。",
-        "deprecated": false,
-        "tags": [
-          "TransferRouteController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/TransferRouteViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "getRoute",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "path",
-            "description": "路由主键",
-            "required": true,
-            "name": "routeId"
-          }
-        ]
-      }
-    },
-    "/api/transfer-delivery-records": {
-      "get": {
-        "summary": "查询文件投递结果列表。",
-        "deprecated": false,
-        "tags": [
-          "TransferDeliveryRecordController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MultiResultTransferDeliveryRecordViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "listRecords",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "路由主键",
-            "required": false,
-            "name": "routeId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件主键",
-            "required": false,
-            "name": "transferId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "目标编码",
-            "required": false,
-            "name": "targetCode"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "执行状态",
-            "required": false,
-            "name": "executeStatus"
-          },
-          {
-            "schema": {
-              "format": "int32",
-              "type": "integer"
-            },
-            "in": "query",
-            "description": "查询上限",
-            "required": false,
-            "example": 0,
-            "name": "limit"
-          }
-        ]
-      }
-    },
-    "/api/transfer-delivery-records/page": {
-      "get": {
-        "summary": "分页查询文件投递结果列表。",
-        "deprecated": false,
-        "tags": [
-          "TransferDeliveryRecordController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/PageResultTransferDeliveryRecordViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "pageRecords",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "路由主键",
-            "required": false,
-            "name": "routeId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "文件主键",
-            "required": false,
-            "name": "transferId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "目标编码",
-            "required": false,
-            "name": "targetCode"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "执行状态",
-            "required": false,
-            "name": "executeStatus"
-          },
-          {
-            "schema": {
-              "format": "int32",
-              "type": "integer"
-            },
-            "in": "query",
-            "description": "页码",
+            "description": "No comments found.",
             "required": false,
             "example": 0,
             "name": "pageIndex"
@@ -1902,7 +2139,7 @@
               "type": "integer"
             },
             "in": "query",
-            "description": "每页条数",
+            "description": "No comments found.",
             "required": false,
             "example": 0,
             "name": "pageSize"
@@ -1910,12 +2147,13 @@
         ]
       }
     },
-    "/api/transfer-delivery-records/{deliveryId}": {
+    "/api/transfer-tags/{tagId}": {
       "get": {
-        "summary": "查询文件投递结果详情。",
+        "summary": "getTag",
         "deprecated": false,
+        "description": "",
         "tags": [
-          "TransferDeliveryRecordController"
+          "TransferTagController"
         ],
         "responses": {
           "200": {
@@ -1923,13 +2161,13 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferDeliveryRecordViewDTO"
+                  "$ref": "#/components/schemas/SingleResultTransferTagViewDTO"
                 }
               }
             }
           }
         },
-        "operationId": "getRecord",
+        "operationId": "getTag",
         "parameters": [
           {
             "schema": {
@@ -1937,9 +2175,152 @@
               "type": "string"
             },
             "in": "path",
-            "description": "投递记录主键",
+            "description": "No comments found.",
             "required": true,
-            "name": "deliveryId"
+            "name": "tagId"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "deleteTag",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "TransferTagController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTagMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "deleteTag",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "tagId"
+          }
+        ]
+      },
+      "put": {
+        "summary": "updateTag",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "TransferTagController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferTagUpsertCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTagMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "updateTag",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "tagId"
+          }
+        ]
+      }
+    },
+    "/api/transfer-tags/template-name": {
+      "get": {
+        "summary": "getTemplateName",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "TransferTagController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultString"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getTemplateName_4",
+        "parameters": []
+      }
+    },
+    "/api/transfer-tags/{tagId}/test": {
+      "post": {
+        "summary": "testTag",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "TransferTagController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferTagTestCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferTagTestResultDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "testTag",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "tagId"
           }
         ]
       }
@@ -2292,6 +2673,208 @@
         ]
       }
     },
+    "/api/files/upload": {
+      "post": {
+        "summary": "手动上传文件并执行 ODS 提取。",
+        "deprecated": false,
+        "tags": [
+          "FileManagementController"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultUploadValuationFileResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "upload_1",
+        "parameters": []
+      }
+    },
+    "/api/files/{fileId}": {
+      "get": {
+        "summary": "查询文件主数据。",
+        "deprecated": false,
+        "tags": [
+          "FileManagementController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultValsetFileInfoViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "queryFileInfo",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "path",
+            "description": "文件主键",
+            "required": true,
+            "example": 0,
+            "name": "fileId"
+          }
+        ]
+      }
+    },
+    "/api/files": {
+      "get": {
+        "summary": "按条件搜索文件主数据。",
+        "deprecated": false,
+        "tags": [
+          "FileManagementController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultValsetFileInfoViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "searchFileInfos",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源渠道",
+            "required": false,
+            "name": "sourceChannel"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件状态",
+            "required": false,
+            "name": "fileStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件指纹",
+            "required": false,
+            "name": "fingerprint"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "查询上限",
+            "required": false,
+            "example": 0,
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/api/files/{fileId}/ingest-logs": {
+      "get": {
+        "summary": "查询文件接入日志。",
+        "deprecated": false,
+        "tags": [
+          "FileManagementController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultValsetFileIngestLogViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "queryIngestLogs",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "path",
+            "description": "文件主键",
+            "required": true,
+            "example": 0,
+            "name": "fileId"
+          }
+        ]
+      }
+    },
+    "/api/files/{fileId}/sheet-styles": {
+      "get": {
+        "summary": "查询文件对应的 Excel sheet 样式快照。",
+        "deprecated": false,
+        "tags": [
+          "FileManagementController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultValuationSheetStyleViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "querySheetStyles",
+        "parameters": [
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "path",
+            "description": "文件主键",
+            "required": true,
+            "example": 0,
+            "name": "fileId"
+          }
+        ]
+      }
+    },
     "/api/transfer-route-configs": {
       "post": {
         "summary": "创建路由配置。",
@@ -2534,44 +3117,12 @@
         ]
       }
     },
-    "/api/files/upload": {
-      "post": {
-        "summary": "手动上传文件并执行 ODS 提取。",
-        "deprecated": false,
-        "tags": [
-          "FileManagementController"
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "boolean"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultUploadValuationFileResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "upload_1",
-        "parameters": []
-      }
-    },
-    "/api/files/{fileId}": {
+    "/api/transfer-run-logs": {
       "get": {
-        "summary": "查询文件主数据。",
+        "summary": "查询文件收发运行日志列表。",
         "deprecated": false,
         "tags": [
-          "FileManagementController"
+          "TransferRunLogController"
         ],
         "responses": {
           "200": {
@@ -2579,48 +3130,13 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/SingleResultValsetFileInfoViewDTO"
+                  "$ref": "#/components/schemas/MultiResultTransferRunLogViewDTO"
                 }
               }
             }
           }
         },
-        "operationId": "queryFileInfo",
-        "parameters": [
-          {
-            "schema": {
-              "format": "int64",
-              "type": "number"
-            },
-            "in": "path",
-            "description": "文件主键",
-            "required": true,
-            "example": 0,
-            "name": "fileId"
-          }
-        ]
-      }
-    },
-    "/api/files": {
-      "get": {
-        "summary": "按条件搜索文件主数据。",
-        "deprecated": false,
-        "tags": [
-          "FileManagementController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MultiResultValsetFileInfoViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "searchFileInfos",
+        "operationId": "listLogs",
         "parameters": [
           {
             "schema": {
@@ -2628,9 +3144,400 @@
               "type": "string"
             },
             "in": "query",
-            "description": "来源渠道",
+            "description": "来源主键",
             "required": false,
-            "name": "sourceChannel"
+            "name": "sourceId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件主键",
+            "required": false,
+            "name": "transferId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "路由主键",
+            "required": false,
+            "name": "routeId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "运行阶段",
+            "required": false,
+            "name": "runStage"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "运行状态",
+            "required": false,
+            "name": "runStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "触发类型",
+            "required": false,
+            "name": "triggerType"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "查询上限",
+            "required": false,
+            "example": 0,
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/api/transfer-run-logs/page": {
+      "get": {
+        "summary": "分页查询文件收发运行日志。",
+        "deprecated": false,
+        "tags": [
+          "TransferRunLogController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultTransferRunLogViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pageLogs",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源主键",
+            "required": false,
+            "name": "sourceId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件主键",
+            "required": false,
+            "name": "transferId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "路由主键",
+            "required": false,
+            "name": "routeId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "运行阶段",
+            "required": false,
+            "name": "runStage"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "运行状态",
+            "required": false,
+            "name": "runStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "触发类型",
+            "required": false,
+            "name": "triggerType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "关键字",
+            "required": false,
+            "name": "keyword"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "每页条数",
+            "required": false,
+            "example": 0,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/api/transfer-run-logs/analysis": {
+      "get": {
+        "summary": "统计分析文件收发运行日志。",
+        "deprecated": false,
+        "tags": [
+          "TransferRunLogController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferRunLogAnalysisViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "analyzeLogs",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源主键",
+            "required": false,
+            "name": "sourceId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件主键",
+            "required": false,
+            "name": "transferId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "路由主键",
+            "required": false,
+            "name": "routeId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "运行阶段",
+            "required": false,
+            "name": "runStage"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "运行状态",
+            "required": false,
+            "name": "runStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "触发类型",
+            "required": false,
+            "name": "triggerType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "关键字",
+            "required": false,
+            "name": "keyword"
+          }
+        ]
+      }
+    },
+    "/api/transfer-run-logs/redeliver": {
+      "post": {
+        "summary": "批量重新投递失败的文件收发运行日志。",
+        "deprecated": false,
+        "tags": [
+          "TransferRunLogController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferRunLogRedeliverCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferRunLogRedeliverResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "redeliver",
+        "parameters": []
+      }
+    },
+    "/api/transfer-objects/{transferId}": {
+      "get": {
+        "summary": "查询文件主对象详情。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferObjectViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getObject",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件主键",
+            "required": true,
+            "name": "transferId"
+          }
+        ]
+      }
+    },
+    "/api/transfer-objects": {
+      "get": {
+        "summary": "分页查询文件主对象列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultTransferObjectViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pageObjects",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源主键",
+            "required": false,
+            "name": "sourceId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源类型",
+            "required": false,
+            "name": "sourceType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源编码",
+            "required": false,
+            "name": "sourceCode"
           },
           {
             "schema": {
@@ -2640,7 +3547,17 @@
             "in": "query",
             "description": "文件状态",
             "required": false,
-            "name": "fileStatus"
+            "name": "status"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "邮件唯一标识",
+            "required": false,
+            "name": "mailId"
           },
           {
             "schema": {
@@ -2654,228 +3571,13 @@
           },
           {
             "schema": {
-              "format": "int32",
-              "type": "integer"
-            },
-            "in": "query",
-            "description": "查询上限",
-            "required": false,
-            "example": 0,
-            "name": "limit"
-          }
-        ]
-      }
-    },
-    "/api/files/{fileId}/ingest-logs": {
-      "get": {
-        "summary": "查询文件接入日志。",
-        "deprecated": false,
-        "tags": [
-          "FileManagementController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MultiResultValsetFileIngestLogViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "queryIngestLogs",
-        "parameters": [
-          {
-            "schema": {
-              "format": "int64",
-              "type": "number"
-            },
-            "in": "path",
-            "description": "文件主键",
-            "required": true,
-            "example": 0,
-            "name": "fileId"
-          }
-        ]
-      }
-    },
-    "/api/files/{fileId}/sheet-styles": {
-      "get": {
-        "summary": "查询文件对应的 Excel sheet 样式快照。",
-        "deprecated": false,
-        "tags": [
-          "FileManagementController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MultiResultValuationSheetStyleViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "querySheetStyles",
-        "parameters": [
-          {
-            "schema": {
-              "format": "int64",
-              "type": "number"
-            },
-            "in": "path",
-            "description": "文件主键",
-            "required": true,
-            "example": 0,
-            "name": "fileId"
-          }
-        ]
-      }
-    },
-    "/api/transfer-form-templates": {
-      "get": {
-        "summary": "查询 Transfer 表单模板列表。",
-        "deprecated": false,
-        "tags": [
-          "TransferFormTemplateController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MultiResultTransferFormTemplateViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "listTemplates",
-        "parameters": []
-      }
-    },
-    "/api/transfer-form-templates/grouped": {
-      "get": {
-        "summary": "查询 Transfer 表单模板分组。",
-        "deprecated": false,
-        "tags": [
-          "TransferFormTemplateController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MultiResultTransferFormTemplateGroupDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "listGroupedTemplates",
-        "parameters": []
-      }
-    },
-    "/api/transfer-form-templates/{name}": {
-      "get": {
-        "summary": "查询 Transfer 表单模板详情。",
-        "deprecated": false,
-        "tags": [
-          "TransferFormTemplateController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferFormTemplateViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "getTemplate",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "path",
-            "description": "模板名称",
-            "required": true,
-            "name": "name"
-          }
-        ]
-      }
-    },
-    "/api/transfer-targets": {
-      "post": {
-        "summary": "创建投递目标。",
-        "deprecated": false,
-        "tags": [
-          "TransferTargetController"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransferTargetUpsertCommand"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferTargetMutationResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "createTarget",
-        "parameters": []
-      },
-      "get": {
-        "summary": "查询投递目标列表。",
-        "deprecated": false,
-        "tags": [
-          "TransferTargetController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/MultiResultTransferTargetViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "listTargets",
-        "parameters": [
-          {
-            "schema": {
               "format": "string",
               "type": "string"
             },
             "in": "query",
-            "description": "目标类型",
+            "description": "路由主键",
             "required": false,
-            "name": "targetType"
+            "name": "routeId"
           },
           {
             "schema": {
@@ -2883,20 +3585,29 @@
               "type": "string"
             },
             "in": "query",
-            "description": "目标编码",
+            "description": "标签主键",
             "required": false,
-            "name": "targetCode"
+            "name": "tagId"
           },
           {
             "schema": {
-              "format": "boolean",
-              "type": "boolean"
+              "format": "string",
+              "type": "string"
             },
             "in": "query",
-            "description": "是否启用",
+            "description": "标签编码",
             "required": false,
-            "example": true,
-            "name": "enabled"
+            "name": "tagCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "标签值",
+            "required": false,
+            "name": "tagValue"
           },
           {
             "schema": {
@@ -2904,158 +3615,145 @@
               "type": "integer"
             },
             "in": "query",
-            "description": "查询上限",
+            "description": "页码",
             "required": false,
             "example": 0,
-            "name": "limit"
-          }
-        ]
-      }
-    },
-    "/api/transfer-targets/{targetId}": {
-      "get": {
-        "summary": "查询投递目标详情。",
-        "deprecated": false,
-        "tags": [
-          "TransferTargetController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferTargetViewDTO"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "getTarget",
-        "parameters": [
+            "name": "pageIndex"
+          },
           {
             "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "path",
-            "description": "目标主键",
-            "required": true,
-            "name": "targetId"
-          }
-        ]
-      },
-      "delete": {
-        "summary": "删除投递目标。",
-        "deprecated": false,
-        "tags": [
-          "TransferTargetController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferTargetMutationResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "deleteTarget",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "path",
-            "description": "目标主键",
-            "required": true,
-            "name": "targetId"
-          }
-        ]
-      },
-      "put": {
-        "summary": "更新投递目标。",
-        "deprecated": false,
-        "tags": [
-          "TransferTargetController"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TransferTargetUpsertCommand"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultTransferTargetMutationResponse"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "updateTarget",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "path",
-            "description": "目标主键",
-            "required": true,
-            "name": "targetId"
-          }
-        ]
-      }
-    },
-    "/api/transfer-targets/template-name": {
-      "get": {
-        "summary": "查询投递目标对应表单模板名。",
-        "deprecated": false,
-        "tags": [
-          "TransferTargetController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SingleResultString"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "getTemplateName_2",
-        "parameters": [
-          {
-            "schema": {
-              "format": "enum",
-              "type": "string",
-              "enum": [
-                "EMAIL",
-                "S3",
-                "SFTP",
-                "FILESYS"
-              ]
+              "format": "int32",
+              "type": "integer"
             },
             "in": "query",
-            "description": "目标类型<br/>(See: 文件投递目标类型。)",
-            "required": true,
-            "example": "EMAIL",
-            "name": "targetType"
+            "description": "每页条数",
+            "required": false,
+            "example": 0,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/api/transfer-objects/analysis": {
+      "get": {
+        "summary": "统计分析文件主对象。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferObjectAnalysisViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "analyzeObjects",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源主键",
+            "required": false,
+            "name": "sourceId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源类型",
+            "required": false,
+            "name": "sourceType"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源编码",
+            "required": false,
+            "name": "sourceCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件状态",
+            "required": false,
+            "name": "status"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "邮件唯一标识",
+            "required": false,
+            "name": "mailId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件指纹",
+            "required": false,
+            "name": "fingerprint"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "路由主键",
+            "required": false,
+            "name": "routeId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "标签主键",
+            "required": false,
+            "name": "tagId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "标签编码",
+            "required": false,
+            "name": "tagCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "标签值",
+            "required": false,
+            "name": "tagValue"
           }
         ]
       }
@@ -3507,6 +4205,201 @@
           }
         ]
       }
+    },
+    "/api/transfer-delivery-records": {
+      "get": {
+        "summary": "查询文件投递结果列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferDeliveryRecordController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultTransferDeliveryRecordViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "listRecords",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "路由主键",
+            "required": false,
+            "name": "routeId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件主键",
+            "required": false,
+            "name": "transferId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "目标编码",
+            "required": false,
+            "name": "targetCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "执行状态",
+            "required": false,
+            "name": "executeStatus"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "查询上限",
+            "required": false,
+            "example": 0,
+            "name": "limit"
+          }
+        ]
+      }
+    },
+    "/api/transfer-delivery-records/page": {
+      "get": {
+        "summary": "分页查询文件投递结果列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferDeliveryRecordController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultTransferDeliveryRecordViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pageRecords",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "路由主键",
+            "required": false,
+            "name": "routeId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "文件主键",
+            "required": false,
+            "name": "transferId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "目标编码",
+            "required": false,
+            "name": "targetCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "执行状态",
+            "required": false,
+            "name": "executeStatus"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "每页条数",
+            "required": false,
+            "example": 0,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/api/transfer-delivery-records/{deliveryId}": {
+      "get": {
+        "summary": "查询文件投递结果详情。",
+        "deprecated": false,
+        "tags": [
+          "TransferDeliveryRecordController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferDeliveryRecordViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getRecord",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "投递记录主键",
+            "required": true,
+            "name": "deliveryId"
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -3713,16 +4606,6 @@
           }
         }
       },
-      "String": {
-        "type": "object",
-        "properties": {
-          "mapKey": {
-            "format": "string",
-            "description": "A map key.",
-            "type": "string"
-          }
-        }
-      },
       "SingleResultTransferTargetViewDTO": {
         "type": "object",
         "properties": {
@@ -3754,6 +4637,16 @@
           "data": {
             "description": "返回的单条数据(object)",
             "$ref": "#/components/schemas/TransferTargetViewDTO"
+          }
+        }
+      },
+      "String": {
+        "type": "object",
+        "properties": {
+          "mapKey": {
+            "format": "string",
+            "description": "A map key.",
+            "type": "string"
           }
         }
       },
@@ -3936,6 +4829,64 @@
           "ruleCode",
           "ruleName"
         ]
+      },
+      "TransferObjectSizeAnalysisViewDTO": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "format": "int64",
+            "description": "文件总数。",
+            "type": "number",
+            "example": 0
+          },
+          "totalSizeBytes": {
+            "format": "int64",
+            "description": "总大小，单位字节。",
+            "type": "number",
+            "example": 0
+          },
+          "extensionCounts": {
+            "description": "后缀统计列表。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectExtensionCountViewDTO"
+            }
+          }
+        }
+      },
+      "SingleResultTransferTagTestResultDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferTagTestResultDTO"
+          }
+        }
       },
       "TransferRuleMutationResponse": {
         "type": "object",
@@ -4832,6 +5783,13 @@
             "format": "string",
             "description": "文件元数据 JSON。",
             "type": "string"
+          },
+          "tags": {
+            "description": "文件标签列表。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectTagViewDTO"
+            }
           }
         }
       },
@@ -4853,6 +5811,67 @@
             "description": "状态数量。",
             "type": "number",
             "example": 0
+          }
+        }
+      },
+      "TransferObjectTagViewDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "string",
+            "description": "标签结果主键。",
+            "type": "string"
+          },
+          "transferId": {
+            "format": "string",
+            "description": "文件主键。",
+            "type": "string"
+          },
+          "tagId": {
+            "format": "string",
+            "description": "标签主键。",
+            "type": "string"
+          },
+          "tagCode": {
+            "format": "string",
+            "description": "标签编码。",
+            "type": "string"
+          },
+          "tagName": {
+            "format": "string",
+            "description": "标签名称。",
+            "type": "string"
+          },
+          "tagValue": {
+            "format": "string",
+            "description": "标签值。",
+            "type": "string"
+          },
+          "matchStrategy": {
+            "format": "string",
+            "description": "匹配策略。",
+            "type": "string"
+          },
+          "matchReason": {
+            "format": "string",
+            "description": "命中原因。",
+            "type": "string"
+          },
+          "matchedField": {
+            "format": "string",
+            "description": "命中字段。",
+            "type": "string"
+          },
+          "matchedValue": {
+            "format": "string",
+            "description": "命中值。",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "string",
+            "description": "创建时间。",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
           }
         }
       },
@@ -4890,40 +5909,6 @@
           }
         }
       },
-      "SingleResultTransferObjectAnalysisViewDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "format": "boolean",
-            "description": "状态",
-            "type": "boolean",
-            "example": true
-          },
-          "dataType": {
-            "format": "string",
-            "description": "返回数据格式",
-            "type": "string"
-          },
-          "code": {
-            "description": "返回状态码(object)",
-            "type": "object"
-          },
-          "message": {
-            "format": "string",
-            "description": "返回消息",
-            "type": "string"
-          },
-          "tips": {
-            "format": "string",
-            "description": "返回提示消息",
-            "type": "string"
-          },
-          "data": {
-            "description": "返回的单条数据(object)",
-            "$ref": "#/components/schemas/TransferObjectAnalysisViewDTO"
-          }
-        }
-      },
       "SingleResultTransferRunLogAnalysisViewDTO": {
         "type": "object",
         "properties": {
@@ -4955,6 +5940,40 @@
           "data": {
             "description": "返回的单条数据(object)",
             "$ref": "#/components/schemas/TransferRunLogAnalysisViewDTO"
+          }
+        }
+      },
+      "SingleResultTransferObjectAnalysisViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferObjectAnalysisViewDTO"
           }
         }
       },
@@ -5827,29 +6846,6 @@
           }
         }
       },
-      "TransferObjectSourceAnalysisViewDTO": {
-        "type": "object",
-        "properties": {
-          "sourceType": {
-            "format": "string",
-            "description": "来源类型。",
-            "type": "string"
-          },
-          "totalCount": {
-            "format": "int64",
-            "description": "总数。",
-            "type": "number",
-            "example": 0
-          },
-          "statusCounts": {
-            "description": "状态统计列表。",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TransferObjectStatusCountViewDTO"
-            }
-          }
-        }
-      },
       "TransferSourceViewDTO": {
         "type": "object",
         "properties": {
@@ -5894,6 +6890,11 @@
             "description": "收取状态。",
             "type": "string"
           },
+          "ingestTriggerType": {
+            "format": "string",
+            "description": "收取触发类型。",
+            "type": "string"
+          },
           "ingestBusy": {
             "format": "boolean",
             "description": "是否仍在收取锁定中。",
@@ -5931,6 +6932,36 @@
             "description": "修改时间。",
             "type": "string",
             "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "TransferObjectSourceAnalysisViewDTO": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "format": "string",
+            "description": "来源类型。",
+            "type": "string"
+          },
+          "totalCount": {
+            "format": "int64",
+            "description": "总数。",
+            "type": "number",
+            "example": 0
+          },
+          "statusCounts": {
+            "description": "状态统计列表。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectStatusCountViewDTO"
+            }
+          },
+          "mailFolderCounts": {
+            "description": "邮件文件夹统计列表。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectMailFolderCountViewDTO"
+            }
           }
         }
       },
@@ -6080,6 +7111,77 @@
           "standardWorkbookPath"
         ]
       },
+      "MultiResultTransferTargetViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferTargetViewDTO"
+            }
+          }
+        }
+      },
+      "SingleResultMatchResultViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/MatchResultViewDTO"
+          }
+        }
+      },
       "TransferRunLogRedeliverItemViewDTO": {
         "type": "object",
         "properties": {
@@ -6118,77 +7220,6 @@
             "format": "string",
             "description": "明细消息。",
             "type": "string"
-          }
-        }
-      },
-      "SingleResultMatchResultViewDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "format": "boolean",
-            "description": "状态",
-            "type": "boolean",
-            "example": true
-          },
-          "dataType": {
-            "format": "string",
-            "description": "返回数据格式",
-            "type": "string"
-          },
-          "code": {
-            "description": "返回状态码(object)",
-            "type": "object"
-          },
-          "message": {
-            "format": "string",
-            "description": "返回消息",
-            "type": "string"
-          },
-          "tips": {
-            "format": "string",
-            "description": "返回提示消息",
-            "type": "string"
-          },
-          "data": {
-            "description": "返回的单条数据(object)",
-            "$ref": "#/components/schemas/MatchResultViewDTO"
-          }
-        }
-      },
-      "MultiResultTransferTargetViewDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "format": "boolean",
-            "description": "状态",
-            "type": "boolean",
-            "example": true
-          },
-          "dataType": {
-            "format": "string",
-            "description": "返回数据格式",
-            "type": "string"
-          },
-          "code": {
-            "description": "返回状态码(object)",
-            "type": "object"
-          },
-          "message": {
-            "format": "string",
-            "description": "返回消息",
-            "type": "string"
-          },
-          "tips": {
-            "format": "string",
-            "description": "返回提示消息",
-            "type": "string"
-          },
-          "data": {
-            "description": "返回数据",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TransferTargetViewDTO"
-            }
           }
         }
       },
@@ -6256,6 +7287,27 @@
             "items": {
               "$ref": "#/components/schemas/TransferDeliveryRecordViewDTO"
             }
+          }
+        }
+      },
+      "TransferObjectMailFolderCountViewDTO": {
+        "type": "object",
+        "properties": {
+          "mailFolder": {
+            "format": "string",
+            "description": "邮件文件夹。",
+            "type": "string"
+          },
+          "mailFolderLabel": {
+            "format": "string",
+            "description": "邮件文件夹标签。",
+            "type": "string"
+          },
+          "count": {
+            "format": "int64",
+            "description": "数量。",
+            "type": "number",
+            "example": 0
           }
         }
       },
@@ -6466,6 +7518,72 @@
             "$ref": "#/components/schemas/TransferTargetViewDTO"
           }
         }
+      },
+      "TransferTagUpsertCommand": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagValue": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "enabled": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "priority": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "matchStrategy": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "scriptLanguage": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "scriptBody": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "regexPattern": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagMeta": {
+            "description": "No comments found.(object)",
+            "$ref": "#/components/schemas/Object"
+          }
+        },
+        "required": [
+          "tagCode",
+          "tagName",
+          "tagValue"
+        ]
       },
       "MultiResultTransferRouteViewDTO": {
         "type": "object",
@@ -6684,20 +7802,6 @@
           "sourceType"
         ]
       },
-      "RawValuationSheetDTO": {
-        "type": "object",
-        "properties": {
-          "sheetName": {
-            "format": "string",
-            "description": "工作表名称。",
-            "type": "string"
-          },
-          "headerMeta": {
-            "description": "表头元数据。(object)",
-            "$ref": "#/components/schemas/Object"
-          }
-        }
-      },
       "TransferFormTemplateGroupDTO": {
         "type": "object",
         "properties": {
@@ -6717,6 +7821,20 @@
             "items": {
               "$ref": "#/components/schemas/TransferFormTemplateViewDTO"
             }
+          }
+        }
+      },
+      "RawValuationSheetDTO": {
+        "type": "object",
+        "properties": {
+          "sheetName": {
+            "format": "string",
+            "description": "工作表名称。",
+            "type": "string"
+          },
+          "headerMeta": {
+            "description": "表头元数据。(object)",
+            "$ref": "#/components/schemas/Object"
           }
         }
       },
@@ -6928,6 +8046,15 @@
           }
         }
       },
+      "YssSchemaNode": {
+        "type": "object",
+        "properties": {
+          "mapKey": {
+            "description": "YssFormily schema 节点。(object)",
+            "$ref": "#/components/schemas/YssSchemaNode"
+          }
+        }
+      },
       "PageResultTransferDeliveryRecordViewDTO": {
         "type": "object",
         "properties": {
@@ -6983,15 +8110,6 @@
           }
         }
       },
-      "YssSchemaNode": {
-        "type": "object",
-        "properties": {
-          "mapKey": {
-            "description": "YssFormily schema 节点。(object)",
-            "$ref": "#/components/schemas/YssSchemaNode"
-          }
-        }
-      },
       "MultiResultTransferFormTemplateViewDTO": {
         "type": "object",
         "properties": {
@@ -7026,6 +8144,54 @@
             "items": {
               "$ref": "#/components/schemas/TransferFormTemplateViewDTO"
             }
+          }
+        }
+      },
+      "SseEmitter": {
+        "type": "object",
+        "properties": {
+          "timeout": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "handler": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "earlySendAttempts": {
+            "description": "No comments found.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "complete": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "failure": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "timeoutCallback": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "errorCallback": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "completionCallback": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          },
+          "writeLock": {
+            "description": "No comments found.(object)",
+            "type": "object"
           }
         }
       },
@@ -7741,6 +8907,66 @@
           }
         }
       },
+      "TransferTagTestCommand": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "sourceCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "mimeType": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileSize": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "sender": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "subject": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "path": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "mailFolder": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "body": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "attributes": {
+            "description": "No comments found.(object)",
+            "$ref": "#/components/schemas/Object"
+          }
+        }
+      },
       "SingleResultTransferFormTemplateViewDTO": {
         "type": "object",
         "properties": {
@@ -8059,6 +9285,44 @@
           }
         }
       },
+      "MatchTaskCommand": {
+        "type": "object",
+        "properties": {
+          "dataSourceType": {
+            "format": "string",
+            "description": "估值表数据源类型 (EXCEL, CSV, API, DB)，默认 EXCEL 保持向后兼容。",
+            "type": "string"
+          },
+          "workbookPath": {
+            "format": "string",
+            "description": "评估估值表的数据源URI或绝对路径。",
+            "type": "string"
+          },
+          "forceRebuild": {
+            "format": "boolean",
+            "description": "是否强制重新生成匹配任务。",
+            "type": "boolean",
+            "example": true
+          },
+          "fileId": {
+            "format": "int64",
+            "description": "可选的原始数据文件标识。",
+            "type": "number",
+            "example": 0
+          },
+          "topK": {
+            "format": "int32",
+            "description": "每个科目保留的考生数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "createdBy": {
+            "format": "string",
+            "description": "可选的创建者标识符。",
+            "type": "string"
+          }
+        }
+      },
       "PageResultTransferObjectViewDTO": {
         "type": "object",
         "properties": {
@@ -8111,44 +9375,6 @@
             "items": {
               "$ref": "#/components/schemas/TransferObjectViewDTO"
             }
-          }
-        }
-      },
-      "MatchTaskCommand": {
-        "type": "object",
-        "properties": {
-          "dataSourceType": {
-            "format": "string",
-            "description": "估值表数据源类型 (EXCEL, CSV, API, DB)，默认 EXCEL 保持向后兼容。",
-            "type": "string"
-          },
-          "workbookPath": {
-            "format": "string",
-            "description": "评估估值表的数据源URI或绝对路径。",
-            "type": "string"
-          },
-          "forceRebuild": {
-            "format": "boolean",
-            "description": "是否强制重新生成匹配任务。",
-            "type": "boolean",
-            "example": true
-          },
-          "fileId": {
-            "format": "int64",
-            "description": "可选的原始数据文件标识。",
-            "type": "number",
-            "example": 0
-          },
-          "topK": {
-            "format": "int32",
-            "description": "每个科目保留的考生数量。",
-            "type": "integer",
-            "example": 0
-          },
-          "createdBy": {
-            "format": "string",
-            "description": "可选的创建者标识符。",
-            "type": "string"
           }
         }
       },
@@ -8215,43 +9441,6 @@
           }
         }
       },
-      "MultiResultTransferSourceCheckpointItemViewDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "format": "boolean",
-            "description": "状态",
-            "type": "boolean",
-            "example": true
-          },
-          "dataType": {
-            "format": "string",
-            "description": "返回数据格式",
-            "type": "string"
-          },
-          "code": {
-            "description": "返回状态码(object)",
-            "type": "object"
-          },
-          "message": {
-            "format": "string",
-            "description": "返回消息",
-            "type": "string"
-          },
-          "tips": {
-            "format": "string",
-            "description": "返回提示消息",
-            "type": "string"
-          },
-          "data": {
-            "description": "返回数据",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TransferSourceCheckpointItemViewDTO"
-            }
-          }
-        }
-      },
       "TransferRouteViewDTO": {
         "type": "object",
         "properties": {
@@ -8308,6 +9497,121 @@
           "routeMeta": {
             "description": "路由扩展信息。(object)",
             "$ref": "#/components/schemas/Object"
+          }
+        }
+      },
+      "MultiResultTransferSourceCheckpointItemViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferSourceCheckpointItemViewDTO"
+            }
+          }
+        }
+      },
+      "TransferTagViewDTO": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagValue": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "enabled": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "priority": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "matchStrategy": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "scriptLanguage": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "scriptBody": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "regexPattern": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagMeta": {
+            "description": "No comments found.(object)",
+            "$ref": "#/components/schemas/Object"
+          },
+          "formTemplateName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updatedAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
           }
         }
       },
@@ -8382,6 +9686,84 @@
           }
         }
       },
+      "TransferObjectExtensionCountViewDTO": {
+        "type": "object",
+        "properties": {
+          "extension": {
+            "format": "string",
+            "description": "后缀。",
+            "type": "string"
+          },
+          "extensionLabel": {
+            "format": "string",
+            "description": "后缀标签。",
+            "type": "string"
+          },
+          "count": {
+            "format": "int64",
+            "description": "数量。",
+            "type": "number",
+            "example": 0
+          }
+        }
+      },
+      "TransferTagTestResultDTO": {
+        "type": "object",
+        "properties": {
+          "tagId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "matched": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "matchStrategy": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "matchReason": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "matchedByScript": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "matchedByRegex": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "matchedField": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "matchedValue": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "contextSnapshot": {
+            "description": "No comments found.(object)",
+            "$ref": "#/components/schemas/Object"
+          },
+          "errorMessage": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        }
+      },
       "SingleResultTransferObjectViewDTO": {
         "type": "object",
         "properties": {
@@ -8416,6 +9798,61 @@
           }
         }
       },
+      "PageResultTransferTagViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "totalCount": {
+            "format": "int64",
+            "description": "总数",
+            "type": "number",
+            "example": 0
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "页数",
+            "type": "integer",
+            "example": 0
+          },
+          "pageIndex": {
+            "format": "int32",
+            "description": "当前页数",
+            "type": "integer",
+            "example": 0
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferTagViewDTO"
+            }
+          }
+        }
+      },
       "YssSchema": {
         "type": "object",
         "properties": {
@@ -8427,24 +9864,6 @@
           "properties": {
             "description": "属性节点映射。(object)",
             "$ref": "#/components/schemas/YssSchemaNode"
-          }
-        }
-      },
-      "TransferObjectAnalysisViewDTO": {
-        "type": "object",
-        "properties": {
-          "totalCount": {
-            "format": "int64",
-            "description": "总数。",
-            "type": "number",
-            "example": 0
-          },
-          "sourceAnalyses": {
-            "description": "按来源类型统计列表。",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TransferObjectSourceAnalysisViewDTO"
-            }
           }
         }
       },
@@ -8481,6 +9900,62 @@
             "items": {
               "$ref": "#/components/schemas/TransferRunLogStageAnalysisViewDTO"
             }
+          }
+        }
+      },
+      "TransferObjectAnalysisViewDTO": {
+        "type": "object",
+        "properties": {
+          "totalCount": {
+            "format": "int64",
+            "description": "总数。",
+            "type": "number",
+            "example": 0
+          },
+          "sourceAnalyses": {
+            "description": "按来源类型统计列表。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectSourceAnalysisViewDTO"
+            }
+          },
+          "sizeAnalysis": {
+            "description": "文件大小统计。(object)",
+            "$ref": "#/components/schemas/TransferObjectSizeAnalysisViewDTO"
+          }
+        }
+      },
+      "SingleResultTransferTagViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferTagViewDTO"
           }
         }
       },
@@ -8654,6 +10129,43 @@
           }
         }
       },
+      "MultiResultTransferFormTemplateGroupDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferFormTemplateGroupDTO"
+            }
+          }
+        }
+      },
       "TransferDeliveryRecordViewDTO": {
         "type": "object",
         "properties": {
@@ -8707,43 +10219,6 @@
             "description": "投递时间。",
             "type": "string",
             "example": "yyyy-MM-dd HH:mm:ss"
-          }
-        }
-      },
-      "MultiResultTransferFormTemplateGroupDTO": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "format": "boolean",
-            "description": "状态",
-            "type": "boolean",
-            "example": true
-          },
-          "dataType": {
-            "format": "string",
-            "description": "返回数据格式",
-            "type": "string"
-          },
-          "code": {
-            "description": "返回状态码(object)",
-            "type": "object"
-          },
-          "message": {
-            "format": "string",
-            "description": "返回消息",
-            "type": "string"
-          },
-          "tips": {
-            "format": "string",
-            "description": "返回提示消息",
-            "type": "string"
-          },
-          "data": {
-            "description": "返回数据",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TransferFormTemplateGroupDTO"
-            }
           }
         }
       },
@@ -8967,6 +10442,64 @@
           "data": {
             "description": "返回的单条数据(object)",
             "$ref": "#/components/schemas/TransferRuleViewDTO"
+          }
+        }
+      },
+      "SingleResultTransferTagMutationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferTagMutationResponse"
+          }
+        }
+      },
+      "TransferTagMutationResponse": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "message": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "formTemplateName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tag": {
+            "description": "No comments found.(object)",
+            "$ref": "#/components/schemas/TransferTagViewDTO"
           }
         }
       },

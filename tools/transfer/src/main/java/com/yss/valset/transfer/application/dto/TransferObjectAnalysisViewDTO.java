@@ -21,4 +21,9 @@ public class TransferObjectAnalysisViewDTO {
      * 按来源类型统计列表。
      */
     private List<TransferObjectSourceAnalysisViewDTO> sourceAnalyses;
+
+    /**
+     * 文件大小统计。
+     */
+    private TransferObjectSizeAnalysisViewDTO sizeAnalysis;
 }

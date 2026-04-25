@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +53,7 @@ public class DefaultTransferRuleManagementAppService implements TransferRuleMana
                 command.getScriptBody(),
                 toInstant(command.getEffectiveFrom()),
                 toInstant(command.getEffectiveTo()),
-                command.getRuleMeta() == null ? Map.of() : command.getRuleMeta()
+                command.getRuleMeta() == null ? new HashMap<>() : command.getRuleMeta()
         );
         RuleDefinition saved = transferRuleGateway.save(definition);
         return TransferRuleMutationResponse.builder()

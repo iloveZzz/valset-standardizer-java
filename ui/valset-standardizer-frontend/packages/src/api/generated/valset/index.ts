@@ -10,11 +10,14 @@ import type {
   AnalyzeRequest,
   EvaluateMappingTaskCommand,
   ExtractDataTaskCommand,
-  GetTemplateName1Params,
   GetTemplateName2Params,
+  GetTemplateName3Params,
+  GetTemplateNameParams,
   ImportMappingHintsRequest,
   ImportMappingSamplesRequest,
+  ListCheckpointItems1Params,
   ListCheckpointItemsParams,
+  ListCheckpoints1Params,
   ListCheckpointsParams,
   ListLogsParams,
   ListProfilesParams,
@@ -22,6 +25,7 @@ import type {
   ListRoutes1Params,
   ListRoutesParams,
   ListRulesParams,
+  ListSources1Params,
   ListSourcesParams,
   ListTargetsParams,
   ListTracesParams,
@@ -48,6 +52,8 @@ import type {
   PageResultTransferDeliveryRecordViewDTO,
   PageResultTransferObjectViewDTO,
   PageResultTransferRunLogViewDTO,
+  PageResultTransferTagViewDTO,
+  PageTagsParams,
   ParseRuleProfileUpsertCommand,
   ParseRulePublishCommand,
   ParseRuleRollbackCommand,
@@ -79,49 +85,44 @@ import type {
   SingleResultTransferRunLogRedeliverResponse,
   SingleResultTransferSourceMutationResponse,
   SingleResultTransferSourceViewDTO,
+  SingleResultTransferTagMutationResponse,
+  SingleResultTransferTagTestResultDTO,
+  SingleResultTransferTagViewDTO,
   SingleResultTransferTargetMutationResponse,
   SingleResultTransferTargetViewDTO,
   SingleResultUploadValuationFileResponse,
   SingleResultValsetFileInfoViewDTO,
+  SseEmitter,
   TransferRouteUpsertCommand,
   TransferRouteViewDTO,
   TransferRuleUpsertCommand,
   TransferRunLogRedeliverCommand,
   TransferSourceUpsertCommand,
+  TransferTagTestCommand,
+  TransferTagUpsertCommand,
   TransferTargetUpsertCommand,
 } from "./schemas";
 import { customInstance } from "../../mutator";
 
 export const getJavaSpringBootQuartzApi = () => {
   /**
-   * @summary 查询文件主对象详情。
+   * @summary 查询分拣路由配置列表。
    */
-  const getObject = (transferId: string) => {
-    return customInstance<SingleResultTransferObjectViewDTO>({
-      url: `/api/transfer-objects/${transferId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 分页查询文件主对象列表。
-   */
-  const pageObjects = (params?: PageObjectsParams) => {
-    return customInstance<PageResultTransferObjectViewDTO>({
-      url: `/api/transfer-objects`,
+  const listRoutes = (params?: ListRoutesParams) => {
+    return customInstance<TransferRouteViewDTO[]>({
+      url: `/api/transfer-routes`,
       method: "GET",
       params,
     });
   };
 
   /**
-   * @summary 统计分析文件主对象。
+   * @summary 根据路由主键查询分拣路由详情。
    */
-  const analyzeObjects = (params?: AnalyzeObjectsParams) => {
-    return customInstance<SingleResultTransferObjectAnalysisViewDTO>({
-      url: `/api/transfer-objects/analysis`,
+  const getRoute = (routeId: string) => {
+    return customInstance<TransferRouteViewDTO>({
+      url: `/api/transfer-routes/${routeId}`,
       method: "GET",
-      params,
     });
   };
 
@@ -183,612 +184,6 @@ export const getJavaSpringBootQuartzApi = () => {
   const queryTask = (taskId: number) => {
     return customInstance<SingleResultTaskViewDTO>({
       url: `/api/tasks/${taskId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 创建路由规则。
-   */
-  const createRule = (transferRuleUpsertCommand: TransferRuleUpsertCommand) => {
-    return customInstance<SingleResultTransferRuleMutationResponse>({
-      url: `/api/transfer-rules`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: transferRuleUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询路由规则列表。
-   */
-  const listRules = (params?: ListRulesParams) => {
-    return customInstance<MultiResultTransferRuleViewDTO>({
-      url: `/api/transfer-rules`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询路由规则详情。
-   */
-  const getRule = (ruleId: string) => {
-    return customInstance<SingleResultTransferRuleViewDTO>({
-      url: `/api/transfer-rules/${ruleId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 删除路由规则。
-   */
-  const deleteRule = (ruleId: string) => {
-    return customInstance<SingleResultTransferRuleMutationResponse>({
-      url: `/api/transfer-rules/${ruleId}`,
-      method: "DELETE",
-    });
-  };
-
-  /**
-   * @summary 更新路由规则。
-   */
-  const updateRule = (
-    ruleId: string,
-    transferRuleUpsertCommand: TransferRuleUpsertCommand,
-  ) => {
-    return customInstance<SingleResultTransferRuleMutationResponse>({
-      url: `/api/transfer-rules/${ruleId}`,
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      data: transferRuleUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询路由规则对应表单模板名。
-   */
-  const getTemplateName = () => {
-    return customInstance<SingleResultString>({
-      url: `/api/transfer-rules/template-name`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 创建文件来源。
-   */
-  const createSource = (
-    transferSourceUpsertCommand: TransferSourceUpsertCommand,
-  ) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: transferSourceUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询文件来源列表。
-   */
-  const listSources = (params?: ListSourcesParams) => {
-    return customInstance<MultiResultTransferSourceViewDTO>({
-      url: `/api/transfer-sources`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询文件来源详情。
-   */
-  const getSource = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceViewDTO>({
-      url: `/api/transfer-sources/${sourceId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 删除文件来源。
-   */
-  const deleteSource = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}`,
-      method: "DELETE",
-    });
-  };
-
-  /**
-   * @summary 更新文件来源。
-   */
-  const updateSource = (
-    sourceId: string,
-    transferSourceUpsertCommand: TransferSourceUpsertCommand,
-  ) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}`,
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      data: transferSourceUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询来源对应表单模板名。
-   */
-  const getTemplateName1 = (params: GetTemplateName1Params) => {
-    return customInstance<SingleResultString>({
-      url: `/api/transfer-sources/template-name`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 立即触发一次文件来源收取。
-   */
-  const triggerSource = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}/trigger`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 停止文件来源收取。
-   */
-  const stopSource = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}/stop`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 清空来源已处理邮件标识。
-   */
-  const clearProcessedMailIds = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}/checkpoint/processed-mail-ids/clear`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 查询来源检查点列表。
-   */
-  const listCheckpoints = (
-    sourceId: string,
-    params?: ListCheckpointsParams,
-  ) => {
-    return customInstance<MultiResultTransferSourceCheckpointViewDTO>({
-      url: `/api/transfer-sources/${sourceId}/checkpoints`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询来源检查点去重记录。
-   */
-  const listCheckpointItems = (
-    sourceId: string,
-    params?: ListCheckpointItemsParams,
-  ) => {
-    return customInstance<MultiResultTransferSourceCheckpointItemViewDTO>({
-      url: `/api/transfer-sources/${sourceId}/checkpoint-items`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询文件收发运行日志列表。
-   */
-  const listLogs = (params?: ListLogsParams) => {
-    return customInstance<MultiResultTransferRunLogViewDTO>({
-      url: `/api/transfer-run-logs`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 分页查询文件收发运行日志。
-   */
-  const pageLogs = (params?: PageLogsParams) => {
-    return customInstance<PageResultTransferRunLogViewDTO>({
-      url: `/api/transfer-run-logs/page`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 统计分析文件收发运行日志。
-   */
-  const analyzeLogs = (params?: AnalyzeLogsParams) => {
-    return customInstance<SingleResultTransferRunLogAnalysisViewDTO>({
-      url: `/api/transfer-run-logs/analysis`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 批量重新投递失败的文件收发运行日志。
-   */
-  const redeliver = (
-    transferRunLogRedeliverCommand: TransferRunLogRedeliverCommand,
-  ) => {
-    return customInstance<SingleResultTransferRunLogRedeliverResponse>({
-      url: `/api/transfer-run-logs/redeliver`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: transferRunLogRedeliverCommand,
-    });
-  };
-
-  /**
-   * @summary 导入标准科目落地表。
-   */
-  const importStandardSubjects = (importStandardSubjectsRequest: string) => {
-    const formData = new FormData();
-    formData.append("data", importStandardSubjectsRequest);
-
-    return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/api/knowledge/standard-subjects/import`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 导入历史映射经验落地表。
-   */
-  const importMappingHints = (
-    importMappingHintsRequest: ImportMappingHintsRequest,
-  ) => {
-    const formData = new FormData();
-    formData.append("file", importMappingHintsRequest.file);
-
-    return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/api/knowledge/mapping-hints/import`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 导入映射样例落地表。
-   */
-  const importMappingSamples = (
-    importMappingSamplesRequest: ImportMappingSamplesRequest,
-  ) => {
-    const formData = new FormData();
-    formData.append("file", importMappingSamplesRequest.file);
-
-    return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/api/knowledge/mapping-samples/import`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 查询分拣路由配置列表。
-   */
-  const listRoutes = (params?: ListRoutesParams) => {
-    return customInstance<TransferRouteViewDTO[]>({
-      url: `/api/transfer-routes`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 根据路由主键查询分拣路由详情。
-   */
-  const getRoute = (routeId: string) => {
-    return customInstance<TransferRouteViewDTO>({
-      url: `/api/transfer-routes/${routeId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 查询文件投递结果列表。
-   */
-  const listRecords = (params?: ListRecordsParams) => {
-    return customInstance<MultiResultTransferDeliveryRecordViewDTO>({
-      url: `/api/transfer-delivery-records`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 分页查询文件投递结果列表。
-   */
-  const pageRecords = (params?: PageRecordsParams) => {
-    return customInstance<PageResultTransferDeliveryRecordViewDTO>({
-      url: `/api/transfer-delivery-records/page`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询文件投递结果详情。
-   */
-  const getRecord = (deliveryId: string) => {
-    return customInstance<SingleResultTransferDeliveryRecordViewDTO>({
-      url: `/api/transfer-delivery-records/${deliveryId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 上传外部估值表并完成 ODS 原始提取。
-   */
-  const upload = (file: File) => {
-    const formData = new FormData();
-    formData.append("data", file);
-
-    return customInstance<SingleResultUploadValuationFileResponse>({
-      url: `/api/valuation-workflows/upload`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 执行 DWD 外部估值解析。
-   */
-  const analyze = (analyzeRequest: AnalyzeRequest) => {
-    const formUrlEncoded = new URLSearchParams();
-    if (analyzeRequest.dataSourceType !== undefined) {
-      formUrlEncoded.append("dataSourceType", analyzeRequest.dataSourceType);
-    }
-    if (analyzeRequest.workbookPath !== undefined) {
-      formUrlEncoded.append("workbookPath", analyzeRequest.workbookPath);
-    }
-    if (analyzeRequest.forceRebuild !== undefined) {
-      formUrlEncoded.append(
-        "forceRebuild",
-        analyzeRequest.forceRebuild.toString(),
-      );
-    }
-    if (analyzeRequest.fileId !== undefined) {
-      formUrlEncoded.append("fileId", analyzeRequest.fileId.toString());
-    }
-    if (analyzeRequest.fileNameOriginal !== undefined) {
-      formUrlEncoded.append(
-        "fileNameOriginal",
-        analyzeRequest.fileNameOriginal,
-      );
-    }
-    if (analyzeRequest.createdBy !== undefined) {
-      formUrlEncoded.append("createdBy", analyzeRequest.createdBy);
-    }
-
-    return customInstance<SingleResultTaskViewDTO>({
-      url: `/api/valuation-workflows/analyze`,
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      data: formUrlEncoded,
-    });
-  };
-
-  /**
-   * @summary 执行外部估值科目匹配。
-   */
-  const match = (matchRequest: MatchRequest) => {
-    const formUrlEncoded = new URLSearchParams();
-    if (matchRequest.dataSourceType !== undefined) {
-      formUrlEncoded.append("dataSourceType", matchRequest.dataSourceType);
-    }
-    if (matchRequest.workbookPath !== undefined) {
-      formUrlEncoded.append("workbookPath", matchRequest.workbookPath);
-    }
-    if (matchRequest.forceRebuild !== undefined) {
-      formUrlEncoded.append(
-        "forceRebuild",
-        matchRequest.forceRebuild.toString(),
-      );
-    }
-    if (matchRequest.fileId !== undefined) {
-      formUrlEncoded.append("fileId", matchRequest.fileId.toString());
-    }
-    if (matchRequest.topK !== undefined) {
-      formUrlEncoded.append("topK", matchRequest.topK.toString());
-    }
-    if (matchRequest.createdBy !== undefined) {
-      formUrlEncoded.append("createdBy", matchRequest.createdBy);
-    }
-
-    return customInstance<SingleResultTaskViewDTO>({
-      url: `/api/valuation-workflows/match`,
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      data: formUrlEncoded,
-    });
-  };
-
-  /**
-   * @summary 上传文件并串联执行提取、解析、匹配。
-   */
-  const fullProcess = (file: File) => {
-    const formData = new FormData();
-    formData.append("data", file);
-
-    return customInstance<SingleResultFullWorkflowResponse>({
-      url: `/api/valuation-workflows/full-process`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 查询 ODS 原始行数据。
-   */
-  const queryRawData = (fileId: number, params?: QueryRawDataParams) => {
-    return customInstance<SingleResultRawValuationDataViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/raw-data`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询 STG 外部估值解析快照。
-   */
-  const queryStgData = (fileId: number) => {
-    return customInstance<SingleResultStgExternalValuationViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/stg-data`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 查询 DWD 外部估值标准数据。
-   */
-  const queryDwdData = (fileId: number) => {
-    return customInstance<SingleResultDwdExternalValuationViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/dwd-data`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 查询匹配结果。
-   */
-  const queryMatchResults = (fileId: number) => {
-    return customInstance<SingleResultMatchResultViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/match-results`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 创建路由配置。
-   */
-  const createRoute = (
-    transferRouteUpsertCommand: TransferRouteUpsertCommand,
-  ) => {
-    return customInstance<SingleResultTransferRouteMutationResponse>({
-      url: `/api/transfer-route-configs`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: transferRouteUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询路由配置列表。
-   */
-  const listRoutes1 = (params?: ListRoutes1Params) => {
-    return customInstance<MultiResultTransferRouteViewDTO>({
-      url: `/api/transfer-route-configs`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询路由配置详情。
-   */
-  const getRoute1 = (routeId: string) => {
-    return customInstance<SingleResultTransferRouteViewDTO>({
-      url: `/api/transfer-route-configs/${routeId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 删除路由配置。
-   */
-  const deleteRoute = (routeId: string) => {
-    return customInstance<SingleResultTransferRouteMutationResponse>({
-      url: `/api/transfer-route-configs/${routeId}`,
-      method: "DELETE",
-    });
-  };
-
-  /**
-   * @summary 更新路由配置。
-   */
-  const updateRoute = (
-    routeId: string,
-    transferRouteUpsertCommand: TransferRouteUpsertCommand,
-  ) => {
-    return customInstance<SingleResultTransferRouteMutationResponse>({
-      url: `/api/transfer-route-configs/${routeId}`,
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      data: transferRouteUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 手动上传文件并执行 ODS 提取。
-   */
-  const upload1 = (file: File) => {
-    const formData = new FormData();
-    formData.append("data", file);
-
-    return customInstance<SingleResultUploadValuationFileResponse>({
-      url: `/api/files/upload`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 查询文件主数据。
-   */
-  const queryFileInfo = (fileId: number) => {
-    return customInstance<SingleResultValsetFileInfoViewDTO>({
-      url: `/api/files/${fileId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 按条件搜索文件主数据。
-   */
-  const searchFileInfos = (params?: SearchFileInfosParams) => {
-    return customInstance<MultiResultValsetFileInfoViewDTO>({
-      url: `/api/files`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询文件接入日志。
-   */
-  const queryIngestLogs = (fileId: number) => {
-    return customInstance<MultiResultValsetFileIngestLogViewDTO>({
-      url: `/api/files/${fileId}/ingest-logs`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 查询文件对应的 Excel sheet 样式快照。
-   */
-  const querySheetStyles = (fileId: number) => {
-    return customInstance<MultiResultValuationSheetStyleViewDTO>({
-      url: `/api/files/${fileId}/sheet-styles`,
       method: "GET",
     });
   };
@@ -886,9 +281,826 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 查询投递目标对应表单模板名。
    */
-  const getTemplateName2 = (params: GetTemplateName2Params) => {
+  const getTemplateName = (params: GetTemplateNameParams) => {
     return customInstance<SingleResultString>({
       url: `/api/transfer-targets/template-name`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 创建路由规则。
+   */
+  const createRule = (transferRuleUpsertCommand: TransferRuleUpsertCommand) => {
+    return customInstance<SingleResultTransferRuleMutationResponse>({
+      url: `/api/transfer-rules`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferRuleUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询路由规则列表。
+   */
+  const listRules = (params?: ListRulesParams) => {
+    return customInstance<MultiResultTransferRuleViewDTO>({
+      url: `/api/transfer-rules`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询路由规则详情。
+   */
+  const getRule = (ruleId: string) => {
+    return customInstance<SingleResultTransferRuleViewDTO>({
+      url: `/api/transfer-rules/${ruleId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 删除路由规则。
+   */
+  const deleteRule = (ruleId: string) => {
+    return customInstance<SingleResultTransferRuleMutationResponse>({
+      url: `/api/transfer-rules/${ruleId}`,
+      method: "DELETE",
+    });
+  };
+
+  /**
+   * @summary 更新路由规则。
+   */
+  const updateRule = (
+    ruleId: string,
+    transferRuleUpsertCommand: TransferRuleUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferRuleMutationResponse>({
+      url: `/api/transfer-rules/${ruleId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: transferRuleUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询路由规则对应表单模板名。
+   */
+  const getTemplateName1 = () => {
+    return customInstance<SingleResultString>({
+      url: `/api/transfer-rules/template-name`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 创建文件来源。
+   */
+  const createSource = (
+    transferSourceUpsertCommand: TransferSourceUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/api/transfer-sources`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferSourceUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询文件来源列表。
+   */
+  const listSources = (params?: ListSourcesParams) => {
+    return customInstance<MultiResultTransferSourceViewDTO>({
+      url: `/api/transfer-sources`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 创建文件来源。
+   */
+  const createSource1 = (
+    transferSourceUpsertCommand: TransferSourceUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferSourceUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询文件来源列表。
+   */
+  const listSources1 = (params?: ListSources1Params) => {
+    return customInstance<MultiResultTransferSourceViewDTO>({
+      url: `/transfer-sources`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询文件来源详情。
+   */
+  const getSource = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceViewDTO>({
+      url: `/api/transfer-sources/${sourceId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 删除文件来源。
+   */
+  const deleteSource = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/api/transfer-sources/${sourceId}`,
+      method: "DELETE",
+    });
+  };
+
+  /**
+   * @summary 更新文件来源。
+   */
+  const updateSource = (
+    sourceId: string,
+    transferSourceUpsertCommand: TransferSourceUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/api/transfer-sources/${sourceId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: transferSourceUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询文件来源详情。
+   */
+  const getSource1 = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceViewDTO>({
+      url: `/transfer-sources/${sourceId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 删除文件来源。
+   */
+  const deleteSource1 = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources/${sourceId}`,
+      method: "DELETE",
+    });
+  };
+
+  /**
+   * @summary 更新文件来源。
+   */
+  const updateSource1 = (
+    sourceId: string,
+    transferSourceUpsertCommand: TransferSourceUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources/${sourceId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: transferSourceUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询来源对应表单模板名。
+   */
+  const getTemplateName2 = (params: GetTemplateName2Params) => {
+    return customInstance<SingleResultString>({
+      url: `/api/transfer-sources/template-name`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询来源对应表单模板名。
+   */
+  const getTemplateName3 = (params: GetTemplateName3Params) => {
+    return customInstance<SingleResultString>({
+      url: `/transfer-sources/template-name`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 立即触发一次文件来源收取。
+   */
+  const triggerSource = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/api/transfer-sources/${sourceId}/trigger`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary 立即触发一次文件来源收取。
+   */
+  const triggerSource1 = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources/${sourceId}/trigger`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary 停止文件来源收取。
+   */
+  const stopSource = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/api/transfer-sources/${sourceId}/stop`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary 停止文件来源收取。
+   */
+  const stopSource1 = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources/${sourceId}/stop`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary 清空来源检查点记录。
+   */
+  const clearProcessedMailIds = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/api/transfer-sources/${sourceId}/checkpoint/processed-mail-ids/clear`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary 清空来源检查点记录。
+   */
+  const clearProcessedMailIds1 = (sourceId: string) => {
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources/${sourceId}/checkpoint/processed-mail-ids/clear`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary 查询来源检查点列表。
+   */
+  const listCheckpoints = (
+    sourceId: string,
+    params?: ListCheckpointsParams,
+  ) => {
+    return customInstance<MultiResultTransferSourceCheckpointViewDTO>({
+      url: `/api/transfer-sources/${sourceId}/checkpoints`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询来源检查点列表。
+   */
+  const listCheckpoints1 = (
+    sourceId: string,
+    params?: ListCheckpoints1Params,
+  ) => {
+    return customInstance<MultiResultTransferSourceCheckpointViewDTO>({
+      url: `/transfer-sources/${sourceId}/checkpoints`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询来源检查点去重记录。
+   */
+  const listCheckpointItems = (
+    sourceId: string,
+    params?: ListCheckpointItemsParams,
+  ) => {
+    return customInstance<MultiResultTransferSourceCheckpointItemViewDTO>({
+      url: `/api/transfer-sources/${sourceId}/checkpoint-items`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询来源检查点去重记录。
+   */
+  const listCheckpointItems1 = (
+    sourceId: string,
+    params?: ListCheckpointItems1Params,
+  ) => {
+    return customInstance<MultiResultTransferSourceCheckpointItemViewDTO>({
+      url: `/transfer-sources/${sourceId}/checkpoint-items`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 订阅来源收取进度。
+   */
+  const subscribeProgress = (sourceId: string) => {
+    return customInstance<SseEmitter>({
+      url: `/api/transfer-sources/${sourceId}/progress/stream`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 订阅来源收取进度。
+   */
+  const subscribeProgress1 = (sourceId: string) => {
+    return customInstance<SseEmitter>({
+      url: `/transfer-sources/${sourceId}/progress/stream`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 导入标准科目落地表。
+   */
+  const importStandardSubjects = (importStandardSubjectsRequest: string) => {
+    const formData = new FormData();
+    formData.append("data", importStandardSubjectsRequest);
+
+    return customInstance<SingleResultKnowledgeImportResponse>({
+      url: `/api/knowledge/standard-subjects/import`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
+    });
+  };
+
+  /**
+   * @summary 导入历史映射经验落地表。
+   */
+  const importMappingHints = (
+    importMappingHintsRequest: ImportMappingHintsRequest,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", importMappingHintsRequest.file);
+
+    return customInstance<SingleResultKnowledgeImportResponse>({
+      url: `/api/knowledge/mapping-hints/import`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
+    });
+  };
+
+  /**
+   * @summary 导入映射样例落地表。
+   */
+  const importMappingSamples = (
+    importMappingSamplesRequest: ImportMappingSamplesRequest,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", importMappingSamplesRequest.file);
+
+    return customInstance<SingleResultKnowledgeImportResponse>({
+      url: `/api/knowledge/mapping-samples/import`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
+    });
+  };
+
+  /**
+   * @summary createTag
+   */
+  const createTag = (transferTagUpsertCommand: TransferTagUpsertCommand) => {
+    return customInstance<SingleResultTransferTagMutationResponse>({
+      url: `/api/transfer-tags`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferTagUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary pageTags
+   */
+  const pageTags = (params?: PageTagsParams) => {
+    return customInstance<PageResultTransferTagViewDTO>({
+      url: `/api/transfer-tags`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary getTag
+   */
+  const getTag = (tagId: string) => {
+    return customInstance<SingleResultTransferTagViewDTO>({
+      url: `/api/transfer-tags/${tagId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary deleteTag
+   */
+  const deleteTag = (tagId: string) => {
+    return customInstance<SingleResultTransferTagMutationResponse>({
+      url: `/api/transfer-tags/${tagId}`,
+      method: "DELETE",
+    });
+  };
+
+  /**
+   * @summary updateTag
+   */
+  const updateTag = (
+    tagId: string,
+    transferTagUpsertCommand: TransferTagUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferTagMutationResponse>({
+      url: `/api/transfer-tags/${tagId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: transferTagUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary getTemplateName
+   */
+  const getTemplateName4 = () => {
+    return customInstance<SingleResultString>({
+      url: `/api/transfer-tags/template-name`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary testTag
+   */
+  const testTag = (
+    tagId: string,
+    transferTagTestCommand: TransferTagTestCommand,
+  ) => {
+    return customInstance<SingleResultTransferTagTestResultDTO>({
+      url: `/api/transfer-tags/${tagId}/test`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferTagTestCommand,
+    });
+  };
+
+  /**
+   * @summary 上传外部估值表并完成 ODS 原始提取。
+   */
+  const upload = (boolean: boolean) => {
+    const formData = new FormData();
+    formData.append("data", uploadRequest.toString());
+
+    return customInstance<SingleResultUploadValuationFileResponse>({
+      url: `/api/valuation-workflows/upload`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
+    });
+  };
+
+  /**
+   * @summary 执行 DWD 外部估值解析。
+   */
+  const analyze = (analyzeRequest: AnalyzeRequest) => {
+    const formUrlEncoded = new URLSearchParams();
+    if (analyzeRequest.dataSourceType !== undefined) {
+      formUrlEncoded.append("dataSourceType", analyzeRequest.dataSourceType);
+    }
+    if (analyzeRequest.workbookPath !== undefined) {
+      formUrlEncoded.append("workbookPath", analyzeRequest.workbookPath);
+    }
+    if (analyzeRequest.forceRebuild !== undefined) {
+      formUrlEncoded.append(
+        "forceRebuild",
+        analyzeRequest.forceRebuild.toString(),
+      );
+    }
+    if (analyzeRequest.fileId !== undefined) {
+      formUrlEncoded.append("fileId", analyzeRequest.fileId.toString());
+    }
+    if (analyzeRequest.fileNameOriginal !== undefined) {
+      formUrlEncoded.append(
+        "fileNameOriginal",
+        analyzeRequest.fileNameOriginal,
+      );
+    }
+    if (analyzeRequest.createdBy !== undefined) {
+      formUrlEncoded.append("createdBy", analyzeRequest.createdBy);
+    }
+
+    return customInstance<SingleResultTaskViewDTO>({
+      url: `/api/valuation-workflows/analyze`,
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      data: formUrlEncoded,
+    });
+  };
+
+  /**
+   * @summary 执行外部估值科目匹配。
+   */
+  const match = (matchRequest: MatchRequest) => {
+    const formUrlEncoded = new URLSearchParams();
+    if (matchRequest.dataSourceType !== undefined) {
+      formUrlEncoded.append("dataSourceType", matchRequest.dataSourceType);
+    }
+    if (matchRequest.workbookPath !== undefined) {
+      formUrlEncoded.append("workbookPath", matchRequest.workbookPath);
+    }
+    if (matchRequest.forceRebuild !== undefined) {
+      formUrlEncoded.append(
+        "forceRebuild",
+        matchRequest.forceRebuild.toString(),
+      );
+    }
+    if (matchRequest.fileId !== undefined) {
+      formUrlEncoded.append("fileId", matchRequest.fileId.toString());
+    }
+    if (matchRequest.topK !== undefined) {
+      formUrlEncoded.append("topK", matchRequest.topK.toString());
+    }
+    if (matchRequest.createdBy !== undefined) {
+      formUrlEncoded.append("createdBy", matchRequest.createdBy);
+    }
+
+    return customInstance<SingleResultTaskViewDTO>({
+      url: `/api/valuation-workflows/match`,
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      data: formUrlEncoded,
+    });
+  };
+
+  /**
+   * @summary 上传文件并串联执行提取、解析、匹配。
+   */
+  const fullProcess = (boolean: boolean) => {
+    const formData = new FormData();
+    formData.append("data", fullProcessRequest.toString());
+
+    return customInstance<SingleResultFullWorkflowResponse>({
+      url: `/api/valuation-workflows/full-process`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
+    });
+  };
+
+  /**
+   * @summary 查询 ODS 原始行数据。
+   */
+  const queryRawData = (fileId: number, params?: QueryRawDataParams) => {
+    return customInstance<SingleResultRawValuationDataViewDTO>({
+      url: `/api/valuation-workflows/${fileId}/raw-data`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询 STG 外部估值解析快照。
+   */
+  const queryStgData = (fileId: number) => {
+    return customInstance<SingleResultStgExternalValuationViewDTO>({
+      url: `/api/valuation-workflows/${fileId}/stg-data`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 查询 DWD 外部估值标准数据。
+   */
+  const queryDwdData = (fileId: number) => {
+    return customInstance<SingleResultDwdExternalValuationViewDTO>({
+      url: `/api/valuation-workflows/${fileId}/dwd-data`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 查询匹配结果。
+   */
+  const queryMatchResults = (fileId: number) => {
+    return customInstance<SingleResultMatchResultViewDTO>({
+      url: `/api/valuation-workflows/${fileId}/match-results`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 手动上传文件并执行 ODS 提取。
+   */
+  const upload1 = (boolean: boolean) => {
+    const formData = new FormData();
+    formData.append("data", upload1Request.toString());
+
+    return customInstance<SingleResultUploadValuationFileResponse>({
+      url: `/api/files/upload`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
+    });
+  };
+
+  /**
+   * @summary 查询文件主数据。
+   */
+  const queryFileInfo = (fileId: number) => {
+    return customInstance<SingleResultValsetFileInfoViewDTO>({
+      url: `/api/files/${fileId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 按条件搜索文件主数据。
+   */
+  const searchFileInfos = (params?: SearchFileInfosParams) => {
+    return customInstance<MultiResultValsetFileInfoViewDTO>({
+      url: `/api/files`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询文件接入日志。
+   */
+  const queryIngestLogs = (fileId: number) => {
+    return customInstance<MultiResultValsetFileIngestLogViewDTO>({
+      url: `/api/files/${fileId}/ingest-logs`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 查询文件对应的 Excel sheet 样式快照。
+   */
+  const querySheetStyles = (fileId: number) => {
+    return customInstance<MultiResultValuationSheetStyleViewDTO>({
+      url: `/api/files/${fileId}/sheet-styles`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 创建路由配置。
+   */
+  const createRoute = (
+    transferRouteUpsertCommand: TransferRouteUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferRouteMutationResponse>({
+      url: `/api/transfer-route-configs`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferRouteUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询路由配置列表。
+   */
+  const listRoutes1 = (params?: ListRoutes1Params) => {
+    return customInstance<MultiResultTransferRouteViewDTO>({
+      url: `/api/transfer-route-configs`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询路由配置详情。
+   */
+  const getRoute1 = (routeId: string) => {
+    return customInstance<SingleResultTransferRouteViewDTO>({
+      url: `/api/transfer-route-configs/${routeId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 删除路由配置。
+   */
+  const deleteRoute = (routeId: string) => {
+    return customInstance<SingleResultTransferRouteMutationResponse>({
+      url: `/api/transfer-route-configs/${routeId}`,
+      method: "DELETE",
+    });
+  };
+
+  /**
+   * @summary 更新路由配置。
+   */
+  const updateRoute = (
+    routeId: string,
+    transferRouteUpsertCommand: TransferRouteUpsertCommand,
+  ) => {
+    return customInstance<SingleResultTransferRouteMutationResponse>({
+      url: `/api/transfer-route-configs/${routeId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: transferRouteUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 查询文件收发运行日志列表。
+   */
+  const listLogs = (params?: ListLogsParams) => {
+    return customInstance<MultiResultTransferRunLogViewDTO>({
+      url: `/api/transfer-run-logs`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 分页查询文件收发运行日志。
+   */
+  const pageLogs = (params?: PageLogsParams) => {
+    return customInstance<PageResultTransferRunLogViewDTO>({
+      url: `/api/transfer-run-logs/page`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 统计分析文件收发运行日志。
+   */
+  const analyzeLogs = (params?: AnalyzeLogsParams) => {
+    return customInstance<SingleResultTransferRunLogAnalysisViewDTO>({
+      url: `/api/transfer-run-logs/analysis`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 批量重新投递失败的文件收发运行日志。
+   */
+  const redeliver = (
+    transferRunLogRedeliverCommand: TransferRunLogRedeliverCommand,
+  ) => {
+    return customInstance<SingleResultTransferRunLogRedeliverResponse>({
+      url: `/api/transfer-run-logs/redeliver`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferRunLogRedeliverCommand,
+    });
+  };
+
+  /**
+   * @summary 查询文件主对象详情。
+   */
+  const getObject = (transferId: string) => {
+    return customInstance<SingleResultTransferObjectViewDTO>({
+      url: `/api/transfer-objects/${transferId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 分页查询文件主对象列表。
+   */
+  const pageObjects = (params?: PageObjectsParams) => {
+    return customInstance<PageResultTransferObjectViewDTO>({
+      url: `/api/transfer-objects`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 统计分析文件主对象。
+   */
+  const analyzeObjects = (params?: AnalyzeObjectsParams) => {
+    return customInstance<SingleResultTransferObjectAnalysisViewDTO>({
+      url: `/api/transfer-objects/analysis`,
       method: "GET",
       params,
     });
@@ -1020,62 +1232,46 @@ export const getJavaSpringBootQuartzApi = () => {
     });
   };
 
+  /**
+   * @summary 查询文件投递结果列表。
+   */
+  const listRecords = (params?: ListRecordsParams) => {
+    return customInstance<MultiResultTransferDeliveryRecordViewDTO>({
+      url: `/api/transfer-delivery-records`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 分页查询文件投递结果列表。
+   */
+  const pageRecords = (params?: PageRecordsParams) => {
+    return customInstance<PageResultTransferDeliveryRecordViewDTO>({
+      url: `/api/transfer-delivery-records/page`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询文件投递结果详情。
+   */
+  const getRecord = (deliveryId: string) => {
+    return customInstance<SingleResultTransferDeliveryRecordViewDTO>({
+      url: `/api/transfer-delivery-records/${deliveryId}`,
+      method: "GET",
+    });
+  };
+
   return {
-    getObject,
-    pageObjects,
-    analyzeObjects,
+    listRoutes,
+    getRoute,
     createParseTask,
     createMatchTask,
     createEvaluateTask,
     createExtractTask,
     queryTask,
-    createRule,
-    listRules,
-    getRule,
-    deleteRule,
-    updateRule,
-    getTemplateName,
-    createSource,
-    listSources,
-    getSource,
-    deleteSource,
-    updateSource,
-    getTemplateName1,
-    triggerSource,
-    stopSource,
-    clearProcessedMailIds,
-    listCheckpoints,
-    listCheckpointItems,
-    listLogs,
-    pageLogs,
-    analyzeLogs,
-    redeliver,
-    importStandardSubjects,
-    importMappingHints,
-    importMappingSamples,
-    listRoutes,
-    getRoute,
-    listRecords,
-    pageRecords,
-    getRecord,
-    upload,
-    analyze,
-    match,
-    fullProcess,
-    queryRawData,
-    queryStgData,
-    queryDwdData,
-    queryMatchResults,
-    createRoute,
-    listRoutes1,
-    getRoute1,
-    deleteRoute,
-    updateRoute,
-    upload1,
-    queryFileInfo,
-    searchFileInfos,
-    queryIngestLogs,
-    querySheetStyles,
     listTemplates,
     listGroupedTemplates,
     getTemplate,
@@ -1084,7 +1280,72 @@ export const getJavaSpringBootQuartzApi = () => {
     getTarget,
     deleteTarget,
     updateTarget,
+    getTemplateName,
+    createRule,
+    listRules,
+    getRule,
+    deleteRule,
+    updateRule,
+    getTemplateName1,
+    createSource,
+    listSources,
+    createSource1,
+    listSources1,
+    getSource,
+    deleteSource,
+    updateSource,
+    getSource1,
+    deleteSource1,
+    updateSource1,
     getTemplateName2,
+    getTemplateName3,
+    triggerSource,
+    triggerSource1,
+    stopSource,
+    stopSource1,
+    clearProcessedMailIds,
+    clearProcessedMailIds1,
+    listCheckpoints,
+    listCheckpoints1,
+    listCheckpointItems,
+    listCheckpointItems1,
+    subscribeProgress,
+    subscribeProgress1,
+    importStandardSubjects,
+    importMappingHints,
+    importMappingSamples,
+    createTag,
+    pageTags,
+    getTag,
+    deleteTag,
+    updateTag,
+    getTemplateName4,
+    testTag,
+    upload,
+    analyze,
+    match,
+    fullProcess,
+    queryRawData,
+    queryStgData,
+    queryDwdData,
+    queryMatchResults,
+    upload1,
+    queryFileInfo,
+    searchFileInfos,
+    queryIngestLogs,
+    querySheetStyles,
+    createRoute,
+    listRoutes1,
+    getRoute1,
+    deleteRoute,
+    updateRoute,
+    listLogs,
+    pageLogs,
+    analyzeLogs,
+    redeliver,
+    getObject,
+    pageObjects,
+    analyzeObjects,
     createProfile,
     listProfiles,
     getProfile,
@@ -1095,22 +1356,18 @@ export const getJavaSpringBootQuartzApi = () => {
     rollbackProfile,
     importProfile,
     listTraces,
+    listRecords,
+    pageRecords,
+    getRecord,
   };
 };
-export type GetObjectResult = NonNullable<
+export type ListRoutesResult = NonNullable<
   Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getObject"]>
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRoutes"]>
   >
 >;
-export type PageObjectsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageObjects"]>
-  >
->;
-export type AnalyzeObjectsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyzeObjects"]>
-  >
+export type GetRouteResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRoute"]>>
 >;
 export type CreateParseTaskResult = NonNullable<
   Awaited<
@@ -1139,241 +1396,6 @@ export type CreateExtractTaskResult = NonNullable<
 export type QueryTaskResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryTask"]>
-  >
->;
-export type CreateRuleResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createRule"]>
-  >
->;
-export type ListRulesResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRules"]>
-  >
->;
-export type GetRuleResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRule"]>>
->;
-export type DeleteRuleResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteRule"]>
-  >
->;
-export type UpdateRuleResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateRule"]>
-  >
->;
-export type GetTemplateNameResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName"]>
-  >
->;
-export type CreateSourceResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createSource"]>
-  >
->;
-export type ListSourcesResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listSources"]>
-  >
->;
-export type GetSourceResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getSource"]>
-  >
->;
-export type DeleteSourceResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteSource"]>
-  >
->;
-export type UpdateSourceResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateSource"]>
-  >
->;
-export type GetTemplateName1Result = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName1"]
-    >
-  >
->;
-export type TriggerSourceResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["triggerSource"]>
-  >
->;
-export type StopSourceResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stopSource"]>
-  >
->;
-export type ClearProcessedMailIdsResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["clearProcessedMailIds"]
-    >
-  >
->;
-export type ListCheckpointsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpoints"]>
-  >
->;
-export type ListCheckpointItemsResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpointItems"]
-    >
-  >
->;
-export type ListLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listLogs"]>>
->;
-export type PageLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageLogs"]>>
->;
-export type AnalyzeLogsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyzeLogs"]>
-  >
->;
-export type RedeliverResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["redeliver"]>
-  >
->;
-export type ImportStandardSubjectsResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["importStandardSubjects"]
-    >
-  >
->;
-export type ImportMappingHintsResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["importMappingHints"]
-    >
-  >
->;
-export type ImportMappingSamplesResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["importMappingSamples"]
-    >
-  >
->;
-export type ListRoutesResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRoutes"]>
-  >
->;
-export type GetRouteResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRoute"]>>
->;
-export type ListRecordsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRecords"]>
-  >
->;
-export type PageRecordsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageRecords"]>
-  >
->;
-export type GetRecordResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRecord"]>
-  >
->;
-export type UploadResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["upload"]>>
->;
-export type AnalyzeResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyze"]>>
->;
-export type MatchResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["match"]>>
->;
-export type FullProcessResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["fullProcess"]>
-  >
->;
-export type QueryRawDataResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryRawData"]>
-  >
->;
-export type QueryStgDataResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryStgData"]>
-  >
->;
-export type QueryDwdDataResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryDwdData"]>
-  >
->;
-export type QueryMatchResultsResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["queryMatchResults"]
-    >
-  >
->;
-export type CreateRouteResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createRoute"]>
-  >
->;
-export type ListRoutes1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRoutes1"]>
-  >
->;
-export type GetRoute1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRoute1"]>
-  >
->;
-export type DeleteRouteResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteRoute"]>
-  >
->;
-export type UpdateRouteResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateRoute"]>
-  >
->;
-export type Upload1Result = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["upload1"]>>
->;
-export type QueryFileInfoResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryFileInfo"]>
-  >
->;
-export type SearchFileInfosResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["searchFileInfos"]>
-  >
->;
-export type QueryIngestLogsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryIngestLogs"]>
-  >
->;
-export type QuerySheetStylesResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["querySheetStyles"]
-    >
   >
 >;
 export type ListTemplatesResult = NonNullable<
@@ -1418,11 +1440,346 @@ export type UpdateTargetResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateTarget"]>
   >
 >;
+export type GetTemplateNameResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName"]>
+  >
+>;
+export type CreateRuleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createRule"]>
+  >
+>;
+export type ListRulesResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRules"]>
+  >
+>;
+export type GetRuleResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRule"]>>
+>;
+export type DeleteRuleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteRule"]>
+  >
+>;
+export type UpdateRuleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateRule"]>
+  >
+>;
+export type GetTemplateName1Result = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName1"]
+    >
+  >
+>;
+export type CreateSourceResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createSource"]>
+  >
+>;
+export type ListSourcesResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listSources"]>
+  >
+>;
+export type CreateSource1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createSource1"]>
+  >
+>;
+export type ListSources1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listSources1"]>
+  >
+>;
+export type GetSourceResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getSource"]>
+  >
+>;
+export type DeleteSourceResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteSource"]>
+  >
+>;
+export type UpdateSourceResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateSource"]>
+  >
+>;
+export type GetSource1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getSource1"]>
+  >
+>;
+export type DeleteSource1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteSource1"]>
+  >
+>;
+export type UpdateSource1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateSource1"]>
+  >
+>;
 export type GetTemplateName2Result = NonNullable<
   Awaited<
     ReturnType<
       ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName2"]
     >
+  >
+>;
+export type GetTemplateName3Result = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName3"]
+    >
+  >
+>;
+export type TriggerSourceResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["triggerSource"]>
+  >
+>;
+export type TriggerSource1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["triggerSource1"]>
+  >
+>;
+export type StopSourceResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stopSource"]>
+  >
+>;
+export type StopSource1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stopSource1"]>
+  >
+>;
+export type ClearProcessedMailIdsResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["clearProcessedMailIds"]
+    >
+  >
+>;
+export type ClearProcessedMailIds1Result = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["clearProcessedMailIds1"]
+    >
+  >
+>;
+export type ListCheckpointsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpoints"]>
+  >
+>;
+export type ListCheckpoints1Result = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpoints1"]
+    >
+  >
+>;
+export type ListCheckpointItemsResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpointItems"]
+    >
+  >
+>;
+export type ListCheckpointItems1Result = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpointItems1"]
+    >
+  >
+>;
+export type SubscribeProgressResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["subscribeProgress"]
+    >
+  >
+>;
+export type SubscribeProgress1Result = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["subscribeProgress1"]
+    >
+  >
+>;
+export type ImportStandardSubjectsResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["importStandardSubjects"]
+    >
+  >
+>;
+export type ImportMappingHintsResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["importMappingHints"]
+    >
+  >
+>;
+export type ImportMappingSamplesResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["importMappingSamples"]
+    >
+  >
+>;
+export type CreateTagResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createTag"]>
+  >
+>;
+export type PageTagsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageTags"]>>
+>;
+export type GetTagResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getTag"]>>
+>;
+export type DeleteTagResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteTag"]>
+  >
+>;
+export type UpdateTagResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateTag"]>
+  >
+>;
+export type GetTemplateName4Result = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName4"]
+    >
+  >
+>;
+export type TestTagResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["testTag"]>>
+>;
+export type UploadResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["upload"]>>
+>;
+export type AnalyzeResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyze"]>>
+>;
+export type MatchResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["match"]>>
+>;
+export type FullProcessResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["fullProcess"]>
+  >
+>;
+export type QueryRawDataResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryRawData"]>
+  >
+>;
+export type QueryStgDataResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryStgData"]>
+  >
+>;
+export type QueryDwdDataResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryDwdData"]>
+  >
+>;
+export type QueryMatchResultsResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["queryMatchResults"]
+    >
+  >
+>;
+export type Upload1Result = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["upload1"]>>
+>;
+export type QueryFileInfoResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryFileInfo"]>
+  >
+>;
+export type SearchFileInfosResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["searchFileInfos"]>
+  >
+>;
+export type QueryIngestLogsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryIngestLogs"]>
+  >
+>;
+export type QuerySheetStylesResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["querySheetStyles"]
+    >
+  >
+>;
+export type CreateRouteResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createRoute"]>
+  >
+>;
+export type ListRoutes1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRoutes1"]>
+  >
+>;
+export type GetRoute1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRoute1"]>
+  >
+>;
+export type DeleteRouteResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteRoute"]>
+  >
+>;
+export type UpdateRouteResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateRoute"]>
+  >
+>;
+export type ListLogsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listLogs"]>>
+>;
+export type PageLogsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageLogs"]>>
+>;
+export type AnalyzeLogsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyzeLogs"]>
+  >
+>;
+export type RedeliverResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["redeliver"]>
+  >
+>;
+export type GetObjectResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getObject"]>
+  >
+>;
+export type PageObjectsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageObjects"]>
+  >
+>;
+export type AnalyzeObjectsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyzeObjects"]>
   >
 >;
 export type CreateProfileResult = NonNullable<
@@ -1473,5 +1830,20 @@ export type ImportProfileResult = NonNullable<
 export type ListTracesResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listTraces"]>
+  >
+>;
+export type ListRecordsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRecords"]>
+  >
+>;
+export type PageRecordsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageRecords"]>
+  >
+>;
+export type GetRecordResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRecord"]>
   >
 >;

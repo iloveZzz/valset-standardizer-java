@@ -3,7 +3,7 @@ import { message, Modal } from "ant-design-vue";
 import type { ISchema, YTablePagination } from "@yss-ui/components";
 import { GetTemplateName2TargetType } from "@/api/generated/valset/schemas/getTemplateName2TargetType";
 import type {
-  GetTemplateName2Params,
+  GetTemplateNameParams,
   TransferFormTemplateViewDTO,
   ListTargetsParams,
   TransferTargetUpsertCommand,
@@ -250,15 +250,15 @@ export const useTransferPage = (): { page: TargetPage } => {
       return;
     }
 
-    templateLoading.value = true;
-    syncingTemplateType.value = true;
-    templateSchema.value = null;
-    templateInitialValues.value = {};
-    templateValues.value = {};
+      templateLoading.value = true;
+      syncingTemplateType.value = true;
+      templateSchema.value = null;
+      templateInitialValues.value = {};
+      templateValues.value = {};
     try {
       const templateName = unwrapSingleResult(
-        await api.getTemplateName2({
-          targetType: targetType as GetTemplateName2Params["targetType"],
+        await api.getTemplateName({
+          targetType: targetType as GetTemplateNameParams["targetType"],
         }),
       );
       if (requestId !== templateRequestId) return;
@@ -577,6 +577,18 @@ export const useTransferPage = (): { page: TargetPage } => {
     return "-";
   };
 
+  const getLocalTargetDirectory = (row?: TransferTargetViewDTO | null) => {
+    if (!row || row.targetType !== "LOCAL_DIR") {
+      return "";
+    }
+
+    const directory = row.connectionConfig && typeof row.connectionConfig === "object"
+      ? (row.connectionConfig as Record<string, any>).directory
+      : undefined;
+
+    return String(directory ?? "").trim();
+  };
+
   watch(
     () => formState.targetType,
     async (value) => {
@@ -641,6 +653,7 @@ export const useTransferPage = (): { page: TargetPage } => {
       detailVisible.value = false;
     },
     formatEnabled,
+    getLocalTargetDirectory,
   }) as TargetPage;
 
   return {

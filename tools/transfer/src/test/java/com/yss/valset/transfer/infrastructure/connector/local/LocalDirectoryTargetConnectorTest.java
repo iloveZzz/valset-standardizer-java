@@ -105,4 +105,98 @@ class LocalDirectoryTargetConnectorTest {
         assertThat(Files.exists(expectedFile)).isTrue();
         assertThat(Files.readString(expectedFile, StandardCharsets.UTF_8)).isEqualTo("local target payload");
     }
+
+    @Test
+    void should_expand_home_directory_for_local_target_path() throws Exception {
+        Path sourceFile = Files.createTempFile("valset-local-target-source-", ".txt");
+        Path fakeHome = Files.createTempDirectory("valset-local-target-home-");
+        Path expectedRoot = fakeHome.resolve(".tmp").resolve("yss-transfer").resolve("outbox");
+        String previousHome = System.getProperty("user.home");
+        Files.writeString(sourceFile, "local target payload", StandardCharsets.UTF_8);
+
+        try {
+            System.setProperty("user.home", fakeHome.toString());
+
+            Map<String, Object> connectionConfig = new LinkedHashMap<>();
+            connectionConfig.put("directory", "~/.tmp/yss-transfer/outbox/");
+            connectionConfig.put("createParentDirectories", true);
+            TransferTarget target = new TransferTarget(
+                    102L,
+                    "local-target-home",
+                    "本地目录目标",
+                    TargetType.LOCAL_DIR,
+                    true,
+                    "~/.tmp/yss-transfer/outbox/",
+                    connectionConfig,
+                    Map.of("scenario", "local-target-home-test"),
+                    Instant.now(),
+                    Instant.now()
+            );
+            TransferRoute route = new TransferRoute(
+                    "route-002",
+                    "source-002",
+                    null,
+                    "source-code",
+                    "rule-002",
+                    TargetType.LOCAL_DIR,
+                    "local-target-home",
+                    null,
+                    null,
+                    TransferStatus.ROUTED,
+                    Map.of()
+            );
+            TransferObject transferObject = new TransferObject(
+                    "transfer-002",
+                    "source-002",
+                    "LOCAL_DIR",
+                    "source-code",
+                    sourceFile.getFileName().toString(),
+                    "txt",
+                    "text/plain",
+                    Files.size(sourceFile),
+                    "fingerprint-002",
+                    sourceFile.toString(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    sourceFile.toString(),
+                    TransferStatus.RECEIVED,
+                    Instant.now(),
+                    Instant.now(),
+                    "route-002",
+                    null,
+                    new ProbeResult(true, "LOCAL_FILE", Map.of("sourceType", "LOCAL_DIR")),
+                    Map.of()
+            );
+            TransferContext context = new TransferContext(transferObject, route, target, Map.of());
+
+            TransferResult result = connector.send(context);
+
+            assertThat(result.success()).isTrue();
+            Path expectedFile = expectedRoot.resolve(sourceFile.getFileName()).normalize();
+            assertThat(Files.exists(expectedFile)).isTrue();
+            assertThat(Files.readString(expectedFile, StandardCharsets.UTF_8)).isEqualTo("local target payload");
+        } finally {
+            if (previousHome != null) {
+                System.setProperty("user.home", previousHome);
+            }
+            if (Files.exists(fakeHome)) {
+                try (var stream = Files.walk(fakeHome)) {
+                    stream.sorted((left, right) -> right.compareTo(left))
+                            .forEach(path -> {
+                                try {
+                                    Files.deleteIfExists(path);
+                                } catch (Exception ignored) {
+                                }
+                            });
+                }
+            }
+        }
+    }
 }

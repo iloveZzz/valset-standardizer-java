@@ -3,7 +3,7 @@ import { message, Modal } from "ant-design-vue";
 import type { ISchema, YTablePagination } from "@yss-ui/components";
 import { GetTemplateName1SourceType } from "@/api/generated/valset/schemas/getTemplateName1SourceType";
 import type {
-  GetTemplateName1Params,
+  GetTemplateName2Params,
   ListSourcesParams,
   TransferSourceCheckpointItemViewDTO,
   TransferSourceCheckpointViewDTO,
@@ -271,15 +271,15 @@ export const useTransferPage = (): { page: SourcePage } => {
       return;
     }
 
-    templateLoading.value = true;
-    syncingTemplateType.value = true;
-    templateSchema.value = null;
-    templateInitialValues.value = {};
-    templateValues.value = {};
+      templateLoading.value = true;
+      syncingTemplateType.value = true;
+      templateSchema.value = null;
+      templateInitialValues.value = {};
+      templateValues.value = {};
     try {
       const templateName = unwrapSingleResult(
-        await api.getTemplateName1({
-          sourceType: sourceType as GetTemplateName1Params["sourceType"],
+        await api.getTemplateName2({
+          sourceType: sourceType as GetTemplateName2Params["sourceType"],
         }),
       );
       if (requestId !== templateRequestId) return;
