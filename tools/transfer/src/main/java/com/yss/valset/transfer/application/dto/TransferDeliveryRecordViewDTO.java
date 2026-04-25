@@ -38,6 +38,10 @@ public class TransferDeliveryRecordViewDTO {
      */
     private String executeStatus;
     /**
+     * 执行状态名称。
+     */
+    private String executeStatusLabel;
+    /**
      * 请求快照 JSON。
      */
     private String requestSnapshotJson;

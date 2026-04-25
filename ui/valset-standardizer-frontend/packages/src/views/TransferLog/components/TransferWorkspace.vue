@@ -60,22 +60,22 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="20">
+    <YCard class="workspace-header" :bordered="false" :padding="12">
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
-          <h1>文件投递查询</h1>
+          <h2>文件投递</h2>
           <p>
-            查询文件投递记录、执行状态、路由关联和请求/响应快照，便于排查投递链路问题。
+            查询文件投递记录、执行状态、路由关联和请求/响应摘要，便于排查投递链路问题。
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">支持按路由、文件和状态过滤</span>
-            <span class="workspace-pill">详情查看请求与响应快照</span>
+            <span class="workspace-pill">详情查看请求与响应摘要</span>
             <span class="workspace-pill">聚焦结果查询，不提供编辑</span>
           </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton theme="primary" @click="page.runQuery">
+            <YButton type="primary" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询结果
             </YButton>
@@ -104,7 +104,7 @@ const actionConfig = useTableActionConfig({
         <template #toolbar-left>
           <WorkspaceTableToolbar
             title="文件投递列表"
-            :description="`总数 ${page.total} 条，点击操作按钮查看请求与响应快照。`"
+            :description="`总数 ${page.total} 条，点击操作按钮查看请求与响应摘要。`"
             :meta="`可查看 ${page.total} 条结果，错误记录 ${page.errorCount} 条`"
           >
             <a-form layout="inline" class="workspace-table-toolbar-form">
@@ -141,7 +141,7 @@ const actionConfig = useTableActionConfig({
                 />
               </a-form-item>
               <a-form-item class="workspace-table-toolbar-actions">
-                <YButton theme="primary" @click="page.runQuery">查询</YButton>
+                <YButton type="primary" @click="page.runQuery">查询</YButton>
                 <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
@@ -150,7 +150,7 @@ const actionConfig = useTableActionConfig({
 
         <template #executeStatus="{ row }">
           <a-tag :color="row.executeStatus ? 'blue' : 'default'">
-            {{ page.formatStatus(row.executeStatus) }}
+            {{ page.formatStatus(row.executeStatusLabel || row.executeStatus) }}
           </a-tag>
         </template>
       </YTable>
@@ -173,7 +173,13 @@ const actionConfig = useTableActionConfig({
             }}
           </div>
           <div class="source-detail-banner-meta">
-            {{ page.formatStatus(page.selectedRow.executeStatus) }} ·
+            {{
+              page.formatStatus(
+                page.selectedRow.executeStatusLabel ||
+                  page.selectedRow.executeStatus,
+              )
+            }}
+            ·
             {{ page.selectedRow.deliveredAt || "-" }}
           </div>
         </div>
@@ -194,7 +200,12 @@ const actionConfig = useTableActionConfig({
             {{ page.selectedRow.targetType || "-" }}
           </a-descriptions-item>
           <a-descriptions-item label="执行状态">
-            {{ page.formatStatus(page.selectedRow.executeStatus) }}
+            {{
+              page.formatStatus(
+                page.selectedRow.executeStatusLabel ||
+                  page.selectedRow.executeStatus,
+              )
+            }}
           </a-descriptions-item>
           <a-descriptions-item label="投递时间">
             {{ page.selectedRow.deliveredAt || "-" }}
@@ -202,11 +213,11 @@ const actionConfig = useTableActionConfig({
         </a-descriptions>
 
         <div class="detail-json-block">
-          <h4>请求快照</h4>
+          <h4>请求摘要</h4>
           <pre>{{ page.safeJson(page.selectedRow.requestSnapshotJson) }}</pre>
         </div>
         <div class="detail-json-block">
-          <h4>响应快照</h4>
+          <h4>响应摘要</h4>
           <pre>{{ page.safeJson(page.selectedRow.responseSnapshotJson) }}</pre>
         </div>
         <div class="detail-json-block">

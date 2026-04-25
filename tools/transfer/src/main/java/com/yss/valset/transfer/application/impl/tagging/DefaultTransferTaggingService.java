@@ -16,6 +16,7 @@ import com.yss.valset.transfer.domain.model.TransferObjectTag;
 import com.yss.valset.transfer.domain.model.TransferTagDefinition;
 import com.yss.valset.transfer.domain.rule.RuleEngine;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,6 +33,7 @@ import java.util.regex.Pattern;
 /**
  * 默认文件对象标签服务。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DefaultTransferTaggingService implements TransferTaggingUseCase {
@@ -45,13 +47,21 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
         if (transferObject == null || transferObject.transferId() == null) {
             return List.of();
         }
+        RecognitionContext effectiveRecognitionContext = resolveTaggingContext(recognitionContext, transferObject);
+        String tagPath = resolveTagPath(effectiveRecognitionContext, transferObject);
+        log.info("开始文件对象打标，transferId={}，sourceId={}，sourceCode={}，originalName={}，taggingPath={}",
+                transferObject.transferId(),
+                transferObject.sourceId(),
+                transferObject.sourceCode(),
+                transferObject.originalName(),
+                tagPath);
         List<TransferTagDefinition> tagDefinitions = transferTagGateway.listEnabledTags();
         if (tagDefinitions.isEmpty()) {
             return List.of();
         }
         List<TransferObjectTag> tags = new ArrayList<>();
         for (TransferTagDefinition tagDefinition : tagDefinitions) {
-            TagEvaluation evaluation = evaluate(tagDefinition, recognitionContext, probeResult, transferObject);
+            TagEvaluation evaluation = evaluate(tagDefinition, effectiveRecognitionContext, probeResult, transferObject);
             if (!evaluation.matched()) {
                 continue;
             }
@@ -140,7 +150,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
         String matchedValue = null;
         String message = "标签未命中";
         if (strategy.contains("SCRIPT")) {
-            RuleEvaluationResult result = ruleEngine.evaluate(buildRuleDefinition(definition), new RuleContext(recognitionContext, probeResult, buildVariables(definition, transferObject)));
+            RuleEvaluationResult result = ruleEngine.evaluate(buildRuleDefinition(definition), new RuleContext(recognitionContext, probeResult, buildVariables(recognitionContext, transferObject)));
             scriptMatched = result != null && result.matched();
             message = result == null ? "脚本未返回结果" : result.message();
         }
@@ -162,17 +172,15 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
             default -> scriptMatched || regexMatched;
         };
         Map<String, Object> snapshot = new LinkedHashMap<>();
-        snapshot.put("tagCode", definition.tagCode());
-        snapshot.put("tagName", definition.tagName());
-        snapshot.put("tagValue", definition.tagValue());
         snapshot.put("sourceType", recognitionContext == null ? null : recognitionContext.sourceType());
         snapshot.put("sourceCode", recognitionContext == null ? null : recognitionContext.sourceCode());
         snapshot.put("fileName", recognitionContext == null ? null : recognitionContext.fileName());
         snapshot.put("sender", recognitionContext == null ? null : recognitionContext.sender());
         snapshot.put("subject", recognitionContext == null ? null : recognitionContext.subject());
-        snapshot.put("path", recognitionContext == null ? null : recognitionContext.path());
-        snapshot.put("probeResult", probeResult);
-        snapshot.put("transferId", transferObject == null ? null : transferObject.transferId());
+        snapshot.put("path", resolveTagPath(recognitionContext, transferObject));
+        snapshot.put("probeDetected", probeResult != null && probeResult.detected());
+        snapshot.put("probeDetectedType", probeResult == null ? null : probeResult.detectedType());
+        snapshot.put("probeAttributesCount", probeResult == null || probeResult.attributes() == null ? 0 : probeResult.attributes().size());
         return new TagEvaluation(matched, scriptMatched, regexMatched, message, matchedField, matchedValue, snapshot);
     }
 
@@ -219,7 +227,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
         return scriptBody;
     }
 
-    private Map<String, Object> buildVariables(TransferTagDefinition definition, TransferObject transferObject) {
+    private Map<String, Object> buildVariables(RecognitionContext recognitionContext, TransferObject transferObject) {
         Map<String, Object> variables = new LinkedHashMap<>();
         if (transferObject != null) {
             variables.putIfAbsent("transferId", transferObject.transferId());
@@ -230,13 +238,47 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
             variables.putIfAbsent("fileSize", transferObject.sizeBytes());
             variables.putIfAbsent("sender", transferObject.mailFrom());
             variables.putIfAbsent("subject", transferObject.mailSubject());
-            variables.putIfAbsent("path", transferObject.localTempPath());
+            variables.putIfAbsent("path", resolveTagPath(recognitionContext, transferObject));
             variables.putIfAbsent("mailFolder", transferObject.mailFolder());
             variables.putIfAbsent("mimeType", transferObject.mimeType());
             variables.putIfAbsent("attributes", transferObject.fileMeta());
             variables.putIfAbsent("tags", List.of());
         }
         return variables;
+    }
+
+    private String resolveTagPath(RecognitionContext recognitionContext, TransferObject transferObject) {
+        if (transferObject != null && transferObject.localTempPath() != null && !transferObject.localTempPath().isBlank()) {
+            return transferObject.localTempPath();
+        }
+        if (recognitionContext != null && recognitionContext.path() != null && !recognitionContext.path().isBlank()) {
+            return recognitionContext.path();
+        }
+        return null;
+    }
+
+    private RecognitionContext resolveTaggingContext(RecognitionContext recognitionContext, TransferObject transferObject) {
+        if (transferObject == null) {
+            return recognitionContext;
+        }
+        return new RecognitionContext(
+                recognitionContext == null ? null : recognitionContext.sourceType(),
+                recognitionContext == null ? null : recognitionContext.sourceCode(),
+                recognitionContext == null ? transferObject.originalName() : recognitionContext.fileName(),
+                recognitionContext == null ? transferObject.mimeType() : recognitionContext.mimeType(),
+                recognitionContext == null ? transferObject.sizeBytes() : recognitionContext.fileSize(),
+                recognitionContext == null ? transferObject.mailFrom() : recognitionContext.sender(),
+                recognitionContext == null ? transferObject.mailTo() : recognitionContext.recipientsTo(),
+                recognitionContext == null ? transferObject.mailCc() : recognitionContext.recipientsCc(),
+                recognitionContext == null ? transferObject.mailBcc() : recognitionContext.recipientsBcc(),
+                recognitionContext == null ? transferObject.mailSubject() : recognitionContext.subject(),
+                recognitionContext == null ? transferObject.mailBody() : recognitionContext.body(),
+                recognitionContext == null ? transferObject.mailId() : recognitionContext.mailId(),
+                recognitionContext == null ? transferObject.mailProtocol() : recognitionContext.mailProtocol(),
+                recognitionContext == null ? transferObject.mailFolder() : recognitionContext.mailFolder(),
+                resolveTagPath(recognitionContext, transferObject),
+                transferObject.fileMeta()
+        );
     }
 
     private RegexMatchResult evaluateRegex(TransferTagDefinition definition,

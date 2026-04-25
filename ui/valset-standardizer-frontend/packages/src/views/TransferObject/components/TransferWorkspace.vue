@@ -28,10 +28,10 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="20">
+    <YCard class="workspace-header" :bordered="false" :padding="12">
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
-          <h1>分拣对象查询</h1>
+          <h2>分拣对象</h2>
           <p>
             查询文件主对象清单、来源信息、文件状态和邮件元数据，便于定位文件从收取到入库的链路。
           </p>
@@ -51,10 +51,14 @@ const actionConfig = useTableActionConfig({
             >
               {{ filter.tagName || filter.tagCode || filter.tagValue || "-" }}
               <span v-if="filter.tagValue">：{{ filter.tagValue }}</span>
-              <span class="workspace-tag-filter-count">({{ filter.count }})</span>
+              <span class="workspace-tag-filter-count"
+                >({{ filter.count }})</span
+              >
             </a-tag>
             <a-button
-              v-if="page.query.tagCode || page.query.tagValue || page.query.tagId"
+              v-if="
+                page.query.tagCode || page.query.tagValue || page.query.tagId
+              "
               size="small"
               type="link"
               class="workspace-tag-clear"
@@ -69,7 +73,7 @@ const actionConfig = useTableActionConfig({
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton theme="primary" @click="page.runQuery">
+            <YButton type="primary" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询对象
             </YButton>
@@ -123,18 +127,18 @@ const actionConfig = useTableActionConfig({
                         {{ statusItem.count }}
                       </span>
                     </button>
-                      <span
-                        v-for="folderItem in sourceItem.mailFolderCounts"
-                        :key="`${sourceItem.sourceType}-${folderItem.mailFolder}`"
-                        class="analysis-status-chip analysis-status-chip--default"
-                      >
-                        <span class="analysis-status-chip-label">
-                          {{ folderItem.mailFolderLabel }}
-                        </span>
-                        <span class="analysis-status-chip-value">
-                          {{ folderItem.count }}
-                        </span>
+                    <span
+                      v-for="folderItem in sourceItem.mailFolderCounts"
+                      :key="`${sourceItem.sourceType}-${folderItem.mailFolder}`"
+                      class="analysis-status-chip analysis-status-chip--default"
+                    >
+                      <span class="analysis-status-chip-label">
+                        {{ folderItem.mailFolderLabel }}
                       </span>
+                      <span class="analysis-status-chip-value">
+                        {{ folderItem.count }}
+                      </span>
+                    </span>
                     <div
                       v-if="!sourceItem.statusCounts.length"
                       class="analysis-card-empty"
@@ -296,18 +300,22 @@ const actionConfig = useTableActionConfig({
                 />
               </a-form-item>
               <a-form-item class="workspace-table-toolbar-actions">
-                <YButton theme="primary" @click="page.runQuery">查询</YButton>
+                <YButton type="primary" @click="page.runQuery">查询</YButton>
                 <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
             <div
-              v-if="page.query.tagCode || page.query.tagValue || page.query.tagId"
+              v-if="
+                page.query.tagCode || page.query.tagValue || page.query.tagId
+              "
               class="workspace-active-tag-filter"
             >
               当前标签筛选：
               <a-tag color="cyan">
                 {{ page.query.tagCode || page.query.tagId || "标签" }}
-                <span v-if="page.query.tagValue">：{{ page.query.tagValue }}</span>
+                <span v-if="page.query.tagValue"
+                  >：{{ page.query.tagValue }}</span
+                >
               </a-tag>
               <a-button type="link" @click="page.clearTagFilter">清除</a-button>
             </div>

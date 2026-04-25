@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { YButton, YCard, YTable } from "@yss-ui/components";
+import { YButton, YCard } from "@yss-ui/components";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -7,10 +7,8 @@ import {
   MinusCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from "@ant-design/icons-vue";
-import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
-import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
-import { useTransferRouteConfigColumns } from "../hooks/useTransferTableColumns";
 import { formatDateTime } from "@/utils/format";
 import type { RouteConfigPage } from "../types";
 
@@ -18,63 +16,20 @@ const { page } = defineProps<{
   page: RouteConfigPage;
 }>();
 
-const columns = useTransferRouteConfigColumns();
-
 const getChainIcon = (statusKey: string) => {
   if (statusKey === "success") return CheckCircleOutlined;
   if (statusKey === "error") return CloseCircleOutlined;
   if (statusKey === "loading") return LoadingOutlined;
   return MinusCircleOutlined;
 };
-
-const actionConfig = useTableActionConfig({
-  width: 420,
-  displayLimit: 5,
-  buttons: [
-    {
-      text: "手动收取",
-      key: "trigger",
-      type: "link",
-      disabledFn: ({ row }: any) =>
-        !page.canTriggerSource(row) || page.isSourceTriggering(row.sourceId),
-      clickFn: ({ row }: any) => page.triggerSource(row),
-    },
-    {
-      text: "停止",
-      key: "stop",
-      type: "link",
-      disabledFn: ({ row }: any) =>
-        !page.canStopSource(row) || page.isSourceStopping(row.sourceId),
-      clickFn: ({ row }: any) => page.stopSource(row),
-    },
-    {
-      text: "详情",
-      key: "detail",
-      type: "link",
-      clickFn: ({ row }: any) => page.openDetailDrawer(row),
-    },
-    {
-      text: "修改",
-      key: "edit",
-      type: "link",
-      clickFn: ({ row }: any) => page.openEditDialog(row),
-    },
-    {
-      text: "删除",
-      key: "delete",
-      type: "link",
-      clickFn: ({ row }: any) => page.confirmDelete(row),
-    },
-  ],
-});
 </script>
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="20">
+    <YCard class="workspace-header" :bordered="false" :padding="12">
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
-          <h1>分拣路由映射配置</h1>
+          <h2>分拣路由</h2>
           <p>
             统一维护来源、规则与目标之间的路由映射，并在映射页直接发起来源收取、
             停止收取和配置维护。
@@ -82,17 +37,15 @@ const actionConfig = useTableActionConfig({
           <div class="workspace-header-pills">
             <span class="workspace-pill">来源 → 路由映射 → 目标</span>
             <span class="workspace-pill">支持手动收取 / 停止收取</span>
-            <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
-            <span class="workspace-pill">详情抽屉展示流向与 JSON</span>
           </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton theme="primary" @click="page.openCreateDialog">
+            <YButton size="small" type="primary" @click="page.openCreateDialog">
               <template #icon><PlusOutlined /></template>
               新建路由
             </YButton>
-            <YButton @click="page.runQuery">
+            <YButton size="small" @click="page.runQuery">
               <template #icon><ReloadOutlined /></template>
               刷新列表
             </YButton>
@@ -102,185 +55,234 @@ const actionConfig = useTableActionConfig({
     </YCard>
 
     <div class="workspace-body">
-      <YTable
-        :columns="columns"
-        :action-config="actionConfig"
-        :data="page.tableData"
-        :loading="page.loading"
-        :row-config="{ keyField: 'routeId', isCurrent: false, isHover: false }"
-        :pageable="true"
-        :cell-config="{ height: 320 }"
-        :header-height="40"
-        v-model:pagination="page.pagination"
-        :toolbar-config="{ custom: false }"
-        @page-change="page.handlePageChange"
-      >
-        <template #toolbar-left>
-          <WorkspaceTableToolbar
-            title="路由映射列表"
-            :description="`总数 ${page.total} 条，点击操作按钮查看详情或维护配置。`"
-            meta="固定使用 transfer_route 配置"
-          >
-            <div class="route-table-legend">
-              <div
-                v-for="item in page.flowTableLegend"
-                :key="item.label"
-                class="route-table-legend-item"
-                :class="`route-table-legend-item--${item.tone}`"
-              >
-                <span>{{ item.label }}</span>
-                <small>{{ item.hint }}</small>
-              </div>
-            </div>
-
-            <a-form layout="inline" class="workspace-table-toolbar-form">
-              <a-form-item label="来源类型">
-                <a-select
-                  v-model:value="page.query.sourceType"
-                  allow-clear
-                  style="width: 168px"
-                  placeholder="全部"
-                >
-                  <a-select-option value="">全部</a-select-option>
-                  <a-select-option
-                    v-for="item in page.sourceTypeOptions"
-                    :key="item.value"
-                    :value="item.value"
-                  >
-                    {{ item.label }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item label="来源编码">
-                <a-input
-                  v-model:value="page.query.sourceCode"
-                  style="width: 180px"
-                  placeholder="输入来源编码"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="规则主键">
-                <a-input
-                  v-model:value="page.query.ruleId"
-                  style="width: 140px"
-                  placeholder="输入规则ID"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="目标类型">
-                <a-select
-                  v-model:value="page.query.targetType"
-                  allow-clear
-                  style="width: 168px"
-                  placeholder="全部"
-                >
-                  <a-select-option value="">全部</a-select-option>
-                  <a-select-option
-                    v-for="item in page.targetTypeOptions"
-                    :key="item.value"
-                    :value="item.value"
-                  >
-                    {{ item.label }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item label="目标编码">
-                <a-input
-                  v-model:value="page.query.targetCode"
-                  style="width: 180px"
-                  placeholder="输入目标编码"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item class="workspace-table-toolbar-actions">
-                <YButton theme="primary" @click="page.runQuery">查询</YButton>
-                <YButton @click="page.resetQuery">重置</YButton>
-              </a-form-item>
-            </a-form>
-          </WorkspaceTableToolbar>
-        </template>
-
-        <template #flowSummary="{ row }">
-          <div
-            class="route-summary-cell"
-            :class="{
-              'route-summary-cell--active':
-                page.selectedRow?.routeId === row.routeId,
-            }"
-            role="button"
-            tabindex="0"
-            @click.stop="page.openDetailDrawer(row)"
-            @keydown.enter.stop="page.openDetailDrawer(row)"
-          >
-            <div class="route-summary-segment route-summary-segment--source">
-              <span>来源:</span>
-              <strong>{{ row.sourceCode || "-" }}</strong>
-              <small>{{ row.sourceType || "-" }}</small>
-            </div>
-            <div class="route-summary-segment route-summary-segment--route">
-              <span>路由:</span>
-              <strong>{{ page.getRuleDisplayName(row.ruleId) }}</strong>
-              <small>{{ row.renamePattern || "默认命名" }}</small>
-            </div>
-            <div class="route-summary-segment route-summary-segment--target">
-              <span>目标:</span>
-              <strong>{{ row.targetCode || "-" }}</strong>
-              <small>{{ row.targetPath || "-" }}</small>
-            </div>
-          </div>
-        </template>
-
-        <template #sourceIngestStatus="{ row }">
-          <div class="route-thought-chain">
-            <div
-              v-for="(node, index) in page.getSourceIngestChainItems(row)"
-              :key="node.key"
-              class="route-thought-chain-item"
-              :class="`route-thought-chain-item--${node.statusKey}`"
+      <YCard class="route-query-card" :bordered="false" :padding="18">
+        <a-form layout="inline">
+          <a-form-item label="来源类型">
+            <a-select
+              v-model:value="page.query.sourceType"
+              allow-clear
+              size="small"
+              style="width: 180px"
+              placeholder="全部"
             >
-              <div class="route-thought-chain-rail">
-                <span
-                  v-if="index > 0"
-                  class="route-thought-chain-rail__line route-thought-chain-rail__line--top"
-                />
-                <span
-                  class="route-thought-chain-rail__icon"
-                  :class="`route-thought-chain-rail__icon--${node.statusKey}`"
-                >
-                  <component :is="getChainIcon(node.statusKey)" />
-                </span>
-                <span
-                  v-if="index < page.getSourceIngestChainItems(row).length - 1"
-                  class="route-thought-chain-rail__line route-thought-chain-rail__line--bottom"
-                />
-              </div>
-              <div class="route-thought-chain-content">
-                <div class="route-thought-chain-content__head">
-                  <strong>{{ node.title }}</strong>
-                  <span>{{ node.timeText }}</span>
-                </div>
-                <div class="route-thought-chain-content__status">
-                  status: {{ node.statusLabel }}
-                </div>
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option
+                v-for="item in page.sourceTypeOptions"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="来源编码">
+            <a-input
+              size="small"
+              v-model:value="page.query.sourceCode"
+              style="width: 220px"
+              placeholder="输入来源编码"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="目标类型">
+            <a-select
+              size="small"
+              v-model:value="page.query.targetType"
+              allow-clear
+              style="width: 180px"
+              placeholder="全部"
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option
+                v-for="item in page.targetTypeOptions"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="目标编码">
+            <a-input
+              v-model:value="page.query.targetCode"
+              size="small"
+              style="width: 220px"
+              placeholder="输入目标编码"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item class="workspace-table-toolbar-actions">
+            <a-button type="primary" size="small" @click="page.runQuery">
+              <template #icon><SearchOutlined /></template>
+              查询
+            </a-button>
+            <a-button size="small" @click="page.resetQuery">
+              <template #icon><ReloadOutlined /></template>
+              重置
+            </a-button>
+          </a-form-item>
+        </a-form>
+        <a-list
+          class="route-config-list"
+          :data-source="page.tableData"
+          :loading="page.loading"
+          item-layout="vertical"
+        >
+          <template #renderItem="{ item: row }">
+            <a-list-item
+              class="route-config-list-item"
+              :class="{
+                'route-config-list-item--active':
+                  page.selectedRow?.routeId === row.routeId,
+              }"
+            >
+              <div class="route-config-list-card">
                 <div
-                  v-if="node.key === 'source-status'"
-                  class="route-ingest-progress-cell"
+                  class="route-summary-cell"
+                  role="button"
+                  tabindex="0"
+                  @click.stop="page.openDetailDrawer(row)"
+                  @keydown.enter.stop="page.openDetailDrawer(row)"
                 >
-                  <a-progress
-                    :percent="page.getSourceIngestProgressPercent(row)"
-                    :show-info="false"
-                    :stroke-width="6"
-                  />
-                  <div class="route-ingest-progress-cell__text">
-                    {{ page.getSourceIngestProgressText(row) }}
+                  <div
+                    class="route-summary-segment route-summary-segment--source"
+                  >
+                    <span>1.来源</span>
+                    <strong>{{ row.sourceCode || "-" }}</strong>
+                    <small>{{ row.sourceType || "-" }}</small>
+                  </div>
+                  <div
+                    class="route-summary-segment route-summary-segment--route"
+                  >
+                    <span>2.路由</span>
+                    <strong>{{ page.getRuleDisplayName(row.ruleId) }}</strong>
+                    <small>{{ row.renamePattern || "默认命名" }}</small>
+                  </div>
+                  <div
+                    class="route-summary-segment route-summary-segment--target"
+                  >
+                    <span>3.目标</span>
+                    <strong>{{ row.targetCode || "-" }}</strong>
+                    <small>{{ row.targetPath || "-" }}</small>
                   </div>
                 </div>
-                <p>{{ node.content }}</p>
+
+                <div class="route-thought-chain">
+                  <div
+                    v-for="(node, index) in page.getSourceIngestChainItems(row)"
+                    :key="node.key"
+                    class="route-thought-chain-item"
+                    :class="`route-thought-chain-item--${node.statusKey}`"
+                  >
+                    <div class="route-thought-chain-rail">
+                      <span
+                        v-if="index > 0"
+                        class="route-thought-chain-rail__line route-thought-chain-rail__line--top"
+                      />
+                      <span
+                        class="route-thought-chain-rail__icon"
+                        :class="`route-thought-chain-rail__icon--${node.statusKey}`"
+                      >
+                        <component :is="getChainIcon(node.statusKey)" />
+                      </span>
+                      <span
+                        v-if="
+                          index < page.getSourceIngestChainItems(row).length - 1
+                        "
+                        class="route-thought-chain-rail__line route-thought-chain-rail__line--bottom"
+                      />
+                    </div>
+                    <div class="route-thought-chain-content">
+                      <div class="route-thought-chain-content__head">
+                        <strong>{{ node.title }}</strong>
+                        <span>{{ node.timeText }}</span>
+                      </div>
+                      <div class="route-thought-chain-content__status">
+                        <a-tag
+                          :color="page.getRouteChainStatusColor(node.statusKey)"
+                        >
+                          {{ node.statusLabel }}
+                        </a-tag>
+                      </div>
+                      <div
+                        v-if="node.key === 'source-status'"
+                        class="route-ingest-progress-cell"
+                      >
+                        <a-progress
+                          :percent="page.getSourceIngestProgressPercent(row)"
+                          :show-info="false"
+                          :stroke-width="6"
+                        />
+                        <div class="route-ingest-progress-cell__text">
+                          {{ page.getSourceIngestProgressText(row) }}
+                        </div>
+                      </div>
+                      <p>{{ node.content }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="route-list-actions">
+                  <YButton
+                    size="small"
+                    type="primary"
+                    :disabled="
+                      !page.canTriggerSource(row) ||
+                      page.isSourceTriggering(row.sourceId)
+                    "
+                    @click="page.triggerSource(row)"
+                  >
+                    手动收取
+                  </YButton>
+                  <YButton
+                    size="small"
+                    :disabled="
+                      !page.canStopSource(row) ||
+                      page.isSourceStopping(row.sourceId)
+                    "
+                    @click="page.stopSource(row)"
+                  >
+                    停止
+                  </YButton>
+                  <YButton size="small" @click="page.openDetailDrawer(row)"
+                    >详情</YButton
+                  >
+                  <YButton size="small" @click="page.openEditDialog(row)"
+                    >修改</YButton
+                  >
+                  <YButton
+                    size="small"
+                    class="route-delete-button"
+                    @click="page.confirmDelete(row)"
+                  >
+                    删除
+                  </YButton>
+                </div>
               </div>
-            </div>
-          </div>
-        </template>
-      </YTable>
+            </a-list-item>
+          </template>
+        </a-list>
+
+        <div class="route-list-pagination">
+          <a-pagination
+            :current="page.pagination.current"
+            :page-size="page.pagination.pageSize"
+            :total="page.total"
+            :show-size-changer="page.pagination.showSizeChanger"
+            :show-quick-jumper="page.pagination.showQuickJumper"
+            :page-size-options="page.pagination.pageSizeOptions"
+            :show-total="(total) => `共 ${total} 条`"
+            @change="
+              (current, pageSize) =>
+                page.handlePageChange({ current, pageSize })
+            "
+            @show-size-change="
+              (_current, pageSize) =>
+                page.handlePageChange({ current: 1, pageSize })
+            "
+          />
+        </div>
+      </YCard>
     </div>
 
     <a-modal
@@ -539,7 +541,9 @@ const actionConfig = useTableActionConfig({
               class="route-message-list"
             >
               <div
-                v-for="(item, index) in page.getSourceIngestMessages(page.selectedRow)"
+                v-for="(item, index) in page.getSourceIngestMessages(
+                  page.selectedRow,
+                )"
                 :key="`${item.timeText}-${index}`"
                 class="route-message-item"
               >
@@ -553,31 +557,6 @@ const actionConfig = useTableActionConfig({
               </div>
             </div>
             <a-empty v-else description="暂无收取消息" />
-          </section>
-
-          <section class="route-detail-panel">
-            <div class="route-detail-panel-header">
-              <h4>路由匹配</h4>
-              <a-button
-                type="link"
-                size="small"
-                class="route-copy-button"
-                @click="page.copyRouteField(page.selectedRow.ruleId, '规则ID')"
-              >
-                复制规则ID
-              </a-button>
-            </div>
-            <a-descriptions bordered :column="1" size="small">
-              <a-descriptions-item label="路由主键">
-                {{ page.selectedRow.routeId ?? "-" }}
-              </a-descriptions-item>
-              <a-descriptions-item label="规则主键">
-                {{ page.selectedRow.ruleId ?? "-" }}
-              </a-descriptions-item>
-              <a-descriptions-item label="规则名称">
-                {{ page.getRuleDisplayName(page.selectedRow.ruleId) }}
-              </a-descriptions-item>
-            </a-descriptions>
           </section>
 
           <section class="route-detail-panel">

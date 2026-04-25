@@ -12,10 +12,11 @@ export const useTransferRouteConfigColumns = () =>
     {
       field: "flowSummary",
       title: "映射 / 摘要",
-      width: 400,
+      width: 460,
     },
     {
       field: "sourceIngestStatus",
       title: "收取状态",
+      minWidth: 680,
     },
   ]);

@@ -281,8 +281,8 @@ curl "http://localhost:8080/api/transfer-delivery-records?transferId=1"
 - `executeStatus`
 - `targetType`
 - `targetCode`
-- `requestSnapshotJson`
-- `responseSnapshotJson`
+- `requestSnapshotJson`，现在是请求摘要
+- `responseSnapshotJson`，现在是响应摘要
 
 ## 9. 最小验收清单
 

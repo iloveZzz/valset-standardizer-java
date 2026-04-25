@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 默认文件投递结果查询服务。
@@ -54,10 +55,26 @@ public class DefaultTransferDeliveryRecordQueryService implements TransferDelive
                 .targetType(record.targetType())
                 .targetCode(record.targetCode())
                 .executeStatus(record.executeStatus())
+                .executeStatusLabel(resolveExecuteStatusLabel(record.executeStatus()))
                 .requestSnapshotJson(record.requestSnapshotJson())
                 .responseSnapshotJson(record.responseSnapshotJson())
                 .errorMessage(record.errorMessage())
                 .deliveredAt(record.deliveredAt())
                 .build();
+    }
+
+    private String resolveExecuteStatusLabel(String executeStatus) {
+        if (executeStatus == null || executeStatus.isBlank()) {
+            return "-";
+        }
+        return switch (executeStatus.trim().toUpperCase(Locale.ROOT)) {
+            case "SUCCESS", "SUCCEEDED", "DONE", "COMPLETED" -> "成功";
+            case "FAILED", "FAIL", "ERROR" -> "失败";
+            case "PENDING" -> "待处理";
+            case "RUNNING", "PROCESSING" -> "执行中";
+            case "RETRYING" -> "重试中";
+            case "SKIPPED" -> "已跳过";
+            default -> executeStatus;
+        };
     }
 }

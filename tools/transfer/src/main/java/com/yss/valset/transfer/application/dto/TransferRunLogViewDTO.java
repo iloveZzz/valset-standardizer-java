@@ -77,6 +77,10 @@ public class TransferRunLogViewDTO {
      * 运行状态。
      */
     private String runStatus;
+    /**
+     * 运行状态名称。
+     */
+    private String runStatusLabel;
 
     /**
      * 运行说明。

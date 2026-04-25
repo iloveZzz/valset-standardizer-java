@@ -24,6 +24,8 @@ export interface TransferRunLogViewDTO {
   runStage?: string;
   /** 运行状态。 */
   runStatus?: string;
+  /** 运行状态名称。 */
+  runStatusLabel?: string;
   /** 来源编码。 */
   sourceCode?: string;
   /** 来源主键。 */

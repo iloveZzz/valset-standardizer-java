@@ -60,7 +60,7 @@
     },
     {
       "name": "TransferRouteConfigController",
-      "description": "分拣路由配置接口。"
+      "description": "分拣路由接口。"
     },
     {
       "name": "TransferRuleController",
@@ -74,7 +74,7 @@
   "paths": {
     "/api/transfer-routes": {
       "get": {
-        "summary": "查询分拣路由配置列表。",
+        "summary": "查询分拣路由列表。",
         "deprecated": false,
         "tags": [
           "TransferRouteController"
@@ -10201,12 +10201,12 @@
           },
           "requestSnapshotJson": {
             "format": "string",
-            "description": "请求快照 JSON。",
+            "description": "请求摘要 JSON。",
             "type": "string"
           },
           "responseSnapshotJson": {
             "format": "string",
-            "description": "响应快照 JSON。",
+            "description": "响应摘要 JSON。",
             "type": "string"
           },
           "errorMessage": {

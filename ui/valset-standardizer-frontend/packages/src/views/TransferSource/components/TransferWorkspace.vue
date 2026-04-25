@@ -141,10 +141,10 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="20">
+    <YCard class="workspace-header" :bordered="false" :padding="12">
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
-          <h1>文件来源接口配置</h1>
+          <h2>文件来源接口配置</h2>
           <p>
             统一维护来源编码、名称、类型、轮询表达式与扩展配置，适用于收发分拣的来源接入管理。
           </p>
@@ -156,7 +156,7 @@ const actionConfig = useTableActionConfig({
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton theme="primary" @click="page.openCreateDialog">
+            <YButton type="primary" @click="page.openCreateDialog">
               <template #icon><PlusOutlined /></template>
               新建来源
             </YButton>
@@ -234,7 +234,7 @@ const actionConfig = useTableActionConfig({
                 </a-select>
               </a-form-item>
               <a-form-item class="workspace-table-toolbar-actions">
-                <YButton theme="primary" @click="page.runQuery">查询</YButton>
+                <YButton type="primary" @click="page.runQuery">查询</YButton>
                 <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>

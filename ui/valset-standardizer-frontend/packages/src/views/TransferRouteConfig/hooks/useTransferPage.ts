@@ -315,6 +315,65 @@ const normalizeIngestStatusWord = (value?: string, ingestBusy?: boolean) => {
   return "pending";
 };
 
+const formatChainStatusLabel = (statusKey: string) => {
+  if (statusKey === "success") {
+    return "成功";
+  }
+  if (statusKey === "loading") {
+    return "处理中";
+  }
+  if (statusKey === "error") {
+    return "异常";
+  }
+  return "待执行";
+};
+
+const getRouteChainStatusColor = (statusKey: string) => {
+  if (statusKey === "success") {
+    return "green";
+  }
+  if (statusKey === "loading") {
+    return "blue";
+  }
+  if (statusKey === "error") {
+    return "red";
+  }
+  return "default";
+};
+
+const formatRunStageLabel = (stage?: string) => {
+  const normalized = String(stage ?? "")
+    .trim()
+    .toUpperCase();
+  const labels: Record<string, string> = {
+    INGEST: "收取",
+    ROUTE: "路由",
+    DELIVER: "投递",
+  };
+  return labels[normalized] || normalized;
+};
+
+const formatRunStatusLabel = (status?: string) => {
+  const normalized = String(status ?? "")
+    .trim()
+    .toUpperCase();
+  const labels: Record<string, string> = {
+    SUCCESS: "成功",
+    SUCCEEDED: "成功",
+    DONE: "完成",
+    COMPLETED: "完成",
+    FAILED: "失败",
+    FAIL: "失败",
+    ERROR: "异常",
+    PENDING: "待处理",
+    RUNNING: "运行中",
+    PROCESSING: "处理中",
+    RETRYING: "重试中",
+    SKIPPED: "已跳过",
+  };
+  return labels[normalized] || normalized;
+};
+
 const normalizeIngestBusy = (state?: SourceIngestState | null) => {
   const status = String(state?.ingestStatus ?? "")
     .trim()
@@ -1187,8 +1246,8 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     const routeIssue = row?.routeId ? routeExecutionStates[row.routeId] ?? null : null;
     const routeIssueText = routeIssue
       ? [
-          routeIssue.runStage ? `阶段 ${routeIssue.runStage}` : "",
-          routeIssue.runStatus ? `状态 ${routeIssue.runStatus}` : "",
+          routeIssue.runStage ? `阶段 ${formatRunStageLabel(routeIssue.runStage)}` : "",
+          routeIssue.runStatus ? `状态 ${formatRunStatusLabel(routeIssue.runStatus)}` : "",
           routeIssue.errorMessage || routeIssue.logMessage || "",
         ]
           .filter(Boolean)
@@ -1220,7 +1279,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
         key: "source-status",
         title: "当前收取",
         statusKey: sourceTone,
-        statusLabel: sourceTone,
+        statusLabel: normalizeIngestStatus(sourceState?.ingestStatus) || formatChainStatusLabel(sourceTone),
         content: [
           getTriggerSummaryText(sourceState)
             ? `本轮${getTriggerSummaryText(sourceState)}`
@@ -1238,7 +1297,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
         key: "route-match",
         title: "路由匹配",
         statusKey: routeTone,
-        statusLabel: routeTone,
+        statusLabel: formatChainStatusLabel(routeTone),
         content: [
           row?.ruleId
             ? `规则 ${ruleLabel} 已完成匹配，重命名模板 ${row.renamePattern || "默认命名"}。`
@@ -1253,7 +1312,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
         key: "target-delivery",
         title: "目标投递",
         statusKey: targetTone,
-        statusLabel: targetTone,
+        statusLabel: formatChainStatusLabel(targetTone),
         content: [
           row?.targetCode
             ? `目标 ${row.targetCode} 正在等待投递，目标路径 ${row.targetPath || "待配置"}。`
@@ -1691,6 +1750,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     getRouteFlowFactMessages,
     getSourceIngestMessages,
     getSourceIngestChainItems,
+    getRouteChainStatusColor,
     getRuleDisplayName,
     triggerSource,
     stopSource,

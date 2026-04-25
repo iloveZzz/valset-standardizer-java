@@ -75,6 +75,7 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
         String triggerType = resolveTriggerType(transferObject.fileMeta());
         boolean routeFailureLogged = false;
         try {
+            transferObject = ensureMaterialized(transferObject);
             log.info("开始文件路由识别，transferId={}，sourceId={}，sourceCode={}，sourceType={}，originalName={}，localTempPath={}",
                     transferObject.transferId(),
                     transferObject.sourceId(),
@@ -88,10 +89,11 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
                     triggerType,
                     TransferRunStage.ROUTE.name(),
                     TransferRunStatus.SUCCESS.name(),
-                    "开始路由识别，transferId=" + transferId
+                            "开始路由识别，transferId=" + transferId
                             + "，sourceId=" + transferObject.sourceId()
                             + "，sourceCode=" + transferObject.sourceCode()
-                            + "，originalName=" + transferObject.originalName(),
+                            + "，originalName=" + transferObject.originalName()
+                            + "，localTempPath=" + transferObject.localTempPath(),
                     null
             );
             RecognitionContext context = toRecognitionContext(transferObject);
@@ -121,7 +123,6 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
                 );
                 return;
             }
-            transferObject = ensureMaterialized(transferObject);
             TransferRoute primaryRoute = matchResult.routes().get(0);
             log.info("路由规则命中，transferId={}，routeCount={}，primaryRouteId={}，ruleId={}，targetCode={}，reason={}",
                     transferObject.transferId(),

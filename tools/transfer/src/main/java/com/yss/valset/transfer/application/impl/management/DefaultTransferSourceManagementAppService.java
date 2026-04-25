@@ -47,6 +47,7 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
     private final TransferRouteGateway transferRouteGateway;
     private final TransferSourceCheckpointGateway transferSourceCheckpointGateway;
     private final TransferSecretCodec transferSecretCodec;
+    private final TransferSourceScheduleCoordinator transferSourceScheduleCoordinator;
     private final TransferJobScheduler transferJobScheduler;
 
     @Override
@@ -94,7 +95,7 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 existing == null ? null : existing.updatedAt()
         );
         TransferSource saved = transferSourceGateway.save(transferSource);
-        syncIngestSchedule(saved);
+        transferSourceScheduleCoordinator.syncSourceSchedule(saved);
         return TransferSourceMutationResponse.builder()
                 .operation(createMode ? "create" : "update")
                 .message("文件来源保存成功")
@@ -261,23 +262,6 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 + "，sourceCode="
                 + (source == null ? null : source.sourceCode())
                 + "）";
-    }
-
-    private void syncIngestSchedule(TransferSource source) {
-        if (source == null || source.sourceId() == null) {
-            return;
-        }
-        if (!source.enabled() || source.pollCron() == null || source.pollCron().isBlank()) {
-            transferJobScheduler.unscheduleIngest(source.sourceId());
-            return;
-        }
-        transferJobScheduler.scheduleIngestCron(
-                source.sourceId(),
-                source.sourceType() == null ? null : source.sourceType().name(),
-                source.sourceCode(),
-                source.connectionConfig(),
-                source.pollCron()
-        );
     }
 
     private TransferSourceViewDTO toView(TransferSource source) {

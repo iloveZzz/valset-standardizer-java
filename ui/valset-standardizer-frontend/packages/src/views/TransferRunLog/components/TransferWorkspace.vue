@@ -35,10 +35,10 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="20">
+    <YCard class="workspace-header" :bordered="false" :padding="12">
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
-          <h1>分拣运行日志</h1>
+          <h2>运行日志</h2>
           <p>
             查询分拣任务的运行阶段、运行状态、来源信息和错误详情，用于定位分拣链路中的异常、失败投递和重投递过程。
           </p>
@@ -50,7 +50,7 @@ const actionConfig = useTableActionConfig({
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton theme="primary" @click="page.runQuery">
+            <YButton type="primary" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询日志
             </YButton>
@@ -142,7 +142,7 @@ const actionConfig = useTableActionConfig({
       >
         <template #toolbar-left>
           <WorkspaceTableToolbar
-            title="分拣运行日志列表"
+            title="运行日志列表"
             :description="`按条件检索运行日志，查看分页结果、失败投递和单条详情。`"
             :meta="`当前共 ${page.total} 条日志`"
           >
@@ -204,7 +204,7 @@ const actionConfig = useTableActionConfig({
                 />
               </a-form-item>
               <a-form-item class="workspace-table-toolbar-actions">
-                <YButton theme="primary" @click="page.runQuery">查询</YButton>
+                <YButton type="primary" @click="page.runQuery">查询</YButton>
                 <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
@@ -216,7 +216,7 @@ const actionConfig = useTableActionConfig({
               已选失败日志 {{ page.selectedFailedCount }} 条
             </a-tag>
             <YButton
-              theme="primary"
+              type="primary"
               :loading="page.redeliverLoading"
               @click="page.redeliverSelectedFailedLogs"
             >
@@ -227,7 +227,7 @@ const actionConfig = useTableActionConfig({
 
         <template #runStatus="{ row }">
           <a-tag :color="page.runStatusTagColor(row.runStatus)">
-            {{ page.formatText(row.runStatus) }}
+            {{ page.formatStatus(row.runStatusLabel || row.runStatus) }}
           </a-tag>
         </template>
         <template #runStage="{ row }">
@@ -242,17 +242,22 @@ const actionConfig = useTableActionConfig({
     <a-drawer
       class="source-detail-drawer"
       :open="page.detailVisible"
-      title="分拣运行日志详情"
+      title="运行日志详情"
       :width="720"
       @close="page.closeDetail"
     >
       <template v-if="page.selectedRow">
         <div class="source-detail-banner">
           <div class="source-detail-banner-title">
-            {{ page.selectedRow.runLogId || "分拣运行日志详情" }}
+            {{ page.selectedRow.runLogId || "运行日志详情" }}
           </div>
           <div class="source-detail-banner-meta">
-            {{ page.formatText(page.selectedRow.runStatus) }} ·
+            {{
+              page.formatStatus(
+                page.selectedRow.runStatusLabel || page.selectedRow.runStatus,
+              )
+            }}
+            ·
             {{ page.formatText(page.selectedRow.createdAt) }}
           </div>
         </div>
@@ -293,7 +298,11 @@ const actionConfig = useTableActionConfig({
           </a-descriptions-item>
           <a-descriptions-item label="运行状态">
             <a-tag :color="page.runStatusTagColor(page.selectedRow.runStatus)">
-              {{ page.formatText(page.selectedRow.runStatus) }}
+              {{
+                page.formatStatus(
+                  page.selectedRow.runStatusLabel || page.selectedRow.runStatus,
+                )
+              }}
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item label="触发类型">

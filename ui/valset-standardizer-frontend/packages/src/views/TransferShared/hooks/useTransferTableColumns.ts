@@ -301,29 +301,41 @@ export const useTransferOverviewRecentDeliveryColumns = () =>
       fixed: "left" as const,
     },
     {
-      field: "fileName",
-      title: "文件名称",
-      width: 240,
-    },
-    {
-      field: "source",
-      title: "来源",
-      width: 160,
-    },
-    {
-      field: "target",
-      title: "目标",
-      width: 160,
-    },
-    {
-      field: "route",
-      title: "路由",
+      field: "deliveryId",
+      title: "投递ID",
       width: 130,
     },
     {
-      field: "status",
-      title: "结果",
-      width: 110,
+      field: "transferId",
+      title: "分拣ID",
+      width: 130,
+    },
+    {
+      field: "targetCode",
+      title: "目标编码",
+      width: 180,
+    },
+    {
+      field: "targetType",
+      title: "目标类型",
+      width: 120,
+      formatter: (params: any) => {
+        const value = String(params?.cellValue ?? "").trim().toUpperCase();
+        if (!value) {
+          return "-";
+        }
+        if (value === "EMAIL") return "邮件";
+        if (value === "LOCAL_DIR") return "本地目录";
+        if (value === "S3") return "S3";
+        if (value === "SFTP") return "SFTP";
+        if (value === "FILESYS") return "文件服务";
+        return value;
+      },
+    },
+    {
+      field: "executeStatusLabel",
+      title: "执行状态",
+      width: 140,
     },
     {
       field: "deliveredAt",

@@ -67,10 +67,10 @@ const columns: YTableColumn[] = [
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="20">
+    <YCard class="workspace-header" :bordered="false" :padding="12">
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
-          <h1>标签管理</h1>
+          <h2>标签管理</h2>
           <p>
             配置标签名称、标签值、QLExpress4
             规则与正则表达式，并在对象收集完成后自动打标。
@@ -83,7 +83,7 @@ const columns: YTableColumn[] = [
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton theme="primary" @click="page.openCreateDialog">
+            <YButton type="primary" @click="page.openCreateDialog">
               <template #icon><PlusOutlined /></template>
               新建标签
             </YButton>
@@ -165,7 +165,7 @@ const columns: YTableColumn[] = [
                 </a-select>
               </a-form-item>
               <a-form-item class="workspace-table-toolbar-actions">
-                <YButton theme="primary" @click="page.runQuery">查询</YButton>
+                <YButton type="primary" @click="page.runQuery">查询</YButton>
                 <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
@@ -390,7 +390,7 @@ const columns: YTableColumn[] = [
           </a-form-item>
           <a-space>
             <YButton
-              theme="primary"
+              type="primary"
               :loading="page.testSubmitting"
               @click="page.submitTest"
               >执行试跑</YButton

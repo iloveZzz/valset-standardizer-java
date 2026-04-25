@@ -95,6 +95,26 @@ const formatStatusLabel = (value: string | undefined) => {
   return status;
 };
 
+const formatObjectStatus = (value: string | undefined) => {
+  const status = String(value ?? "")
+    .trim()
+    .toUpperCase();
+  if (!status) {
+    return "-";
+  }
+  if (status === "PENDING") return "待处理";
+  if (status === "RECEIVED") return "已收取";
+  if (status === "IDENTIFIED") return "已识别";
+  if (status === "ROUTED") return "已路由";
+  if (status === "DELIVERING") return "投递中";
+  if (status === "DELIVERED") return "已投递";
+  if (status === "ARCHIVED") return "已归档";
+  if (status === "SKIPPED") return "已跳过";
+  if (status === "QUARANTINED") return "已隔离";
+  if (status === "FAILED") return "失败";
+  return status;
+};
+
 const normalizeStatusCounts = (
   statusCounts: TransferObjectStatusCountViewDTO[] | undefined,
 ): ObjectAnalysis["sourceAnalyses"][number]["statusCounts"] => {
@@ -414,7 +434,7 @@ export const useTransferPage = () => {
     void loadList(current, nextPageSize);
   };
 
-  const formatStatus = (value: string | undefined) => value || "-";
+  const formatStatus = (value: string | undefined) => formatObjectStatus(value);
   const formatSourceTypeLabel = (value: string | undefined) => {
     const text = String(value ?? "").trim();
     return text || "-";

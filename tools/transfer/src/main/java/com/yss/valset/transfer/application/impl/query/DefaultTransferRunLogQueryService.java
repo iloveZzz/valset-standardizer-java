@@ -152,6 +152,7 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                 .triggerType(runLog.triggerType())
                 .runStage(runLog.runStage())
                 .runStatus(runLog.runStatus())
+                .runStatusLabel(resolveStatusLabel(runLog.runStatus()))
                 .logMessage(runLog.logMessage())
                 .errorMessage(runLog.errorMessage())
                 .createdAt(runLog.createdAt())

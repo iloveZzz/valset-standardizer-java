@@ -50,8 +50,8 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
         po.setTargetCode(route == null ? null : route.targetCode());
         po.setExecuteStatus(transferResult.success() ? "SUCCESS" : "FAILED");
         po.setRetryCount(retryCount == null ? 0 : retryCount);
-        po.setRequestSnapshotJson(transferJsonMapper.toJson(route));
-        po.setResponseSnapshotJson(transferJsonMapper.toJson(transferResult.messages()));
+        po.setRequestSnapshotJson(transferJsonMapper.toJson(buildRequestSnapshot(route, retryCount)));
+        po.setResponseSnapshotJson(transferJsonMapper.toJson(buildResponseSnapshot(transferResult)));
         po.setDeliveredAt(LocalDateTime.now());
         transferDeliveryRecordRepository.insert(po);
     }
@@ -129,5 +129,32 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
 
     private TransferDeliveryRecord toDomain(TransferDeliveryRecordPO po) {
         return transferDeliveryRecordMapper.toDomain(po);
+    }
+
+    private java.util.Map<String, Object> buildRequestSnapshot(TransferRoute route, Integer retryCount) {
+        java.util.Map<String, Object> snapshot = new java.util.LinkedHashMap<>();
+        snapshot.put("routeId", route == null ? null : route.routeId());
+        snapshot.put("ruleId", route == null ? null : route.ruleId());
+        snapshot.put("targetType", route == null || route.targetType() == null ? null : route.targetType().name());
+        snapshot.put("targetCode", route == null ? null : route.targetCode());
+        snapshot.put("targetPath", route == null ? null : route.targetPath());
+        snapshot.put("renamePattern", route == null ? null : route.renamePattern());
+        snapshot.put("routeStatus", route == null || route.routeStatus() == null ? null : route.routeStatus().name());
+        snapshot.put("retryCount", retryCount == null ? 0 : retryCount);
+        snapshot.put("triggerType", route == null || route.routeMeta() == null ? null : route.routeMeta().get("triggerType"));
+        snapshot.put("maxRetryCount", route == null || route.routeMeta() == null ? null : route.routeMeta().get("maxRetryCount"));
+        snapshot.put("retryDelaySeconds", route == null || route.routeMeta() == null ? null : route.routeMeta().get("retryDelaySeconds"));
+        return snapshot;
+    }
+
+    private java.util.Map<String, Object> buildResponseSnapshot(TransferResult transferResult) {
+        java.util.Map<String, Object> snapshot = new java.util.LinkedHashMap<>();
+        java.util.List<String> messages = transferResult == null || transferResult.messages() == null ? java.util.List.of() : transferResult.messages();
+        int previewSize = Math.min(messages.size(), 3);
+        snapshot.put("success", transferResult != null && transferResult.success());
+        snapshot.put("messageCount", messages.size());
+        snapshot.put("messages", messages.subList(0, previewSize));
+        snapshot.put("truncated", messages.size() > previewSize);
+        return snapshot;
     }
 }

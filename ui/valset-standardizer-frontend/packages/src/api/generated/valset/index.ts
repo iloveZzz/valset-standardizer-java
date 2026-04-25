@@ -106,7 +106,7 @@ import { customInstance } from "../../mutator";
 
 export const getJavaSpringBootQuartzApi = () => {
   /**
-   * @summary 查询分拣路由配置列表。
+   * @summary 查询分拣路由列表。
    */
   const listRoutes = (params?: ListRoutesParams) => {
     return customInstance<TransferRouteViewDTO[]>({

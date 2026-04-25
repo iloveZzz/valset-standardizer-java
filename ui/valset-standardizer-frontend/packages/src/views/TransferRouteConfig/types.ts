@@ -146,6 +146,7 @@ export interface RouteConfigPage {
   getSourceIngestProgressText: (row: TransferRouteViewDTO | null) => string;
   getRouteFlowFactMessages: (row: TransferRouteViewDTO | null) => RouteFlowFactMessage[];
   getSourceIngestMessages: (row: TransferRouteViewDTO | null) => SourceIngestMessage[];
+  getRouteChainStatusColor: (statusKey: string) => string;
   getRuleDisplayName: (ruleId?: string | number | null) => string;
   triggerSource: (row: TransferRouteViewDTO) => Promise<void> | void;
   stopSource: (row: TransferRouteViewDTO) => Promise<void> | void;

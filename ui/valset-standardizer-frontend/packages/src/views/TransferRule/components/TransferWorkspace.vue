@@ -47,10 +47,10 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="20">
+    <YCard class="workspace-header" :bordered="false" :padding="12">
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
-          <h1>文件分拣规则配置</h1>
+          <h2>分拣规则</h2>
           <p>
             统一维护分拣规则编码、名称、版本、脚本与路由扩展信息，模板固定加载
             transfer_rule。
@@ -63,7 +63,7 @@ const actionConfig = useTableActionConfig({
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton theme="primary" @click="page.openCreateDialog">
+            <YButton type="primary" @click="page.openCreateDialog">
               <template #icon><PlusOutlined /></template>
               新建规则
             </YButton>
@@ -116,7 +116,7 @@ const actionConfig = useTableActionConfig({
                 </a-select>
               </a-form-item>
               <a-form-item class="workspace-table-toolbar-actions">
-                <YButton theme="primary" @click="page.runQuery">查询</YButton>
+                <YButton type="primary" @click="page.runQuery">查询</YButton>
                 <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
@@ -173,7 +173,11 @@ const actionConfig = useTableActionConfig({
         <template #scriptBody="{ value, onChange }">
           <YMonaco
             :model-value="value"
-            :language="page.resolveScriptEditorLanguage(page.templateValues.scriptLanguage)"
+            :language="
+              page.resolveScriptEditorLanguage(
+                page.templateValues.scriptLanguage,
+              )
+            "
             height="360px"
             @update:model-value="onChange"
           />

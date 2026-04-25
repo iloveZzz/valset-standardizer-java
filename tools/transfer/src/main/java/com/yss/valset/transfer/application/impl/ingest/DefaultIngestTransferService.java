@@ -261,8 +261,9 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                 Path storedPath = storeReceivedFile(source, analysisContext, draftTransferObject);
                 TransferObject transferObject = draftTransferObject.withLocalTempPath(storedPath == null ? null : storedPath.toAbsolutePath().toString());
                 TransferObject savedTransfer = transferObjectGateway.save(transferObject);
+                RecognitionContext taggingContext = toTaggingContext(analysisContext, savedTransfer);
                 try {
-                    transferTaggingUseCase.tag(savedTransfer, analysisContext, probeResult);
+                    transferTaggingUseCase.tag(savedTransfer, taggingContext, probeResult);
                 } catch (Exception tagException) {
                     log.warn("文件对象打标失败，继续执行路由，transferId={}，sourceId={}，sourceCode={}",
                             savedTransfer.transferId(),
@@ -738,6 +739,30 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
             throw new IllegalStateException("文件不存在或不是普通文件，path=" + path);
         }
         return path;
+    }
+
+    static RecognitionContext toTaggingContext(RecognitionContext analysisContext, TransferObject transferObject) {
+        if (transferObject == null) {
+            return analysisContext;
+        }
+        return new RecognitionContext(
+                analysisContext == null ? null : analysisContext.sourceType(),
+                analysisContext == null ? null : analysisContext.sourceCode(),
+                analysisContext == null ? transferObject.originalName() : analysisContext.fileName(),
+                analysisContext == null ? transferObject.mimeType() : analysisContext.mimeType(),
+                analysisContext == null ? transferObject.sizeBytes() : analysisContext.fileSize(),
+                analysisContext == null ? transferObject.mailFrom() : analysisContext.sender(),
+                analysisContext == null ? transferObject.mailTo() : analysisContext.recipientsTo(),
+                analysisContext == null ? transferObject.mailCc() : analysisContext.recipientsCc(),
+                analysisContext == null ? transferObject.mailBcc() : analysisContext.recipientsBcc(),
+                analysisContext == null ? transferObject.mailSubject() : analysisContext.subject(),
+                analysisContext == null ? transferObject.mailBody() : analysisContext.body(),
+                analysisContext == null ? transferObject.mailId() : analysisContext.mailId(),
+                analysisContext == null ? transferObject.mailProtocol() : analysisContext.mailProtocol(),
+                analysisContext == null ? transferObject.mailFolder() : analysisContext.mailFolder(),
+                transferObject.localTempPath(),
+                transferObject.fileMeta()
+        );
     }
 
     private Path storeReceivedFile(TransferSource source, RecognitionContext context, TransferObject transferObject) {

@@ -39,6 +39,34 @@ const safeJson = (value: unknown) => {
   }
 };
 
+const formatExecuteStatusLabel = (value: string | undefined) => {
+  const status = String(value ?? "")
+    .trim()
+    .toUpperCase();
+  if (!status) {
+    return "-";
+  }
+  if (status === "SUCCESS" || status === "SUCCEEDED" || status === "DONE" || status === "COMPLETED") {
+    return "成功";
+  }
+  if (status === "FAILED" || status === "FAIL" || status === "ERROR") {
+    return "失败";
+  }
+  if (status === "PENDING") {
+    return "待处理";
+  }
+  if (status === "RUNNING" || status === "PROCESSING") {
+    return "执行中";
+  }
+  if (status === "RETRYING") {
+    return "重试中";
+  }
+  if (status === "SKIPPED") {
+    return "已跳过";
+  }
+  return status;
+};
+
 export const useTransferPage = () => {
   const query = reactive<QueryState>(defaultQuery());
   const rows = ref<TransferDeliveryRecordViewDTO[]>([]);
@@ -162,7 +190,7 @@ export const useTransferPage = () => {
     void loadList(current, nextPageSize);
   };
 
-  const formatStatus = (value: string | undefined) => value || "-";
+  const formatStatus = (value: string | undefined) => formatExecuteStatusLabel(value);
 
   void loadList();
 

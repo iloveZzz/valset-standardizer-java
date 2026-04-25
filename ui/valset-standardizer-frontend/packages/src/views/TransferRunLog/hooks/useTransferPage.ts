@@ -299,8 +299,8 @@ export const useTransferPage = (): { page: RunLogPage } => {
       if (requestId !== analysisRequestId) {
         return;
       }
-      console.error("加载分拣运行日志分析失败:", error);
-      message.error("加载分拣运行日志分析失败");
+      console.error("加载运行日志分析失败:", error);
+      message.error("加载运行日志分析失败");
       analysis.value = {
         totalCount: 0,
         sourceCount: 0,
@@ -337,8 +337,8 @@ export const useTransferPage = (): { page: RunLogPage } => {
       if (requestId !== listRequestId) {
         return;
       }
-      console.error("加载分拣运行日志列表失败:", error);
-      message.error("加载分拣运行日志列表失败");
+      console.error("加载运行日志列表失败:", error);
+      message.error("加载运行日志列表失败");
       rows.value = [];
       total.value = 0;
       pagination.value.total = 0;
@@ -504,7 +504,7 @@ export const useTransferPage = (): { page: RunLogPage } => {
     applyStageStatusFilter,
     formatText: normalizeText,
     formatStageLabel,
-    formatStatus: normalizeText,
+    formatStatus: formatStatusLabel,
     formatStatusLabel,
     getStatusChipClass,
     runStatusTagColor: buildStatusColor,

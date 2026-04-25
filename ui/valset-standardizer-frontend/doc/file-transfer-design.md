@@ -425,7 +425,7 @@ public interface RuleEngine {
 
 ### `t_transfer_rule`
 
-保存识别和分拣规则配置。
+保存识别和分拣规则。
 
 ### `t_transfer_object`
 
