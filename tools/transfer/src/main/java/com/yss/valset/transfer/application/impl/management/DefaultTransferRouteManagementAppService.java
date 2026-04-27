@@ -26,6 +26,7 @@ import java.util.Map;
 public class DefaultTransferRouteManagementAppService implements TransferRouteManagementAppService {
 
     private final TransferRouteGateway transferRouteGateway;
+    private final TransferSourceScheduleCoordinator transferSourceScheduleCoordinator;
     private final TransferSecretCodec transferSecretCodec;
 
     @Override
@@ -35,9 +36,10 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
                                                  String ruleId,
                                                  String targetType,
                                                  String targetCode,
+                                                 Boolean enabled,
                                                  String routeStatus,
                                                  Integer limit) {
-        return transferRouteGateway.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, routeStatus, limit)
+        return transferRouteGateway.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, enabled, routeStatus, limit)
                 .stream()
                 .map(this::toView)
                 .toList();
@@ -67,12 +69,15 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
                 command.getRuleId(),
                 parseTargetType(command.getTargetType()),
                 command.getTargetCode(),
+                normalizePollCron(command.getPollCron(), existing),
                 command.getTargetPath(),
                 command.getRenamePattern(),
+                parseEnabled(command.getEnabled(), existing),
                 parseStatus(command.getRouteStatus(), existing),
                 routeMeta
         );
         TransferRoute saved = transferRouteGateway.save(transferRoute);
+        transferSourceScheduleCoordinator.syncSourceScheduleBySourceId(saved.sourceId());
         return TransferRouteMutationResponse.builder()
                 .operation(createMode ? "create" : "update")
                 .message("分拣路由保存成功")
@@ -82,10 +87,21 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
     }
 
     @Override
+    public TransferRouteMutationResponse enableRoute(String routeId) {
+        return setRouteEnabled(routeId, true);
+    }
+
+    @Override
+    public TransferRouteMutationResponse disableRoute(String routeId) {
+        return setRouteEnabled(routeId, false);
+    }
+
+    @Override
     public TransferRouteMutationResponse deleteRoute(String routeId) {
         TransferRoute existing = transferRouteGateway.findById(routeId)
                 .orElseThrow(() -> new IllegalStateException("未找到分拣路由，routeId=" + routeId));
         transferRouteGateway.deleteById(routeId);
+        transferSourceScheduleCoordinator.syncSourceScheduleBySourceId(existing.sourceId());
         return TransferRouteMutationResponse.builder()
                 .operation("delete")
                 .message("分拣路由删除成功")
@@ -103,10 +119,47 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
                 .ruleId(route.ruleId() == null ? null : String.valueOf(route.ruleId()))
                 .targetType(route.targetType() == null ? null : route.targetType().name())
                 .targetCode(route.targetCode())
+                .enabled(route.enabled())
+                .pollCron(route.pollCron())
                 .targetPath(route.targetPath())
                 .renamePattern(route.renamePattern())
                 .routeStatus(route.routeStatus() == null ? null : route.routeStatus().name())
                 .routeMeta(transferSecretCodec.maskMap(route.routeMeta()))
+                .build();
+    }
+
+    private TransferRouteMutationResponse setRouteEnabled(String routeId, boolean enabled) {
+        TransferRoute existing = transferRouteGateway.findById(routeId)
+                .orElseThrow(() -> new IllegalStateException("未找到分拣路由，routeId=" + routeId));
+        if (existing.enabled() == enabled) {
+            return TransferRouteMutationResponse.builder()
+                    .operation(enabled ? "enable" : "disable")
+                    .message(enabled ? "分拣路由已启用" : "分拣路由已停用")
+                    .formTemplateName(TransferFormTemplateNames.TRANSFER_ROUTE)
+                    .route(toView(existing))
+                    .build();
+        }
+        TransferRoute saved = transferRouteGateway.save(new TransferRoute(
+                existing.routeId(),
+                existing.sourceId(),
+                existing.sourceType(),
+                existing.sourceCode(),
+                existing.ruleId(),
+                existing.targetType(),
+                existing.targetCode(),
+                existing.pollCron(),
+                existing.targetPath(),
+                existing.renamePattern(),
+                enabled,
+                existing.routeStatus(),
+                existing.routeMeta()
+        ));
+        transferSourceScheduleCoordinator.syncSourceScheduleBySourceId(saved.sourceId());
+        return TransferRouteMutationResponse.builder()
+                .operation(enabled ? "enable" : "disable")
+                .message(enabled ? "分拣路由启用成功" : "分拣路由停用成功")
+                .formTemplateName(TransferFormTemplateNames.TRANSFER_ROUTE)
+                .route(toView(saved))
                 .build();
     }
 
@@ -137,5 +190,19 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
             return existing == null ? TransferStatus.PENDING : existing.routeStatus();
         }
         return TransferStatus.valueOf(value);
+    }
+
+    private boolean parseEnabled(Boolean value, TransferRoute existing) {
+        if (value == null) {
+            return existing == null || existing.enabled();
+        }
+        return Boolean.TRUE.equals(value);
+    }
+
+    private String normalizePollCron(String value, TransferRoute existing) {
+        if (value == null || value.isBlank()) {
+            return existing == null ? null : existing.pollCron();
+        }
+        return value.trim();
     }
 }

@@ -25,8 +25,6 @@ export interface TransferSourceViewDTO {
   ingestStatus?: string;
   /** 收取触发类型。 */
   ingestTriggerType?: string;
-  /** 轮询表达式。 */
-  pollCron?: string;
   /** 文件来源编码。 */
   sourceCode?: string;
   /** 文件来源主键。 */

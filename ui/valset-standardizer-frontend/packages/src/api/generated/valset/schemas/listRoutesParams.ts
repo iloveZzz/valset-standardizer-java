@@ -31,6 +31,10 @@ export type ListRoutesParams = {
    */
   targetCode?: string;
   /**
+   * 启用状态
+   */
+  enabled?: boolean;
+  /**
    * 查询上限
    */
   limit?: number;

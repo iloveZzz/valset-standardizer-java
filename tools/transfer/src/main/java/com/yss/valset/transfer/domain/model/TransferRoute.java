@@ -13,8 +13,10 @@ public record TransferRoute(
         String ruleId,
         TargetType targetType,
         String targetCode,
+        String pollCron,
         String targetPath,
         String renamePattern,
+        boolean enabled,
         TransferStatus routeStatus,
         Map<String, Object> routeMeta
 ) {

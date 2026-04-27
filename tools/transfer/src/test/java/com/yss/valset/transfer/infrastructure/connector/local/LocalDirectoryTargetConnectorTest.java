@@ -28,22 +28,22 @@ class LocalDirectoryTargetConnectorTest {
 
     @Test
     void should_copy_source_file_to_local_target_directory() throws Exception {
-        Path sourceFile = Files.createTempFile("valset-local-target-source-", ".txt");
-        Path targetDir = Files.createTempDirectory("valset-local-target-output-");
-        Files.writeString(sourceFile, "local target payload", StandardCharsets.UTF_8);
+        Path sourceFile = Files.createTempFile("valset-local-endpoint-source-", ".txt");
+        Path targetDir = Files.createTempDirectory("valset-local-endpoint-output-");
+        Files.writeString(sourceFile, "local endpoint payload", StandardCharsets.UTF_8);
 
         Map<String, Object> connectionConfig = new LinkedHashMap<>();
         connectionConfig.put("directory", targetDir.toString());
         connectionConfig.put("createParentDirectories", true);
         TransferTarget target = new TransferTarget(
                 101L,
-                "local-target",
+                "local-endpoint",
                 "本地目录目标",
                 TargetType.LOCAL_DIR,
                 true,
                 "archive/${yyyyMMdd}",
                 connectionConfig,
-                Map.of("scenario", "local-target-test"),
+                Map.of("scenario", "local-endpoint-test"),
                 Instant.now(),
                 Instant.now()
         );
@@ -57,9 +57,11 @@ class LocalDirectoryTargetConnectorTest {
                 "source-code",
                 "rule-001",
                 TargetType.LOCAL_DIR,
-                "local-target",
+                "local-endpoint",
+                null,
                 "route-out/${yyyyMMdd}",
                 "copied-${fileName}",
+                true,
                 TransferStatus.ROUTED,
                 routeMeta
         );
@@ -97,22 +99,23 @@ class LocalDirectoryTargetConnectorTest {
         TransferResult result = connector.send(context);
 
         assertThat(result.success()).isTrue();
+        assertThat(result.fileId()).isNull();
         Path expectedFile = targetDir
                 .resolve("route-out")
                 .resolve(java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE))
                 .resolve("copied-" + sourceFile.getFileName())
                 .normalize();
         assertThat(Files.exists(expectedFile)).isTrue();
-        assertThat(Files.readString(expectedFile, StandardCharsets.UTF_8)).isEqualTo("local target payload");
+        assertThat(Files.readString(expectedFile, StandardCharsets.UTF_8)).isEqualTo("local endpoint payload");
     }
 
     @Test
     void should_expand_home_directory_for_local_target_path() throws Exception {
-        Path sourceFile = Files.createTempFile("valset-local-target-source-", ".txt");
-        Path fakeHome = Files.createTempDirectory("valset-local-target-home-");
+        Path sourceFile = Files.createTempFile("valset-local-endpoint-source-", ".txt");
+        Path fakeHome = Files.createTempDirectory("valset-local-endpoint-home-");
         Path expectedRoot = fakeHome.resolve(".tmp").resolve("yss-transfer").resolve("outbox");
         String previousHome = System.getProperty("user.home");
-        Files.writeString(sourceFile, "local target payload", StandardCharsets.UTF_8);
+        Files.writeString(sourceFile, "local endpoint payload", StandardCharsets.UTF_8);
 
         try {
             System.setProperty("user.home", fakeHome.toString());
@@ -122,13 +125,13 @@ class LocalDirectoryTargetConnectorTest {
             connectionConfig.put("createParentDirectories", true);
             TransferTarget target = new TransferTarget(
                     102L,
-                    "local-target-home",
+                    "local-endpoint-home",
                     "本地目录目标",
                     TargetType.LOCAL_DIR,
                     true,
                     "~/.tmp/yss-transfer/outbox/",
                     connectionConfig,
-                    Map.of("scenario", "local-target-home-test"),
+                    Map.of("scenario", "local-endpoint-home-test"),
                     Instant.now(),
                     Instant.now()
             );
@@ -139,9 +142,11 @@ class LocalDirectoryTargetConnectorTest {
                     "source-code",
                     "rule-002",
                     TargetType.LOCAL_DIR,
-                    "local-target-home",
+                    "local-endpoint-home",
                     null,
                     null,
+                    null,
+                    true,
                     TransferStatus.ROUTED,
                     Map.of()
             );
@@ -179,9 +184,10 @@ class LocalDirectoryTargetConnectorTest {
             TransferResult result = connector.send(context);
 
             assertThat(result.success()).isTrue();
+            assertThat(result.fileId()).isNull();
             Path expectedFile = expectedRoot.resolve(sourceFile.getFileName()).normalize();
             assertThat(Files.exists(expectedFile)).isTrue();
-            assertThat(Files.readString(expectedFile, StandardCharsets.UTF_8)).isEqualTo("local target payload");
+            assertThat(Files.readString(expectedFile, StandardCharsets.UTF_8)).isEqualTo("local endpoint payload");
         } finally {
             if (previousHome != null) {
                 System.setProperty("user.home", previousHome);

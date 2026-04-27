@@ -31,7 +31,6 @@ public class TransferSourceSftpFormTemplate extends FormTemplate {
         values.put(TransferConfigKeys.CONNECT_TIMEOUT_MILLIS, 10000);
         values.put(TransferConfigKeys.CHANNEL_TIMEOUT_MILLIS, 10000);
         values.put("enabled", Boolean.FALSE);
-        values.put("pollCron", "0 */5 * * * ?");
         return values;
     }
 
@@ -58,7 +57,6 @@ public class TransferSourceSftpFormTemplate extends FormTemplate {
                         YssFormilyDsl.input("sourceCode", "来源编码").required().placeholder("例如：sftp-inbox").gridSpan(1),
                         YssFormilyDsl.input("sourceName", "来源名称").required().placeholder("例如：SFTP 收件目录").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
-                        YssFormilyDsl.slot("pollCron", "轮询表达式","pollCron").placeholder("0 */5 * * * ?").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.HOST, "主机地址").required().placeholder("sftp.example.com").gridSpan(1),
                         YssFormilyDsl.inputNumber(TransferConfigKeys.PORT, "端口").placeholder("22").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.USERNAME, "用户名").required().placeholder("sftp-user").gridSpan(1),

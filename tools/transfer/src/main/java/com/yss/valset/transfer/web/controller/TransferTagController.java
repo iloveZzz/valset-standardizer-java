@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 标签管理接口。
  */
 @RestController
-@RequestMapping("/api/transfer-tags")
+@RequestMapping("/transfer-tags")
 public class TransferTagController {
 
     private final TransferTagManagementAppService transferTagManagementAppService;

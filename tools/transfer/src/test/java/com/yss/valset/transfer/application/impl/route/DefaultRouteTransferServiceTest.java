@@ -134,9 +134,11 @@ class DefaultRouteTransferServiceTest {
                 source.sourceCode(),
                 "rule-1",
                 TargetType.FILESYS,
-                "target-1",
+                "endpoint-1",
+                null,
                 "/inbox",
                 null,
+                true,
                 TransferStatus.IDENTIFIED,
                 Map.of()
         );

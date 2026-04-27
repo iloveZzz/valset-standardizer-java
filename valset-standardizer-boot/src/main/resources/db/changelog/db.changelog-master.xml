@@ -24,6 +24,7 @@
     <include file="sql/common/transfer-source-ingest-columns-drop.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-init.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-init-fix.sql" relativeToChangelogFile="true"/>
+    <include file="sql/common/transfer-source-poll-cron-cleanup.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-email.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/tr.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/indexes.sql" relativeToChangelogFile="true"/>

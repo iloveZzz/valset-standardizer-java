@@ -28,7 +28,6 @@ public class TransferSourceLocalFormTemplate extends FormTemplate {
         values.put(TransferConfigKeys.INCLUDE_HIDDEN, Boolean.FALSE);
         values.put(TransferConfigKeys.LIMIT, 100);
         values.put("enabled", Boolean.FALSE);
-        values.put("pollCron", "0 */5 * * * ?");
         return values;
     }
 
@@ -56,7 +55,6 @@ public class TransferSourceLocalFormTemplate extends FormTemplate {
                         YssFormilyDsl.input("sourceName", "来源名称").required().placeholder("例如：本地收件箱").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
                         YssFormilyDsl.switchField(TransferConfigKeys.RECURSIVE, "递归扫描").gridSpan(1),
-                        YssFormilyDsl.slot("pollCron", "轮询表达式", "pollCron").placeholder("0 */5 * * * ?").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.DIRECTORY, "目录路径").required().placeholder("/tmp/yss-transfer/inbox").gridSpan(2),
                         YssFormilyDsl.switchField(TransferConfigKeys.INCLUDE_HIDDEN, "包含隐藏文件").gridSpan(1),
                         YssFormilyDsl.inputNumber(TransferConfigKeys.LIMIT, "扫描上限").placeholder("100").gridSpan(1)

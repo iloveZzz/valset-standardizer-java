@@ -11,8 +11,6 @@ export interface TransferSourceUpsertCommand {
   connectionConfig?: Object;
   /** 是否启用。 */
   enabled?: boolean;
-  /** 轮询表达式。 */
-  pollCron?: string;
   /** 文件来源编码。 */
   sourceCode: string;
   /** 文件来源主键。 */

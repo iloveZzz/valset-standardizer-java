@@ -11,13 +11,10 @@ import type {
   EvaluateMappingTaskCommand,
   ExtractDataTaskCommand,
   GetTemplateName2Params,
-  GetTemplateName3Params,
   GetTemplateNameParams,
   ImportMappingHintsRequest,
   ImportMappingSamplesRequest,
-  ListCheckpointItems1Params,
   ListCheckpointItemsParams,
-  ListCheckpoints1Params,
   ListCheckpointsParams,
   ListLogsParams,
   ListProfilesParams,
@@ -25,7 +22,6 @@ import type {
   ListRoutes1Params,
   ListRoutesParams,
   ListRulesParams,
-  ListSources1Params,
   ListSourcesParams,
   ListTargetsParams,
   ListTracesParams,
@@ -93,6 +89,7 @@ import type {
   SingleResultUploadValuationFileResponse,
   SingleResultValsetFileInfoViewDTO,
   SseEmitter,
+  StreamLogsParams,
   TransferRouteUpsertCommand,
   TransferRouteViewDTO,
   TransferRuleUpsertCommand,
@@ -106,11 +103,11 @@ import { customInstance } from "../../mutator";
 
 export const getJavaSpringBootQuartzApi = () => {
   /**
-   * @summary 查询分拣路由列表。
+   * @summary 查询分拣路由配置列表。
    */
   const listRoutes = (params?: ListRoutesParams) => {
     return customInstance<TransferRouteViewDTO[]>({
-      url: `/api/transfer-routes`,
+      url: `/transfer-routes`,
       method: "GET",
       params,
     });
@@ -121,7 +118,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getRoute = (routeId: string) => {
     return customInstance<TransferRouteViewDTO>({
-      url: `/api/transfer-routes/${routeId}`,
+      url: `/transfer-routes/${routeId}`,
       method: "GET",
     });
   };
@@ -131,7 +128,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const createParseTask = (parseTaskCommand: ParseTaskCommand) => {
     return customInstance<SingleResultTaskCreateResponse>({
-      url: `/api/tasks/parse`,
+      url: `/tasks/parse`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: parseTaskCommand,
@@ -143,7 +140,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const createMatchTask = (matchTaskCommand: MatchTaskCommand) => {
     return customInstance<SingleResultTaskCreateResponse>({
-      url: `/api/tasks/match`,
+      url: `/tasks/match`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: matchTaskCommand,
@@ -157,7 +154,7 @@ export const getJavaSpringBootQuartzApi = () => {
     evaluateMappingTaskCommand: EvaluateMappingTaskCommand,
   ) => {
     return customInstance<SingleResultTaskCreateResponse>({
-      url: `/api/tasks/evaluate`,
+      url: `/tasks/evaluate`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: evaluateMappingTaskCommand,
@@ -171,7 +168,7 @@ export const getJavaSpringBootQuartzApi = () => {
     extractDataTaskCommand: ExtractDataTaskCommand,
   ) => {
     return customInstance<SingleResultTaskCreateResponse>({
-      url: `/api/tasks/extract`,
+      url: `/tasks/extract`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: extractDataTaskCommand,
@@ -183,7 +180,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const queryTask = (taskId: number) => {
     return customInstance<SingleResultTaskViewDTO>({
-      url: `/api/tasks/${taskId}`,
+      url: `/tasks/${taskId}`,
       method: "GET",
     });
   };
@@ -193,7 +190,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listTemplates = () => {
     return customInstance<MultiResultTransferFormTemplateViewDTO>({
-      url: `/api/transfer-form-templates`,
+      url: `/transfer-form-templates`,
       method: "GET",
     });
   };
@@ -203,7 +200,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listGroupedTemplates = () => {
     return customInstance<MultiResultTransferFormTemplateGroupDTO>({
-      url: `/api/transfer-form-templates/grouped`,
+      url: `/transfer-form-templates/grouped`,
       method: "GET",
     });
   };
@@ -213,7 +210,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getTemplate = (name: string) => {
     return customInstance<SingleResultTransferFormTemplateViewDTO>({
-      url: `/api/transfer-form-templates/${name}`,
+      url: `/transfer-form-templates/${name}`,
       method: "GET",
     });
   };
@@ -225,7 +222,7 @@ export const getJavaSpringBootQuartzApi = () => {
     transferTargetUpsertCommand: TransferTargetUpsertCommand,
   ) => {
     return customInstance<SingleResultTransferTargetMutationResponse>({
-      url: `/api/transfer-targets`,
+      url: `/transfer-targets`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferTargetUpsertCommand,
@@ -237,7 +234,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listTargets = (params?: ListTargetsParams) => {
     return customInstance<MultiResultTransferTargetViewDTO>({
-      url: `/api/transfer-targets`,
+      url: `/transfer-targets`,
       method: "GET",
       params,
     });
@@ -248,7 +245,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getTarget = (targetId: string) => {
     return customInstance<SingleResultTransferTargetViewDTO>({
-      url: `/api/transfer-targets/${targetId}`,
+      url: `/transfer-targets/${targetId}`,
       method: "GET",
     });
   };
@@ -258,7 +255,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const deleteTarget = (targetId: string) => {
     return customInstance<SingleResultTransferTargetMutationResponse>({
-      url: `/api/transfer-targets/${targetId}`,
+      url: `/transfer-targets/${targetId}`,
       method: "DELETE",
     });
   };
@@ -271,7 +268,7 @@ export const getJavaSpringBootQuartzApi = () => {
     transferTargetUpsertCommand: TransferTargetUpsertCommand,
   ) => {
     return customInstance<SingleResultTransferTargetMutationResponse>({
-      url: `/api/transfer-targets/${targetId}`,
+      url: `/transfer-targets/${targetId}`,
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       data: transferTargetUpsertCommand,
@@ -283,7 +280,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getTemplateName = (params: GetTemplateNameParams) => {
     return customInstance<SingleResultString>({
-      url: `/api/transfer-targets/template-name`,
+      url: `/transfer-targets/template-name`,
       method: "GET",
       params,
     });
@@ -294,7 +291,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const createRule = (transferRuleUpsertCommand: TransferRuleUpsertCommand) => {
     return customInstance<SingleResultTransferRuleMutationResponse>({
-      url: `/api/transfer-rules`,
+      url: `/transfer-rules`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferRuleUpsertCommand,
@@ -306,7 +303,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listRules = (params?: ListRulesParams) => {
     return customInstance<MultiResultTransferRuleViewDTO>({
-      url: `/api/transfer-rules`,
+      url: `/transfer-rules`,
       method: "GET",
       params,
     });
@@ -317,7 +314,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getRule = (ruleId: string) => {
     return customInstance<SingleResultTransferRuleViewDTO>({
-      url: `/api/transfer-rules/${ruleId}`,
+      url: `/transfer-rules/${ruleId}`,
       method: "GET",
     });
   };
@@ -327,7 +324,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const deleteRule = (ruleId: string) => {
     return customInstance<SingleResultTransferRuleMutationResponse>({
-      url: `/api/transfer-rules/${ruleId}`,
+      url: `/transfer-rules/${ruleId}`,
       method: "DELETE",
     });
   };
@@ -340,7 +337,7 @@ export const getJavaSpringBootQuartzApi = () => {
     transferRuleUpsertCommand: TransferRuleUpsertCommand,
   ) => {
     return customInstance<SingleResultTransferRuleMutationResponse>({
-      url: `/api/transfer-rules/${ruleId}`,
+      url: `/transfer-rules/${ruleId}`,
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       data: transferRuleUpsertCommand,
@@ -352,7 +349,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getTemplateName1 = () => {
     return customInstance<SingleResultString>({
-      url: `/api/transfer-rules/template-name`,
+      url: `/transfer-rules/template-name`,
       method: "GET",
     });
   };
@@ -361,31 +358,6 @@ export const getJavaSpringBootQuartzApi = () => {
    * @summary 创建文件来源。
    */
   const createSource = (
-    transferSourceUpsertCommand: TransferSourceUpsertCommand,
-  ) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: transferSourceUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询文件来源列表。
-   */
-  const listSources = (params?: ListSourcesParams) => {
-    return customInstance<MultiResultTransferSourceViewDTO>({
-      url: `/api/transfer-sources`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 创建文件来源。
-   */
-  const createSource1 = (
     transferSourceUpsertCommand: TransferSourceUpsertCommand,
   ) => {
     return customInstance<SingleResultTransferSourceMutationResponse>({
@@ -399,7 +371,7 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 查询文件来源列表。
    */
-  const listSources1 = (params?: ListSources1Params) => {
+  const listSources = (params?: ListSourcesParams) => {
     return customInstance<MultiResultTransferSourceViewDTO>({
       url: `/transfer-sources`,
       method: "GET",
@@ -412,7 +384,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getSource = (sourceId: string) => {
     return customInstance<SingleResultTransferSourceViewDTO>({
-      url: `/api/transfer-sources/${sourceId}`,
+      url: `/transfer-sources/${sourceId}`,
       method: "GET",
     });
   };
@@ -422,7 +394,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const deleteSource = (sourceId: string) => {
     return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}`,
+      url: `/transfer-sources/${sourceId}`,
       method: "DELETE",
     });
   };
@@ -431,41 +403,6 @@ export const getJavaSpringBootQuartzApi = () => {
    * @summary 更新文件来源。
    */
   const updateSource = (
-    sourceId: string,
-    transferSourceUpsertCommand: TransferSourceUpsertCommand,
-  ) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}`,
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      data: transferSourceUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询文件来源详情。
-   */
-  const getSource1 = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceViewDTO>({
-      url: `/transfer-sources/${sourceId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 删除文件来源。
-   */
-  const deleteSource1 = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/transfer-sources/${sourceId}`,
-      method: "DELETE",
-    });
-  };
-
-  /**
-   * @summary 更新文件来源。
-   */
-  const updateSource1 = (
     sourceId: string,
     transferSourceUpsertCommand: TransferSourceUpsertCommand,
   ) => {
@@ -482,17 +419,6 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getTemplateName2 = (params: GetTemplateName2Params) => {
     return customInstance<SingleResultString>({
-      url: `/api/transfer-sources/template-name`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询来源对应表单模板名。
-   */
-  const getTemplateName3 = (params: GetTemplateName3Params) => {
-    return customInstance<SingleResultString>({
       url: `/transfer-sources/template-name`,
       method: "GET",
       params,
@@ -504,16 +430,6 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const triggerSource = (sourceId: string) => {
     return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}/trigger`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 立即触发一次文件来源收取。
-   */
-  const triggerSource1 = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
       url: `/transfer-sources/${sourceId}/trigger`,
       method: "POST",
     });
@@ -524,16 +440,6 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const stopSource = (sourceId: string) => {
     return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}/stop`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 停止文件来源收取。
-   */
-  const stopSource1 = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
       url: `/transfer-sources/${sourceId}/stop`,
       method: "POST",
     });
@@ -543,16 +449,6 @@ export const getJavaSpringBootQuartzApi = () => {
    * @summary 清空来源检查点记录。
    */
   const clearProcessedMailIds = (sourceId: string) => {
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/api/transfer-sources/${sourceId}/checkpoint/processed-mail-ids/clear`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 清空来源检查点记录。
-   */
-  const clearProcessedMailIds1 = (sourceId: string) => {
     return customInstance<SingleResultTransferSourceMutationResponse>({
       url: `/transfer-sources/${sourceId}/checkpoint/processed-mail-ids/clear`,
       method: "POST",
@@ -565,20 +461,6 @@ export const getJavaSpringBootQuartzApi = () => {
   const listCheckpoints = (
     sourceId: string,
     params?: ListCheckpointsParams,
-  ) => {
-    return customInstance<MultiResultTransferSourceCheckpointViewDTO>({
-      url: `/api/transfer-sources/${sourceId}/checkpoints`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询来源检查点列表。
-   */
-  const listCheckpoints1 = (
-    sourceId: string,
-    params?: ListCheckpoints1Params,
   ) => {
     return customInstance<MultiResultTransferSourceCheckpointViewDTO>({
       url: `/transfer-sources/${sourceId}/checkpoints`,
@@ -595,20 +477,6 @@ export const getJavaSpringBootQuartzApi = () => {
     params?: ListCheckpointItemsParams,
   ) => {
     return customInstance<MultiResultTransferSourceCheckpointItemViewDTO>({
-      url: `/api/transfer-sources/${sourceId}/checkpoint-items`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询来源检查点去重记录。
-   */
-  const listCheckpointItems1 = (
-    sourceId: string,
-    params?: ListCheckpointItems1Params,
-  ) => {
-    return customInstance<MultiResultTransferSourceCheckpointItemViewDTO>({
       url: `/transfer-sources/${sourceId}/checkpoint-items`,
       method: "GET",
       params,
@@ -619,16 +487,6 @@ export const getJavaSpringBootQuartzApi = () => {
    * @summary 订阅来源收取进度。
    */
   const subscribeProgress = (sourceId: string) => {
-    return customInstance<SseEmitter>({
-      url: `/api/transfer-sources/${sourceId}/progress/stream`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 订阅来源收取进度。
-   */
-  const subscribeProgress1 = (sourceId: string) => {
     return customInstance<SseEmitter>({
       url: `/transfer-sources/${sourceId}/progress/stream`,
       method: "GET",
@@ -643,7 +501,7 @@ export const getJavaSpringBootQuartzApi = () => {
     formData.append("data", importStandardSubjectsRequest);
 
     return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/api/knowledge/standard-subjects/import`,
+      url: `/knowledge/standard-subjects/import`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -660,7 +518,7 @@ export const getJavaSpringBootQuartzApi = () => {
     formData.append("file", importMappingHintsRequest.file);
 
     return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/api/knowledge/mapping-hints/import`,
+      url: `/knowledge/mapping-hints/import`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -677,7 +535,7 @@ export const getJavaSpringBootQuartzApi = () => {
     formData.append("file", importMappingSamplesRequest.file);
 
     return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/api/knowledge/mapping-samples/import`,
+      url: `/knowledge/mapping-samples/import`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -689,7 +547,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const createTag = (transferTagUpsertCommand: TransferTagUpsertCommand) => {
     return customInstance<SingleResultTransferTagMutationResponse>({
-      url: `/api/transfer-tags`,
+      url: `/transfer-tags`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferTagUpsertCommand,
@@ -701,7 +559,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const pageTags = (params?: PageTagsParams) => {
     return customInstance<PageResultTransferTagViewDTO>({
-      url: `/api/transfer-tags`,
+      url: `/transfer-tags`,
       method: "GET",
       params,
     });
@@ -712,7 +570,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getTag = (tagId: string) => {
     return customInstance<SingleResultTransferTagViewDTO>({
-      url: `/api/transfer-tags/${tagId}`,
+      url: `/transfer-tags/${tagId}`,
       method: "GET",
     });
   };
@@ -722,7 +580,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const deleteTag = (tagId: string) => {
     return customInstance<SingleResultTransferTagMutationResponse>({
-      url: `/api/transfer-tags/${tagId}`,
+      url: `/transfer-tags/${tagId}`,
       method: "DELETE",
     });
   };
@@ -735,7 +593,7 @@ export const getJavaSpringBootQuartzApi = () => {
     transferTagUpsertCommand: TransferTagUpsertCommand,
   ) => {
     return customInstance<SingleResultTransferTagMutationResponse>({
-      url: `/api/transfer-tags/${tagId}`,
+      url: `/transfer-tags/${tagId}`,
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       data: transferTagUpsertCommand,
@@ -745,9 +603,9 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary getTemplateName
    */
-  const getTemplateName4 = () => {
+  const getTemplateName3 = () => {
     return customInstance<SingleResultString>({
-      url: `/api/transfer-tags/template-name`,
+      url: `/transfer-tags/template-name`,
       method: "GET",
     });
   };
@@ -760,7 +618,7 @@ export const getJavaSpringBootQuartzApi = () => {
     transferTagTestCommand: TransferTagTestCommand,
   ) => {
     return customInstance<SingleResultTransferTagTestResultDTO>({
-      url: `/api/transfer-tags/${tagId}/test`,
+      url: `/transfer-tags/${tagId}/test`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferTagTestCommand,
@@ -770,12 +628,12 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 上传外部估值表并完成 ODS 原始提取。
    */
-  const upload = (boolean: boolean) => {
+  const upload = (uploadRequest: File) => {
     const formData = new FormData();
     formData.append("data", uploadRequest.toString());
 
     return customInstance<SingleResultUploadValuationFileResponse>({
-      url: `/api/valuation-workflows/upload`,
+      url: `/valuation-workflows/upload`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -813,7 +671,7 @@ export const getJavaSpringBootQuartzApi = () => {
     }
 
     return customInstance<SingleResultTaskViewDTO>({
-      url: `/api/valuation-workflows/analyze`,
+      url: `/valuation-workflows/analyze`,
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       data: formUrlEncoded,
@@ -848,7 +706,7 @@ export const getJavaSpringBootQuartzApi = () => {
     }
 
     return customInstance<SingleResultTaskViewDTO>({
-      url: `/api/valuation-workflows/match`,
+      url: `/valuation-workflows/match`,
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       data: formUrlEncoded,
@@ -858,12 +716,12 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 上传文件并串联执行提取、解析、匹配。
    */
-  const fullProcess = (boolean: boolean) => {
+  const fullProcess = (fullProcessRequest: File) => {
     const formData = new FormData();
     formData.append("data", fullProcessRequest.toString());
 
     return customInstance<SingleResultFullWorkflowResponse>({
-      url: `/api/valuation-workflows/full-process`,
+      url: `/valuation-workflows/full-process`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -875,7 +733,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const queryRawData = (fileId: number, params?: QueryRawDataParams) => {
     return customInstance<SingleResultRawValuationDataViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/raw-data`,
+      url: `/valuation-workflows/${fileId}/raw-data`,
       method: "GET",
       params,
     });
@@ -886,7 +744,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const queryStgData = (fileId: number) => {
     return customInstance<SingleResultStgExternalValuationViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/stg-data`,
+      url: `/valuation-workflows/${fileId}/stg-data`,
       method: "GET",
     });
   };
@@ -896,7 +754,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const queryDwdData = (fileId: number) => {
     return customInstance<SingleResultDwdExternalValuationViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/dwd-data`,
+      url: `/valuation-workflows/${fileId}/dwd-data`,
       method: "GET",
     });
   };
@@ -906,7 +764,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const queryMatchResults = (fileId: number) => {
     return customInstance<SingleResultMatchResultViewDTO>({
-      url: `/api/valuation-workflows/${fileId}/match-results`,
+      url: `/valuation-workflows/${fileId}/match-results`,
       method: "GET",
     });
   };
@@ -914,12 +772,12 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 手动上传文件并执行 ODS 提取。
    */
-  const upload1 = (boolean: boolean) => {
+  const upload1 = (upload1Request: File) => {
     const formData = new FormData();
     formData.append("data", upload1Request.toString());
 
     return customInstance<SingleResultUploadValuationFileResponse>({
-      url: `/api/files/upload`,
+      url: `/files/upload`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -931,7 +789,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const queryFileInfo = (fileId: number) => {
     return customInstance<SingleResultValsetFileInfoViewDTO>({
-      url: `/api/files/${fileId}`,
+      url: `/files/${fileId}`,
       method: "GET",
     });
   };
@@ -941,7 +799,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const searchFileInfos = (params?: SearchFileInfosParams) => {
     return customInstance<MultiResultValsetFileInfoViewDTO>({
-      url: `/api/files`,
+      url: `/files`,
       method: "GET",
       params,
     });
@@ -952,7 +810,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const queryIngestLogs = (fileId: number) => {
     return customInstance<MultiResultValsetFileIngestLogViewDTO>({
-      url: `/api/files/${fileId}/ingest-logs`,
+      url: `/files/${fileId}/ingest-logs`,
       method: "GET",
     });
   };
@@ -962,7 +820,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const querySheetStyles = (fileId: number) => {
     return customInstance<MultiResultValuationSheetStyleViewDTO>({
-      url: `/api/files/${fileId}/sheet-styles`,
+      url: `/files/${fileId}/sheet-styles`,
       method: "GET",
     });
   };
@@ -974,7 +832,7 @@ export const getJavaSpringBootQuartzApi = () => {
     transferRouteUpsertCommand: TransferRouteUpsertCommand,
   ) => {
     return customInstance<SingleResultTransferRouteMutationResponse>({
-      url: `/api/transfer-route-configs`,
+      url: `/transfer-route-configs`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferRouteUpsertCommand,
@@ -986,7 +844,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listRoutes1 = (params?: ListRoutes1Params) => {
     return customInstance<MultiResultTransferRouteViewDTO>({
-      url: `/api/transfer-route-configs`,
+      url: `/transfer-route-configs`,
       method: "GET",
       params,
     });
@@ -997,7 +855,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getRoute1 = (routeId: string) => {
     return customInstance<SingleResultTransferRouteViewDTO>({
-      url: `/api/transfer-route-configs/${routeId}`,
+      url: `/transfer-route-configs/${routeId}`,
       method: "GET",
     });
   };
@@ -1007,7 +865,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const deleteRoute = (routeId: string) => {
     return customInstance<SingleResultTransferRouteMutationResponse>({
-      url: `/api/transfer-route-configs/${routeId}`,
+      url: `/transfer-route-configs/${routeId}`,
       method: "DELETE",
     });
   };
@@ -1020,10 +878,30 @@ export const getJavaSpringBootQuartzApi = () => {
     transferRouteUpsertCommand: TransferRouteUpsertCommand,
   ) => {
     return customInstance<SingleResultTransferRouteMutationResponse>({
-      url: `/api/transfer-route-configs/${routeId}`,
+      url: `/transfer-route-configs/${routeId}`,
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       data: transferRouteUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary 启用路由配置。
+   */
+  const enableRoute = (routeId: string) => {
+    return customInstance<SingleResultTransferRouteMutationResponse>({
+      url: `/transfer-route-configs/${routeId}/enable`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary 停用路由配置。
+   */
+  const disableRoute = (routeId: string) => {
+    return customInstance<SingleResultTransferRouteMutationResponse>({
+      url: `/transfer-route-configs/${routeId}/disable`,
+      method: "POST",
     });
   };
 
@@ -1032,7 +910,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listLogs = (params?: ListLogsParams) => {
     return customInstance<MultiResultTransferRunLogViewDTO>({
-      url: `/api/transfer-run-logs`,
+      url: `/transfer-run-logs`,
       method: "GET",
       params,
     });
@@ -1043,7 +921,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const pageLogs = (params?: PageLogsParams) => {
     return customInstance<PageResultTransferRunLogViewDTO>({
-      url: `/api/transfer-run-logs/page`,
+      url: `/transfer-run-logs/page`,
       method: "GET",
       params,
     });
@@ -1054,7 +932,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const analyzeLogs = (params?: AnalyzeLogsParams) => {
     return customInstance<SingleResultTransferRunLogAnalysisViewDTO>({
-      url: `/api/transfer-run-logs/analysis`,
+      url: `/transfer-run-logs/analysis`,
       method: "GET",
       params,
     });
@@ -1067,10 +945,21 @@ export const getJavaSpringBootQuartzApi = () => {
     transferRunLogRedeliverCommand: TransferRunLogRedeliverCommand,
   ) => {
     return customInstance<SingleResultTransferRunLogRedeliverResponse>({
-      url: `/api/transfer-run-logs/redeliver`,
+      url: `/transfer-run-logs/redeliver`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferRunLogRedeliverCommand,
+    });
+  };
+
+  /**
+   * @summary 订阅文件收发运行日志流。
+   */
+  const streamLogs = (params?: StreamLogsParams) => {
+    return customInstance<SseEmitter>({
+      url: `/transfer-run-logs/stream`,
+      method: "GET",
+      params,
     });
   };
 
@@ -1079,7 +968,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getObject = (transferId: string) => {
     return customInstance<SingleResultTransferObjectViewDTO>({
-      url: `/api/transfer-objects/${transferId}`,
+      url: `/transfer-objects/${transferId}`,
       method: "GET",
     });
   };
@@ -1089,7 +978,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const pageObjects = (params?: PageObjectsParams) => {
     return customInstance<PageResultTransferObjectViewDTO>({
-      url: `/api/transfer-objects`,
+      url: `/transfer-objects`,
       method: "GET",
       params,
     });
@@ -1100,7 +989,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const analyzeObjects = (params?: AnalyzeObjectsParams) => {
     return customInstance<SingleResultTransferObjectAnalysisViewDTO>({
-      url: `/api/transfer-objects/analysis`,
+      url: `/transfer-objects/analysis`,
       method: "GET",
       params,
     });
@@ -1113,7 +1002,7 @@ export const getJavaSpringBootQuartzApi = () => {
     parseRuleProfileUpsertCommand: ParseRuleProfileUpsertCommand,
   ) => {
     return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/api/parse-rules/profiles`,
+      url: `/parse-rules/profiles`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: parseRuleProfileUpsertCommand,
@@ -1125,7 +1014,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listProfiles = (params?: ListProfilesParams) => {
     return customInstance<MultiResultParseRuleProfileViewDTO>({
-      url: `/api/parse-rules/profiles`,
+      url: `/parse-rules/profiles`,
       method: "GET",
       params,
     });
@@ -1136,7 +1025,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getProfile = (profileId: number) => {
     return customInstance<SingleResultParseRuleBundleViewDTO>({
-      url: `/api/parse-rules/profiles/${profileId}`,
+      url: `/parse-rules/profiles/${profileId}`,
       method: "GET",
     });
   };
@@ -1149,7 +1038,7 @@ export const getJavaSpringBootQuartzApi = () => {
     parseRuleProfileUpsertCommand: ParseRuleProfileUpsertCommand,
   ) => {
     return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/api/parse-rules/profiles/${profileId}`,
+      url: `/parse-rules/profiles/${profileId}`,
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       data: parseRuleProfileUpsertCommand,
@@ -1161,7 +1050,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const validateProfile = (profileId: number) => {
     return customInstance<SingleResultParseRuleValidationViewDTO>({
-      url: `/api/parse-rules/profiles/${profileId}/validate`,
+      url: `/parse-rules/profiles/${profileId}/validate`,
       method: "POST",
     });
   };
@@ -1171,7 +1060,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const runRegression = (profileId: number) => {
     return customInstance<SingleResultParseRuleRegressionViewDTO>({
-      url: `/api/parse-rules/profiles/${profileId}/regression`,
+      url: `/parse-rules/profiles/${profileId}/regression`,
       method: "POST",
     });
   };
@@ -1184,7 +1073,7 @@ export const getJavaSpringBootQuartzApi = () => {
     parseRulePublishCommand: ParseRulePublishCommand,
   ) => {
     return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/api/parse-rules/profiles/${profileId}/publish`,
+      url: `/parse-rules/profiles/${profileId}/publish`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: parseRulePublishCommand,
@@ -1199,7 +1088,7 @@ export const getJavaSpringBootQuartzApi = () => {
     parseRuleRollbackCommand: ParseRuleRollbackCommand,
   ) => {
     return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/api/parse-rules/profiles/${profileId}/rollback`,
+      url: `/parse-rules/profiles/${profileId}/rollback`,
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: parseRuleRollbackCommand,
@@ -1214,7 +1103,7 @@ export const getJavaSpringBootQuartzApi = () => {
     formData.append("data", importProfileRequest.toString());
 
     return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/api/parse-rules/profiles/import`,
+      url: `/parse-rules/profiles/import`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -1226,7 +1115,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listTraces = (params?: ListTracesParams) => {
     return customInstance<MultiResultParseRuleTraceViewDTO>({
-      url: `/api/parse-rules/traces`,
+      url: `/parse-rules/traces`,
       method: "GET",
       params,
     });
@@ -1237,7 +1126,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const listRecords = (params?: ListRecordsParams) => {
     return customInstance<MultiResultTransferDeliveryRecordViewDTO>({
-      url: `/api/transfer-delivery-records`,
+      url: `/transfer-delivery-records`,
       method: "GET",
       params,
     });
@@ -1248,7 +1137,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const pageRecords = (params?: PageRecordsParams) => {
     return customInstance<PageResultTransferDeliveryRecordViewDTO>({
-      url: `/api/transfer-delivery-records/page`,
+      url: `/transfer-delivery-records/page`,
       method: "GET",
       params,
     });
@@ -1259,7 +1148,7 @@ export const getJavaSpringBootQuartzApi = () => {
    */
   const getRecord = (deliveryId: string) => {
     return customInstance<SingleResultTransferDeliveryRecordViewDTO>({
-      url: `/api/transfer-delivery-records/${deliveryId}`,
+      url: `/transfer-delivery-records/${deliveryId}`,
       method: "GET",
     });
   };
@@ -1289,28 +1178,16 @@ export const getJavaSpringBootQuartzApi = () => {
     getTemplateName1,
     createSource,
     listSources,
-    createSource1,
-    listSources1,
     getSource,
     deleteSource,
     updateSource,
-    getSource1,
-    deleteSource1,
-    updateSource1,
     getTemplateName2,
-    getTemplateName3,
     triggerSource,
-    triggerSource1,
     stopSource,
-    stopSource1,
     clearProcessedMailIds,
-    clearProcessedMailIds1,
     listCheckpoints,
-    listCheckpoints1,
     listCheckpointItems,
-    listCheckpointItems1,
     subscribeProgress,
-    subscribeProgress1,
     importStandardSubjects,
     importMappingHints,
     importMappingSamples,
@@ -1319,7 +1196,7 @@ export const getJavaSpringBootQuartzApi = () => {
     getTag,
     deleteTag,
     updateTag,
-    getTemplateName4,
+    getTemplateName3,
     testTag,
     upload,
     analyze,
@@ -1339,10 +1216,13 @@ export const getJavaSpringBootQuartzApi = () => {
     getRoute1,
     deleteRoute,
     updateRoute,
+    enableRoute,
+    disableRoute,
     listLogs,
     pageLogs,
     analyzeLogs,
     redeliver,
+    streamLogs,
     getObject,
     pageObjects,
     analyzeObjects,
@@ -1485,16 +1365,6 @@ export type ListSourcesResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listSources"]>
   >
 >;
-export type CreateSource1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createSource1"]>
-  >
->;
-export type ListSources1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listSources1"]>
-  >
->;
 export type GetSourceResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getSource"]>
@@ -1510,32 +1380,10 @@ export type UpdateSourceResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateSource"]>
   >
 >;
-export type GetSource1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getSource1"]>
-  >
->;
-export type DeleteSource1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteSource1"]>
-  >
->;
-export type UpdateSource1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateSource1"]>
-  >
->;
 export type GetTemplateName2Result = NonNullable<
   Awaited<
     ReturnType<
       ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName2"]
-    >
-  >
->;
-export type GetTemplateName3Result = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName3"]
     >
   >
 >;
@@ -1544,19 +1392,9 @@ export type TriggerSourceResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["triggerSource"]>
   >
 >;
-export type TriggerSource1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["triggerSource1"]>
-  >
->;
 export type StopSourceResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stopSource"]>
-  >
->;
-export type StopSource1Result = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stopSource1"]>
   >
 >;
 export type ClearProcessedMailIdsResult = NonNullable<
@@ -1566,23 +1404,9 @@ export type ClearProcessedMailIdsResult = NonNullable<
     >
   >
 >;
-export type ClearProcessedMailIds1Result = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["clearProcessedMailIds1"]
-    >
-  >
->;
 export type ListCheckpointsResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpoints"]>
-  >
->;
-export type ListCheckpoints1Result = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpoints1"]
-    >
   >
 >;
 export type ListCheckpointItemsResult = NonNullable<
@@ -1592,24 +1416,10 @@ export type ListCheckpointItemsResult = NonNullable<
     >
   >
 >;
-export type ListCheckpointItems1Result = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["listCheckpointItems1"]
-    >
-  >
->;
 export type SubscribeProgressResult = NonNullable<
   Awaited<
     ReturnType<
       ReturnType<typeof getJavaSpringBootQuartzApi>["subscribeProgress"]
-    >
-  >
->;
-export type SubscribeProgress1Result = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["subscribeProgress1"]
     >
   >
 >;
@@ -1655,10 +1465,10 @@ export type UpdateTagResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateTag"]>
   >
 >;
-export type GetTemplateName4Result = NonNullable<
+export type GetTemplateName3Result = NonNullable<
   Awaited<
     ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName4"]
+      ReturnType<typeof getJavaSpringBootQuartzApi>["getTemplateName3"]
     >
   >
 >;
@@ -1751,6 +1561,16 @@ export type UpdateRouteResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateRoute"]>
   >
 >;
+export type EnableRouteResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["enableRoute"]>
+  >
+>;
+export type DisableRouteResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["disableRoute"]>
+  >
+>;
 export type ListLogsResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listLogs"]>>
 >;
@@ -1765,6 +1585,11 @@ export type AnalyzeLogsResult = NonNullable<
 export type RedeliverResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["redeliver"]>
+  >
+>;
+export type StreamLogsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["streamLogs"]>
   >
 >;
 export type GetObjectResult = NonNullable<

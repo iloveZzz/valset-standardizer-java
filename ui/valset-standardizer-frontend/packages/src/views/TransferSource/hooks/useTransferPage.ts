@@ -38,7 +38,6 @@ type SourceFormState = {
   sourceName: string;
   sourceType: string;
   enabled: boolean;
-  pollCron: string;
   connectionConfigText: string;
   sourceMetaText: string;
 };
@@ -47,7 +46,6 @@ const SOURCE_TEMPLATE_BASE_KEYS = [
   "sourceCode",
   "sourceName",
   "enabled",
-  "pollCron",
 ] as const;
 
 const api = getJavaSpringBootQuartzApi();
@@ -72,7 +70,6 @@ const defaultForm = (): SourceFormState => ({
   sourceName: "",
   sourceType: GetTemplateName1SourceType.LOCAL_DIR,
   enabled: true,
-  pollCron: "",
   connectionConfigText: "{}",
   sourceMetaText: "{}",
 });
@@ -218,7 +215,6 @@ export const useTransferPage = (): { page: SourcePage } => {
       sourceCode: row?.sourceCode ?? templateValues.value.sourceCode ?? "",
       sourceName: row?.sourceName ?? templateValues.value.sourceName ?? "",
       enabled: row?.enabled ?? templateValues.value.enabled ?? true,
-      pollCron: row?.pollCron ?? templateValues.value.pollCron ?? "",
       mailCondition: normalizeMailCondition(currentMailCondition),
     };
   };
@@ -376,7 +372,6 @@ export const useTransferPage = (): { page: SourcePage } => {
     formState.sourceType =
       row.sourceType || GetTemplateName1SourceType.LOCAL_DIR;
     formState.enabled = row.enabled ?? true;
-    formState.pollCron = row.pollCron || "";
     formState.connectionConfigText = stringifyJson(row.connectionConfig);
     formState.sourceMetaText = stringifyJson(row.sourceMeta);
   };
@@ -487,7 +482,6 @@ export const useTransferPage = (): { page: SourcePage } => {
       sourceName: String(templateValues.value.sourceName ?? "").trim(),
       sourceType: String(formState.sourceType ?? "").trim(),
       enabled: Boolean(templateValues.value.enabled),
-      pollCron: String(templateValues.value.pollCron ?? "").trim() || undefined,
       connectionConfig:
         Object.keys(templateConfig).length > 0 ? templateConfig : undefined,
       sourceMeta: undefined,
@@ -503,7 +497,6 @@ export const useTransferPage = (): { page: SourcePage } => {
     sourceName: String(row.sourceName ?? "").trim(),
     sourceType: String(row.sourceType ?? "").trim(),
     enabled,
-    pollCron: String(row.pollCron ?? "").trim() || undefined,
     connectionConfig: row.connectionConfig,
     sourceMeta: row.sourceMeta,
   });

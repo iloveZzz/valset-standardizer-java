@@ -13,6 +13,7 @@ export interface RouteFormState {
   sourceId?: string;
   sourceCode: string;
   sourceType: string;
+  pollCron: string;
   targetCode: string;
   targetType: string;
   targetPath: string;
@@ -90,6 +91,7 @@ export interface RouteConfigPage {
     ruleId: string;
     targetCode: string;
     targetType: string;
+    enabled: string;
     limit: number;
   };
   sourceTypeOptions: Array<{ label: string; value: GetTemplateName1SourceType }>;
@@ -99,6 +101,7 @@ export interface RouteConfigPage {
   ruleOptions: RouteSelectOption[];
   selectLoading: boolean;
   sourceActionLoadingIds: Record<string, boolean>;
+  routeActionLoadingIds: Record<string, boolean>;
   sourceIngestStates: Record<
     string,
     {
@@ -128,6 +131,8 @@ export interface RouteConfigPage {
   openEditDialog: (row: TransferRouteViewDTO) => Promise<void> | void;
   openDetailDrawer: (row: TransferRouteViewDTO) => Promise<void> | void;
   confirmDelete: (row: TransferRouteViewDTO) => void;
+  toggleRouteEnabled: (row: TransferRouteViewDTO) => Promise<void> | void;
+  isRouteToggling: (routeId?: string) => boolean;
   getSourceIngestState: (row: TransferRouteViewDTO | null) => {
     ingestBusy?: boolean;
     ingestFinishedAt?: string;
@@ -147,6 +152,7 @@ export interface RouteConfigPage {
   getRouteFlowFactMessages: (row: TransferRouteViewDTO | null) => RouteFlowFactMessage[];
   getSourceIngestMessages: (row: TransferRouteViewDTO | null) => SourceIngestMessage[];
   getRouteChainStatusColor: (statusKey: string) => string;
+  getRouteEnabledLabel: (enabled?: boolean | null) => string;
   getRuleDisplayName: (ruleId?: string | number | null) => string;
   triggerSource: (row: TransferRouteViewDTO) => Promise<void> | void;
   stopSource: (row: TransferRouteViewDTO) => Promise<void> | void;

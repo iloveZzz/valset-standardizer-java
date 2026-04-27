@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  computed,
   nextTick,
   onBeforeUnmount,
   onMounted,
@@ -14,173 +13,287 @@ import {
   PauseCircleOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons-vue";
+import type { TransferRunLogViewDTO } from "@/api/generated/valset/schemas";
 
-type RunLogConsoleItem = {
+type RunLogConsoleSeedItem = {
   key: string;
   title: string;
   stageLabel: string;
   statusLabel: string;
-  statusColor: string;
   createdAt?: string;
   description: string;
 };
 
+type RunLogConsoleStreamItem = TransferRunLogViewDTO & {
+  seedTitle?: string;
+  seedStageLabel?: string;
+  seedStatusLabel?: string;
+  seedDescription?: string;
+};
+
+type StageFilterValue = "ALL" | "RECEIVE" | "INGEST" | "ROUTE" | "DELIVER";
+
 const props = withDefaults(
   defineProps<{
-    items: RunLogConsoleItem[];
+    items: RunLogConsoleSeedItem[];
     height?: number;
     autoStart?: boolean;
+    baseUrl?: string;
+    streamUrl?: string;
+    streamLimit?: number;
   }>(),
   {
     height: 486,
     autoStart: true,
+    baseUrl: import.meta.env.VITE_API_BASE_URL || "/api",
+    streamUrl: "/transfer-run-logs/stream",
+    streamLimit: 2000,
   },
 );
 
 const monacoRef = ref<any>(null);
-const isStreaming = ref(true);
+const isStreaming = ref(false);
 const logCount = ref(0);
 const totalLines = ref(0);
-let streamTimer: number | null = null;
-let batchCounter = 1;
+const eventSourceRef = ref<EventSource | null>(null);
+const seenLogIds = new Set<string>();
+const editorHeight = "100%";
+const stageFilter = ref<StageFilterValue>("ALL");
+const lastSeedSignature = ref("");
 
-const LOG_LEVELS = ["INFO", "WARN", "ERROR", "DEBUG"];
-const consoleSeed = ref("");
-
-const seedLineCount = computed(() =>
-  consoleSeed.value
-    ? consoleSeed.value
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean).length
-    : 0,
-);
-
-const generateLogLine = (): string => {
-  const timestamp = new Date().toISOString();
-  const level = LOG_LEVELS[Math.floor(Math.random() * LOG_LEVELS.length)];
-  const messages = [
-    "来源收取成功，等待路由判定",
-    "来源附件解析完成，进入规则匹配",
-    "路由命中目标 财务中心，准备投递",
-    "路由命中目标 业务归档，准备投递",
-    "目标投递成功，结果已写入日志",
-    "目标投递失败，等待下一次重试",
-    "来源线程完成增量扫描",
-    "路由结果已刷新，目标状态同步完成",
-  ];
-  const stageLabels = ["收取", "识别", "路由", "投递"];
-  const message = messages[Math.floor(Math.random() * messages.length)];
-  const stage = stageLabels[Math.floor(Math.random() * stageLabels.length)];
-  const threadId = Math.floor(Math.random() * 100);
-
-  return `[${timestamp}] [${level}] [${stage}] [Thread-${threadId}] ${message}`;
+const formatTimestamp = (value?: string) => {
+  if (!value) {
+    return new Date().toISOString().slice(0, 19).replace("T", " ");
+  }
+  return value.replace("T", " ").slice(0, 19);
 };
 
-const buildSeedContent = () =>
-  props.items
-    .map((item) => {
-      const timestamp = item.createdAt || new Date().toISOString();
-      const description = item.description ? ` - ${item.description}` : "";
-      const sourceTitle = item.title || "来源";
-      const stageLabel = item.stageLabel || "路由";
-      const statusLabel = item.statusLabel || "运行中";
-      return `[${timestamp}] [${statusLabel}] [${stageLabel}] ${sourceTitle}${description}`;
-    })
-    .join("\n");
+const stageFilterOptions: Array<{ label: string; value: StageFilterValue }> = [
+  { label: "全部", value: "ALL" },
+  { label: "来源收取", value: "RECEIVE" },
+  { label: "规则识别", value: "INGEST" },
+  { label: "路由分发", value: "ROUTE" },
+  { label: "目标投递", value: "DELIVER" },
+];
 
-const syncContent = async () => {
+const resolveKey = (item: RunLogConsoleStreamItem) => {
+  return (
+    item.runLogId ||
+    `${item.createdAt || ""}-${item.sourceId || ""}-${item.transferId || ""}-${item.routeId || ""}-${item.runStage || ""}-${item.runStatus || ""}`
+  );
+};
+
+const normalizeStageFilter = (value?: string) => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toUpperCase();
+  if (
+    normalized === "RECEIVE" ||
+    normalized === "INGEST" ||
+    normalized === "ROUTE" ||
+    normalized === "DELIVER"
+  ) {
+    return normalized as StageFilterValue;
+  }
+  return "ALL";
+};
+
+const matchesStageFilter = (item: RunLogConsoleStreamItem) => {
+  if (stageFilter.value === "ALL") {
+    return true;
+  }
+  return normalizeStageFilter(item.runStage) === stageFilter.value;
+};
+
+const buildLogLine = (item: RunLogConsoleStreamItem) => {
+  const timestamp = formatTimestamp(item.createdAt);
+  const description =
+    item.errorMessage || item.logMessage || item.seedDescription || "暂无说明";
+
+  return `[${timestamp}] ${description}`;
+};
+
+const appendLogs = async (items: RunLogConsoleStreamItem[]) => {
   await nextTick();
-  const content = buildSeedContent();
-  consoleSeed.value = content;
-
   if (!monacoRef.value) {
-    totalLines.value = seedLineCount.value;
     return;
   }
 
-  monacoRef.value.clearContent?.();
-  if (content) {
-    monacoRef.value.appendContent(content);
-  }
-  totalLines.value = monacoRef.value.getLineCount?.() ?? seedLineCount.value;
-  logCount.value = seedLineCount.value;
-};
-
-function appendGeneratedLogs(count: number) {
-  if (!monacoRef.value) {
+  if (!items.length) {
+    totalLines.value = monacoRef.value.getLineCount?.() ?? totalLines.value;
     return;
   }
 
   const lines: string[] = [];
-  for (let index = 0; index < count; index += 1) {
-    lines.push(generateLogLine());
-    logCount.value += 1;
+  for (const item of items) {
+    if (!matchesStageFilter(item)) {
+      continue;
+    }
+    const key = resolveKey(item);
+    if (seenLogIds.has(key)) {
+      continue;
+    }
+    seenLogIds.add(key);
+    lines.push(buildLogLine(item));
   }
 
+  if (!lines.length) {
+    totalLines.value = monacoRef.value.getLineCount?.() ?? totalLines.value;
+    return;
+  }
+
+  logCount.value += lines.length;
   monacoRef.value.appendContent(lines.join("\n"));
   totalLines.value = monacoRef.value.getLineCount?.() ?? totalLines.value;
-}
+};
+
+const seedInitialLogs = async () => {
+  if (!props.items.length || !monacoRef.value) {
+    return;
+  }
+  const signature = `${stageFilter.value}::${props.items
+    .map((item) =>
+      [
+        item.key,
+        item.createdAt ?? "",
+        item.stageLabel,
+        item.statusLabel,
+        item.description,
+      ].join("@"),
+    )
+    .join("|")}`;
+  if (lastSeedSignature.value === signature) {
+    return;
+  }
+  lastSeedSignature.value = signature;
+  await appendLogs(
+    props.items.map((item) => ({
+      runLogId: item.key,
+      createdAt: item.createdAt,
+      seedTitle: item.title,
+      seedStageLabel: item.stageLabel,
+      seedStatusLabel: item.statusLabel,
+      seedDescription: item.description,
+    })),
+  );
+};
+
+const buildStreamUrl = () => {
+  const baseUrl = props.baseUrl.endsWith("/")
+    ? props.baseUrl.slice(0, -1)
+    : props.baseUrl;
+  const url = new URL(`${baseUrl}${props.streamUrl}`, window.location.origin);
+  url.searchParams.set("limit", String(props.streamLimit));
+  if (stageFilter.value !== "ALL") {
+    url.searchParams.set("runStage", stageFilter.value);
+  }
+  return `${url.pathname}${url.search}${url.hash}`;
+};
+
+const parsePayload = (event: MessageEvent): RunLogConsoleStreamItem[] => {
+  try {
+    const parsed = JSON.parse(String(event.data || ""));
+    const data = parsed?.data || parsed?.item || parsed;
+    if (!data) {
+      return [];
+    }
+    return Array.isArray(data) ? data : [data];
+  } catch {
+    return [];
+  }
+};
+
+const handleStreamMessage = async (event: MessageEvent) => {
+  const items = parsePayload(event);
+  if (!items.length) {
+    return;
+  }
+  await appendLogs(items);
+};
+
+const resetContent = async () => {
+  await nextTick();
+  if (!monacoRef.value) {
+    return;
+  }
+
+  seenLogIds.clear();
+  monacoRef.value.clearContent?.();
+  logCount.value = 0;
+  totalLines.value = 0;
+};
+
+const restartStream = () => {
+  stopLogStream();
+  void resetContent().then(() => {
+    lastSeedSignature.value = "";
+    void seedInitialLogs().then(() => {
+      if (props.autoStart) {
+        startLogStream();
+      }
+    });
+  });
+};
 
 const startLogStream = () => {
-  if (isStreaming.value) {
+  if (
+    eventSourceRef.value &&
+    eventSourceRef.value.readyState !== EventSource.CLOSED
+  ) {
+    isStreaming.value = true;
     return;
   }
 
   isStreaming.value = true;
-  logCount.value = seedLineCount.value;
-  appendGeneratedLogs(8);
+  const eventSource = new EventSource(buildStreamUrl());
+  eventSourceRef.value = eventSource;
 
-  streamTimer = window.setInterval(() => {
-    if (!monacoRef.value) {
-      return;
+  eventSource.onopen = () => {
+    isStreaming.value = true;
+  };
+
+  eventSource.onmessage = (event) => {
+    void handleStreamMessage(event);
+  };
+
+  eventSource.onerror = () => {
+    if (eventSource.readyState === EventSource.CLOSED) {
+      isStreaming.value = false;
     }
-
-    appendGeneratedLogs(Math.floor(Math.random() * 6) + 5);
-  }, 500);
+  };
 };
 
 const stopLogStream = () => {
-  if (streamTimer) {
-    clearInterval(streamTimer);
-    streamTimer = null;
-  }
+  eventSourceRef.value?.close();
+  eventSourceRef.value = null;
   isStreaming.value = false;
 };
 
 const clearLogs = () => {
-  stopLogStream();
-  monacoRef.value?.clearContent?.();
-  totalLines.value = 0;
-  logCount.value = 0;
-  batchCounter = 1;
+  void resetContent();
 };
 
 const scrollToBottom = () => {
   monacoRef.value?.scrollToBottom?.();
 };
 
-const handleScrollEnd = () => {
-  if (!monacoRef.value || !isStreaming.value) {
-    return;
-  }
-
-  const moreLogs = Array.from({ length: 20 }, () => generateLogLine());
-  logCount.value += moreLogs.length;
-  monacoRef.value.appendContent(
-    `\n--- 批次 ${batchCounter++} ---\n${moreLogs.join("\n")}`,
-  );
-  totalLines.value = monacoRef.value.getLineCount?.() ?? totalLines.value;
-};
-
 const handleLineExceed = (lines: number) => {
   console.log(`运行日志行数超出限制：${lines} 行，已自动清理`);
+};
+
+const updateStageFilter = (value: StageFilterValue) => {
+  if (stageFilter.value === value) {
+    return;
+  }
+  stageFilter.value = value;
+  lastSeedSignature.value = "";
+  restartStream();
 };
 
 watch(
   () => props.items,
   () => {
-    void syncContent();
+    void seedInitialLogs();
   },
   {
     deep: true,
@@ -189,7 +302,7 @@ watch(
 );
 
 onMounted(() => {
-  void syncContent().then(() => {
+  void seedInitialLogs().then(() => {
     if (props.autoStart) {
       startLogStream();
     }
@@ -224,6 +337,15 @@ onBeforeUnmount(() => {
 
     <div class="overview-run-log-console-toolbar">
       <a-space wrap>
+        <a-tag
+          v-for="item in stageFilterOptions"
+          :key="item.value"
+          :color="stageFilter === item.value ? 'blue' : 'default'"
+          class="stage-filter-tag"
+          @click="updateStageFilter(item.value)"
+        >
+          {{ item.label }}
+        </a-tag>
         <YButton
           v-if="!isStreaming"
           type="primary"
@@ -231,7 +353,7 @@ onBeforeUnmount(() => {
           @click="startLogStream"
         >
           <template #icon><PlayCircleOutlined /></template>
-          开始日志流
+          开始实时日志
         </YButton>
         <YButton v-else danger size="small" @click="stopLogStream">
           <template #icon><PauseCircleOutlined /></template>
@@ -254,11 +376,10 @@ onBeforeUnmount(() => {
         :model-value="''"
         :log-mode="true"
         :max-lines="2000"
-        height="100%"
+        :height="editorHeight"
         :scroll-threshold="10"
         :auto-scroll="true"
         language="shell"
-        :height="props.height"
         :readonly="true"
         :options="{
           fontSize: 13,
@@ -267,7 +388,6 @@ onBeforeUnmount(() => {
           minimap: { enabled: false },
           wordWrap: 'off',
         }"
-        @scroll-end="handleScrollEnd"
         @line-exceed="handleLineExceed"
       />
     </div>
@@ -316,13 +436,21 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
+}
+
+.stage-filter-tag {
+  cursor: pointer;
+  user-select: none;
 }
 
 .overview-run-log-console-editor {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .blinking-dot {

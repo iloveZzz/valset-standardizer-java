@@ -47,11 +47,6 @@ export const useTransferSourceColumns = () =>
       width: 180,
       formatter: (params: any) => formatDateTime(params?.cellValue),
     },
-    {
-      field: "pollCron",
-      title: "轮询表达式",
-      width: 180,
-    },
   ]);
 
 export const useTransferTargetColumns = () =>
@@ -173,6 +168,21 @@ export const useTransferObjectColumns = () =>
       field: "sourceType",
       title: "来源类型",
       width: 120,
+    },
+    {
+      field: "deliveryStatus",
+      title: "投递状态",
+      width: 120,
+      formatter: (params: any) => {
+        const value = String(
+          params?.cellValue ?? params?.row?.deliveryStatus ?? "",
+        )
+          .trim()
+          .toUpperCase();
+        return value === "已投递" || value === "DELIVERED" || value === "SUCCESS"
+          ? "已投递"
+          : "未投递";
+      },
     },
     {
       field: "status",

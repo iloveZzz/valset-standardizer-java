@@ -24,6 +24,7 @@ public interface TransferRouteGateway {
                                    String ruleId,
                                    String targetType,
                                    String targetCode,
+                                   Boolean enabled,
                                    String routeStatus,
                                    Integer limit);
 

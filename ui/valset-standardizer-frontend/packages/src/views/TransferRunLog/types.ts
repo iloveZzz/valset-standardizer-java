@@ -22,6 +22,15 @@ export type RunLogAnalysis = {
   stageAnalyses: RunLogStageStat[];
 };
 
+export type RunLogConsoleSeedItem = {
+  key: string;
+  title: string;
+  stageLabel: string;
+  statusLabel: string;
+  createdAt?: string;
+  description: string;
+};
+
 export type RunLogQueryState = {
   sourceId: string;
   transferId: string;
@@ -35,25 +44,21 @@ export type RunLogQueryState = {
 export type RunLogPage = {
   loading: boolean;
   analysisLoading: boolean;
-  redeliverLoading: boolean;
+  cleanupLoading: boolean;
   rows: TransferRunLogViewDTO[];
   total: number;
   pagination: YTablePagination;
   query: RunLogQueryState;
-  setTableRef: (instance: any) => void;
   selectedRow: TransferRunLogViewDTO | null;
-  selectedFailedCount: number;
   detailVisible: boolean;
   analysis: RunLogAnalysis;
+  consoleItems: RunLogConsoleSeedItem[];
   openDetailDrawer: (row: TransferRunLogViewDTO) => void;
   runQuery: () => void;
   resetQuery: () => void;
-  refreshSelectedRows: () => void;
-  redeliverSelectedFailedLogs: () => void;
-  redeliverRunLog: (row: TransferRunLogViewDTO) => void;
+  cleanupLogs: () => void;
   closeDetail: () => void;
   handlePageChange: (params: { current: number; pageSize: number }) => void;
-  clearSelectedRows: () => void;
   applyStageFilter: (runStage?: string) => void;
   applyStageStatusFilter: (runStage?: string, runStatus?: string) => void;
   formatText: (value: unknown) => string;
@@ -63,5 +68,4 @@ export type RunLogPage = {
   getStatusChipClass: (value?: string) => string;
   runStatusTagColor: (value?: string) => string;
   safeJson: (value: unknown) => string;
-  isFailedDeliverRow: (row: TransferRunLogViewDTO | null | undefined) => boolean;
 };

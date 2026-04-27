@@ -7,6 +7,7 @@ import java.util.List;
  */
 public record TransferResult(
         boolean success,
+        String fileId,
         List<String> messages
 ) {
 }

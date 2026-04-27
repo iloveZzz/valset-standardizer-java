@@ -4,7 +4,7 @@
 
 最短验证路径：
 
-1. 创建一个启用的邮件来源，带 `pollCron`
+1. 创建一个启用的邮件来源
 2. 创建一个启用的规则，规则脚本返回 `true`
 3. 创建一个启用的目标
 4. 创建一条路由配置
@@ -31,7 +31,7 @@
 
 当前实现支持两种触发方式：
 
-- 来源配置中的 `pollCron` 定时触发
+- 路由配置中的 `pollCron` 定时触发
 - 来源详情的手动立即触发
 
 ## 2. 前置条件
@@ -64,13 +64,14 @@
 
 - `sourceType=EMAIL`
 - `enabled=true`
-- `pollCron=0 */5 * * * ?`
 - `connectionConfig.protocol=imap` 或 `imaps`
 - `connectionConfig.host`
 - `connectionConfig.port`
 - `connectionConfig.username`
 - `connectionConfig.password`
 - `connectionConfig.folder=INBOX`
+
+如果要验证自动触发，请把 `pollCron` 配到路由配置里。
 
 ### 3.2 规则
 
@@ -91,7 +92,7 @@
 
 ### 4.1 cron 自动触发
 
-如果来源已经配置了 `pollCron`，保存后会自动注册 db-scheduler 的循环任务。
+如果路由已经配置了 `pollCron`，保存后会自动注册 db-scheduler 的循环任务。
 
 当 cron 到点时，系统会按以下顺序执行：
 
@@ -117,7 +118,7 @@ curl -X POST "http://localhost:8080/api/transfer-sources/{sourceId}/trigger"
 1. 创建来源
 2. 创建规则
 3. 创建目标
-4. 创建路由配置
+4. 创建路由配置并填写 `pollCron`
 5. 调用来源手动触发接口
 6. 查看文件主对象
 7. 查看路由结果
@@ -289,7 +290,7 @@ curl "http://localhost:8080/api/transfer-delivery-records?transferId=1"
 按下面顺序执行，满足对应结果即视为通过：
 
 1. 创建来源，返回结果中 `sourceId` 不为空。
-2. 创建来源后查看详情，确认 `pollCron` 已保存。
+2. 创建来源后查看详情，确认来源基础信息已保存。
 3. 创建目标，返回结果中 `targetId` 不为空。
 4. 创建规则，返回结果中 `ruleId` 不为空。
 5. 创建路由配置，返回结果中 `routeId` 不为空。

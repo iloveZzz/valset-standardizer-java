@@ -265,7 +265,7 @@ export const useTransferPage = (): { page: TagPage } => {
     templateLoading.value = true;
     try {
       const name =
-        unwrapSingleResult(await api.getTemplateName4()) || TEMPLATE_NAME;
+        unwrapSingleResult(await api.getTemplateName3()) || TEMPLATE_NAME;
       const template = unwrapSingleResult(await api.getTemplate(name));
       if (requestId !== templateRequestId) {
         return;

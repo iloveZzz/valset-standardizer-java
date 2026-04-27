@@ -30,7 +30,6 @@ public class TransferSourceEmailFormTemplate extends FormTemplate {
         values.put(TransferConfigKeys.START_TLS, Boolean.FALSE);
         values.put(TransferConfigKeys.LIMIT, 100);
         values.put("enabled", Boolean.FALSE);
-        values.put("pollCron", "0 */5 * * * ?");
         return values;
     }
 
@@ -57,7 +56,6 @@ public class TransferSourceEmailFormTemplate extends FormTemplate {
                         YssFormilyDsl.input("sourceCode", "来源编码").required().placeholder("例如：mail-inbox").gridSpan(1),
                         YssFormilyDsl.input("sourceName", "来源名称").required().placeholder("例如：邮件收件箱").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
-                        YssFormilyDsl.slot("pollCron", "轮询表达式","pollCron").placeholder("0 */5 * * * ?").gridSpan(1),
                         YssFormilyDsl.select(TransferConfigKeys.PROTOCOL, "协议")
                                 .required()
                                 .options(

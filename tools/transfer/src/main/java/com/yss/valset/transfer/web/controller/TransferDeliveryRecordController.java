@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 文件投递结果查询接口。
  */
 @RestController
-@RequestMapping("/api/transfer-delivery-records")
+@RequestMapping("/transfer-delivery-records")
 public class TransferDeliveryRecordController {
 
     private final TransferDeliveryRecordQueryService transferDeliveryRecordQueryService;

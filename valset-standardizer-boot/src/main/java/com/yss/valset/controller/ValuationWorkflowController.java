@@ -30,7 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
  * 外部估值全流程接口。
  */
 @RestController
-@RequestMapping("/api/valuation-workflows")
+@RequestMapping("/valuation-workflows")
 public class ValuationWorkflowController {
 
     private final ValuationWorkflowAppService valuationWorkflowAppService;

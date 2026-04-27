@@ -12,6 +12,7 @@ import type {
   TransferObjectSizeAnalysisViewDTO,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
+import { customInstance } from "@/api/mutator";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
   ObjectAnalysis,
@@ -115,6 +116,16 @@ const formatObjectStatus = (value: string | undefined) => {
   return status;
 };
 
+const formatDeliveryStatus = (value: string | undefined) => {
+  const status = String(value ?? "")
+    .trim()
+    .toUpperCase();
+  if (status === "已投递" || status === "DELIVERED" || status === "SUCCESS") {
+    return "已投递";
+  }
+  return "未投递";
+};
+
 const normalizeStatusCounts = (
   statusCounts: TransferObjectStatusCountViewDTO[] | undefined,
 ): ObjectAnalysis["sourceAnalyses"][number]["statusCounts"] => {
@@ -204,6 +215,8 @@ const normalizeAnalysis = (
 
   return {
     totalCount: Number(value?.totalCount ?? 0),
+    taggedCount: Number(value?.taggedCount ?? 0),
+    untaggedCount: Number(value?.untaggedCount ?? 0),
     sourceAnalyses,
     sizeAnalysis: normalizeSizeAnalysis(value?.sizeAnalysis),
   };
@@ -223,8 +236,11 @@ export const useTransferPage = () => {
   });
   const selectedRow = ref<TransferObjectViewDTO | null>(null);
   const detailVisible = ref(false);
+  const redeliverLoading = ref(false);
   const analysis = ref<ObjectAnalysis>({
     totalCount: 0,
+    taggedCount: 0,
+    untaggedCount: 0,
     sourceAnalyses: [],
     sizeAnalysis: {
       totalCount: 0,
@@ -377,6 +393,8 @@ export const useTransferPage = () => {
       message.error("加载主对象分析失败");
       analysis.value = {
         totalCount: 0,
+        taggedCount: 0,
+        untaggedCount: 0,
         sourceAnalyses: [],
         sizeAnalysis: {
           totalCount: 0,
@@ -396,6 +414,49 @@ export const useTransferPage = () => {
       loadAnalysis(),
       loadList(1, pagination.value.pageSize || 10),
     ]);
+  };
+
+  const redeliverObject = async (row: TransferObjectViewDTO) => {
+    const transferId = String(row?.transferId ?? "").trim();
+    if (!transferId) {
+      message.warning("文件主对象缺少主键，无法重新投递");
+      return;
+    }
+    if (formatDeliveryStatus(row.deliveryStatus) === "已投递") {
+      message.warning("该对象已经投递完成，无需重新投递");
+      return;
+    }
+    if (redeliverLoading.value) {
+      return;
+    }
+
+    redeliverLoading.value = true;
+    try {
+      const res = await customInstance<any>({
+        url: "/transfer-objects/redeliver",
+        method: "POST",
+        data: {
+          transferIds: [transferId],
+        },
+      });
+      const result = unwrapSingleResult(res);
+      const successCount = Number(result?.successCount ?? 0);
+      const failureCount = Number(result?.failureCount ?? 0);
+      const skippedCount = Number(result?.skippedCount ?? 0);
+      const requestedCount = Number(result?.requestedCount ?? 1);
+      const summary = `已处理 ${requestedCount} 条，成功 ${successCount} 条，失败 ${failureCount} 条，跳过 ${skippedCount} 条`;
+      if (failureCount > 0 || skippedCount > 0) {
+        message.warning(summary);
+      } else {
+        message.success(summary);
+      }
+      await reloadAnalysisAndList();
+    } catch (error) {
+      console.error("重新投递文件主对象失败:", error);
+      message.error("重新投递文件主对象失败");
+    } finally {
+      redeliverLoading.value = false;
+    }
   };
 
   const openDetailDrawer = async (row: TransferObjectViewDTO) => {
@@ -435,6 +496,8 @@ export const useTransferPage = () => {
   };
 
   const formatStatus = (value: string | undefined) => formatObjectStatus(value);
+  const formatDeliveryStatusText = (value: string | undefined) =>
+    formatDeliveryStatus(value);
   const formatSourceTypeLabel = (value: string | undefined) => {
     const text = String(value ?? "").trim();
     return text || "-";
@@ -494,6 +557,7 @@ export const useTransferPage = () => {
   const page = reactive({
     loading: listLoading,
     analysisLoading,
+    redeliverLoading,
     rows,
     tableData,
     total,
@@ -510,6 +574,7 @@ export const useTransferPage = () => {
     detailVisible,
     handlePageChange,
     openDetailDrawer,
+    redeliverObject,
     runQuery,
     resetQuery,
     applySourceFilter,
@@ -520,6 +585,7 @@ export const useTransferPage = () => {
       detailVisible.value = false;
     },
     formatStatus,
+    formatDeliveryStatus: formatDeliveryStatusText,
     formatSourceTypeLabel,
     formatStatusLabel,
     formatTagLabel,

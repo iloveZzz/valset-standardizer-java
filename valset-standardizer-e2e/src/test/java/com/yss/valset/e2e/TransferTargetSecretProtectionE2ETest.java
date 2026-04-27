@@ -118,7 +118,7 @@ public class TransferTargetSecretProtectionE2ETest {
                 ))
         );
         assertThat(createResponse.status()).isEqualTo(201);
-        JsonNode created = readJson(createResponse).get("target");
+        JsonNode created = readJson(createResponse).get("endpoint");
         assertThat(created.get("targetCode").asText()).isEqualTo(targetCode);
         assertThat(created.get("connectionConfig").get("password").asText()).isBlank();
 
@@ -163,7 +163,7 @@ public class TransferTargetSecretProtectionE2ETest {
                 )))
         );
         assertThat(updateWithSecretResponse.status()).isEqualTo(200);
-        JsonNode updated = readJson(updateWithSecretResponse).get("target");
+        JsonNode updated = readJson(updateWithSecretResponse).get("endpoint");
         assertThat(updated.get("connectionConfig").get("password").asText()).isBlank();
         assertThat(transferTargetGateway.findById(created.get("targetId").asLong()))
                 .isPresent()

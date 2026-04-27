@@ -27,7 +27,6 @@ public class TransferSourceS3FormTemplate extends FormTemplate {
         values.put(TransferConfigKeys.USE_PATH_STYLE, Boolean.FALSE);
         values.put(TransferConfigKeys.LIMIT, 100);
         values.put("enabled", Boolean.FALSE);
-        values.put("pollCron", "0 */5 * * * ?");
         return values;
     }
 
@@ -54,7 +53,6 @@ public class TransferSourceS3FormTemplate extends FormTemplate {
                         YssFormilyDsl.input("sourceCode", "来源编码").required().placeholder("例如：s3-inbox").gridSpan(1),
                         YssFormilyDsl.input("sourceName", "来源名称").required().placeholder("例如：S3 收件桶").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
-                        YssFormilyDsl.slot("pollCron", "轮询表达式","pollCron").placeholder("0 */5 * * * ?").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.BUCKET, "Bucket").required().placeholder("例如：my-bucket").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.REGION, "Region").required().placeholder("cn-north-1").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.ENDPOINT_URL, "Endpoint").placeholder("可选，自建对象存储地址").gridSpan(2),

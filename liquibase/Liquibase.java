@@ -149,7 +149,7 @@ public class Liquibase implements AutoCloseable {
     /**
      * Convenience method for {@link #update(Contexts)} that runs in "no context mode".
      *
-     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" target="_top">contexts</a> in documentation
+     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" endpoint="_top">contexts</a> in documentation
      */
     public void update() throws LiquibaseException {
         this.update(new Contexts());
@@ -159,7 +159,7 @@ public class Liquibase implements AutoCloseable {
      * Convenience method for {@link #update(Contexts)} that constructs the Context object from the passed string.
      * To run in "no context mode", pass a null or empty "".
      *
-     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" target="_top">contexts</a> in documentation
+     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" endpoint="_top">contexts</a> in documentation
      */
     public void update(String contexts) throws LiquibaseException {
         this.update(new Contexts(contexts));
@@ -169,7 +169,7 @@ public class Liquibase implements AutoCloseable {
      * Executes Liquibase "update" logic which ensures that the configured {@link Database} is up to date according to
      * the configured changelog file. To run in "no context mode", pass a null or empty context object.
      *
-     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" target="_top">contexts</a> in documentation
+     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" endpoint="_top">contexts</a> in documentation
      */
     public void update(Contexts contexts) throws LiquibaseException {
         update(contexts, new LabelExpression());
@@ -181,8 +181,8 @@ public class Liquibase implements AutoCloseable {
      * @param contexts        the set of contexts to execute the update against. If empty or {@code null}, all contexts are used.
      * @param labelExpression the label expression to use during the update. If empty or {@code null}, no labels are used.
      * @throws LiquibaseException If an error occurs while executing the update.
-     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" target="_top">Liquibase Contexts</a> in the Liquibase documentation
-     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/labels.html" target="_top">Liquibase Labels</a> in the Liquibase documentation
+     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" endpoint="_top">Liquibase Contexts</a> in the Liquibase documentation
+     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/labels.html" endpoint="_top">Liquibase Labels</a> in the Liquibase documentation
      */
     public void update(Contexts contexts, LabelExpression labelExpression) throws LiquibaseException {
         update(contexts, labelExpression, true);
@@ -198,8 +198,8 @@ public class Liquibase implements AutoCloseable {
      *                             assume that the metadata tables already exist and will not attempt to create them.
      * @throws LiquibaseException if an error occurs while updating the database schema.
      *
-     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" target="_top">Liquibase Contexts</a>
-     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/labels.html" target="_top">Liquibase Labels</a>
+     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/contexts.html" endpoint="_top">Liquibase Contexts</a>
+     * @see <a href="https://docs.liquibase.com/concepts/changelogs/attributes/labels.html" endpoint="_top">Liquibase Labels</a>
      */
     public void update(Contexts contexts, LabelExpression labelExpression, boolean checkLiquibaseTables) throws LiquibaseException {
         runInScope(() -> {

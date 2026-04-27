@@ -945,6 +945,10 @@
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.5fr);
 }
 
+.route-config-grid--schedule {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .route-config-path-item {
   grid-column: 1 / -1;
 }
@@ -958,6 +962,59 @@
 .route-config-form .ant-form-item-label > label {
   color: #0f172a;
   font-weight: 600;
+}
+
+.route-cron-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 11px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.route-cron-select:hover {
+  border-color: #4096ff;
+}
+
+.route-cron-select-icon {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.route-cron-select-value {
+  flex: 1;
+  overflow: hidden;
+  color: rgba(0, 0, 0, 0.88);
+  font-family: SFMono-Regular, Consolas, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.route-cron-popover-content {
+  width: 460px;
+}
+
+.route-cron-popover-content .y-cron {
+  height: 296px;
+  border: none;
+}
+
+.route-cron-popover-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.route-cron-popover .ant-popover-inner {
+  padding: 12px;
 }
 
 @keyframes routeFlowRise {

@@ -42,9 +42,11 @@ class TransferDeliveryGatewayImplTest {
                 "source-code",
                 "rule-1",
                 TargetType.FILESYS,
-                "target-1",
+                "endpoint-1",
+                null,
                 "/inbox",
                 "rename-{name}",
+                true,
                 TransferStatus.IDENTIFIED,
                 Map.of("triggerType", "MANUAL", "maxRetryCount", 3, "retryDelaySeconds", 60)
         )));
@@ -56,7 +58,7 @@ class TransferDeliveryGatewayImplTest {
                 transferDeliveryRecordMapper
         );
 
-        TransferResult result = new TransferResult(false, List.of("message-1", "message-2", "message-3", "message-4"));
+        TransferResult result = new TransferResult(false, null, List.of("message-1", "message-2", "message-3", "message-4"));
         gateway.recordResult("route-1", "transfer-1", result, 2);
 
         ArgumentCaptor<Object> snapshotCaptor = ArgumentCaptor.forClass(Object.class);
@@ -71,11 +73,12 @@ class TransferDeliveryGatewayImplTest {
 
         assertThat(requestSnapshot).containsEntry("routeId", "route-1");
         assertThat(requestSnapshot).containsEntry("ruleId", "rule-1");
-        assertThat(requestSnapshot).containsEntry("targetCode", "target-1");
+        assertThat(requestSnapshot).containsEntry("targetCode", "endpoint-1");
         assertThat(requestSnapshot).containsEntry("retryCount", 2);
         assertThat(requestSnapshot).doesNotContainKey("routeMeta");
 
         assertThat(responseSnapshot).containsEntry("success", false);
+        assertThat(responseSnapshot).containsEntry("fileId", null);
         assertThat(responseSnapshot).containsEntry("messageCount", 4);
         assertThat(responseSnapshot).containsEntry("truncated", true);
         @SuppressWarnings("unchecked")

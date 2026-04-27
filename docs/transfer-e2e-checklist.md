@@ -6,10 +6,10 @@
 
 ## 2. 最短路径
 
-1. 创建来源，带 `pollCron`
+1. 创建来源，不在来源表单里配置 `pollCron`
 2. 创建规则，脚本返回 `true`
 3. 创建目标
-4. 创建路由配置
+4. 创建路由配置并填写 `pollCron`
 5. 触发来源执行一次
 6. 查询结果
 
@@ -125,6 +125,6 @@ curl -X POST "http://localhost:8080/api/transfer-route-configs" \
 ## 10. 失败排查
 
 - 先查 `GET /api/transfer-run-logs?sourceId=...`，确认失败发生在 `INGEST` / `ROUTE` / `DELIVER` 哪一段
-- 没有 `transfer-objects`：检查来源、邮箱连通性、附件是否存在、`pollCron`
+- 没有 `transfer-objects`：检查来源、邮箱连通性、附件是否存在、路由 `pollCron`
 - 有 `transfer-objects` 但没有 `transfer-routes`：检查规则启用、脚本返回值、目标编码
 - 有 `transfer-routes` 但没有 `transfer-delivery-records`：检查目标配置、目标连接器、临时文件路径

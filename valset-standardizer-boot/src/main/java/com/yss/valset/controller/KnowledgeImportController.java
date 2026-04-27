@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
  * 知识库导入接口。
  */
 @RestController
-@RequestMapping("/api/knowledge")
+@RequestMapping("/knowledge")
 public class KnowledgeImportController {
 
     private final KnowledgeImportAppService knowledgeImportAppService;

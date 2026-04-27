@@ -92,3 +92,5 @@ subject:
       skip-excel-style-parsing: false
       enable-match-process: true
       persist-standardized-dwd-details: false
+    run-log-cleanup:
+      cron: ${TRANSFER_RUN_LOG_CLEANUP_CRON:0 0 23 * * ?}

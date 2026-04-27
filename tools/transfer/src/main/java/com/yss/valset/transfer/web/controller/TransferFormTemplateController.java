@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Transfer 表单模板接口。
  */
 @RestController
-@RequestMapping("/api/transfer-form-templates")
+@RequestMapping("/transfer-form-templates")
 public class TransferFormTemplateController {
 
     private final TransferFormTemplateQueryService transferFormTemplateQueryService;

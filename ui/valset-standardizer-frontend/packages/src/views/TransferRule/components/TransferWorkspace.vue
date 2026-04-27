@@ -160,7 +160,7 @@ const actionConfig = useTableActionConfig({
       </template>
       <YssFormily
         :ref="page.setTemplateFormRef"
-        :key="`${page.formMode}-${page.templateNamePreview || 'transfer_rule'}`"
+        :key="`${page.formMode}-${page.formState.ruleId || 'new'}-${page.templateNamePreview || 'transfer_rule'}`"
         v-model="page.templateValues"
         :schema="page.templateSchema"
         :initial-values="page.templateInitialValues"
@@ -170,16 +170,15 @@ const actionConfig = useTableActionConfig({
         :detail-options="page.templateDetailOptions"
         :grid-defaults="page.templateGridDefaults"
       >
-        <template #scriptBody="{ value, onChange }">
+        <template #scriptBody>
           <YMonaco
-            :model-value="value"
+            v-model:model-value="page.templateValues.scriptBody"
             :language="
               page.resolveScriptEditorLanguage(
                 page.templateValues.scriptLanguage,
               )
             "
             height="360px"
-            @update:model-value="onChange"
           />
         </template>
       </YssFormily>

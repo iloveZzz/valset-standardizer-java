@@ -56,6 +56,18 @@ public class TransferRoutePO {
     private String targetCode;
 
     /**
+     * 是否启用。
+     */
+    @TableField("enabled")
+    private Boolean enabled;
+
+    /**
+     * 轮询表达式。
+     */
+    @TableField("poll_cron")
+    private String pollCron;
+
+    /**
      * 目标路径。
      */
     @TableField("target_path")

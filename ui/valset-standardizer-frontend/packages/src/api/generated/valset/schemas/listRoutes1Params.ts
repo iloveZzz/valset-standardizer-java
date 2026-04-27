@@ -31,6 +31,10 @@ export type ListRoutes1Params = {
    */
   targetCode?: string;
   /**
+   * 启用状态
+   */
+  enabled?: boolean;
+  /**
    * 路由状态
    */
   routeStatus?: string;

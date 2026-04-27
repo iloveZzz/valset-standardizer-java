@@ -53,11 +53,10 @@
 - `sourceName`
 - `sourceType`
 - `enabled`
-- `pollCron`
 - `connectionConfig`
 - `sourceMetaJson`
 
-建议同时为来源配置建立持久化实体 `TransferSourcePO`，表名可使用 `t_transfer_source`，用于保存后台维护的来源配置、轮询表达式和连接参数。
+建议同时为来源配置建立持久化实体 `TransferSourcePO`，表名可使用 `t_transfer_source`，用于保存后台维护的来源配置和连接参数；轮询表达式建议放到路由配置侧维护。
 
 `sourceType` 建议包括：
 

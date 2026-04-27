@@ -200,15 +200,6 @@ const columns: YTableColumn[] = [
         :grid-defaults="page.templateGridDefaults"
       >
         <template #scriptBody>
-          <div class="workspace-script-helper">
-            <div class="workspace-script-helper-title">推荐脚本</div>
-            <pre>{{ page.templateInitialValues.scriptBody || "" }}</pre>
-            <div class="workspace-script-helper-actions">
-              <YButton size="small" @click="page.resetScriptBody">
-                恢复默认脚本
-              </YButton>
-            </div>
-          </div>
           <YMonaco
             v-model:model-value="page.templateValues.scriptBody"
             :language="
@@ -298,15 +289,6 @@ const columns: YTableColumn[] = [
       @close="page.closeTest"
     >
       <template v-if="page.testTag">
-        <div class="source-detail-banner">
-          <div class="source-detail-banner-title">
-            {{ page.testTag.tagName || page.testTag.tagCode || "标签试跑" }}
-          </div>
-          <div class="source-detail-banner-meta">
-            {{ page.formatMatchStrategy(page.testTag.matchStrategy) }} ·
-            {{ page.formatEnabled(page.testTag.enabled) }}
-          </div>
-        </div>
         <a-form layout="vertical">
           <a-row :gutter="12">
             <a-col :span="12">

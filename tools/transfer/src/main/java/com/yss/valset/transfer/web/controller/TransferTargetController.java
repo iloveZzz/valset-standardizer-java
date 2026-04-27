@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 投递目标管理接口。
  */
 @RestController
-@RequestMapping("/api/transfer-targets")
+@RequestMapping("/transfer-targets")
 public class TransferTargetController {
 
     private final TransferTargetManagementAppService transferTargetManagementAppService;

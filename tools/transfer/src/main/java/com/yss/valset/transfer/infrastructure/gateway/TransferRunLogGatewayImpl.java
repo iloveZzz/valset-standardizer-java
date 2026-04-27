@@ -79,6 +79,18 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
     }
 
     @Override
+    public long deleteLogsCreatedBetween(LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        if (startInclusive == null || endExclusive == null || !startInclusive.isBefore(endExclusive)) {
+            return 0L;
+        }
+        return transferRunLogRepository.delete(
+                Wrappers.lambdaQuery(TransferRunLogPO.class)
+                        .ge(TransferRunLogPO::getCreatedAt, startInclusive)
+                        .lt(TransferRunLogPO::getCreatedAt, endExclusive)
+        );
+    }
+
+    @Override
     public List<TransferRunLog> listLogs(String sourceId,
                                          String transferId,
                                          String routeId,

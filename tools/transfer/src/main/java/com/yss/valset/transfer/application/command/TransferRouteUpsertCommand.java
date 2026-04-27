@@ -53,6 +53,16 @@ public class TransferRouteUpsertCommand {
     private String targetCode;
 
     /**
+     * 是否启用。
+     */
+    private Boolean enabled;
+
+    /**
+     * 轮询表达式。
+     */
+    private String pollCron;
+
+    /**
      * 目标路径。
      */
     private String targetPath;

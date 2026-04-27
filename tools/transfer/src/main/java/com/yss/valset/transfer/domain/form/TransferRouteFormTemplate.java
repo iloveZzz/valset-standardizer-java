@@ -28,6 +28,7 @@ public class TransferRouteFormTemplate extends FormTemplate {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("routeStatus", TransferStatus.PENDING.name());
         values.put("ruleId", 0L);
+        values.put("pollCron", "0 */5 * * * ?");
         values.put("sourceType", SourceType.LOCAL_DIR.name());
         values.put(TransferConfigKeys.SOURCE_CODE, "source-default");
         values.put(TransferConfigKeys.TARGET_TYPE, TargetType.FILESYS.name());
@@ -70,6 +71,9 @@ public class TransferRouteFormTemplate extends FormTemplate {
                                 )
                                 .gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.SOURCE_CODE, "来源编码").required().placeholder("例如：source-default").gridSpan(2),
+                        YssFormilyDsl.slot("pollCron", "轮询表达式", "pollCron")
+                                .placeholder("0 */5 * * * ?")
+                                .gridSpan(2),
                         YssFormilyDsl.inputNumber("ruleId", "规则主键").required().placeholder("请输入规则主键").gridSpan(1),
                         YssFormilyDsl.groupHeader("header2", "目标信息"),
                         YssFormilyDsl.select(TransferConfigKeys.TARGET_TYPE, "目标类型")

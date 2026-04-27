@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import { h } from "vue";
+import { Modal } from "ant-design-vue";
 import { YButton, YCard, YTable } from "@yss-ui/components";
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons-vue";
+import {
+  ExclamationCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import { useTransferObjectColumns } from "../../TransferShared/hooks/useTransferTableColumns";
@@ -12,15 +18,38 @@ const { page } = defineProps<{
 
 const columns = useTransferObjectColumns();
 
+const confirmRedeliver = (row: any) => {
+  Modal.confirm({
+    title: "重新投递",
+    content: "将对该分拣对象执行重新投递，是否继续？",
+    icon: h(ExclamationCircleOutlined),
+    okText: "确定重投",
+    cancelText: "取消",
+    okButtonProps: {
+      danger: true,
+      loading: page.redeliverLoading,
+    },
+    onOk: () => page.redeliverObject(row),
+  });
+};
+
 const actionConfig = useTableActionConfig({
-  width: 120,
-  displayLimit: 1,
+  width: 180,
+  displayLimit: 2,
   buttons: [
     {
       text: "详情",
       key: "detail",
       type: "link",
       clickFn: ({ row }: any) => page.openDetailDrawer(row),
+    },
+    {
+      text: "重新投递",
+      key: "redeliver",
+      type: "link",
+      disabledFn: ({ row }: any) =>
+        page.formatDeliveryStatus(row.deliveryStatus) === "已投递",
+      clickFn: ({ row }: any) => confirmRedeliver(row),
     },
   ],
 });
@@ -211,7 +240,7 @@ const actionConfig = useTableActionConfig({
         :columns="columns"
         :action-config="actionConfig"
         :data="page.tableData"
-        :loading="page.loading"
+        :loading="page.loading || page.redeliverLoading"
         :autoFlexColumn="true"
         :row-config="{ keyField: 'transferId' }"
         :checkbox-config="{ highlight: true }"
@@ -325,6 +354,17 @@ const actionConfig = useTableActionConfig({
         <template #status="{ row }">
           <a-tag :color="row.status ? 'blue' : 'default'">
             {{ page.formatStatus(row.status) }}
+          </a-tag>
+        </template>
+        <template #deliveryStatus="{ row }">
+          <a-tag
+            :color="
+              page.formatDeliveryStatus(row.deliveryStatus) === '已投递'
+                ? 'green'
+                : 'default'
+            "
+          >
+            {{ page.formatDeliveryStatus(row.deliveryStatus) }}
           </a-tag>
         </template>
         <template #sizeBytes="{ row }">

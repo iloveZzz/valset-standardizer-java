@@ -22,6 +22,22 @@ ALTER TABLE t_transfer_route
 
 CREATE INDEX idx_transfer_route_source_code ON t_transfer_route (source_code);
 
+--changeset codex:20260426-02-mysql-transfer-route-poll-cron dbms:mysql
+ALTER TABLE t_transfer_route
+    ADD COLUMN poll_cron VARCHAR(128) NULL;
+
+--changeset codex:20260426-02-postgres-transfer-route-poll-cron dbms:postgresql
+ALTER TABLE t_transfer_route
+    ADD COLUMN poll_cron VARCHAR(128) NULL;
+
+--changeset codex:20260426-03-mysql-transfer-route-enabled dbms:mysql
+ALTER TABLE t_transfer_route
+    ADD COLUMN enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER target_code;
+
+--changeset codex:20260426-03-postgres-transfer-route-enabled dbms:postgresql
+ALTER TABLE t_transfer_route
+    ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT TRUE;
+
 --changeset codex:20260422-04-postgres-transfer-source dbms:postgresql
 --validCheckSum 9:322a1e7b48250fababbebf09e33d355a
 CREATE TABLE t_transfer_source (
@@ -36,13 +52,28 @@ CREATE TABLE t_transfer_source (
     CONSTRAINT uk_transfer_source_code UNIQUE (source_code)
 );
 
---changeset codex:20260422-06-postgres-transfer-source-target-time dbms:postgresql
+--changeset codex:20260422-06-postgres-transfer-source-created-at dbms:postgresql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 't_transfer_source' AND column_name = 'created_at'
 ALTER TABLE t_transfer_source
-    ADD COLUMN created_at TIMESTAMP NULL,
+    ADD COLUMN created_at TIMESTAMP NULL;
+
+--changeset codex:20260422-06-postgres-transfer-source-updated-at dbms:postgresql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 't_transfer_source' AND column_name = 'updated_at'
+ALTER TABLE t_transfer_source
     ADD COLUMN updated_at TIMESTAMP NULL;
 
+--changeset codex:20260422-06-postgres-transfer-target-created-at dbms:postgresql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 't_transfer_target' AND column_name = 'created_at'
 ALTER TABLE t_transfer_target
-    ADD COLUMN created_at TIMESTAMP NULL,
+    ADD COLUMN created_at TIMESTAMP NULL;
+
+--changeset codex:20260422-06-postgres-transfer-target-updated-at dbms:postgresql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 't_transfer_target' AND column_name = 'updated_at'
+ALTER TABLE t_transfer_target
     ADD COLUMN updated_at TIMESTAMP NULL;
 
 --changeset codex:20260424-02-mysql-transfer-source-drop-checkpoint-config dbms:mysql
@@ -57,13 +88,28 @@ ALTER TABLE t_transfer_source
 ALTER TABLE t_transfer_source
     DROP COLUMN checkpoint_config_json;
 
---changeset codex:20260422-06-mysql-transfer-source-target-time dbms:mysql
+--changeset codex:20260422-06-mysql-transfer-source-created-at dbms:mysql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_source' AND column_name = 'created_at'
 ALTER TABLE t_transfer_source
-    ADD COLUMN created_at DATETIME NULL,
+    ADD COLUMN created_at DATETIME NULL;
+
+--changeset codex:20260422-06-mysql-transfer-source-updated-at dbms:mysql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_source' AND column_name = 'updated_at'
+ALTER TABLE t_transfer_source
     ADD COLUMN updated_at DATETIME NULL;
 
+--changeset codex:20260422-06-mysql-transfer-target-created-at dbms:mysql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_target' AND column_name = 'created_at'
 ALTER TABLE t_transfer_target
-    ADD COLUMN created_at DATETIME NULL,
+    ADD COLUMN created_at DATETIME NULL;
+
+--changeset codex:20260422-06-mysql-transfer-target-updated-at dbms:mysql
+--preconditions onFail:MARK_RAN onError:MARK_RAN
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_target' AND column_name = 'updated_at'
+ALTER TABLE t_transfer_target
     ADD COLUMN updated_at DATETIME NULL;
 
 --changeset codex:20260423-02-mysql-transfer-run-log dbms:mysql

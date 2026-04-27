@@ -3,6 +3,7 @@ package com.yss.valset.transfer.infrastructure.gateway;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
+import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectAnalysis;
 import com.yss.valset.transfer.domain.model.TransferObjectExtensionCount;
@@ -38,6 +39,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final TransferObjectRepository transferObjectRepository;
+    private final TransferObjectTagGateway transferObjectTagGateway;
     private final TransferJsonMapper transferJsonMapper;
     private final TransferObjectMapper transferObjectMapper;
 
@@ -125,6 +127,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 .stream()
                 .map(this::toDomain)
                 .toList();
+        long taggedCount = countTaggedObjects(objects);
+        long untaggedCount = Math.max(0L, objects.size() - taggedCount);
         Map<String, List<TransferObject>> sourceGroups = objects.stream()
                 .collect(Collectors.groupingBy(
                         item -> normalizeSourceTypeKey(item.sourceType()),
@@ -164,6 +168,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 .toList();
         return new TransferObjectAnalysis(
                 (long) objects.size(),
+                taggedCount,
+                untaggedCount,
                 sourceAnalyses,
                 buildSizeAnalysis(objects)
         );
@@ -265,6 +271,24 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 })
                 .toList();
         return new TransferObjectSizeAnalysis((long) objects.size(), totalSizeBytes, extensionCounts);
+    }
+
+    private long countTaggedObjects(List<TransferObject> objects) {
+        if (objects == null || objects.isEmpty()) {
+            return 0L;
+        }
+        List<String> transferIds = objects.stream()
+                .map(TransferObject::transferId)
+                .filter(org.springframework.util.StringUtils::hasText)
+                .toList();
+        if (transferIds.isEmpty()) {
+            return 0L;
+        }
+        return transferObjectTagGateway.listByTransferIds(transferIds).stream()
+                .map(tag -> tag.transferId() == null ? null : tag.transferId().trim())
+                .filter(org.springframework.util.StringUtils::hasText)
+                .distinct()
+                .count();
     }
 
     private String normalizeStatusKey(String value) {

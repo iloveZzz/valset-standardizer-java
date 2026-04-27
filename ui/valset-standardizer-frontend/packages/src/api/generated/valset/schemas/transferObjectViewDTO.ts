@@ -55,6 +55,8 @@ export interface TransferObjectViewDTO {
   sourceType?: string;
   /** 文件状态。 */
   status?: string;
+  /** 投递状态。 */
+  deliveryStatus?: string;
   /** 落库时间。 */
   storedAt?: string;
   /** 文件标签列表。 */

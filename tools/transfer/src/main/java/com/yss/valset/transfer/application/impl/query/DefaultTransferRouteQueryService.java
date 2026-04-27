@@ -27,8 +27,9 @@ public class DefaultTransferRouteQueryService implements TransferRouteQueryServi
                                                  String ruleId,
                                                  String targetType,
                                                  String targetCode,
+                                                 Boolean enabled,
                                                  Integer limit) {
-        return transferRouteGateway.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, null, limit)
+        return transferRouteGateway.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, enabled, null, limit)
                 .stream()
                 .map(this::toView)
                 .toList();
@@ -50,6 +51,8 @@ public class DefaultTransferRouteQueryService implements TransferRouteQueryServi
                 .ruleId(route.ruleId() == null ? null : String.valueOf(route.ruleId()))
                 .targetType(route.targetType() == null ? null : route.targetType().name())
                 .targetCode(route.targetCode())
+                .enabled(route.enabled())
+                .pollCron(route.pollCron())
                 .targetPath(route.targetPath())
                 .renamePattern(route.renamePattern())
                 .routeStatus(route.routeStatus() == null ? null : route.routeStatus().name())

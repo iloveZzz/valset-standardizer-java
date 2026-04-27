@@ -174,7 +174,16 @@ public class TransferRuleManagementE2ETest {
         JsonNode updatedRule = readJson(updateResponse).get("data").get("rule");
         assertThat(updatedRule.get("enabled").asBoolean()).isFalse();
         assertThat(updatedRule.get("priority").asInt()).isEqualTo(18);
+        assertThat(updatedRule.get("scriptBody").asText())
+                .isEqualTo("sourceType != null && sourceType.name().equals(\"EMAIL\") && containsIgnoreCase(subject, \"日报\")");
         assertNoGroupingKeys(updatedRule.get("ruleMeta"));
+        String storedScriptBody = jdbcTemplate.queryForObject(
+                "select script_body from t_transfer_rule where rule_id = ?",
+                String.class,
+                ruleId
+        );
+        assertThat(storedScriptBody)
+                .isEqualTo("sourceType != null && sourceType.name().equals(\"EMAIL\") && containsIgnoreCase(subject, \"日报\")");
 
         APIResponse disabledListResponse = requestContext.get(
                 "/api/transfer-rules",

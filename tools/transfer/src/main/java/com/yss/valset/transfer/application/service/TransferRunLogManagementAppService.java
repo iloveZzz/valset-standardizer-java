@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.application.service;
 
 import com.yss.valset.transfer.application.command.TransferRunLogRedeliverCommand;
+import com.yss.valset.transfer.application.dto.TransferRunLogCleanupResponse;
 import com.yss.valset.transfer.application.dto.TransferRunLogRedeliverResponse;
 
 /**
@@ -15,4 +16,11 @@ public interface TransferRunLogManagementAppService {
      * @return 重投递结果
      */
     TransferRunLogRedeliverResponse redeliver(TransferRunLogRedeliverCommand command);
+
+    /**
+     * 清理前一天的运行日志。
+     *
+     * @return 清理结果
+     */
+    TransferRunLogCleanupResponse cleanupYesterdayLogs();
 }

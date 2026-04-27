@@ -1,7 +1,9 @@
 package com.yss.valset.transfer.application.impl.management;
 
 import com.yss.valset.transfer.application.port.TransferJobScheduler;
+import com.yss.valset.transfer.domain.gateway.TransferRouteGateway;
 import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
+import com.yss.valset.transfer.domain.model.TransferRoute;
 import com.yss.valset.transfer.domain.model.TransferSource;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -20,6 +22,7 @@ public class TransferSourceScheduleCoordinator {
     private static final Logger log = LoggerFactory.getLogger(TransferSourceScheduleCoordinator.class);
 
     private final TransferSourceGateway transferSourceGateway;
+    private final TransferRouteGateway transferRouteGateway;
     private final TransferJobScheduler transferJobScheduler;
 
     public void reconcileAllSourcesOnStartup() {
@@ -33,7 +36,7 @@ public class TransferSourceScheduleCoordinator {
                         source == null ? null : source.sourceId(),
                         source == null ? null : source.sourceCode(),
                         source != null && source.enabled(),
-                        source == null ? null : source.pollCron(),
+                        resolvePollCron(source),
                         exception.getMessage(),
                         exception);
             }
@@ -45,7 +48,8 @@ public class TransferSourceScheduleCoordinator {
         if (source == null || source.sourceId() == null) {
             return;
         }
-        if (!source.enabled() || source.pollCron() == null || source.pollCron().isBlank()) {
+        String pollCron = resolvePollCron(source);
+        if (!source.enabled() || pollCron == null || pollCron.isBlank()) {
             transferJobScheduler.unscheduleIngest(source.sourceId());
             return;
         }
@@ -54,7 +58,41 @@ public class TransferSourceScheduleCoordinator {
                 source.sourceType() == null ? null : source.sourceType().name(),
                 source.sourceCode(),
                 source.connectionConfig(),
-                source.pollCron()
+                pollCron
         );
+    }
+
+    public void syncSourceScheduleBySourceId(String sourceId) {
+        if (sourceId == null || sourceId.isBlank()) {
+            return;
+        }
+        transferSourceGateway.findById(sourceId).ifPresent(this::syncSourceSchedule);
+    }
+
+    private String resolvePollCron(TransferSource source) {
+        if (source == null || source.sourceId() == null) {
+            return null;
+        }
+        List<TransferRoute> routes = transferRouteGateway.listRoutes(
+                source.sourceId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+        return routes.stream()
+                .filter(TransferRoute::enabled)
+                .map(TransferRoute::pollCron)
+                .filter(this::hasText)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

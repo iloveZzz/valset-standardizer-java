@@ -33,7 +33,7 @@ import java.time.format.DateTimeFormatter;
  * 文件来源管理接口。
  */
 @RestController
-@RequestMapping({"/api/transfer-sources", "/transfer-sources"})
+@RequestMapping("/transfer-sources")
 public class TransferSourceController {
 
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

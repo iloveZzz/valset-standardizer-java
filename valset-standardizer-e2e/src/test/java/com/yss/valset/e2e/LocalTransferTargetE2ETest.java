@@ -96,11 +96,11 @@ public class LocalTransferTargetE2ETest {
     void should_deliver_attachment_to_local_directory_target() throws Exception {
         sourceFile = Files.createTempFile("valset-local-source-", ".txt");
         Files.writeString(sourceFile, "local delivery payload", StandardCharsets.UTF_8);
-        targetDir = Files.createTempDirectory("valset-local-target-");
+        targetDir = Files.createTempDirectory("valset-local-endpoint-");
 
         TransferTarget target = transferTargetGateway.save(new TransferTarget(
                 null,
-                "local-target-e2e",
+                "local-endpoint-e2e",
                 "本地目录投递目标",
                 TargetType.LOCAL_DIR,
                 true,
@@ -109,7 +109,7 @@ public class LocalTransferTargetE2ETest {
                         "directory", targetDir.toString(),
                         "createParentDirectories", true
                 ),
-                Map.of("scenario", "local-target-e2e"),
+                Map.of("scenario", "local-endpoint-e2e"),
                 Instant.now(),
                 Instant.now()
         ));

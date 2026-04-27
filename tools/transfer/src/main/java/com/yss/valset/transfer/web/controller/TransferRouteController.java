@@ -15,7 +15,7 @@ import java.util.List;
  * 分拣路由查询接口。
  */
 @RestController
-@RequestMapping("/api/transfer-routes")
+@RequestMapping("/transfer-routes")
 public class TransferRouteController {
 
     private final TransferRouteQueryService transferRouteQueryService;
@@ -33,6 +33,7 @@ public class TransferRouteController {
      * @param ruleId 规则主键
      * @param targetType 目标类型
      * @param targetCode 目标编码
+     * @param enabled 启用状态
      * @param limit 查询上限
      * @return 分拣路由列表
      */
@@ -44,8 +45,9 @@ public class TransferRouteController {
                                                  @RequestParam(value = "ruleId", required = false) String ruleId,
                                                  @RequestParam(value = "targetType", required = false) String targetType,
                                                  @RequestParam(value = "targetCode", required = false) String targetCode,
+                                                 @RequestParam(value = "enabled", required = false) Boolean enabled,
                                                  @RequestParam(value = "limit", required = false) Integer limit) {
-        return transferRouteQueryService.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, limit);
+        return transferRouteQueryService.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, enabled, limit);
     }
 
     /**

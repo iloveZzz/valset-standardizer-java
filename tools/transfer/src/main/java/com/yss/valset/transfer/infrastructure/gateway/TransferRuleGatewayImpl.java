@@ -79,6 +79,7 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
     @Override
     public RuleDefinition save(RuleDefinition ruleDefinition) {
         TransferRulePO po = transferRuleMapper.toPO(ruleDefinition);
+        po.setScriptBody(ruleDefinition.scriptBody());
         if (po.getRuleId() == null) {
             transferRuleRepository.insert(po);
         } else {

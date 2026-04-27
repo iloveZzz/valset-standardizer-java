@@ -40,11 +40,6 @@ public class TransferSourceUpsertCommand {
     private Boolean enabled = Boolean.TRUE;
 
     /**
-     * 轮询表达式。
-     */
-    private String pollCron;
-
-    /**
      * 连接配置。
      */
     private Map<String, Object> connectionConfig;

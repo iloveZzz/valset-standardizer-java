@@ -17,12 +17,17 @@ public interface TransferRouteManagementAppService {
                                          String ruleId,
                                          String targetType,
                                          String targetCode,
+                                         Boolean enabled,
                                          String routeStatus,
                                          Integer limit);
 
     TransferRouteViewDTO getRoute(String routeId);
 
     TransferRouteMutationResponse upsertRoute(TransferRouteUpsertCommand command);
+
+    TransferRouteMutationResponse enableRoute(String routeId);
+
+    TransferRouteMutationResponse disableRoute(String routeId);
 
     TransferRouteMutationResponse deleteRoute(String routeId);
 }

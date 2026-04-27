@@ -18,6 +18,16 @@ public class TransferObjectAnalysisViewDTO {
     private Long totalCount;
 
     /**
+     * 已打标对象数。
+     */
+    private Long taggedCount;
+
+    /**
+     * 未打标对象数。
+     */
+    private Long untaggedCount;
+
+    /**
      * 按来源类型统计列表。
      */
     private List<TransferObjectSourceAnalysisViewDTO> sourceAnalyses;

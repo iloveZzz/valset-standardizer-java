@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
  * 解析模板管理接口。
  */
 @RestController
-@RequestMapping("/api/parse-rules")
+@RequestMapping("/parse-rules")
 public class ParseRuleManagementController {
 
     private final ParseRuleManagementAppService parseRuleManagementAppService;

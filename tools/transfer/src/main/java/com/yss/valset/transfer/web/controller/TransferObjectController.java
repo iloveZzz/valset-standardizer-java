@@ -2,14 +2,19 @@ package com.yss.valset.transfer.web.controller;
 
 import com.yss.cloud.dto.response.PageResult;
 import com.yss.cloud.dto.response.SingleResult;
+import com.yss.valset.transfer.application.command.TransferObjectRedeliverCommand;
 import com.yss.valset.transfer.application.dto.TransferObjectAnalysisViewDTO;
+import com.yss.valset.transfer.application.dto.TransferObjectRedeliverResponse;
 import com.yss.valset.transfer.application.dto.TransferObjectPageViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectViewDTO;
+import com.yss.valset.transfer.application.service.TransferObjectManagementAppService;
 import com.yss.valset.transfer.application.service.TransferObjectQueryService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,13 +22,16 @@ import org.springframework.web.bind.annotation.RestController;
  * 文件主对象查询接口。
  */
 @RestController
-@RequestMapping("/api/transfer-objects")
+@RequestMapping("/transfer-objects")
 public class TransferObjectController {
 
     private final TransferObjectQueryService transferObjectQueryService;
+    private final TransferObjectManagementAppService transferObjectManagementAppService;
 
-    public TransferObjectController(TransferObjectQueryService transferObjectQueryService) {
+    public TransferObjectController(TransferObjectQueryService transferObjectQueryService,
+                                    TransferObjectManagementAppService transferObjectManagementAppService) {
         this.transferObjectQueryService = transferObjectQueryService;
+        this.transferObjectManagementAppService = transferObjectManagementAppService;
     }
 
     /**
@@ -100,5 +108,17 @@ public class TransferObjectController {
                                                                       @RequestParam(value = "tagCode", required = false) String tagCode,
                                                                       @RequestParam(value = "tagValue", required = false) String tagValue) {
         return SingleResult.of(transferObjectQueryService.analyzeObjects(sourceId, sourceType, sourceCode, status, mailId, fingerprint, routeId, tagId, tagCode, tagValue));
+    }
+
+    /**
+     * 重新投递文件主对象。
+     *
+     * @param command 重新投递命令
+     * @return 重新投递结果
+     */
+    @PostMapping("/redeliver")
+    @Operation(summary = "重新投递文件主对象", description = "支持对未投递完成的文件主对象执行重新投递，输入文件主键集合即可。")
+    public SingleResult<TransferObjectRedeliverResponse> redeliver(@RequestBody TransferObjectRedeliverCommand command) {
+        return SingleResult.of(transferObjectManagementAppService.redeliver(command));
     }
 }

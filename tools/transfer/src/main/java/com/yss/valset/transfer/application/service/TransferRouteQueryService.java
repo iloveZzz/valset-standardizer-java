@@ -27,6 +27,7 @@ public interface TransferRouteQueryService {
                                           String ruleId,
                                           String targetType,
                                           String targetCode,
+                                          Boolean enabled,
                                           Integer limit);
 
     /**

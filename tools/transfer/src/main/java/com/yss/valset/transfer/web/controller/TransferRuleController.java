@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 路由规则管理接口。
  */
 @RestController
-@RequestMapping("/api/transfer-rules")
+@RequestMapping("/transfer-rules")
 public class TransferRuleController {
 
     private final TransferRuleManagementAppService transferRuleManagementAppService;

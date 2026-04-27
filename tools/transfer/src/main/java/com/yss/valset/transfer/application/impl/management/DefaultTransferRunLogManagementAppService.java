@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.application.impl.management;
 
 import com.yss.valset.transfer.application.command.TransferRunLogRedeliverCommand;
+import com.yss.valset.transfer.application.dto.TransferRunLogCleanupResponse;
 import com.yss.valset.transfer.application.dto.TransferRunLogRedeliverItemViewDTO;
 import com.yss.valset.transfer.application.dto.TransferRunLogRedeliverResponse;
 import com.yss.valset.transfer.application.service.TransferRunLogManagementAppService;
@@ -16,6 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,6 +32,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class DefaultTransferRunLogManagementAppService implements TransferRunLogManagementAppService {
+
+    private static final ZoneId CLEANUP_ZONE_ID = ZoneId.of("Asia/Shanghai");
 
     private final TransferRunLogGateway transferRunLogGateway;
     private final TransferProcessUseCase transferProcessUseCase;
@@ -92,6 +98,26 @@ public class DefaultTransferRunLogManagementAppService implements TransferRunLog
                 .failureCount(failureCount)
                 .skippedCount(skippedCount)
                 .items(items)
+                .build();
+    }
+
+    @Override
+    public TransferRunLogCleanupResponse cleanupYesterdayLogs() {
+        LocalDate today = LocalDate.now(CLEANUP_ZONE_ID);
+        LocalDate yesterday = today.minusDays(1);
+        LocalDateTime startInclusive = yesterday.atStartOfDay();
+        LocalDateTime endExclusive = today.atStartOfDay();
+        long deletedCount = transferRunLogGateway.deleteLogsCreatedBetween(startInclusive, endExclusive);
+        log.info("文件收发运行日志手动清理完成，cleanupDate={}，startInclusive={}，endExclusive={}，deletedCount={}",
+                yesterday,
+                startInclusive,
+                endExclusive,
+                deletedCount);
+        return TransferRunLogCleanupResponse.builder()
+                .cleanupDate(yesterday)
+                .startInclusive(startInclusive)
+                .endExclusive(endExclusive)
+                .deletedCount(deletedCount)
                 .build();
     }
 

@@ -84,7 +84,7 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 command.getSourceName(),
                 sourceType,
                 Boolean.TRUE.equals(command.getEnabled()),
-                command.getPollCron(),
+                null,
                 connectionConfig,
                 sourceMeta,
                 existing == null ? null : existing.ingestStatus(),
@@ -200,7 +200,7 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 source.sourceName(),
                 source.sourceType(),
                 source.enabled(),
-                source.pollCron(),
+                null,
                 source.connectionConfig(),
                 source.sourceMeta(),
                 source.ingestStatus(),
@@ -273,7 +273,6 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 .sourceType(current.sourceType() == null ? null : current.sourceType().name())
                 .formTemplateName(TransferFormTemplateNames.sourceTemplateName(current.sourceType()))
                 .enabled(current.enabled())
-                .pollCron(current.pollCron())
                 .ingestStatus(current.ingestStatus())
                 .ingestTriggerType(current.ingestTriggerType())
                 .ingestBusy(isIngestBusy(current))

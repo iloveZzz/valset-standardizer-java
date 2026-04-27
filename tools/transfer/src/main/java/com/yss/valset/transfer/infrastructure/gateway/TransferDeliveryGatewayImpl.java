@@ -94,6 +94,31 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
     }
 
     @Override
+    public List<TransferDeliveryRecord> listRecordsByTransferIds(List<String> transferIds, String executeStatus) {
+        if (transferIds == null || transferIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> normalizedTransferIds = transferIds.stream()
+                .map(this::parseLong)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (normalizedTransferIds.isEmpty()) {
+            return List.of();
+        }
+        return transferDeliveryRecordRepository.selectList(
+                        Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
+                                .in(TransferDeliveryRecordPO::getTransferId, normalizedTransferIds)
+                                .eq(executeStatus != null && !executeStatus.isBlank(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
+                                .orderByDesc(TransferDeliveryRecordPO::getDeliveredAt)
+                                .orderByDesc(TransferDeliveryRecordPO::getDeliveryId)
+                )
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
     public TransferDeliveryRecordPage pageRecords(String routeId,
                                                   String transferId,
                                                   String targetCode,
@@ -152,6 +177,7 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
         java.util.List<String> messages = transferResult == null || transferResult.messages() == null ? java.util.List.of() : transferResult.messages();
         int previewSize = Math.min(messages.size(), 3);
         snapshot.put("success", transferResult != null && transferResult.success());
+        snapshot.put("fileId", transferResult == null ? null : transferResult.fileId());
         snapshot.put("messageCount", messages.size());
         snapshot.put("messages", messages.subList(0, previewSize));
         snapshot.put("truncated", messages.size() > previewSize);

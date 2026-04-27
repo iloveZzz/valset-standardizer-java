@@ -388,6 +388,8 @@ CREATE TABLE IF NOT EXISTS t_transfer_route (
     rule_id BIGINT NOT NULL,
     target_type VARCHAR(32) NOT NULL,
     target_code VARCHAR(128) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    poll_cron VARCHAR(128),
     target_path VARCHAR(1024),
     rename_pattern VARCHAR(512),
     route_status VARCHAR(32) NOT NULL,

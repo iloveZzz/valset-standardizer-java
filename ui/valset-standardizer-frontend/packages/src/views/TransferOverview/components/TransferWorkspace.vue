@@ -4,7 +4,6 @@ import { Modal } from "ant-design-vue";
 import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import * as echarts from "echarts";
 import { YButton, YCard, YTable } from "@yss-ui/components";
-import OverviewRunLogConsole from "./OverviewRunLogConsole.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import { useTransferOverviewRecentDeliveryColumns } from "../../TransferShared/hooks/useTransferTableColumns";
 
@@ -353,9 +352,27 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <div class="overview-hero-column overview-hero-column--run-log">
-                  <OverviewRunLogConsole :items="page.overviewRunLogItems" />
+                <div class="overview-hero-column overview-hero-column--objects">
+                  <div class="overview-object-summary-stack">
+                    <div
+                      v-for="item in page.objectSummaryCards"
+                      :key="item.key"
+                      class="overview-hero-stat-card"
+                      :class="`overview-hero-stat-card--${item.tone}`"
+                    >
+                      <div class="overview-hero-stat-label">
+                        {{ item.label }}
+                      </div>
+                      <div class="overview-hero-stat-value">
+                        {{ item.value }}
+                      </div>
+                      <div class="overview-hero-stat-desc">
+                        {{ item.description }}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
               </div>
             </div>
           </div>

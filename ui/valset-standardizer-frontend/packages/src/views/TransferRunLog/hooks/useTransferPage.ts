@@ -1,4 +1,4 @@
-import { computed, nextTick, reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import type { YTablePagination } from "@yss-ui/components";
 import type {
@@ -10,8 +10,14 @@ import type {
   TransferRunLogViewDTO,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
+import { customInstance } from "@/api/mutator";
 import { unwrapSingleResult } from "@/utils/api-response";
-import type { RunLogAnalysis, RunLogPage, RunLogQueryState } from "../types";
+import type {
+  RunLogAnalysis,
+  RunLogConsoleSeedItem,
+  RunLogPage,
+  RunLogQueryState,
+} from "../types";
 
 const api = getJavaSpringBootQuartzApi();
 type RunLogPageParams = PageLogsParams & { pageIndex?: number };
@@ -213,54 +219,40 @@ export const useTransferPage = (): { page: RunLogPage } => {
     stageAnalyses: defaultStageAnalyses(),
   });
   const selectedRow = ref<TransferRunLogViewDTO | null>(null);
-  const selectedRows = ref<TransferRunLogViewDTO[]>([]);
+  const cleanupLoading = ref(false);
   const detailVisible = ref(false);
-  const redeliverLoading = ref(false);
-  const tableRef = ref<any>(null);
 
   const listLoading = ref(false);
   const analysisLoading = ref(false);
   let listRequestId = 0;
   let analysisRequestId = 0;
+  const consoleItems = computed<RunLogConsoleSeedItem[]>(() =>
+    rows.value.slice(0, 6).map((item, index) => {
+      const status = formatStatusLabel(item.runStatus);
+      const fallbackTitle =
+        item.originalName ||
+        item.routeName ||
+        item.sourceName ||
+        item.transferId ||
+        "运行日志";
+      const description =
+        item.errorMessage ||
+        item.logMessage ||
+        [item.sourceName, item.routeName, item.targetName]
+          .filter(Boolean)
+          .join(" / ") ||
+        "暂无运行说明";
 
-  const isFailedDeliverRow = (
-    row: TransferRunLogViewDTO | null | undefined,
-  ) => {
-    const stage = String(row?.runStage ?? "")
-      .trim()
-      .toUpperCase();
-    const status = String(row?.runStatus ?? "")
-      .trim()
-      .toUpperCase();
-    return stage === "DELIVER" && status === "FAILED";
-  };
-
-  const refreshSelectedRows = async () => {
-    await nextTick();
-    const instance = tableRef.value?.getTableInstance?.();
-    const records = instance?.getCheckboxRecords?.() || [];
-    selectedRows.value = records.filter((row: TransferRunLogViewDTO) =>
-      isFailedDeliverRow(row),
-    );
-  };
-
-  const clearSelectedRows = () => {
-    tableRef.value?.getTableInstance?.()?.clearCheckboxRow?.();
-    selectedRows.value = [];
-  };
-
-  const selectedFailedCount = computed(() => selectedRows.value.length);
-  const selectedFailedIds = computed(() =>
-    selectedRows.value
-      .map((row) => row.runLogId)
-      .filter((value): value is string =>
-        Boolean(value && String(value).trim()),
-      ),
+      return {
+        key: item.runLogId || `${item.transferId ?? "run-log"}-${index}`,
+        title: fallbackTitle,
+        stageLabel: formatStageLabel(item.runStage),
+        statusLabel: item.runStatusLabel || status,
+        createdAt: item.createdAt,
+        description,
+      };
+    }),
   );
-  const setTableRef = (instance: any) => {
-    tableRef.value = instance;
-  };
-
   const mapListQuery = (
     pageNo = pagination.value.current || 1,
     pageSize = pagination.value.pageSize || 10,
@@ -332,7 +324,6 @@ export const useTransferPage = (): { page: RunLogPage } => {
       pagination.value.total = total.value;
       pagination.value.current = pageNo;
       pagination.value.pageSize = pageSize;
-      await refreshSelectedRows();
     } catch (error) {
       if (requestId !== listRequestId) {
         return;
@@ -358,92 +349,44 @@ export const useTransferPage = (): { page: RunLogPage } => {
     await Promise.all([loadAnalysis(), loadList(pageNo, pageSize)]);
   };
 
+  const cleanupLogs = async () => {
+    if (cleanupLoading.value) {
+      return;
+    }
+
+    cleanupLoading.value = true;
+    try {
+      const res = await customInstance<any>({
+        url: "/transfer-run-logs/cleanup-yesterday",
+        method: "POST",
+      });
+      const result = unwrapSingleResult(res);
+      const deletedCount = Number(result?.deletedCount ?? 0);
+      const cleanupDate = String(result?.cleanupDate ?? "").trim() || "前一天";
+      message.success(`已清理 ${cleanupDate} 的运行日志，共 ${deletedCount} 条`);
+      await reloadAnalysisAndList(
+        pagination.value.current || 1,
+        pagination.value.pageSize || 10,
+      );
+    } catch (error) {
+      console.error("清理运行日志失败:", error);
+      message.error("清理运行日志失败");
+    } finally {
+      cleanupLoading.value = false;
+    }
+  };
+
   const openDetailDrawer = (row: TransferRunLogViewDTO) => {
     selectedRow.value = row;
     detailVisible.value = true;
   };
 
-  const redeliverSelectedFailedLogs = async () => {
-    await refreshSelectedRows();
-    const runLogIds = selectedFailedIds.value;
-    if (!runLogIds.length) {
-      message.warning("请先勾选目标投递失败的运行日志");
-      return;
-    }
-
-    redeliverLoading.value = true;
-    try {
-      const res = await api.redeliver({ runLogIds });
-      const result = unwrapSingleResult(res);
-      const successCount = Number(result?.successCount ?? 0);
-      const failureCount = Number(result?.failureCount ?? 0);
-      const skippedCount = Number(result?.skippedCount ?? 0);
-      const requestedCount = Number(result?.requestedCount ?? runLogIds.length);
-      const summary = `已处理 ${requestedCount} 条，成功 ${successCount} 条，失败 ${failureCount} 条，跳过 ${skippedCount} 条`;
-      if (failureCount > 0 || skippedCount > 0) {
-        message.warning(summary);
-      } else {
-        message.success(summary);
-      }
-      clearSelectedRows();
-      await reloadAnalysisAndList(
-        pagination.value.current || 1,
-        pagination.value.pageSize || 10,
-      );
-    } catch (error) {
-      console.error("批量重新投递失败的运行日志失败:", error);
-      message.error("批量重新投递失败的运行日志失败");
-    } finally {
-      redeliverLoading.value = false;
-    }
-  };
-
-  const redeliverRunLog = async (row: TransferRunLogViewDTO) => {
-    if (!isFailedDeliverRow(row)) {
-      message.warning("仅支持对目标投递失败的运行日志执行重投递");
-      return;
-    }
-
-    const runLogId = String(row.runLogId ?? "").trim();
-    if (!runLogId) {
-      message.warning("运行日志缺少主键，无法重新投递");
-      return;
-    }
-
-    redeliverLoading.value = true;
-    try {
-      const res = await api.redeliver({ runLogIds: [runLogId] });
-      const result = unwrapSingleResult(res);
-      const successCount = Number(result?.successCount ?? 0);
-      const failureCount = Number(result?.failureCount ?? 0);
-      const skippedCount = Number(result?.skippedCount ?? 0);
-      const summary = `已处理 1 条，成功 ${successCount} 条，失败 ${failureCount} 条，跳过 ${skippedCount} 条`;
-      if (failureCount > 0 || skippedCount > 0) {
-        message.warning(summary);
-      } else {
-        message.success(summary);
-      }
-      clearSelectedRows();
-      await reloadAnalysisAndList(
-        pagination.value.current || 1,
-        pagination.value.pageSize || 10,
-      );
-    } catch (error) {
-      console.error("重新投递失败的运行日志失败:", error);
-      message.error("重新投递失败的运行日志失败");
-    } finally {
-      redeliverLoading.value = false;
-    }
-  };
-
   const runQuery = async () => {
-    clearSelectedRows();
     await reloadAnalysisAndList(1, pagination.value.pageSize || 10);
   };
 
   const resetQuery = async () => {
     Object.assign(query, defaultQuery());
-    clearSelectedRows();
     await reloadAnalysisAndList(1, pagination.value.pageSize || 10);
   };
 
@@ -454,7 +397,6 @@ export const useTransferPage = (): { page: RunLogPage } => {
     current: number;
     pageSize: number;
   }) => {
-    clearSelectedRows();
     pagination.value.current = current;
     pagination.value.pageSize = nextPageSize;
     void loadList(current, nextPageSize);
@@ -463,14 +405,12 @@ export const useTransferPage = (): { page: RunLogPage } => {
   const applyStageFilter = (runStage?: string) => {
     query.runStage = runStage ?? "";
     query.runStatus = "";
-    clearSelectedRows();
     void runQuery();
   };
 
   const applyStageStatusFilter = (runStage?: string, runStatus?: string) => {
     query.runStage = runStage ?? "";
     query.runStatus = runStatus ?? "";
-    clearSelectedRows();
     void runQuery();
   };
 
@@ -479,27 +419,23 @@ export const useTransferPage = (): { page: RunLogPage } => {
   const page = reactive({
     loading: listLoading,
     analysisLoading,
-    redeliverLoading,
+    cleanupLoading,
     rows,
     total,
     analysis,
     pagination,
     query,
-    setTableRef,
     selectedRow,
-    selectedFailedCount,
     detailVisible,
+    consoleItems,
     openDetailDrawer,
     runQuery,
     resetQuery,
-    refreshSelectedRows,
-    redeliverSelectedFailedLogs,
-    redeliverRunLog,
+    cleanupLogs,
     closeDetail: () => {
       detailVisible.value = false;
     },
     handlePageChange,
-    clearSelectedRows,
     applyStageFilter,
     applyStageStatusFilter,
     formatText: normalizeText,
@@ -509,7 +445,6 @@ export const useTransferPage = (): { page: RunLogPage } => {
     getStatusChipClass,
     runStatusTagColor: buildStatusColor,
     safeJson,
-    isFailedDeliverRow,
   });
 
   return {

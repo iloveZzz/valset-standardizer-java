@@ -41,10 +41,6 @@ public class TransferSourceViewDTO {
      */
     private Boolean enabled;
     /**
-     * 轮询表达式。
-     */
-    private String pollCron;
-    /**
      * 收取状态。
      */
     private String ingestStatus;

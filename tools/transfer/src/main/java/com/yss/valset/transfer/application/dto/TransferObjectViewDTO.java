@@ -99,6 +99,10 @@ public class TransferObjectViewDTO {
      */
     private String status;
     /**
+     * 投递状态。
+     */
+    private String deliveryStatus;
+    /**
      * 收取时间。
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

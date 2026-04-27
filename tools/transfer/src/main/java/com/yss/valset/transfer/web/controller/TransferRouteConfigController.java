@@ -26,7 +26,7 @@ import java.util.List;
  * 分拣路由配置接口。
  */
 @RestController
-@RequestMapping("/api/transfer-route-configs")
+@RequestMapping("/transfer-route-configs")
 public class TransferRouteConfigController {
 
     private final TransferRouteManagementAppService transferRouteManagementAppService;
@@ -44,6 +44,7 @@ public class TransferRouteConfigController {
      * @param ruleId 规则主键
      * @param targetType 目标类型
      * @param targetCode 目标编码
+     * @param enabled 启用状态
      * @param routeStatus 路由状态
      * @param limit 查询上限
      * @return 路由配置列表
@@ -56,9 +57,10 @@ public class TransferRouteConfigController {
                                                         @RequestParam(value = "ruleId", required = false) String ruleId,
                                                         @RequestParam(value = "targetType", required = false) String targetType,
                                                         @RequestParam(value = "targetCode", required = false) String targetCode,
+                                                        @RequestParam(value = "enabled", required = false) Boolean enabled,
                                                         @RequestParam(value = "routeStatus", required = false) String routeStatus,
                                                         @RequestParam(value = "limit", required = false) Integer limit) {
-        List<TransferRouteViewDTO> routes = transferRouteManagementAppService.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, routeStatus, limit);
+        List<TransferRouteViewDTO> routes = transferRouteManagementAppService.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, enabled, routeStatus, limit);
         return MultiResult.of(routes);
     }
 
@@ -101,6 +103,30 @@ public class TransferRouteConfigController {
                                                                    @Valid @RequestBody TransferRouteUpsertCommand command) {
         command.setRouteId(routeId);
         return SingleResult.of(transferRouteManagementAppService.upsertRoute(command));
+    }
+
+    /**
+     * 启用路由配置。
+     *
+     * @param routeId 路由主键
+     * @return 路由变更结果
+     */
+    @PostMapping("/{routeId}/enable")
+    @Operation(summary = "启用路由配置", description = "将指定分拣路由配置标记为启用，并同步调度任务。")
+    public SingleResult<TransferRouteMutationResponse> enableRoute(@PathVariable String routeId) {
+        return SingleResult.of(transferRouteManagementAppService.enableRoute(routeId));
+    }
+
+    /**
+     * 停用路由配置。
+     *
+     * @param routeId 路由主键
+     * @return 路由变更结果
+     */
+    @PostMapping("/{routeId}/disable")
+    @Operation(summary = "停用路由配置", description = "将指定分拣路由配置标记为停用，并同步调度任务。")
+    public SingleResult<TransferRouteMutationResponse> disableRoute(@PathVariable String routeId) {
+        return SingleResult.of(transferRouteManagementAppService.disableRoute(routeId));
     }
 
     /**

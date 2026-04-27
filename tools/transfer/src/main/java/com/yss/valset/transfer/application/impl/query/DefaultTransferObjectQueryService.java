@@ -12,7 +12,9 @@ import com.yss.valset.transfer.application.dto.TransferObjectSizeAnalysisViewDTO
 import com.yss.valset.transfer.application.dto.TransferObjectViewDTO;
 import com.yss.valset.transfer.application.service.TransferObjectQueryService;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
+import com.yss.valset.transfer.domain.gateway.TransferDeliveryGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
+import com.yss.valset.transfer.domain.model.TransferDeliveryRecord;
 import com.yss.valset.transfer.domain.model.TransferObjectAnalysis;
 import com.yss.valset.transfer.domain.model.TransferObjectExtensionCount;
 import com.yss.valset.transfer.domain.model.TransferObjectMailFolderCount;
@@ -44,6 +46,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
 
     private final TransferObjectGateway transferObjectGateway;
     private final TransferObjectTagGateway transferObjectTagGateway;
+    private final TransferDeliveryGateway transferDeliveryGateway;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -51,7 +54,10 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         TransferObject transferObject = transferObjectGateway.findById(transferId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "未找到文件主对象，transferId=" + transferId));
         Map<String, List<TransferObjectTag>> tagMap = loadTags(List.of(transferObject));
-        return toView(transferObject, tagMap.getOrDefault(transferObject.transferId(), List.of()));
+        Map<String, Boolean> deliveryMap = loadDeliveryStatus(List.of(transferObject));
+        return toView(transferObject,
+                tagMap.getOrDefault(transferObject.transferId(), List.of()),
+                deliveryMap.getOrDefault(transferObject.transferId(), Boolean.FALSE));
     }
 
     @Override
@@ -83,7 +89,13 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 pageSize);
         List<TransferObject> records = page.records() == null ? List.of() : page.records();
         Map<String, List<TransferObjectTag>> tagMap = loadTags(records);
-        List<TransferObjectViewDTO> data = records.stream().map(record -> toView(record, tagMap.getOrDefault(record.transferId(), List.of()))).collect(Collectors.toList());
+        Map<String, Boolean> deliveryMap = loadDeliveryStatus(records);
+        List<TransferObjectViewDTO> data = records.stream()
+                .map(record -> toView(
+                        record,
+                        tagMap.getOrDefault(record.transferId(), List.of()),
+                        deliveryMap.getOrDefault(record.transferId(), Boolean.FALSE)))
+                .collect(Collectors.toList());
         return PageResult.of(data,
                         page.total(),
                         page.pageSize(),
@@ -106,6 +118,8 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         TransferObjectAnalysis analysis = transferObjectGateway.analyzeObjects(sourceId, sourceType, sourceCode, normalizedStatus, mailId, fingerprint, routeId, tagId, tagCode, tagValue);
         return TransferObjectAnalysisViewDTO.builder()
                 .totalCount(analysis.totalCount())
+                .taggedCount(analysis.taggedCount())
+                .untaggedCount(analysis.untaggedCount())
                 .sourceAnalyses(analysis.sourceAnalyses() == null ? List.of() : analysis.sourceAnalyses().stream().map(this::toSourceAnalysisView).toList())
                 .sizeAnalysis(analysis.sizeAnalysis() == null ? null : toSizeAnalysisView(analysis.sizeAnalysis()))
                 .build();
@@ -212,7 +226,25 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 ));
     }
 
-    private TransferObjectViewDTO toView(TransferObject transferObject, List<TransferObjectTag> tags) {
+    private Map<String, Boolean> loadDeliveryStatus(List<TransferObject> records) {
+        List<String> transferIds = records == null ? List.of() : records.stream()
+                .map(TransferObject::transferId)
+                .filter(StringUtils::hasText)
+                .toList();
+        if (transferIds.isEmpty()) {
+            return Map.of();
+        }
+        return transferDeliveryGateway.listRecordsByTransferIds(transferIds, "SUCCESS").stream()
+                .map(TransferDeliveryRecord::transferId)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toMap(
+                        transferId -> transferId,
+                        transferId -> Boolean.TRUE,
+                        (left, right) -> left
+                ));
+    }
+
+    private TransferObjectViewDTO toView(TransferObject transferObject, List<TransferObjectTag> tags, boolean delivered) {
         return TransferObjectViewDTO.builder()
                 .transferId(transferObject.transferId() == null ? null : String.valueOf(transferObject.transferId()))
                 .sourceId(transferObject.sourceId() == null ? null : String.valueOf(transferObject.sourceId()))
@@ -235,6 +267,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .mailFolder(transferObject.mailFolder())
                 .localTempPath(transferObject.localTempPath())
                 .status(transferObject.status() == null ? null : transferObject.status().name())
+                .deliveryStatus(delivered ? "已投递" : "未投递")
                 .receivedAt(transferObject.receivedAt() == null ? null : java.time.LocalDateTime.ofInstant(transferObject.receivedAt(), java.time.ZoneId.systemDefault()))
                 .storedAt(transferObject.storedAt() == null ? null : java.time.LocalDateTime.ofInstant(transferObject.storedAt(), java.time.ZoneId.systemDefault()))
                 .routeId(transferObject.routeId() == null ? null : String.valueOf(transferObject.routeId()))

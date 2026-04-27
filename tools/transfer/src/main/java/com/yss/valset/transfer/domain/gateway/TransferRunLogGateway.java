@@ -4,6 +4,7 @@ import com.yss.valset.transfer.domain.model.TransferRunLog;
 import com.yss.valset.transfer.domain.model.TransferRunLogAnalysis;
 import com.yss.valset.transfer.domain.model.TransferRunLogPage;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,8 @@ public interface TransferRunLogGateway {
     Optional<TransferRunLog> findById(String runLogId);
 
     long deleteFailedDeliverLogsByTransferId(String transferId);
+
+    long deleteLogsCreatedBetween(LocalDateTime startInclusive, LocalDateTime endExclusive);
 
     List<TransferRunLog> listLogs(String sourceId,
                                   String transferId,

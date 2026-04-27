@@ -27,7 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
  * 文件信息管理接口。
  */
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/files")
 public class FileManagementController {
 
     private final ValuationWorkflowAppService valuationWorkflowAppService;

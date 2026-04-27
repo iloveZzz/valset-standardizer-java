@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { h } from "vue";
+import { Modal } from "ant-design-vue";
 import { YButton, YCard, YTable } from "@yss-ui/components";
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons-vue";
+import {
+  ExclamationCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import { useTransferRunLogColumns } from "../../TransferShared/hooks/useTransferTableColumns";
+import OverviewRunLogConsole from "../../TransferOverview/components/OverviewRunLogConsole.vue";
 import type { RunLogPage } from "../types";
 
 const { page } = defineProps<{
@@ -12,22 +19,30 @@ const { page } = defineProps<{
 
 const columns = useTransferRunLogColumns();
 
+const confirmCleanupLogs = () => {
+  Modal.confirm({
+    title: "清理日志",
+    content: "将清理前一天产生的运行日志，是否继续？",
+    icon: h(ExclamationCircleOutlined),
+    okText: "确定清理",
+    cancelText: "取消",
+    okButtonProps: {
+      danger: true,
+      loading: page.cleanupLoading,
+    },
+    onOk: () => page.cleanupLogs(),
+  });
+};
+
 const actionConfig = useTableActionConfig({
-  width: 180,
-  displayLimit: 2,
+  width: 120,
+  displayLimit: 1,
   buttons: [
     {
       text: "详情",
       key: "detail",
       type: "link",
       clickFn: ({ row }: any) => page.openDetailDrawer(row),
-    },
-    {
-      text: "重新投递",
-      key: "redeliver",
-      type: "link",
-      disabledFn: ({ row }: any) => !page.isFailedDeliverRow(row),
-      clickFn: ({ row }: any) => page.redeliverRunLog(row),
     },
   ],
 });
@@ -40,12 +55,12 @@ const actionConfig = useTableActionConfig({
         <div class="workspace-header-copy">
           <h2>运行日志</h2>
           <p>
-            查询分拣任务的运行阶段、运行状态、来源信息和错误详情，用于定位分拣链路中的异常、失败投递和重投递过程。
+            查询分拣任务的运行阶段、运行状态、来源信息和错误详情，用于定位分拣链路中的异常和失败投递过程。
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">支持按来源、路由、阶段和状态过滤</span>
             <span class="workspace-pill">查看运行说明与错误信息</span>
-            <span class="workspace-pill">失败投递支持批量重新投递</span>
+            <span class="workspace-pill">支持查看和清理历史日志</span>
           </div>
         </div>
         <div class="workspace-header-actions">
@@ -57,6 +72,13 @@ const actionConfig = useTableActionConfig({
             <YButton @click="page.resetQuery">
               <template #icon><ReloadOutlined /></template>
               重置条件
+            </YButton>
+            <YButton
+              danger
+              :loading="page.cleanupLoading"
+              @click="confirmCleanupLogs"
+            >
+              清理日志
             </YButton>
           </div>
         </div>
@@ -126,18 +148,14 @@ const actionConfig = useTableActionConfig({
 
     <div class="workspace-body">
       <YTable
-        :ref="page.setTableRef"
         :columns="columns"
         :action-config="actionConfig"
         :data="page.rows"
-        :loading="page.loading || page.redeliverLoading"
+        :loading="page.loading"
         :row-config="{ keyField: 'runLogId' }"
-        :checkbox-config="{ highlight: true }"
         :pageable="true"
         v-model:pagination="page.pagination"
         :toolbar-config="{ custom: false }"
-        @checkbox-change="page.refreshSelectedRows"
-        @checkbox-all="page.refreshSelectedRows"
         @page-change="page.handlePageChange"
       >
         <template #toolbar-left>
@@ -210,21 +228,6 @@ const actionConfig = useTableActionConfig({
             </a-form>
           </WorkspaceTableToolbar>
         </template>
-        <template #toolbar-right>
-          <div class="workspace-table-toolbar-right">
-            <a-tag color="red">
-              已选失败日志 {{ page.selectedFailedCount }} 条
-            </a-tag>
-            <YButton
-              type="primary"
-              :loading="page.redeliverLoading"
-              @click="page.redeliverSelectedFailedLogs"
-            >
-              批量重新投递
-            </YButton>
-          </div>
-        </template>
-
         <template #runStatus="{ row }">
           <a-tag :color="page.runStatusTagColor(row.runStatus)">
             {{ page.formatStatus(row.runStatusLabel || row.runStatus) }}
@@ -237,6 +240,10 @@ const actionConfig = useTableActionConfig({
           {{ page.formatText(row.originalName) }}
         </template>
       </YTable>
+
+      <div class="run-log-console-slot">
+        <OverviewRunLogConsole :items="page.consoleItems" />
+      </div>
     </div>
 
     <a-drawer

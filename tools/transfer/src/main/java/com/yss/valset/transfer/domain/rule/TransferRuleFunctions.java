@@ -75,11 +75,54 @@ public class TransferRuleFunctions {
     }
 
     @QLFunction({"matchesRegex"})
-    public boolean matchesRegex(String source, String regex) {
+    public boolean matchesRegex(String source, Object regex) {
         if (source == null || regex == null) {
             return false;
         }
-        return Pattern.compile(regex).matcher(source).matches();
+        String sourceText = normalizeKeyword(source);
+        String regexText = normalizeKeyword(regex);
+        if (sourceText.isBlank() || regexText.isBlank()) {
+            return false;
+        }
+        return Pattern.compile(regexText).matcher(sourceText).matches();
+    }
+
+    /**
+     * 判断文本是否命中任意一个正则表达式。
+     */
+    @QLFunction({"matchesAnyRegex"})
+    public boolean matchesAnyRegex(Object source, Object regexList) {
+        String sourceText = normalizeKeyword(source);
+        if (sourceText.isBlank() || regexList == null) {
+            return false;
+        }
+        if (regexList instanceof Collection<?> collection) {
+            for (Object regex : collection) {
+                if (matchesRegex(sourceText, String.valueOf(regex))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (regexList.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(regexList);
+            for (int index = 0; index < length; index++) {
+                if (matchesRegex(sourceText, String.valueOf(java.lang.reflect.Array.get(regexList, index)))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        String regexText = normalizeKeyword(regexList);
+        if (regexText.isBlank()) {
+            return false;
+        }
+        for (String item : regexText.split("[,;|\\n]")) {
+            if (matchesRegex(sourceText, item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @QLFunction({"isExcel"})

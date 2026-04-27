@@ -52,6 +52,8 @@ export type ObjectSizeAnalysis = {
 
 export type ObjectAnalysis = {
   totalCount: number;
+  taggedCount: number;
+  untaggedCount: number;
   sourceAnalyses: ObjectSourceStat[];
   sizeAnalysis: ObjectSizeAnalysis;
 };
@@ -80,6 +82,7 @@ export type ObjectTagFilter = {
 export type ObjectPage = {
   loading: boolean;
   analysisLoading: boolean;
+  redeliverLoading: boolean;
   rows: TransferObjectViewDTO[];
   tableData: TransferObjectViewDTO[];
   total: number;
@@ -95,6 +98,7 @@ export type ObjectPage = {
   detailVisible: boolean;
   selectedRow: TransferObjectViewDTO | null;
   openDetailDrawer: (row: TransferObjectViewDTO) => void;
+  redeliverObject: (row: TransferObjectViewDTO) => void;
   runQuery: () => void;
   resetQuery: () => void;
   closeDetail: () => void;
@@ -104,6 +108,7 @@ export type ObjectPage = {
   applyTagFilter: (filter: ObjectTagFilter) => void;
   clearTagFilter: () => void;
   formatStatus: (value: string | undefined) => string;
+  formatDeliveryStatus: (value: string | undefined) => string;
   formatSourceTypeLabel: (value: string | undefined) => string;
   formatStatusLabel: (value: string | undefined) => string;
   formatTagLabel: (value: string | undefined) => string;

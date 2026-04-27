@@ -6,6 +6,7 @@ import type { YTablePagination } from "@yss-ui/components";
 import type {
   PageRecordsParams,
   PageLogsParams,
+  TransferObjectAnalysisViewDTO,
   TransferDeliveryRecordViewDTO,
   TransferRuleViewDTO,
   TransferRunLogAnalysisViewDTO,
@@ -161,6 +162,7 @@ export const useTransferPage = () => {
   const trendWindow = ref<3 | 7 | 30>(3);
   const trendSeries = ref(buildTrendSeries());
   const runLogAnalysis = ref<TransferRunLogAnalysisViewDTO | null>(null);
+  const objectAnalysis = ref<TransferObjectAnalysisViewDTO | null>(null);
   const runLogRows = ref<TransferRunLogViewDTO[]>([]);
   const recentDeliveryPagination = ref<YTablePagination>({
     current: 1,
@@ -508,68 +510,29 @@ export const useTransferPage = () => {
     },
   ]);
 
-  const formatRunStage = (stage?: string) => {
-    const value = String(stage ?? "")
-      .trim()
-      .toUpperCase();
-    const labels: Record<string, string> = {
-      RECEIVE: "收取",
-      INGEST: "识别",
-      ROUTE: "路由",
-      DELIVER: "投递",
-    };
-    return labels[value] || value || "-";
-  };
-
-  const formatRunStatus = (status?: string) => {
-    const value = String(status ?? "")
-      .trim()
-      .toUpperCase();
-    const labels: Record<string, { text: string; color: string }> = {
-      SUCCESS: { text: "成功", color: "green" },
-      SUCCEEDED: { text: "成功", color: "green" },
-      DONE: { text: "完成", color: "green" },
-      COMPLETED: { text: "完成", color: "green" },
-      FAILED: { text: "失败", color: "red" },
-      FAIL: { text: "失败", color: "red" },
-      ERROR: { text: "异常", color: "red" },
-      PENDING: { text: "待处理", color: "gold" },
-      RUNNING: { text: "运行中", color: "blue" },
-      PROCESSING: { text: "处理中", color: "blue" },
-      RETRYING: { text: "重试中", color: "orange" },
-      SKIPPED: { text: "已跳过", color: "default" },
-    };
-    return labels[value] || { text: value || "-", color: "default" };
-  };
-
-  const overviewRunLogItems = computed(() =>
-    runLogRows.value.slice(0, 6).map((item, index) => {
-      const status = formatRunStatus(item.runStatus);
-      const fallbackTitle =
-        item.originalName ||
-        item.routeName ||
-        item.sourceName ||
-        item.transferId ||
-        "运行日志";
-      const description =
-        item.errorMessage ||
-        item.logMessage ||
-        [item.sourceName, item.routeName, item.targetName]
-          .filter(Boolean)
-          .join(" / ") ||
-        "暂无运行说明";
-
-      return {
-        key: item.runLogId || `${item.transferId ?? "run-log"}-${index}`,
-        title: fallbackTitle,
-        stageLabel: formatRunStage(item.runStage),
-        statusLabel: item.runStatusLabel || status.text,
-        statusColor: status.color,
-        createdAt: item.createdAt,
-        description,
-      };
-    }),
-  );
+  const objectSummaryCards = computed(() => [
+    {
+      key: "object-total",
+      label: "分拣对象个数",
+      value: Number(objectAnalysis.value?.totalCount ?? 0),
+      description: "当前筛选条件下分拣对象的总数量",
+      tone: "primary",
+    },
+    {
+      key: "object-tagged",
+      label: "分拣对象打标个数",
+      value: Number(objectAnalysis.value?.taggedCount ?? 0),
+      description: "已匹配到标签的分拣对象数量",
+      tone: "success",
+    },
+    {
+      key: "object-untagged",
+      label: "未打标分拣对象个数",
+      value: Number(objectAnalysis.value?.untaggedCount ?? 0),
+      description: "尚未匹配到标签的分拣对象数量",
+      tone: "warning",
+    },
+  ]);
 
   const trendData = computed(() => {
     const startIndex = Math.max(
@@ -1065,13 +1028,22 @@ export const useTransferPage = () => {
 
   const loadOverviewSnapshot = async () => {
     try {
-      const [sources, targets, rules, logsPage, analysisResult, runLogsPage] =
+      const [
+        sources,
+        targets,
+        rules,
+        logsPage,
+        analysisResult,
+        objectAnalysisResult,
+        runLogsPage,
+      ] =
         await Promise.all([
           api.listSources(),
           api.listTargets(),
           api.listRules(),
           api.pageRecords({ pageIndex: 0, pageSize: 200 }),
           api.analyzeLogs(),
+          api.analyzeObjects(),
           api.pageLogs(mapRunLogPageQuery()),
         ]);
 
@@ -1105,6 +1077,7 @@ export const useTransferPage = () => {
 
       const analysis = unwrapSingleResult(analysisResult);
       runLogAnalysis.value = analysis ?? null;
+      objectAnalysis.value = unwrapSingleResult(objectAnalysisResult) ?? null;
       runLogRows.value = runLogsPage?.data ?? [];
 
       recentDeliveryPagination.value.total = deliveryTotal.value;
@@ -1117,6 +1090,7 @@ export const useTransferPage = () => {
       logs.value = buildRecentDeliveries();
       trendSeries.value = buildTrendSeries();
       runLogAnalysis.value = null;
+      objectAnalysis.value = null;
       await loadOverviewRunLogs();
       await loadRecentDeliveries(
         1,
@@ -1142,10 +1116,10 @@ export const useTransferPage = () => {
     overviewHero,
     overviewHeroStats,
     pipelineCards,
-    overviewRunLogItems,
     phaseCards,
     anomalyItems,
     overviewMetrics,
+    objectSummaryCards,
     trendOptions,
     trendWindow,
     trendChartOption,

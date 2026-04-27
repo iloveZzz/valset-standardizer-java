@@ -55,22 +55,13 @@ public class ScriptRouteMatchPlugin implements RouteMatchPlugin {
         List<RuleDefinition> ruleDefinitions = transferRuleGateway.listEnabledRules();
         boolean matchedAnyRule = false;
         for (RuleDefinition ruleDefinition : ruleDefinitions) {
-            RuleContext ruleContext = new RuleContext(context, probeResult, Map.of());
+            RuleContext ruleContext = new RuleContext(context, probeResult, buildRuleVariables(ruleDefinition));
             RuleEvaluationResult evaluationResult = evaluate(ruleDefinition, ruleContext);
             if (!evaluationResult.matched()) {
                 continue;
             }
             matchedAnyRule = true;
-            List<TransferRoute> routes = transferRouteGateway.listRoutes(
-                    null,
-                    context == null || context.sourceType() == null ? null : context.sourceType().name(),
-                    context == null ? null : context.sourceCode(),
-                    ruleDefinition.ruleId(),
-                    null,
-                    null,
-                    null,
-                    null
-            );
+            List<TransferRoute> routes = transferRouteGateway.listRoutes(null, context == null || context.sourceType() == null ? null : context.sourceType().name(), context == null ? null : context.sourceCode(), ruleDefinition.ruleId(), null, null, null, null, null);
             if (!routes.isEmpty()) {
                 return new MatchResult(true, routes, evaluationResult.message());
             }
@@ -79,6 +70,17 @@ public class ScriptRouteMatchPlugin implements RouteMatchPlugin {
             return new MatchResult(true, List.of(), "规则已命中，但未找到对应的手动分拣路由配置");
         }
         return new MatchResult(false, List.of(), "未匹配到可用规则");
+    }
+
+    private Map<String, Object> buildRuleVariables(RuleDefinition ruleDefinition) {
+        Map<String, Object> variables = new java.util.LinkedHashMap<>();
+        if (ruleDefinition != null && ruleDefinition.ruleMeta() != null && !ruleDefinition.ruleMeta().isEmpty()) {
+            variables.putAll(ruleDefinition.ruleMeta());
+            variables.put("ruleMeta", ruleDefinition.ruleMeta());
+        } else {
+            variables.put("ruleMeta", Map.of());
+        }
+        return variables;
     }
 
     private RuleEvaluationResult evaluate(RuleDefinition ruleDefinition, RuleContext ruleContext) {

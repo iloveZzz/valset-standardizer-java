@@ -345,6 +345,13 @@ export const useTransferPage = (): { page: RulePage } => {
     formState.scriptBody = row.scriptBody || "";
   };
 
+  const loadRuleDetail = async (row: TransferRuleViewDTO) => {
+    if (!row.ruleId) {
+      return row;
+    }
+    return unwrapSingleResult(await api.getRule(row.ruleId)) ?? row;
+  };
+
   const resetForm = () => {
     Object.assign(formState, defaultForm());
   };
@@ -353,36 +360,36 @@ export const useTransferPage = (): { page: RulePage } => {
     formMode.value = "create";
     resetForm();
     resetTemplateState();
-    formVisible.value = true;
-    void loadTemplate();
+    void (async () => {
+      await loadTemplate();
+      formVisible.value = true;
+    })();
   };
 
-  const openEditDialog = async (row: TransferRuleViewDTO) => {
+  const openEditDialog = (row: TransferRuleViewDTO) => {
     formMode.value = "edit";
-    try {
-      const detail = row.ruleId
-        ? unwrapSingleResult(await api.getRule(row.ruleId))
-        : row;
-      if (detail) {
-        fillForm(detail);
+    void (async () => {
+      try {
+        const detail = await loadRuleDetail(row);
+        if (detail) {
+          fillForm(detail);
+        }
+        resetTemplateState();
+        await loadTemplate();
+        if (detail) {
+          hydrateTemplateValuesFromRow(detail);
+        }
+        formVisible.value = true;
+      } catch (error) {
+        console.error("加载规则详情失败:", error);
+        message.error("加载规则详情失败");
       }
-      resetTemplateState();
-      formVisible.value = true;
-      await loadTemplate();
-      if (detail) {
-        hydrateTemplateValuesFromRow(detail);
-      }
-    } catch (error) {
-      console.error("加载规则详情失败:", error);
-      message.error("加载规则详情失败");
-    }
+    })();
   };
 
   const openDetailDrawer = async (row: TransferRuleViewDTO) => {
     try {
-      selectedRow.value = row.ruleId
-        ? unwrapSingleResult(await api.getRule(row.ruleId)) ?? null
-        : row;
+      selectedRow.value = await loadRuleDetail(row);
       detailVisible.value = true;
     } catch (error) {
       console.error("加载规则详情失败:", error);

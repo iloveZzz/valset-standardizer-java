@@ -92,6 +92,13 @@ public class DbTransferJobScheduler implements TransferJobScheduler {
                     "transfer-ingest-cron",
                     TransferSchedulerTasks.INGEST_CRON_TASK.instanceId(sourceId));
             rescheduled = false;
+        } catch (TaskInstanceCurrentlyExecutingException exception) {
+            log.warn("来源轮询任务正在执行，跳过本次对账修改，sourceId={}，taskName={}，instanceId={}，message={}",
+                    sourceId,
+                    "transfer-ingest-cron",
+                    TransferSchedulerTasks.INGEST_CRON_TASK.instanceId(sourceId),
+                    exception.getMessage());
+            rescheduled = true;
         }
         if (!rescheduled) {
             schedulerClient.scheduleIfNotExists(schedulableInstance);

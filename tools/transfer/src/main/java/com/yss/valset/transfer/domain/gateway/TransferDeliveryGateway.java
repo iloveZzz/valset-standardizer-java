@@ -22,5 +22,7 @@ public interface TransferDeliveryGateway {
 
     List<TransferDeliveryRecord> listRecords(String routeId, String transferId, String targetCode, String executeStatus, Integer limit);
 
+    List<TransferDeliveryRecord> listRecordsByTransferIds(List<String> transferIds, String executeStatus);
+
     TransferDeliveryRecordPage pageRecords(String routeId, String transferId, String targetCode, String executeStatus, Integer pageIndex, Integer pageSize);
 }

@@ -112,6 +112,13 @@ class TransferRuleFunctionsTest {
                 "isExcel(fileName) && isCsv(csvName)",
                 Map.of("fileName", "demo.xlsx", "csvName", "demo.csv")
         )).isTrue();
+        assertThat(engine.evaluateBooleanExpression(
+                "matchesAnyRegex(fileName, regexList)",
+                Map.of(
+                        "fileName", "普通估值表(生成)_DL_SDLYHYX2023045外包EWY_20231031.xls",
+                        "regexList", List.of(".*估值.*\\.xlsx?", ".*农银.*\\.xlsx?")
+                )
+        )).isTrue();
     }
 
     @Test

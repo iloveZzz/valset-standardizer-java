@@ -53,11 +53,10 @@
 - `sourceName`
 - `sourceType`
 - `enabled`
-- `pollCron`
 - `connectionConfig`
 - `sourceMetaJson`
 
-建议同时为来源配置建立持久化实体 `TransferSourcePO`，表名可使用 `t_transfer_source`，用于保存后台维护的来源配置、轮询表达式和连接参数。
+建议同时为来源配置建立持久化实体 `TransferSourcePO`，表名可使用 `t_transfer_source`，用于保存后台维护的来源配置、连接参数和运行态信息；轮询表达式建议放到路由配置侧维护。
 
 `sourceType` 建议包括：
 
@@ -444,6 +443,8 @@ public interface RuleEngine {
 ### `t_transfer_route`
 
 保存路由结果。
+
+如果路由配置需要驱动定时轮询，可以在这里维护 `poll_cron`。
 
 ### `t_transfer_delivery_record`
 

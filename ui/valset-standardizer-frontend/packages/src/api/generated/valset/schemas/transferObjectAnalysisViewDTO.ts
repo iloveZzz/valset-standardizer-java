@@ -10,6 +10,10 @@ import type { TransferObjectSourceAnalysisViewDTO } from "./transferObjectSource
 export interface TransferObjectAnalysisViewDTO {
   /** 文件大小统计。(object) */
   sizeAnalysis?: TransferObjectSizeAnalysisViewDTO;
+  /** 已打标对象数。 */
+  taggedCount?: number;
+  /** 未打标对象数。 */
+  untaggedCount?: number;
   /** 按来源类型统计列表。 */
   sourceAnalyses?: TransferObjectSourceAnalysisViewDTO[];
   /** 总数。 */

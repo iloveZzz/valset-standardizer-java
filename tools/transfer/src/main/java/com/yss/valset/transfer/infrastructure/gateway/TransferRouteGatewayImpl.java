@@ -70,6 +70,7 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
                                           String ruleId,
                                           String targetType,
                                           String targetCode,
+                                          Boolean enabled,
                                           String routeStatus,
                                           Integer limit) {
         Long sourceIdValue = parseLong(sourceId);
@@ -82,6 +83,7 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
                                 .eq(ruleIdValue != null, TransferRoutePO::getRuleId, ruleIdValue)
                                 .eq(targetType != null && !targetType.isBlank(), TransferRoutePO::getTargetType, targetType)
                                 .eq(targetCode != null && !targetCode.isBlank(), TransferRoutePO::getTargetCode, targetCode)
+                                .eq(enabled != null, TransferRoutePO::getEnabled, enabled)
                                 .eq(routeStatus != null && !routeStatus.isBlank(), TransferRoutePO::getRouteStatus, routeStatus)
                                 .orderByDesc(TransferRoutePO::getRouteId)
                 )

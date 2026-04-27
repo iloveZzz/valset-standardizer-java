@@ -43,12 +43,11 @@ export interface SourcePage {
     sourceId?: string;
     sourceCode: string;
     sourceName: string;
-  sourceType: string;
-  enabled: boolean;
-  pollCron: string;
-  connectionConfigText: string;
-  sourceMetaText: string;
-};
+    sourceType: string;
+    enabled: boolean;
+    connectionConfigText: string;
+    sourceMetaText: string;
+  };
   detailVisible: boolean;
   selectedRow: any | null;
   checkpointRows: any[];

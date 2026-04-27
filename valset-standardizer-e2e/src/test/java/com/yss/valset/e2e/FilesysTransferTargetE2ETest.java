@@ -137,14 +137,14 @@ public class FilesysTransferTargetE2ETest {
 
     @Test
     void should_create_filesys_target_and_deliver_attachment_to_filesys_storage() throws Exception {
-        String targetCode = "filesys-e2e-target";
+        String targetCode = "filesys-e2e-endpoint";
         Map<String, Object> connectionConfig = new LinkedHashMap<>();
         connectionConfig.put("parentId", "parent-e2e-001");
         connectionConfig.put("storageSettingId", "storage-e2e-001");
         connectionConfig.put("chunkSize", 4096);
         Map<String, Object> targetMeta = Map.of(
                 "usage", "filesys-e2e",
-                "scenario", "target-create-and-deliver"
+                "scenario", "endpoint-create-and-deliver"
         );
 
         APIResponse createResponse = requestContext.post(
@@ -161,7 +161,7 @@ public class FilesysTransferTargetE2ETest {
         );
         assertThat(createResponse.status()).isEqualTo(201);
         JsonNode createJson = readJson(createResponse);
-        JsonNode targetJson = createJson.get("target");
+        JsonNode targetJson = createJson.get("endpoint");
         assertThat(targetJson).isNotNull();
         Long targetId = targetJson.get("targetId").asLong();
         assertThat(targetId).isNotNull();
@@ -187,7 +187,7 @@ public class FilesysTransferTargetE2ETest {
         Map<String, Object> fileMeta = new LinkedHashMap<>();
         fileMeta.put("sourceType", SourceType.LOCAL_DIR.name());
         fileMeta.put("sourceCode", "e2e-local");
-        fileMeta.put("scenario", "filesys-target");
+        fileMeta.put("scenario", "filesys-endpoint");
 
         TransferObject transferObject = transferObjectGateway.save(new TransferObject(
                 null,
@@ -235,7 +235,7 @@ public class FilesysTransferTargetE2ETest {
                         "transferId", transferObject.transferId(),
                         "maxRetryCount", 1,
                         "retryDelaySeconds", 1,
-                        "scenario", "filesys-target"
+                        "scenario", "filesys-endpoint"
                 )
         ));
         assertThat(route.routeId()).isNotNull();
@@ -272,7 +272,7 @@ public class FilesysTransferTargetE2ETest {
 
     @Test
     void should_manage_filesys_target_crud_via_api() throws Exception {
-        String targetCode = "filesys-crud-target";
+        String targetCode = "filesys-crud-endpoint";
         APIResponse createResponse = requestContext.post(
                 "/api/transfer-targets",
                 RequestOptions.create().setData(Map.of(
@@ -293,7 +293,7 @@ public class FilesysTransferTargetE2ETest {
                 ))
         );
         assertThat(createResponse.status()).isEqualTo(201);
-        JsonNode created = readJson(createResponse).get("target");
+        JsonNode created = readJson(createResponse).get("endpoint");
         assertThat(created).isNotNull();
         Long targetId = created.get("targetId").asLong();
         assertThat(targetId).isNotNull();
@@ -325,7 +325,7 @@ public class FilesysTransferTargetE2ETest {
                 ))
         );
         assertThat(updateResponse.status()).isEqualTo(200);
-        JsonNode updated = readJson(updateResponse).get("target");
+        JsonNode updated = readJson(updateResponse).get("endpoint");
         assertThat(updated.get("enabled").asBoolean()).isFalse();
         assertThat(updated.get("connectionConfig").get("storageSettingId").asText()).isEqualTo("crud-storage-002");
 
@@ -343,7 +343,7 @@ public class FilesysTransferTargetE2ETest {
 
         APIResponse deleteResponse = requestContext.delete("/api/transfer-targets/" + targetId);
         assertThat(deleteResponse.status()).isEqualTo(200);
-        JsonNode deleted = readJson(deleteResponse).get("target");
+        JsonNode deleted = readJson(deleteResponse).get("endpoint");
         assertThat(deleted.get("targetId").asLong()).isEqualTo(targetId);
 
         APIResponse afterDeleteResponse = requestContext.get("/api/transfer-targets/" + targetId);

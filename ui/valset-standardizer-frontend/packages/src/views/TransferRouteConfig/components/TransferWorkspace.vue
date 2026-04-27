@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { YButton, YCard } from "@yss-ui/components";
+import { ref, watch } from "vue";
+import { Button, Popover } from "ant-design-vue";
 import {
+  ScheduleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   LoadingOutlined,
@@ -9,6 +11,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
+import { YButton, YCard, YCron } from "@yss-ui/components";
 import { formatDateTime } from "@/utils/format";
 import type { RouteConfigPage } from "../types";
 
@@ -22,6 +25,34 @@ const getChainIcon = (statusKey: string) => {
   if (statusKey === "loading") return LoadingOutlined;
   return MinusCircleOutlined;
 };
+
+const popoverVisible = ref(false);
+const tempCronValue = ref("");
+
+const openCronPopover = () => {
+  tempCronValue.value = String(page.formState.pollCron ?? "");
+  popoverVisible.value = true;
+};
+
+const handleCronConfirm = () => {
+  page.formState.pollCron = tempCronValue.value;
+  popoverVisible.value = false;
+};
+
+const handleCronCancel = () => {
+  popoverVisible.value = false;
+};
+
+watch(
+  () => page.formVisible,
+  (visible) => {
+    if (!visible) {
+      popoverVisible.value = false;
+      return;
+    }
+    tempCronValue.value = String(page.formState.pollCron ?? "");
+  },
+);
 </script>
 
 <template>
@@ -31,12 +62,12 @@ const getChainIcon = (statusKey: string) => {
         <div class="workspace-header-copy">
           <h2>分拣路由</h2>
           <p>
-            统一维护来源、规则与目标之间的路由映射，并在映射页直接发起来源收取、
+            统一维护来源、规则、目标与轮询任务之间的路由映射，并在映射页直接发起来源收取、
             停止收取和配置维护。
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">来源 → 路由映射 → 目标</span>
-            <span class="workspace-pill">支持手动收取 / 停止收取</span>
+            <span class="workspace-pill">支持手动收取 / 停止收取 / 轮询配置</span>
           </div>
         </div>
         <div class="workspace-header-actions">
@@ -110,6 +141,19 @@ const getChainIcon = (statusKey: string) => {
               placeholder="输入目标编码"
               allow-clear
             />
+          </a-form-item>
+          <a-form-item label="启用状态">
+            <a-select
+              v-model:value="page.query.enabled"
+              allow-clear
+              size="small"
+              style="width: 160px"
+              placeholder="全部"
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option value="true">启用</a-select-option>
+              <a-select-option value="false">停用</a-select-option>
+            </a-select>
           </a-form-item>
           <a-form-item class="workspace-table-toolbar-actions">
             <a-button type="primary" size="small" @click="page.runQuery">
@@ -223,6 +267,12 @@ const getChainIcon = (statusKey: string) => {
                 </div>
 
                 <div class="route-list-actions">
+                  <a-tag
+                    class="route-enabled-tag"
+                    :color="row.enabled === false ? 'red' : 'green'"
+                  >
+                    {{ page.getRouteEnabledLabel(row.enabled) }}
+                  </a-tag>
                   <YButton
                     size="small"
                     type="primary"
@@ -250,6 +300,13 @@ const getChainIcon = (statusKey: string) => {
                   <YButton size="small" @click="page.openEditDialog(row)"
                     >修改</YButton
                   >
+                  <YButton
+                    size="small"
+                    :loading="page.isRouteToggling(row.routeId)"
+                    @click="page.toggleRouteEnabled(row)"
+                  >
+                    {{ row.enabled === false ? "启用" : "停用" }}
+                  </YButton>
                   <YButton
                     size="small"
                     class="route-delete-button"
@@ -341,6 +398,49 @@ const getChainIcon = (statusKey: string) => {
             </a-form-item>
             <a-form-item label="来源类型">
               <a-input :value="page.formState.sourceType" disabled />
+            </a-form-item>
+          </div>
+        </div>
+
+        <div class="route-config-section">
+          <div class="route-config-section-header">
+            <h3>调度信息</h3>
+            <p>配置来源轮询任务的定时表达式，保存后会同步到调度器。</p>
+          </div>
+          <div class="route-config-grid route-config-grid--schedule">
+            <a-form-item label="轮询表达式">
+              <Popover
+                v-model:open="popoverVisible"
+                trigger="click"
+                placement="bottomLeft"
+                :arrow="false"
+                overlay-class-name="route-cron-popover"
+              >
+                <template #content>
+                  <div class="route-cron-popover-content">
+                    <YCron v-model="tempCronValue" />
+                    <div class="route-cron-popover-footer">
+                      <Button size="small" @click="handleCronCancel">
+                        取消
+                      </Button>
+                      <Button
+                        type="primary"
+                        size="small"
+                        @click="handleCronConfirm"
+                      >
+                        确定
+                      </Button>
+                    </div>
+                  </div>
+                </template>
+
+                <div class="route-cron-select" @click="openCronPopover">
+                  <ScheduleOutlined class="route-cron-select-icon" />
+                  <span class="route-cron-select-value">
+                    {{ page.formState.pollCron || "请选择轮询表达式" }}
+                  </span>
+                </div>
+              </Popover>
             </a-form-item>
           </div>
         </div>
@@ -493,20 +593,26 @@ const getChainIcon = (statusKey: string) => {
               </a-button>
             </div>
             <a-descriptions bordered :column="1" size="small">
+              <a-descriptions-item label="启用状态">
+                {{ page.getRouteEnabledLabel(page.selectedRow.enabled) }}
+              </a-descriptions-item>
               <a-descriptions-item label="来源主键">
                 {{ page.selectedRow.sourceId ?? "-" }}
               </a-descriptions-item>
               <a-descriptions-item label="来源类型">
                 {{ page.selectedRow.sourceType || "-" }}
               </a-descriptions-item>
-              <a-descriptions-item label="来源编码">
-                {{ page.selectedRow.sourceCode || "-" }}
-              </a-descriptions-item>
-              <a-descriptions-item label="触发方式">
-                {{
-                  page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
-                    ? page.getSourceIngestState(page.selectedRow)
-                        ?.ingestTriggerType === "CRON"
+            <a-descriptions-item label="来源编码">
+              {{ page.selectedRow.sourceCode || "-" }}
+            </a-descriptions-item>
+            <a-descriptions-item label="轮询表达式">
+              {{ page.selectedRow.pollCron || "-" }}
+            </a-descriptions-item>
+            <a-descriptions-item label="触发方式">
+              {{
+                page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
+                  ? page.getSourceIngestState(page.selectedRow)
+                      ?.ingestTriggerType === "CRON"
                       ? "cron 定时"
                       : page.getSourceIngestState(page.selectedRow)
                             ?.ingestTriggerType === "MANUAL"

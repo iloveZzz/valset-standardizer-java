@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
  * 任务API入口点。
  */
 @RestController
-@RequestMapping("/api/tasks")
+@RequestMapping("/tasks")
 public class TaskController {
 
     private final TaskAppService taskAppService;

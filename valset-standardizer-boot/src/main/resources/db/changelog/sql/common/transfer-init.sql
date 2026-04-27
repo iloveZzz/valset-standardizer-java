@@ -21,7 +21,7 @@ INSERT INTO t_transfer_rule (
 );
 
 INSERT INTO t_transfer_source (
-    source_id, source_code, source_name, source_type, enabled, poll_cron,
+    source_id, source_code, source_name, source_type, enabled,
     connection_config_json, source_meta_json, created_at, updated_at
 ) VALUES (
     2047251110490148865,
@@ -29,7 +29,6 @@ INSERT INTO t_transfer_source (
     'qq邮箱',
     'EMAIL',
     1,
-    '0/5 0/5 * * * ? *',
     '{"protocol":"imap","folder":"INBOX","ssl":true,"startTls":true,"limit":20,"host":"imap.qq.com","port":993,"username":"slime365@foxmail.com","password":"ENC:v1:oN4ZRax++VCgx06uv7ePCMkaJCtSVDGfNI4eVY4AeZqtzCq4vUZvFSgLp98="}',
     '{}',
     '2026-04-23 17:47:55',
@@ -73,7 +72,7 @@ INSERT INTO t_transfer_rule (
 );
 
 INSERT INTO t_transfer_source (
-    source_id, source_code, source_name, source_type, enabled, poll_cron,
+    source_id, source_code, source_name, source_type, enabled,
     connection_config_json, source_meta_json, created_at, updated_at
 ) VALUES (
     2047251110490148865,
@@ -81,7 +80,6 @@ INSERT INTO t_transfer_source (
     'qq邮箱',
     'EMAIL',
     TRUE,
-    '0/5 0/5 * * * ? *',
     '{"protocol":"imap","folder":"INBOX","ssl":true,"startTls":true,"limit":20,"host":"imap.qq.com","port":993,"username":"slime365@foxmail.com","password":"ENC:v1:oN4ZRax++VCgx06uv7ePCMkaJCtSVDGfNI4eVY4AeZqtzCq4vUZvFSgLp98="}',
     '{}',
     TIMESTAMP '2026-04-23 17:47:55',

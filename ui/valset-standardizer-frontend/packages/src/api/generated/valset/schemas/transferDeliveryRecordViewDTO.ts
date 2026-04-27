@@ -16,9 +16,9 @@ export interface TransferDeliveryRecordViewDTO {
   executeStatus?: string;
   /** 执行状态名称。 */
   executeStatusLabel?: string;
-  /** 请求摘要 JSON。 */
+  /** 请求快照 JSON。 */
   requestSnapshotJson?: string;
-  /** 响应摘要 JSON。 */
+  /** 响应快照 JSON。 */
   responseSnapshotJson?: string;
   /** 路由主键。 */
   routeId?: string;

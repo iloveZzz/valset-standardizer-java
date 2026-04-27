@@ -88,6 +88,24 @@ class TransferRunLogGatewayImplTest {
         verify(repository).delete(any());
     }
 
+    @Test
+    void deleteLogsCreatedBetweenShouldDeleteMatchingRows() {
+        TransferRunLogRepository repository = mock(TransferRunLogRepository.class);
+        TransferRunLogMapper mapper = new TransferRunLogMapper() {
+        };
+        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper);
+
+        when(repository.delete(any())).thenReturn(3);
+
+        long deletedCount = gateway.deleteLogsCreatedBetween(
+                LocalDateTime.parse("2026-04-24T00:00:00"),
+                LocalDateTime.parse("2026-04-25T00:00:00")
+        );
+
+        assertThat(deletedCount).isEqualTo(3L);
+        verify(repository).delete(any());
+    }
+
     private TransferRunLogPO buildPo(String runLogId, String transferId, String createdAt, String runStatus) {
         TransferRunLogPO po = new TransferRunLogPO();
         po.setRunLogId(runLogId);

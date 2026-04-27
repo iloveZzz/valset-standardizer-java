@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { Button, Popover } from "ant-design-vue";
-import {
-  ScheduleOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons-vue";
-import { YButton, YCard, YCron, YssFormily, YTable } from "@yss-ui/components";
+import { PlusOutlined, ReloadOutlined } from "@ant-design/icons-vue";
+import { YButton, YCard, YssFormily, YTable } from "@yss-ui/components";
 import TransferTypeSelector from "../../TransferShared/components/TransferTypeSelector.vue";
 import MailConditionBuilder from "../../TransferShared/components/MailConditionBuilder.vue";
 import TransferTemplateDialog from "../../TransferShared/components/TransferTemplateDialog.vue";
@@ -21,8 +15,6 @@ const { page } = defineProps<{
 }>();
 
 const columns = useTransferSourceColumns();
-const popoverVisible = ref(false);
-const tempCronValue = ref("");
 const checkpointColumns = [
   {
     title: "检查点键",
@@ -85,32 +77,6 @@ const checkpointItemColumns = [
   },
 ];
 
-const openCronPopover = () => {
-  tempCronValue.value = String(page.templateValues.pollCron ?? "");
-  popoverVisible.value = true;
-};
-
-const handleCronConfirm = () => {
-  page.templateValues.pollCron = tempCronValue.value;
-  page.formState.pollCron = tempCronValue.value;
-  popoverVisible.value = false;
-};
-
-const handleCronCancel = () => {
-  popoverVisible.value = false;
-};
-
-watch(
-  () => page.formVisible,
-  (visible) => {
-    if (!visible) {
-      popoverVisible.value = false;
-      return;
-    }
-    tempCronValue.value = String(page.templateValues.pollCron ?? "");
-  },
-);
-
 const actionConfig = useTableActionConfig({
   width: 300,
   displayLimit: 4,
@@ -146,7 +112,7 @@ const actionConfig = useTableActionConfig({
         <div class="workspace-header-copy">
           <h2>文件来源接口配置</h2>
           <p>
-            统一维护来源编码、名称、类型、轮询表达式与扩展配置，适用于收发分拣的来源接入管理。
+            统一维护来源编码、名称、类型与扩展配置，适用于收发分拣的来源接入管理。
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
@@ -294,40 +260,6 @@ const actionConfig = useTableActionConfig({
         :detail-options="page.templateDetailOptions"
         :grid-defaults="page.templateGridDefaults"
       >
-        <template #pollCron>
-          <div class="cron-select">
-            <Popover
-              v-model:open="popoverVisible"
-              trigger="click"
-              placement="bottomLeft"
-              :arrow="false"
-              overlay-class-name="cron-select-popover"
-            >
-              <template #content>
-                <div class="cron-popover-content">
-                  <YCron v-model="tempCronValue" />
-                  <div class="cron-popover-footer">
-                    <Button size="small" @click="handleCronCancel">取消</Button>
-                    <Button
-                      type="primary"
-                      size="small"
-                      @click="handleCronConfirm"
-                    >
-                      确定
-                    </Button>
-                  </div>
-                </div>
-              </template>
-
-              <div class="cron-select-trigger" @click="openCronPopover">
-                <ScheduleOutlined class="cron-select-icon" />
-                <span class="cron-select-value">
-                  {{ page.templateValues.pollCron || "请选择轮询表达式" }}
-                </span>
-              </div>
-            </Popover>
-          </div>
-        </template>
         <template #mailCondition>
           <MailConditionBuilder v-model="page.templateValues.mailCondition" />
         </template>
@@ -371,9 +303,6 @@ const actionConfig = useTableActionConfig({
           </a-descriptions-item>
           <a-descriptions-item label="启用状态">
             {{ page.formatEnabled(page.selectedRow.enabled) }}
-          </a-descriptions-item>
-          <a-descriptions-item label="轮询表达式">
-            {{ page.selectedRow.pollCron || "-" }}
           </a-descriptions-item>
           <a-descriptions-item label="收取状态">
             {{ page.formatIngestStatus(page.selectedRow.ingestStatus) }}

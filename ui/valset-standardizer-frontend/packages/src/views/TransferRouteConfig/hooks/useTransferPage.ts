@@ -39,6 +39,7 @@ type QueryState = {
   ruleId: string;
   targetCode: string;
   targetType: string;
+  enabled: string;
   limit: number;
 };
 
@@ -72,6 +73,7 @@ const defaultQuery = (): QueryState => ({
   ruleId: "",
   targetCode: "",
   targetType: "",
+  enabled: "",
   limit: 100,
 });
 
@@ -88,6 +90,7 @@ const defaultForm = (): RouteFormState => ({
   sourceId: undefined,
   sourceCode: "",
   sourceType: "",
+  pollCron: "0 */5 * * * ?",
   targetCode: "",
   targetType: "",
   targetPath: "",
@@ -174,6 +177,8 @@ const buildFlowPreview = (
   const sourceMeta = [
     row?.sourceType || "来源类型待补全",
     row?.sourceId != null ? `来源ID ${row.sourceId}` : "",
+    row ? `路由状态 ${row.enabled === false ? "停用" : "启用"}` : "",
+    row?.pollCron ? `轮询 ${row.pollCron}` : "",
     sourceTriggerSummary,
   ]
     .filter(Boolean)
@@ -341,6 +346,9 @@ const getRouteChainStatusColor = (statusKey: string) => {
   return "default";
 };
 
+const getRouteEnabledLabel = (enabled?: boolean | null) =>
+  enabled === false ? "已停用" : "已启用";
+
 const formatRunStageLabel = (stage?: string) => {
   const normalized = String(stage ?? "")
     .trim()
@@ -476,7 +484,9 @@ const buildRouteFlowFacts = (
       title: "路由",
       content: routeIssueText
         ? `路由 ${routeRuleLabel} 已完成匹配，重命名模板 ${row.renamePattern || "默认命名"}。${routeIssuePrefix}`
-        : `路由 ${routeRuleLabel} 已完成匹配，重命名模板 ${row.renamePattern || "默认命名"}。`,
+        : row.enabled === false
+          ? `路由 ${routeRuleLabel} 当前已停用，重命名模板 ${row.renamePattern || "默认命名"}。`
+          : `路由 ${routeRuleLabel} 已完成匹配，重命名模板 ${row.renamePattern || "默认命名"}。`,
       timeText: getCurrentTimeText(),
     },
     {
@@ -515,6 +525,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const formSubmitting = ref(false);
   const formRef = ref<{ validate: () => Promise<void> } | null>(null);
   const sourceActionLoadingIds = reactive<Record<string, boolean>>({});
+  const routeActionLoadingIds = reactive<Record<string, boolean>>({});
   const sourceIngestStates = reactive<Record<string, SourceIngestState>>({});
   const routeExecutionStates = reactive<Record<string, RouteExecutionState>>({});
   const routeFlowFactMessages = reactive<
@@ -800,6 +811,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
       sourceId: row.sourceId,
       sourceCode: row.sourceCode ?? "",
       sourceType: row.sourceType ?? "",
+      pollCron: row.pollCron ?? "",
       targetCode: row.targetCode ?? "",
       targetType: row.targetType ?? "",
       targetPath: row.targetPath ?? "",
@@ -908,6 +920,11 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     if (query.ruleId) next.ruleId = query.ruleId;
     if (query.targetCode) next.targetCode = query.targetCode;
     if (query.targetType) next.targetType = query.targetType;
+    if (query.enabled === "true") {
+      next.enabled = true;
+    } else if (query.enabled === "false") {
+      next.enabled = false;
+    }
     next.limit = query.limit;
     return next;
   };
@@ -1144,6 +1161,61 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     });
   };
 
+  const isRouteToggling = (routeId?: string) => {
+    if (!routeId) {
+      return false;
+    }
+    return Boolean(routeActionLoadingIds[`toggle:${routeId}`]);
+  };
+
+  const toggleRouteEnabled = (row: TransferRouteViewDTO) => {
+    if (!row.routeId) {
+      message.error("路由主键缺失，无法执行启停操作");
+      return;
+    }
+
+    const nextEnabled = row.enabled === false;
+    const loadingKey = `toggle:${row.routeId}`;
+    if (routeActionLoadingIds[loadingKey]) {
+      message.warning("该路由正在处理启停请求，请勿重复操作");
+      return;
+    }
+
+    Modal.confirm({
+      title: nextEnabled ? "启用路由配置" : "停用路由配置",
+      content: nextEnabled
+        ? `确认启用路由配置「${row.sourceCode || row.targetCode || row.routeId}」吗？启用后路由会重新参与调度。`
+        : `确认停用路由配置「${row.sourceCode || row.targetCode || row.routeId}」吗？停用后路由将不再参与调度。`,
+      okText: nextEnabled ? "启用" : "停用",
+      okButtonProps: { danger: !nextEnabled },
+      cancelText: "取消",
+      onOk: async () => {
+        routeActionLoadingIds[loadingKey] = true;
+        try {
+          if (nextEnabled) {
+            await api.enableRoute(row.routeId!);
+          } else {
+            await api.disableRoute(row.routeId!);
+          }
+          message.success(nextEnabled ? "启用成功" : "停用成功");
+          await loadList();
+        } catch (error) {
+          console.error(nextEnabled ? "启用路由失败:" : "停用路由失败:", error);
+          message.error(
+            error instanceof Error
+              ? error.message
+              : nextEnabled
+                ? "启用路由失败"
+                : "停用路由失败",
+          );
+          await loadList();
+        } finally {
+          delete routeActionLoadingIds[loadingKey];
+        }
+      },
+    });
+  };
+
   const getSourceIngestState = (row: TransferRouteViewDTO | null) => {
     if (!row?.sourceId) {
       return null;
@@ -1309,7 +1381,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
         timeText: getCurrentTimeText(),
       },
       {
-        key: "target-delivery",
+        key: "endpoint-delivery",
         title: "目标投递",
         statusKey: targetTone,
         statusLabel: formatChainStatusLabel(targetTone),
@@ -1521,6 +1593,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const buildPayload = (): TransferRouteUpsertCommand => {
     const sourceCode = String(formState.sourceCode ?? "").trim();
     const sourceType = String(formState.sourceType ?? "").trim();
+    const pollCron = String(formState.pollCron ?? "").trim();
     const targetCode = String(formState.targetCode ?? "").trim();
     const targetType = String(formState.targetType ?? "").trim();
     const targetPath = String(formState.targetPath ?? "").trim();
@@ -1551,6 +1624,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
       sourceId: formState.sourceId,
       sourceCode,
       sourceType,
+      pollCron: pollCron || undefined,
       targetCode,
       targetType,
       targetPath,
@@ -1756,6 +1830,10 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     stopSource,
     isSourceTriggering,
     isSourceStopping,
+    toggleRouteEnabled,
+    isRouteToggling,
+    getRouteEnabledLabel,
+    routeActionLoadingIds,
     runQuery,
     resetQuery,
     submitForm,
