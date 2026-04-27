@@ -224,16 +224,6 @@ export const useTransferPage = () => {
         .reduce((sum, item) => sum + Number(item.count ?? 0), 0),
     );
 
-  const getStageTotal = (stageName: string) =>
-    Number(
-      runLogAnalysis.value?.stageAnalyses?.find(
-        (stage) =>
-          String(stage.runStage ?? "")
-            .trim()
-            .toUpperCase() === stageName,
-      )?.totalCount ?? 0,
-    );
-
   const getStageAnalysis = (stageName: string) =>
     runLogAnalysis.value?.stageAnalyses?.find(
       (stage) =>
@@ -412,51 +402,6 @@ export const useTransferPage = () => {
     },
   ]);
 
-  const phaseCards = computed(() => [
-    {
-      key: "received",
-      label: "收取",
-      value:
-        runLogAnalysis.value?.totalCount ??
-        deliveryTotal.value ??
-        logs.value.length,
-      description: "文件进入分拣系统的总量",
-      ratio: 100,
-    },
-    {
-      key: "identified",
-      label: "识别",
-      value: getStageTotal("INGEST"),
-      description: "完成内容识别和对象建模的数量",
-      ratio: Math.max(
-        0,
-        Math.round(
-          (getStageTotal("INGEST") / Math.max(getStageTotal("INGEST"), 1)) *
-            100,
-        ),
-      ),
-    },
-    {
-      key: "routed",
-      label: "路由",
-      value: getStageTotal("ROUTE"),
-      description: "完成规则匹配并选择目标的数量",
-      ratio: Math.max(
-        0,
-        Math.round(
-          (getStageTotal("ROUTE") / Math.max(getStageTotal("INGEST"), 1)) * 100,
-        ),
-      ),
-    },
-    {
-      key: "delivered",
-      label: "投递",
-      value: getStageTotal("DELIVER"),
-      description: "最终落到目标侧的对象数量",
-      ratio: successRate.value,
-    },
-  ]);
-
   const anomalyItems = computed(() =>
     logs.value
       .filter((item) => {
@@ -515,7 +460,7 @@ export const useTransferPage = () => {
       key: "object-total",
       label: "分拣对象个数",
       value: Number(objectAnalysis.value?.totalCount ?? 0),
-      description: "当前筛选条件下分拣对象的总数量",
+      description: "分拣对象的总数量",
       tone: "primary",
     },
     {
@@ -529,7 +474,7 @@ export const useTransferPage = () => {
       key: "object-untagged",
       label: "未打标分拣对象个数",
       value: Number(objectAnalysis.value?.untaggedCount ?? 0),
-      description: "尚未匹配到标签的分拣对象数量",
+      description: "尚未匹配到标签的分拣数量",
       tone: "warning",
     },
   ]);
@@ -1036,16 +981,15 @@ export const useTransferPage = () => {
         analysisResult,
         objectAnalysisResult,
         runLogsPage,
-      ] =
-        await Promise.all([
-          api.listSources(),
-          api.listTargets(),
-          api.listRules(),
-          api.pageRecords({ pageIndex: 0, pageSize: 200 }),
-          api.analyzeLogs(),
-          api.analyzeObjects(),
-          api.pageLogs(mapRunLogPageQuery()),
-        ]);
+      ] = await Promise.all([
+        api.listSources(),
+        api.listTargets(),
+        api.listRules(),
+        api.pageRecords({ pageIndex: 0, pageSize: 200 }),
+        api.analyzeLogs(),
+        api.analyzeObjects(),
+        api.pageLogs(mapRunLogPageQuery()),
+      ]);
 
       sourceRows.value = unwrapMultiResult(sources);
       targetRows.value = unwrapMultiResult(targets);
@@ -1116,7 +1060,6 @@ export const useTransferPage = () => {
     overviewHero,
     overviewHeroStats,
     pipelineCards,
-    phaseCards,
     anomalyItems,
     overviewMetrics,
     objectSummaryCards,

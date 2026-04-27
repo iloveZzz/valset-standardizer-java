@@ -70,10 +70,15 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
         SourceType sourceType = SourceType.valueOf(command.getSourceType());
         TransferSource existing = command.getSourceId() == null ? null : transferSourceGateway.findById(command.getSourceId())
                 .orElseThrow(() -> new IllegalStateException("未找到文件来源，sourceId=" + command.getSourceId()));
+        boolean requestedEnabled = Boolean.TRUE.equals(command.getEnabled());
+        if (existing != null && existing.enabled() != requestedEnabled) {
+            ensureSourceEnabledChangeAllowed(existing);
+        }
         Map<String, Object> connectionConfig = mergeSensitiveConfig(
                 existing == null ? null : existing.connectionConfig(),
                 command.getConnectionConfig()
         );
+        connectionConfig = normalizeLocalDirectoryConfig(connectionConfig);
         Map<String, Object> sourceMeta = mergeConfig(
                 existing == null ? null : existing.sourceMeta(),
                 command.getSourceMeta()
@@ -83,7 +88,7 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 command.getSourceCode(),
                 command.getSourceName(),
                 sourceType,
-                Boolean.TRUE.equals(command.getEnabled()),
+                requestedEnabled,
                 null,
                 connectionConfig,
                 sourceMeta,
@@ -272,6 +277,7 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 .sourceName(current.sourceName())
                 .sourceType(current.sourceType() == null ? null : current.sourceType().name())
                 .formTemplateName(TransferFormTemplateNames.sourceTemplateName(current.sourceType()))
+                .enabledRouteCount(current.sourceId() == null ? 0L : transferRouteGateway.countEnabledBySourceId(current.sourceId()))
                 .enabled(current.enabled())
                 .ingestStatus(current.ingestStatus())
                 .ingestTriggerType(current.ingestTriggerType())
@@ -283,6 +289,18 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 .createdAt(current.createdAt() == null ? null : java.time.LocalDateTime.ofInstant(current.createdAt(), java.time.ZoneId.systemDefault()))
                 .updatedAt(current.updatedAt() == null ? null : java.time.LocalDateTime.ofInstant(current.updatedAt(), java.time.ZoneId.systemDefault()))
                 .build();
+    }
+
+    private void ensureSourceEnabledChangeAllowed(TransferSource source) {
+        long enabledRouteCount = transferRouteGateway.countEnabledBySourceId(source.sourceId());
+        if (enabledRouteCount > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "存在 " + enabledRouteCount + " 条已启用的分拣路由配置引用该来源（sourceId="
+                            + source.sourceId() + "，sourceCode=" + source.sourceCode()
+                            + "），无法启用或停用来源，请先处理相关路由配置"
+            );
+        }
     }
 
     private Map<String, Object> mergeConfig(Map<String, Object> existing, Map<String, Object> incoming) {
@@ -311,6 +329,19 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
             }
         }
         return merged;
+    }
+
+    private Map<String, Object> normalizeLocalDirectoryConfig(Map<String, Object> connectionConfig) {
+        if (connectionConfig == null || connectionConfig.isEmpty()) {
+            return connectionConfig;
+        }
+        Map<String, Object> normalized = new LinkedHashMap<>(connectionConfig);
+        Object directory = normalized.get("directory");
+        if (directory != null) {
+            String trimmed = String.valueOf(directory).trim();
+            normalized.put("directory", trimmed);
+        }
+        return normalized;
     }
 
     private TransferSourceCheckpointViewDTO toCheckpointView(TransferSourceCheckpoint checkpoint) {

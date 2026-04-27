@@ -20,6 +20,9 @@ public record LocalDirectorySourceConfig(
         if (directory == null || directory.isBlank()) {
             directory = source.sourceCode();
         }
+        if (directory != null) {
+            directory = directory.trim();
+        }
         return new LocalDirectorySourceConfig(
                 directory,
                 booleanValue(config, TransferConfigKeys.RECURSIVE, false),

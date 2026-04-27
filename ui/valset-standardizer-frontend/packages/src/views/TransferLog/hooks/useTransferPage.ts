@@ -16,6 +16,12 @@ type QueryState = {
   executeStatus: string;
 };
 
+type TransferDeliveryRecordRow = TransferDeliveryRecordViewDTO & {
+  directoryPath?: string;
+  fileId?: string;
+  messages?: string;
+};
+
 const api = getJavaSpringBootQuartzApi();
 
 const defaultQuery = (): QueryState => ({
@@ -38,6 +44,65 @@ const safeJson = (value: unknown) => {
     return "{}";
   }
 };
+
+const normalizeSnapshotMessages = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return "";
+  }
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        return item.trim();
+      }
+      if (item === null || item === undefined) {
+        return "";
+      }
+      return String(item).trim();
+    })
+    .filter(Boolean)
+    .join("；");
+};
+
+const parseResponseSnapshot = (value: unknown) => {
+  if (value === null || value === undefined || value === "") {
+    return {};
+  }
+
+  let snapshot: unknown = value;
+  if (typeof value === "string") {
+    try {
+      snapshot = JSON.parse(value);
+    } catch {
+      return {};
+    }
+  }
+
+  if (!snapshot || typeof snapshot !== "object") {
+    return {};
+  }
+
+  const record = snapshot as {
+    directoryPath?: unknown;
+    fileId?: unknown;
+    messages?: unknown;
+  };
+  const directoryPath = String(record.directoryPath ?? "").trim();
+  const fileId = String(record.fileId ?? "").trim();
+  const messages = normalizeSnapshotMessages(record.messages);
+
+  return {
+    directoryPath: directoryPath || "-",
+    fileId: fileId || "-",
+    messages: messages || "-",
+  };
+};
+
+const enrichTransferDeliveryRecord = (
+  row: TransferDeliveryRecordViewDTO,
+): TransferDeliveryRecordRow => ({
+  ...row,
+  ...parseResponseSnapshot(row.responseSnapshotJson),
+});
 
 const formatExecuteStatusLabel = (value: string | undefined) => {
   const status = String(value ?? "")
@@ -69,7 +134,7 @@ const formatExecuteStatusLabel = (value: string | undefined) => {
 
 export const useTransferPage = () => {
   const query = reactive<QueryState>(defaultQuery());
-  const rows = ref<TransferDeliveryRecordViewDTO[]>([]);
+  const rows = ref<TransferDeliveryRecordRow[]>([]);
   const total = ref(0);
   const pagination = ref<YTablePagination>({
     current: 1,
@@ -79,7 +144,7 @@ export const useTransferPage = () => {
     showQuickJumper: true,
     pageSizeOptions: ["10", "20", "50", "100"],
   });
-  const selectedRow = ref<TransferDeliveryRecordViewDTO | null>(null);
+  const selectedRow = ref<TransferDeliveryRecordRow | null>(null);
   const detailVisible = ref(false);
   const listLoading = ref(false);
   let listRequestId = 0;
@@ -134,7 +199,7 @@ export const useTransferPage = () => {
       }
       const page = res as PageResultTransferDeliveryRecordViewDTO | undefined;
       const records = page?.data ?? [];
-      rows.value = records;
+      rows.value = records.map((row) => enrichTransferDeliveryRecord(row));
       total.value = Number(page?.totalCount ?? records.length);
       pagination.value.total = total.value;
       pagination.value.current =
@@ -156,11 +221,12 @@ export const useTransferPage = () => {
     }
   };
 
-  const openDetailDrawer = async (row: TransferDeliveryRecordViewDTO) => {
+  const openDetailDrawer = async (row: TransferDeliveryRecordRow) => {
     try {
-      const detail = row.deliveryId
+      const detailRow = row.deliveryId
         ? unwrapSingleResult(await api.getRecord(row.deliveryId))
         : row;
+      const detail = detailRow ? enrichTransferDeliveryRecord(detailRow) : row;
       selectedRow.value = detail ?? null;
       detailVisible.value = true;
     } catch (error) {

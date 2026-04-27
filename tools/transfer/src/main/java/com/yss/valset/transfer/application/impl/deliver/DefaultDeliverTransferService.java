@@ -106,6 +106,7 @@ public class DefaultDeliverTransferService implements DeliverTransferUseCase {
                 throw new IllegalStateException("文件投递失败，routeId=" + routeId + ", messages=" + result.messages());
             }
             clearFailedDeliverRunLogs(transferObject.transferId());
+            transferObject = persistStoragePath(transferObject, result);
             log.info("文件投递成功，routeId={}，transferId={}，targetCode={}，attemptIndex={}，messages={}",
                     routeId,
                     transferId,
@@ -140,6 +141,14 @@ public class DefaultDeliverTransferService implements DeliverTransferUseCase {
             }
             throw exception;
         }
+    }
+
+    private TransferObject persistStoragePath(TransferObject transferObject, TransferResult result) {
+        if (transferObject == null || result == null || result.storagePath() == null || result.storagePath().isBlank()) {
+            return transferObject;
+        }
+        TransferObject updated = transferObject.withRealStoragePath(result.storagePath());
+        return transferObjectGateway.save(updated);
     }
 
     private void clearFailedDeliverRunLogs(String transferId) {

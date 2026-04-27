@@ -15,6 +15,21 @@ export type TransferObjectTagViewDTO = {
   createdAt?: string;
 };
 
+export type TransferObjectRetagItemViewDTO = {
+  transferId?: string;
+  success: boolean;
+  tagCount: number;
+  message?: string;
+};
+
+export type TransferObjectRetagResponse = {
+  requestedCount: number;
+  successCount: number;
+  failureCount: number;
+  matchedTagCount: number;
+  items: TransferObjectRetagItemViewDTO[];
+};
+
 export type TransferObjectViewDTO = GeneratedTransferObjectViewDTO & {
   tags?: TransferObjectTagViewDTO[];
 };
@@ -36,6 +51,7 @@ export type ObjectSourceStat = {
   totalCount: number;
   statusCounts: ObjectStatusStat[];
   mailFolderCounts: ObjectMailFolderStat[];
+  undeliveredCount: number;
 };
 
 export type ObjectExtensionStat = {
@@ -63,6 +79,7 @@ export type ObjectQueryState = {
   sourceType: string;
   sourceCode: string;
   status: string;
+  deliveryStatus: string;
   mailId: string;
   fingerprint: string;
   routeId: string;
@@ -83,6 +100,8 @@ export type ObjectPage = {
   loading: boolean;
   analysisLoading: boolean;
   redeliverLoading: boolean;
+  retagLoading: boolean;
+  downloadLoading: boolean;
   rows: TransferObjectViewDTO[];
   tableData: TransferObjectViewDTO[];
   total: number;
@@ -99,12 +118,18 @@ export type ObjectPage = {
   selectedRow: TransferObjectViewDTO | null;
   openDetailDrawer: (row: TransferObjectViewDTO) => void;
   redeliverObject: (row: TransferObjectViewDTO) => void;
+  downloadObject: (row: TransferObjectViewDTO) => void;
+  retagObjects: () => void;
   runQuery: () => void;
   resetQuery: () => void;
   closeDetail: () => void;
   handlePageChange: (params: { current: number; pageSize: number }) => void;
   applySourceFilter: (sourceType?: string) => void;
   applySourceStatusFilter: (sourceType?: string, status?: string) => void;
+  applyDeliveryStatusFilter: (
+    sourceType?: string,
+    deliveryStatus?: string,
+  ) => void;
   applyTagFilter: (filter: ObjectTagFilter) => void;
   clearTagFilter: () => void;
   formatStatus: (value: string | undefined) => string;

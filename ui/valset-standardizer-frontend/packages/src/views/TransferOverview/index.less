@@ -190,35 +190,34 @@
 }
 
 .overview-hero-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overview-hero-charts-grid {
   display: grid;
-  grid-template-columns: minmax(420px, 0.98fr) minmax(330px, 0.74fr) minmax(
-      300px,
-      0.68fr
-    );
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
 }
 
-.overview-hero-column {
+.overview-hero-summary-row {
   display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.88fr);
   gap: 12px;
   align-content: start;
-  min-height: 100%;
 }
 
-.overview-hero-column--objects {
-  min-height: 100%;
+.overview-hero-summary-group {
+  min-width: 0;
 }
 
 .overview-object-summary-stack {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-content: start;
-}
-
-.overview-hero-column--run-log {
-  align-content: stretch;
-  min-height: 636px;
 }
 
 .overview-mini-chart-card {
@@ -295,11 +294,7 @@
 }
 
 .overview-hero-board-main {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.overview-hero-column--metrics .overview-hero-board-main {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .overview-hero-stat-card,
@@ -377,10 +372,21 @@
 }
 
 .overview-hero-stat-desc,
+.overview-metric-desc,
 .trend-phase-desc {
   margin-top: 8px;
   font-size: 13px;
   line-height: 1.6;
+}
+
+.overview-hero-stat-desc,
+.overview-metric-desc,
+.trend-phase-desc,
+.overview-pipeline-copy p {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .overview-pipeline-card {
@@ -714,14 +720,20 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .overview-hero,
-  .overview-hero-columns,
+  .overview-hero-charts-grid,
+  .overview-hero-summary-row,
   .overview-surface-grid,
   .overview-lower-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .overview-hero-charts-grid,
+  .overview-hero-summary-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .overview-hero-board-main,
+  .overview-object-summary-stack,
   .trend-phase-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -732,6 +744,7 @@
   .overview-metric-grid,
   .source-card-grid,
   .overview-hero-board-main,
+  .overview-object-summary-stack,
   .trend-phase-grid {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -52,7 +52,7 @@ public class TransferTargetFilesysFormTemplate extends FormTemplate {
                         YssFormilyDsl.input("targetCode", "目标编码").required().placeholder("例如：filesys-archive").gridSpan(1),
                         YssFormilyDsl.input("targetName", "目标名称").required().placeholder("例如：文件服务归档").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
-                        YssFormilyDsl.input("targetPathTemplate", "目标路径模板").required().placeholder("例如：/archive/").gridSpan(1),
+                        YssFormilyDsl.input("targetPathTemplate", "目标路径模板").required().placeholder("例如：/archive/${yyyyMMdd}/").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.PARENT_ID, "父目录标识").required().placeholder("请输入父目录标识").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.STORAGE_SETTING_ID, "存储配置标识").required().placeholder("请输入存储配置标识").gridSpan(1),
                         YssFormilyDsl.inputNumber(TransferConfigKeys.CHUNK_SIZE, "分片大小(字节)").placeholder("8388608").gridSpan(1)

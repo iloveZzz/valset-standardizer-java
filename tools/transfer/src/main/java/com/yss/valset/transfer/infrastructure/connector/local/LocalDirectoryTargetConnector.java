@@ -58,7 +58,7 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
                 }
             }
             Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-            return new TransferResult(true, null, List.of("本地目录投递成功，path=" + targetPath.toAbsolutePath()));
+            return new TransferResult(true, null, targetPath.toAbsolutePath().toString(), List.of("本地目录投递成功，path=" + targetPath.toAbsolutePath()));
         } catch (IOException e) {
             throw new IllegalStateException("本地目录投递失败，path=" + targetPath.toAbsolutePath(), e);
         }

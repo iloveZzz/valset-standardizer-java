@@ -95,6 +95,10 @@ public class TransferObjectViewDTO {
      */
     private String localTempPath;
     /**
+     * 真实文件存储地址。
+     */
+    private String realStoragePath;
+    /**
      * 文件状态。
      */
     private String status;
@@ -129,4 +133,24 @@ public class TransferObjectViewDTO {
      * 文件标签列表。
      */
     private List<TransferObjectTagViewDTO> tags;
+
+    /**
+     * 邮件分组的主文件主键。
+     */
+    private String primaryTransferId;
+
+    /**
+     * 当前邮件分组包含的文件主键列表。
+     */
+    private List<String> transferIds;
+
+    /**
+     * 当前邮件分组包含的附件列表。
+     */
+    private List<TransferObjectAttachmentViewDTO> attachments;
+
+    /**
+     * 当前邮件分组的附件数量。
+     */
+    private Integer attachmentCount;
 }

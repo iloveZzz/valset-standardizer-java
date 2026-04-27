@@ -1,5 +1,6 @@
 package com.yss.valset.transfer.application.impl.tagging;
 
+import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
 import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
 import com.yss.valset.transfer.domain.model.ProbeResult;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,11 +29,13 @@ class DefaultTransferTaggingServiceTest {
 
     @Test
     void shouldPreferTransferObjectLocalTempPathWhenBuildingTaggingContext() {
+        TransferObjectGateway transferObjectGateway = mock(TransferObjectGateway.class);
         TransferTagGateway transferTagGateway = mock(TransferTagGateway.class);
         TransferObjectTagGateway transferObjectTagGateway = mock(TransferObjectTagGateway.class);
         RuleEngine ruleEngine = mock(RuleEngine.class);
 
         DefaultTransferTaggingService service = new DefaultTransferTaggingService(
+                transferObjectGateway,
                 transferTagGateway,
                 transferObjectTagGateway,
                 ruleEngine
@@ -120,5 +124,76 @@ class DefaultTransferTaggingServiceTest {
         Map<String, Object> matchSnapshot = tagCaptor.getValue().get(0).matchSnapshot();
         assertThat(matchSnapshot).containsKeys("sourceType", "sourceCode", "fileName", "sender", "subject", "path", "probeDetected", "probeDetectedType", "probeAttributesCount");
         assertThat(matchSnapshot).doesNotContainKeys("tagCode", "tagName", "tagValue", "transferId", "probeResult");
+    }
+
+    @Test
+    void shouldRetagByReloadingObjectAndOverwritingOldTags() {
+        TransferObjectGateway transferObjectGateway = mock(TransferObjectGateway.class);
+        TransferTagGateway transferTagGateway = mock(TransferTagGateway.class);
+        TransferObjectTagGateway transferObjectTagGateway = mock(TransferObjectTagGateway.class);
+        RuleEngine ruleEngine = mock(RuleEngine.class);
+
+        DefaultTransferTaggingService service = new DefaultTransferTaggingService(
+                transferObjectGateway,
+                transferTagGateway,
+                transferObjectTagGateway,
+                ruleEngine
+        );
+
+        TransferTagDefinition tagDefinition = new TransferTagDefinition(
+                "tag-1",
+                "TAG_CODE",
+                "标签",
+                "xlsx",
+                true,
+                10,
+                "REGEX_RULE",
+                "qlexpress4",
+                null,
+                "mail\\.xls",
+                Map.of(),
+                Instant.now(),
+                Instant.now()
+        );
+        when(transferTagGateway.listEnabledTags()).thenReturn(List.of(tagDefinition));
+
+        TransferObject transferObject = new TransferObject(
+                "transfer-1",
+                "source-1",
+                "EMAIL",
+                "source-code",
+                "mail.xls",
+                "xls",
+                "application/vnd.ms-excel",
+                123L,
+                "fingerprint",
+                "source-ref",
+                "mail-id",
+                "sender@example.com",
+                "to@example.com",
+                null,
+                null,
+                "subject",
+                "body",
+                "imap",
+                "INBOX",
+                "/tmp/mail.xls",
+                null,
+                Instant.now(),
+                Instant.now(),
+                null,
+                null,
+                new ProbeResult(false, null, Map.of()),
+                Map.of()
+        );
+        when(transferObjectGateway.findById("transfer-1")).thenReturn(java.util.Optional.of(transferObject));
+        when(transferObjectTagGateway.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        List<TransferObjectTag> tags = service.retag("transfer-1", true);
+
+        assertThat(tags).hasSize(1);
+        assertThat(tags.get(0).transferId()).isEqualTo("transfer-1");
+        verify(transferObjectTagGateway).deleteByTransferId("transfer-1");
+        verify(transferObjectTagGateway).saveAll(any());
     }
 }

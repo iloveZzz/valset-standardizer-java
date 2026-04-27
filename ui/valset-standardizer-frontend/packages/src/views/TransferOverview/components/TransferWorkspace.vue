@@ -258,9 +258,51 @@ onBeforeUnmount(() => {
                   </a-tag>
                 </div>
               </div>
+              <div class="overview-hero-summary-row">
+                <div class="overview-hero-summary-group">
+                  <div class="overview-hero-board-main">
+                    <div
+                      v-for="item in page.overviewHeroStats"
+                      :key="item.key"
+                      class="overview-hero-stat-card"
+                      :class="`overview-hero-stat-card--${item.tone}`"
+                    >
+                      <div class="overview-hero-stat-label">
+                        {{ item.label }}
+                      </div>
+                      <div class="overview-hero-stat-value">
+                        {{ item.value }}
+                      </div>
+                      <div class="overview-hero-stat-desc">
+                        {{ item.description }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
+                <div class="overview-hero-summary-group">
+                  <div class="overview-object-summary-stack">
+                    <div
+                      v-for="item in page.objectSummaryCards"
+                      :key="item.key"
+                      class="overview-hero-stat-card"
+                      :class="`overview-hero-stat-card--${item.tone}`"
+                    >
+                      <div class="overview-hero-stat-label">
+                        {{ item.label }}
+                      </div>
+                      <div class="overview-hero-stat-value">
+                        {{ item.value }}
+                      </div>
+                      <div class="overview-hero-stat-desc">
+                        {{ item.description }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="overview-hero-columns">
-                <div class="overview-hero-column overview-hero-column--charts">
+                <div class="overview-hero-charts-grid">
                   <YCard
                     class="overview-mini-chart-card overview-mini-chart-card--status"
                     :bordered="false"
@@ -312,67 +354,6 @@ onBeforeUnmount(() => {
                     </div>
                   </YCard>
                 </div>
-
-                <div class="overview-hero-column overview-hero-column--metrics">
-                  <div class="overview-hero-board-main">
-                    <div
-                      v-for="item in page.overviewHeroStats"
-                      :key="item.key"
-                      class="overview-hero-stat-card"
-                      :class="`overview-hero-stat-card--${item.tone}`"
-                    >
-                      <div class="overview-hero-stat-label">
-                        {{ item.label }}
-                      </div>
-                      <div class="overview-hero-stat-value">
-                        {{ item.value }}
-                      </div>
-                      <div class="overview-hero-stat-desc">
-                        {{ item.description }}
-                      </div>
-                    </div>
-                  </div>
-                  <div class="trend-phase-grid trend-phase-grid--hero">
-                    <div
-                      v-for="item in page.phaseCards"
-                      :key="item.key"
-                      class="trend-phase-card"
-                    >
-                      <div class="trend-phase-header">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.value }}</strong>
-                      </div>
-                      <div class="trend-phase-bar">
-                        <span
-                          :style="{ width: `${Math.min(item.ratio, 100)}%` }"
-                        />
-                      </div>
-                      <div class="trend-phase-desc">{{ item.description }}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="overview-hero-column overview-hero-column--objects">
-                  <div class="overview-object-summary-stack">
-                    <div
-                      v-for="item in page.objectSummaryCards"
-                      :key="item.key"
-                      class="overview-hero-stat-card"
-                      :class="`overview-hero-stat-card--${item.tone}`"
-                    >
-                      <div class="overview-hero-stat-label">
-                        {{ item.label }}
-                      </div>
-                      <div class="overview-hero-stat-value">
-                        {{ item.value }}
-                      </div>
-                      <div class="overview-hero-stat-desc">
-                        {{ item.description }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
               </div>
             </div>
           </div>

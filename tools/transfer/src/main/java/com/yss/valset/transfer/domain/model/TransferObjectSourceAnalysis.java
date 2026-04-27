@@ -9,6 +9,7 @@ public record TransferObjectSourceAnalysis(
         String sourceType,
         Long totalCount,
         List<TransferObjectStatusCount> statusCounts,
-        List<TransferObjectMailFolderCount> mailFolderCounts
+        List<TransferObjectMailFolderCount> mailFolderCounts,
+        Long undeliveredCount
 ) {
 }

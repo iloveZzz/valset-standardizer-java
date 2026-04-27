@@ -167,3 +167,7 @@ ALTER TABLE t_transfer_object
 --changeset codex:20260424-01-postgres-transfer-probe-result dbms:postgresql
 ALTER TABLE t_transfer_object
     ADD COLUMN probe_result_json TEXT;
+
+--changeset codex:20260427-01-transfer-real-storage-path dbms:mysql,postgresql
+ALTER TABLE t_transfer_object
+    ADD COLUMN real_storage_path VARCHAR(1024);

@@ -20,6 +20,10 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +62,7 @@ public class S3TargetConnector implements TargetConnector {
         messages.add("S3 投递成功");
         messages.add("bucket=" + config.bucket());
         messages.add("objectKey=" + objectKey);
-        return new TransferResult(true, null, messages);
+        return new TransferResult(true, null, objectKey, messages);
     }
 
     private AmazonS3 buildClient(S3TargetConfig config) {
@@ -77,7 +81,7 @@ public class S3TargetConnector implements TargetConnector {
         return builder.build();
     }
 
-    private String buildObjectKey(S3TargetConfig config, TransferContext context) {
+    String buildObjectKey(S3TargetConfig config, TransferContext context) {
         TransferObject transferObject = context.transferObject();
         String basePath = firstNonBlank(
                 stringValue(context.transferRoute().routeMeta(), TransferConfigKeys.TARGET_PATH, null),
@@ -87,13 +91,11 @@ public class S3TargetConnector implements TargetConnector {
                 config.keyPrefix()
         );
         String fileName = firstNonBlank(transferObject.originalName(), "transfer-file");
-        if (basePath.isBlank()) {
+        String resolvedBasePath = resolveTemplate(basePath, context, transferObject);
+        if (resolvedBasePath == null || resolvedBasePath.isBlank()) {
             return fileName;
         }
-        if (basePath.endsWith("/")) {
-            return basePath + fileName;
-        }
-        return basePath;
+        return joinPath(resolvedBasePath, fileName);
     }
 
     private String firstNonBlank(String... values) {
@@ -103,6 +105,44 @@ public class S3TargetConnector implements TargetConnector {
             }
         }
         return "";
+    }
+
+    private String joinPath(String basePath, String fileName) {
+        if (basePath == null || basePath.isBlank()) {
+            return fileName;
+        }
+        String normalizedBasePath = basePath.endsWith("/") && basePath.length() > 1
+                ? basePath.substring(0, basePath.length() - 1)
+                : basePath;
+        if (normalizedBasePath.endsWith("/")) {
+            return normalizedBasePath + fileName;
+        }
+        return normalizedBasePath + "/" + fileName;
+    }
+
+    private String resolveTemplate(String template, TransferContext context, TransferObject transferObject) {
+        if (template == null || template.isBlank()) {
+            return template;
+        }
+        Map<String, String> variables = new LinkedHashMap<>();
+        variables.put("fileName", firstNonBlank(transferObject.originalName(), ""));
+        variables.put("originalName", firstNonBlank(transferObject.originalName(), ""));
+        variables.put("sourceCode", firstNonBlank(transferObject.sourceCode(), ""));
+        variables.put("sourceId", firstNonBlank(transferObject.sourceId(), ""));
+        variables.put("sourceType", firstNonBlank(transferObject.sourceType(), ""));
+        variables.put("targetCode", context.transferTarget() == null ? "" : firstNonBlank(context.transferTarget().targetCode(), ""));
+        variables.put("routeId", context.transferRoute() == null ? "" : firstNonBlank(context.transferRoute().routeId(), ""));
+        variables.put("transferId", firstNonBlank(transferObject.transferId(), ""));
+        variables.put("extension", firstNonBlank(transferObject.extension(), ""));
+        variables.put("mimeType", firstNonBlank(transferObject.mimeType(), ""));
+        variables.put("yyyyMMdd", LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE));
+        variables.put("yyyy-MM-dd", LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE));
+
+        String result = template;
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
+            result = result.replace("${" + entry.getKey() + "}", entry.getValue());
+        }
+        return result;
     }
 
     private static String stringValue(Map<String, Object> config, String key, String defaultValue) {

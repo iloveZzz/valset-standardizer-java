@@ -53,6 +53,19 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
     }
 
     @Override
+    public long countEnabledBySourceId(String sourceId) {
+        Long id = parseLong(sourceId);
+        if (id == null) {
+            return 0L;
+        }
+        return transferRouteRepository.selectCount(
+                Wrappers.lambdaQuery(TransferRoutePO.class)
+                        .eq(TransferRoutePO::getSourceId, id)
+                        .eq(TransferRoutePO::getEnabled, Boolean.TRUE)
+        );
+    }
+
+    @Override
     public long countByTargetCode(String targetCode) {
         if (targetCode == null || targetCode.isBlank()) {
             return 0L;

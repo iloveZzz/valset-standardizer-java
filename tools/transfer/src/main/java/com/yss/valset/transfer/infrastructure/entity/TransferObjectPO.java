@@ -76,64 +76,16 @@ public class TransferObjectPO {
     private String sourceRef;
 
     /**
-     * 邮件唯一标识。
-     */
-    @TableField("mail_id")
-    private String mailId;
-
-    /**
-     * 邮件发件人。
-     */
-    @TableField("mail_from")
-    private String mailFrom;
-
-    /**
-     * 邮件收件人。
-     */
-    @TableField("mail_to")
-    private String mailTo;
-
-    /**
-     * 邮件抄送人。
-     */
-    @TableField("mail_cc")
-    private String mailCc;
-
-    /**
-     * 邮件密送人。
-     */
-    @TableField("mail_bcc")
-    private String mailBcc;
-
-    /**
-     * 邮件主题。
-     */
-    @TableField("mail_subject")
-    private String mailSubject;
-
-    /**
-     * 邮件正文。
-     */
-    @TableField("mail_body")
-    private String mailBody;
-
-    /**
-     * 邮件协议。
-     */
-    @TableField("mail_protocol")
-    private String mailProtocol;
-
-    /**
-     * 邮件文件夹。
-     */
-    @TableField("mail_folder")
-    private String mailFolder;
-
-    /**
      * 本地临时文件路径。
      */
     @TableField("local_temp_path")
     private String localTempPath;
+
+    /**
+     * 真实文件存储地址。
+     */
+    @TableField("real_storage_path")
+    private String realStoragePath;
 
     /**
      * 文件状态。

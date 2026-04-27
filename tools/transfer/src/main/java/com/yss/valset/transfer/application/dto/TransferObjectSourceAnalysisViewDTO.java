@@ -31,4 +31,9 @@ public class TransferObjectSourceAnalysisViewDTO {
      * 邮件文件夹统计列表。
      */
     private List<TransferObjectMailFolderCountViewDTO> mailFolderCounts;
+
+    /**
+     * 未投递数量。
+     */
+    private Long undeliveredCount;
 }

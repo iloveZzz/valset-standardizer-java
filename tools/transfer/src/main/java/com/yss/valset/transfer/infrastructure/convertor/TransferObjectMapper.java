@@ -21,6 +21,7 @@ public interface TransferObjectMapper extends TransferMapstructSupport {
     @Mapping(target = "transferId", expression = "java(transferObject.transferId())")
     @Mapping(target = "sourceId", expression = "java(transferObject.sourceId())")
     @Mapping(target = "routeId", expression = "java(transferObject.routeId())")
+    @Mapping(target = "realStoragePath", expression = "java(transferObject.realStoragePath())")
     @Mapping(target = "probeResultJson", source = "probeResult")
     @Mapping(target = "fileMetaJson", source = "fileMeta")
     @Mapping(target = "status", expression = "java(enumName(transferObject.status()))")
@@ -31,6 +32,7 @@ public interface TransferObjectMapper extends TransferMapstructSupport {
     @Mapping(target = "transferId", expression = "java(stringValue(po.getTransferId()))")
     @Mapping(target = "sourceId", expression = "java(stringValue(po.getSourceId()))")
     @Mapping(target = "routeId", expression = "java(stringValue(po.getRouteId()))")
+    @Mapping(target = "realStoragePath", expression = "java(stringValue(po.getRealStoragePath()))")
     @Mapping(target = "status", expression = "java(statusOf(po.getStatus()))")
     @Mapping(target = "receivedAt", expression = "java(toInstant(po.getReceivedAt()))")
     @Mapping(target = "storedAt", expression = "java(toInstant(po.getStoredAt()))")
@@ -72,15 +74,7 @@ public interface TransferObjectMapper extends TransferMapstructSupport {
         }
         meta.putIfAbsent(TransferConfigKeys.SOURCE_TYPE, po.getSourceType());
         meta.putIfAbsent(TransferConfigKeys.SOURCE_CODE, po.getSourceCode());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_ID, po.getMailId());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_FROM, po.getMailFrom());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_TO, po.getMailTo());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_CC, po.getMailCc());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_BCC, po.getMailBcc());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_SUBJECT, po.getMailSubject());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_BODY, po.getMailBody());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_PROTOCOL, po.getMailProtocol());
-        meta.putIfAbsent(TransferConfigKeys.MAIL_FOLDER, po.getMailFolder());
+        meta.putIfAbsent("realStoragePath", po.getRealStoragePath());
         return meta;
     }
 

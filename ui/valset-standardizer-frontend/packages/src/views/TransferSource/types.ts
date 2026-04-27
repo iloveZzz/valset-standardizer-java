@@ -30,6 +30,7 @@ export interface SourcePage {
   templateGridDefaults: Record<string, any>;
   setTemplateFormRef: (instance: any) => void;
   isEnabledUpdating: (sourceId?: string) => boolean;
+  hasEnabledRoutes: (row?: any | null) => boolean;
   isIngestRunning: (row?: any | null) => boolean;
   isIngestBusy: (row?: any | null) => boolean;
   formatIngestStatus: (value?: string) => string;
@@ -39,6 +40,7 @@ export interface SourcePage {
   sourceTypeCount: number;
   formVisible: boolean;
   formMode: "create" | "edit";
+  editingRow: any | null;
   formState: {
     sourceId?: string;
     sourceCode: string;

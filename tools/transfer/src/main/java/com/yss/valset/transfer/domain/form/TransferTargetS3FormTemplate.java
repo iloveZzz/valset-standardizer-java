@@ -52,7 +52,7 @@ public class TransferTargetS3FormTemplate extends FormTemplate {
                         YssFormilyDsl.input("targetCode", "目标编码").required().placeholder("例如：s3-archive").gridSpan(1),
                         YssFormilyDsl.input("targetName", "目标名称").required().placeholder("例如：S3 归档").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
-                        YssFormilyDsl.input("targetPathTemplate", "目标路径模板").placeholder("例如：archive/").gridSpan(1),
+                        YssFormilyDsl.input("targetPathTemplate", "目标路径模板").placeholder("例如：/archive/${yyyyMMdd}/").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.BUCKET, "Bucket").required().placeholder("例如：my-bucket").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.REGION, "Region").required().placeholder("cn-north-1").gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.ENDPOINT_URL, "Endpoint").placeholder("可选").gridSpan(2),

@@ -4,6 +4,8 @@ import { Modal } from "ant-design-vue";
 import { YButton, YCard, YTable } from "@yss-ui/components";
 import {
   ExclamationCircleOutlined,
+  DownloadOutlined,
+  TagOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
@@ -33,9 +35,24 @@ const confirmRedeliver = (row: any) => {
   });
 };
 
+const confirmRetag = () => {
+  Modal.confirm({
+    title: "重新打标",
+    content: "将按当前筛选条件对全部分拣对象重新识别并覆盖已有标签，是否继续？",
+    icon: h(ExclamationCircleOutlined),
+    okText: "确定打标",
+    cancelText: "取消",
+    okButtonProps: {
+      danger: true,
+      loading: page.retagLoading,
+    },
+    onOk: () => page.retagObjects(),
+  });
+};
+
 const actionConfig = useTableActionConfig({
-  width: 180,
-  displayLimit: 2,
+  width: 240,
+  displayLimit: 3,
   buttons: [
     {
       text: "详情",
@@ -44,11 +61,19 @@ const actionConfig = useTableActionConfig({
       clickFn: ({ row }: any) => page.openDetailDrawer(row),
     },
     {
+      text: "下载",
+      key: "download",
+      type: "link",
+      disabledFn: ({ row }: any) => !String(row?.localTempPath ?? "").trim(),
+      clickFn: ({ row }: any) => page.downloadObject(row),
+    },
+    {
       text: "重新投递",
       key: "redeliver",
       type: "link",
       disabledFn: ({ row }: any) =>
-        page.formatDeliveryStatus(row.deliveryStatus) === "已投递",
+        page.formatDeliveryStatus(row.deliveryStatus) === "已投递" ||
+        !String(row?.routeId ?? "").trim(),
       clickFn: ({ row }: any) => confirmRedeliver(row),
     },
   ],
@@ -110,6 +135,10 @@ const actionConfig = useTableActionConfig({
               <template #icon><ReloadOutlined /></template>
               重置条件
             </YButton>
+            <YButton :loading="page.retagLoading" @click="confirmRetag">
+              <template #icon><TagOutlined /></template>
+              重新打标
+            </YButton>
           </div>
         </div>
       </div>
@@ -154,6 +183,25 @@ const actionConfig = useTableActionConfig({
                       </span>
                       <span class="analysis-status-chip-value">
                         {{ statusItem.count }}
+                      </span>
+                    </button>
+                    <button
+                      v-if="
+                        page.formatSourceTypeLabel(sourceItem.sourceType) ===
+                        'EMAIL'
+                      "
+                      type="button"
+                      class="analysis-status-chip analysis-status-chip--default"
+                      @click.stop="
+                        page.applyDeliveryStatusFilter(
+                          sourceItem.sourceType,
+                          '未投递',
+                        )
+                      "
+                    >
+                      <span class="analysis-status-chip-label">未投递</span>
+                      <span class="analysis-status-chip-value">
+                        {{ sourceItem.undeliveredCount }}
                       </span>
                     </button>
                     <span
@@ -240,7 +288,7 @@ const actionConfig = useTableActionConfig({
         :columns="columns"
         :action-config="actionConfig"
         :data="page.tableData"
-        :loading="page.loading || page.redeliverLoading"
+        :loading="page.loading || page.redeliverLoading || page.retagLoading"
         :autoFlexColumn="true"
         :row-config="{ keyField: 'transferId' }"
         :checkbox-config="{ highlight: true }"
@@ -367,6 +415,20 @@ const actionConfig = useTableActionConfig({
             {{ page.formatDeliveryStatus(row.deliveryStatus) }}
           </a-tag>
         </template>
+        <template #errorMessage="{ row }">
+          <a-popover
+            v-if="String(row.errorMessage ?? '').trim()"
+            trigger="click"
+            placement="topLeft"
+          >
+            <template #content>
+              <pre class="error-message-popover-pre">{{
+                String(row.errorMessage ?? "").trim()
+              }}</pre>
+            </template>
+            <ExclamationCircleOutlined class="error-message-icon" />
+          </a-popover>
+        </template>
         <template #sizeBytes="{ row }">
           {{ row.sizeBytes ?? 0 }}
         </template>
@@ -411,6 +473,16 @@ const actionConfig = useTableActionConfig({
             {{ page.selectedRow.sourceCode || "-" }}
           </div>
         </div>
+        <div class="source-detail-actions">
+          <YButton
+            :loading="page.downloadLoading"
+            :disabled="!page.selectedRow.localTempPath"
+            @click="page.downloadObject(page.selectedRow)"
+          >
+            <template #icon><DownloadOutlined /></template>
+            下载文件
+          </YButton>
+        </div>
         <a-descriptions bordered :column="1" size="small">
           <a-descriptions-item label="文件主键">
             {{ page.selectedRow.transferId ?? "-" }}
@@ -448,6 +520,9 @@ const actionConfig = useTableActionConfig({
           <a-descriptions-item label="本地临时路径">
             {{ page.selectedRow.localTempPath || "-" }}
           </a-descriptions-item>
+          <a-descriptions-item label="真实存储地址">
+            {{ page.selectedRow.realStoragePath || "-" }}
+          </a-descriptions-item>
           <a-descriptions-item label="邮件ID">
             {{ page.selectedRow.mailId || "-" }}
           </a-descriptions-item>
@@ -468,26 +543,6 @@ const actionConfig = useTableActionConfig({
           </a-descriptions-item>
         </a-descriptions>
 
-        <div class="detail-json-block">
-          <h4>文件元数据</h4>
-          <pre>{{ page.safeJson(page.selectedRow.fileMetaJson) }}</pre>
-        </div>
-        <div class="detail-json-block">
-          <h4>邮件信息</h4>
-          <pre>{{
-            page.safeJson({
-              mailFrom: page.selectedRow.mailFrom,
-              mailTo: page.selectedRow.mailTo,
-              mailCc: page.selectedRow.mailCc,
-              mailBcc: page.selectedRow.mailBcc,
-              mailSubject: page.selectedRow.mailSubject,
-              mailBody: page.selectedRow.mailBody,
-              mailFolder: page.selectedRow.mailFolder,
-              mailProtocol: page.selectedRow.mailProtocol,
-              mailId: page.selectedRow.mailId,
-            })
-          }}</pre>
-        </div>
         <div class="detail-json-block">
           <h4>错误信息</h4>
           <pre>{{ page.selectedRow.errorMessage || "-" }}</pre>

@@ -54,11 +54,12 @@ class TransferObjectMapperTest {
                 null,
                 new ProbeResult(true, "EMAIL_ATTACHMENT", probeAttributes),
                 Map.of("sourceCode", "qq-mail", "triggerType", "MANUAL")
-        );
+        ).withRealStoragePath("/data/archive/report.xlsx");
 
         TransferObjectPO po = mapper.toPO(transferObject, transferJsonMapper);
         assertThat(po.getProbeResultJson()).contains("EMAIL_ATTACHMENT");
         assertThat(po.getFileMetaJson()).contains("triggerType");
+        assertThat(po.getRealStoragePath()).isEqualTo("/data/archive/report.xlsx");
 
         TransferObject restored = mapper.toDomain(po, transferJsonMapper);
         assertThat(restored.probeResult()).isNotNull();
@@ -66,5 +67,6 @@ class TransferObjectMapperTest {
         assertThat(restored.probeResult().detectedType()).isEqualTo("EMAIL_ATTACHMENT");
         assertThat(restored.probeResult().attributes()).containsEntry("fileName", "report.xlsx");
         assertThat(restored.fileMeta()).containsEntry("sourceCode", "qq-mail");
+        assertThat(restored.realStoragePath()).isEqualTo("/data/archive/report.xlsx");
     }
 }

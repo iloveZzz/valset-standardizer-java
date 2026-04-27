@@ -37,6 +37,10 @@ public class TransferSourceViewDTO {
      */
     private String formTemplateName;
     /**
+     * 已启用路由数量。
+     */
+    private Long enabledRouteCount;
+    /**
      * 是否启用。
      */
     private Boolean enabled;

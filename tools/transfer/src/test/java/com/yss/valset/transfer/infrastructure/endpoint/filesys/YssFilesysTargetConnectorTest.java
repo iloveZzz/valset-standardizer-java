@@ -104,6 +104,42 @@ class YssFilesysTargetConnectorTest {
         );
     }
 
+    @Test
+    void should_resolve_directory_template_with_context_variables() throws Exception {
+        Path sourceFile = Files.createTempFile("valset-filesys-source-", ".txt");
+        Files.writeString(sourceFile, "filesys payload", StandardCharsets.UTF_8);
+
+        YssFilesysUploadFlowService uploadFlowService = mock(YssFilesysUploadFlowService.class);
+        YssFilesysFeignSdkProperties properties = new YssFilesysFeignSdkProperties();
+        properties.setDefaultChunkSize(8L * 1024 * 1024);
+        when(uploadFlowService.upload(any(byte[].class), anyString(), anyString(), anyString(), anyString(), anyString(), anyLong()))
+                .thenReturn(YssFilesysUploadFlowResult.builder()
+                        .taskId("task-003")
+                        .instantUpload(true)
+                        .fileRecord(com.yss.filesys.feignsdk.dto.YssFilesysFileRecordDTO.builder()
+                                .fileId("file-003")
+                                .build())
+                        .build());
+
+        YssFilesysTargetConnector connector = new YssFilesysTargetConnector(uploadFlowService, properties);
+        TransferContext context = buildContext(sourceFile, "/archive/${sourceCode}/${transferId}/${fileName}", "");
+
+        TransferResult result = connector.send(context);
+
+        String expectedDirectory = "/archive/source-code/transfer-001/" + sourceFile.getFileName();
+        assertThat(result.success()).isTrue();
+        assertThat(result.fileId()).isEqualTo("file-003");
+        verify(uploadFlowService).upload(
+                any(byte[].class),
+                eq(sourceFile.getFileName().toString()),
+                eq("text/plain"),
+                eq("parent-001"),
+                eq(expectedDirectory),
+                eq("storage-001"),
+                eq(8L * 1024 * 1024)
+        );
+    }
+
     private TransferContext buildContext(Path sourceFile, String targetPathTemplate, String routePath) throws Exception {
         TransferTarget target = new TransferTarget(
                 101L,

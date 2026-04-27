@@ -16,6 +16,8 @@ public interface TransferRouteGateway {
 
     long countBySourceId(String sourceId);
 
+    long countEnabledBySourceId(String sourceId);
+
     long countByTargetCode(String targetCode);
 
     List<TransferRoute> listRoutes(String sourceId,

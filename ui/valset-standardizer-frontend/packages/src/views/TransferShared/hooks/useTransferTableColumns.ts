@@ -162,7 +162,7 @@ export const useTransferObjectColumns = () =>
     {
       field: "sourceCode",
       title: "来源编码",
-      width: 180,
+      width: 120,
     },
     {
       field: "sourceType",
@@ -179,20 +179,23 @@ export const useTransferObjectColumns = () =>
         )
           .trim()
           .toUpperCase();
-        return value === "已投递" || value === "DELIVERED" || value === "SUCCESS"
+        return value === "已投递" ||
+          value === "DELIVERED" ||
+          value === "SUCCESS"
           ? "已投递"
           : "未投递";
       },
     },
     {
+      field: "errorMessage",
+      title: "异常",
+      width: 50,
+      ellipsis: true,
+    },
+    {
       field: "status",
       title: "文件状态",
       width: 120,
-    },
-    {
-      field: "originalName",
-      title: "附件名称",
-      width: 240,
     },
     {
       field: "sizeBytes",
@@ -207,7 +210,12 @@ export const useTransferObjectColumns = () =>
     {
       field: "tags",
       title: "标签",
-      width: 260,
+      width: 180,
+    },
+    {
+      field: "originalName",
+      title: "附件名称",
+      width: 240,
     },
   ]);
 
@@ -230,14 +238,22 @@ export const useTransferLogColumns = () =>
       width: 110,
     },
     {
+      field: "messages",
+      title: "消息",
+      minWidth: 320,
+      ellipsis: true,
+    },
+    {
       field: "targetCode",
       title: "目标编码",
-      width: 180,
+      width: 100,
+      ellipsis: true,
     },
     {
       field: "targetType",
       title: "目标类型",
-      width: 120,
+      width: 100,
+      ellipsis: true,
     },
     {
       field: "executeStatus",
@@ -330,7 +346,9 @@ export const useTransferOverviewRecentDeliveryColumns = () =>
       title: "目标类型",
       width: 120,
       formatter: (params: any) => {
-        const value = String(params?.cellValue ?? "").trim().toUpperCase();
+        const value = String(params?.cellValue ?? "")
+          .trim()
+          .toUpperCase();
         if (!value) {
           return "-";
         }

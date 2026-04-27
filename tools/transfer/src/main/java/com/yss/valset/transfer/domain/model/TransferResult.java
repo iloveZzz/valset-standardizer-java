@@ -8,6 +8,14 @@ import java.util.List;
 public record TransferResult(
         boolean success,
         String fileId,
+        String storagePath,
         List<String> messages
 ) {
+
+    public TransferResult {
+    }
+
+    public TransferResult(boolean success, String fileId, List<String> messages) {
+        this(success, fileId, null, messages);
+    }
 }

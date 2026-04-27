@@ -19,6 +19,7 @@ import type {
   ObjectPage,
   ObjectTagFilter,
   ObjectQueryState,
+  TransferObjectRetagResponse,
   TransferObjectViewDTO,
 } from "../types";
 
@@ -34,7 +35,29 @@ type AnalyzeObjectsRequestParams = AnalyzeObjectsParams & {
   tagValue?: string;
 };
 
+type TransferMailInfoViewDTO = Pick<
+  TransferObjectViewDTO,
+  | "transferId"
+  | "mailId"
+  | "mailFrom"
+  | "mailTo"
+  | "mailCc"
+  | "mailBcc"
+  | "mailSubject"
+  | "mailBody"
+  | "mailProtocol"
+  | "mailFolder"
+>;
+
 const api = getJavaSpringBootQuartzApi();
+
+const loadMailInfo = async (transferId: string) => {
+  const response = await customInstance<{ data?: TransferMailInfoViewDTO }>({
+    url: `/transfer-objects/${transferId}/mail-info`,
+    method: "GET",
+  });
+  return unwrapSingleResult(response) as TransferMailInfoViewDTO | null;
+};
 
 const statusOrder = [
   "PENDING",
@@ -54,6 +77,7 @@ const defaultQuery = (): ObjectQueryState => ({
   sourceType: "",
   sourceCode: "",
   status: "",
+  deliveryStatus: "",
   mailId: "",
   fingerprint: "",
   routeId: "",
@@ -124,6 +148,38 @@ const formatDeliveryStatus = (value: string | undefined) => {
     return "已投递";
   }
   return "未投递";
+};
+
+const hasRouteId = (value: string | undefined) => {
+  return String(value ?? "").trim().length > 0;
+};
+
+const parseContentDispositionFileName = (value: string | undefined) => {
+  if (!value) {
+    return "";
+  }
+  const utf8FileName = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8FileName?.[1]) {
+    try {
+      return decodeURIComponent(utf8FileName[1].trim());
+    } catch {
+      return utf8FileName[1].trim();
+    }
+  }
+  const plainFileName = value.match(/filename="?([^";]+)"?/i);
+  return plainFileName?.[1]?.trim() ?? "";
+};
+
+const triggerBrowserDownload = (blob: Blob, fileName: string) => {
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = fileName || "transfer-file";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
 };
 
 const normalizeStatusCounts = (
@@ -202,6 +258,7 @@ const normalizeAnalysis = (
       totalCount: Number(item.totalCount ?? 0),
       statusCounts: normalizeStatusCounts(item.statusCounts),
       mailFolderCounts: normalizeFolderCounts(item.mailFolderCounts),
+      undeliveredCount: Number(item.undeliveredCount ?? 0),
     }))
     .sort((left, right) => {
       const countCompare = right.totalCount - left.totalCount;
@@ -237,6 +294,8 @@ export const useTransferPage = () => {
   const selectedRow = ref<TransferObjectViewDTO | null>(null);
   const detailVisible = ref(false);
   const redeliverLoading = ref(false);
+  const retagLoading = ref(false);
+  const downloadLoading = ref(false);
   const analysis = ref<ObjectAnalysis>({
     totalCount: 0,
     taggedCount: 0,
@@ -321,6 +380,7 @@ export const useTransferPage = () => {
     sourceType: query.sourceType || undefined,
     sourceCode: query.sourceCode || undefined,
     status: query.status || undefined,
+    deliveryStatus: query.deliveryStatus || undefined,
     mailId: query.mailId || undefined,
     fingerprint: query.fingerprint || undefined,
     routeId: query.routeId || undefined,
@@ -336,6 +396,7 @@ export const useTransferPage = () => {
     sourceType: query.sourceType || undefined,
     sourceCode: query.sourceCode || undefined,
     status: query.status || undefined,
+    deliveryStatus: query.deliveryStatus || undefined,
     mailId: query.mailId || undefined,
     fingerprint: query.fingerprint || undefined,
     routeId: query.routeId || undefined,
@@ -416,10 +477,21 @@ export const useTransferPage = () => {
     ]);
   };
 
+  const reloadCurrentPageAndAnalysis = async () => {
+    await Promise.all([
+      loadAnalysis(),
+      loadList(pagination.value.current || 1, pagination.value.pageSize || 10),
+    ]);
+  };
+
   const redeliverObject = async (row: TransferObjectViewDTO) => {
     const transferId = String(row?.transferId ?? "").trim();
     if (!transferId) {
       message.warning("文件主对象缺少主键，无法重新投递");
+      return;
+    }
+    if (!hasRouteId(row?.routeId)) {
+      message.warning("文件主对象缺少路由主键，无法重新投递");
       return;
     }
     if (formatDeliveryStatus(row.deliveryStatus) === "已投递") {
@@ -459,12 +531,107 @@ export const useTransferPage = () => {
     }
   };
 
+  const downloadObject = async (row: TransferObjectViewDTO) => {
+    const transferId = String(row?.transferId ?? "").trim();
+    if (!transferId) {
+      message.warning("文件主对象缺少主键，无法下载");
+      return;
+    }
+    if (!String(row?.localTempPath ?? "").trim()) {
+      message.warning("文件主对象没有可下载的本地临时文件路径");
+      return;
+    }
+    if (downloadLoading.value) {
+      return;
+    }
+
+    downloadLoading.value = true;
+    try {
+      const response = await customInstance<{
+        data: Blob;
+        headers?: Record<string, string>;
+      }>({
+        url: `/transfer-objects/${transferId}/download`,
+        method: "GET",
+        responseType: "blob",
+      });
+      const blob = response.data;
+      const contentDisposition =
+        response.headers?.["content-disposition"] ||
+        response.headers?.["Content-Disposition"];
+      const fileName =
+        parseContentDispositionFileName(contentDisposition) ||
+        String(row.originalName ?? "").trim() ||
+        "transfer-file";
+      triggerBrowserDownload(blob, fileName);
+      message.success("文件下载已开始");
+    } catch (error) {
+      console.error("下载文件主对象失败:", error);
+      message.error("下载文件主对象失败");
+    } finally {
+      downloadLoading.value = false;
+    }
+  };
+
+  const retagObjects = async () => {
+    if (retagLoading.value) {
+      return;
+    }
+
+    retagLoading.value = true;
+    try {
+      const res = await customInstance<TransferObjectRetagResponse>({
+        url: "/transfer-objects/retag",
+        method: "POST",
+        data: {
+          sourceId: query.sourceId || undefined,
+          sourceType: query.sourceType || undefined,
+          sourceCode: query.sourceCode || undefined,
+          status: query.status || undefined,
+          mailId: query.mailId || undefined,
+          fingerprint: query.fingerprint || undefined,
+          routeId: query.routeId || undefined,
+          tagId: query.tagId || undefined,
+          tagCode: query.tagCode || undefined,
+          tagValue: query.tagValue || undefined,
+        },
+      });
+      const result = unwrapSingleResult(res);
+      const requestedCount = Number(result?.requestedCount ?? 0);
+      const successCount = Number(result?.successCount ?? 0);
+      const failureCount = Number(result?.failureCount ?? 0);
+      const matchedTagCount = Number(result?.matchedTagCount ?? 0);
+      const summary =
+        `已处理 ${requestedCount} 条，成功 ${successCount} 条，失败 ${failureCount} 条，命中 ${matchedTagCount} 条标签`;
+      if (requestedCount <= 0) {
+        message.warning("当前筛选条件下没有可重新打标的对象");
+        return;
+      }
+      if (failureCount > 0) {
+        message.warning(summary);
+      } else {
+        message.success(summary);
+      }
+      await reloadCurrentPageAndAnalysis();
+    } catch (error) {
+      console.error("重新打标文件主对象失败:", error);
+    } finally {
+      retagLoading.value = false;
+    }
+  };
+
   const openDetailDrawer = async (row: TransferObjectViewDTO) => {
     try {
       const detail = row.transferId
         ? unwrapSingleResult(await api.getObject(row.transferId))
         : row;
-      selectedRow.value = detail ?? null;
+      const mailInfo = row.transferId
+        ? await loadMailInfo(row.transferId).catch(() => null)
+        : null;
+      selectedRow.value = {
+        ...(detail ?? row),
+        ...(mailInfo ?? {}),
+      } as TransferObjectViewDTO;
       detailVisible.value = true;
     } catch (error) {
       console.error("加载主对象详情失败:", error);
@@ -525,6 +692,7 @@ export const useTransferPage = () => {
   const applySourceFilter = (sourceType?: string) => {
     query.sourceType = sourceType ?? "";
     query.status = "";
+    query.deliveryStatus = "";
     pagination.value.current = 1;
     void runQuery();
   };
@@ -532,6 +700,18 @@ export const useTransferPage = () => {
   const applySourceStatusFilter = (sourceType?: string, status?: string) => {
     query.sourceType = sourceType ?? "";
     query.status = status ?? "";
+    query.deliveryStatus = "";
+    pagination.value.current = 1;
+    void runQuery();
+  };
+
+  const applyDeliveryStatusFilter = (
+    sourceType?: string,
+    deliveryStatus?: string,
+  ) => {
+    query.sourceType = sourceType ?? "";
+    query.status = "";
+    query.deliveryStatus = deliveryStatus ?? "";
     pagination.value.current = 1;
     void runQuery();
   };
@@ -558,6 +738,8 @@ export const useTransferPage = () => {
     loading: listLoading,
     analysisLoading,
     redeliverLoading,
+    retagLoading,
+    downloadLoading,
     rows,
     tableData,
     total,
@@ -575,10 +757,13 @@ export const useTransferPage = () => {
     handlePageChange,
     openDetailDrawer,
     redeliverObject,
+    downloadObject,
+    retagObjects,
     runQuery,
     resetQuery,
     applySourceFilter,
     applySourceStatusFilter,
+    applyDeliveryStatusFilter,
     applyTagFilter,
     clearTagFilter,
     closeDetail: () => {

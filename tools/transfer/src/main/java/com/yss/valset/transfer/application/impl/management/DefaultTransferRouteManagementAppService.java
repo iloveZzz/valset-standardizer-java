@@ -57,6 +57,7 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
         boolean createMode = command.getRouteId() == null;
         TransferRoute existing = command.getRouteId() == null ? null : transferRouteGateway.findById(command.getRouteId())
                 .orElseThrow(() -> new IllegalStateException("未找到分拣路由，routeId=" + command.getRouteId()));
+        String previousSourceId = existing == null ? null : existing.sourceId();
         Map<String, Object> routeMeta = mergeConfig(
                 existing == null ? null : existing.routeMeta(),
                 command.getRouteMeta()
@@ -77,7 +78,7 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
                 routeMeta
         );
         TransferRoute saved = transferRouteGateway.save(transferRoute);
-        transferSourceScheduleCoordinator.syncSourceScheduleBySourceId(saved.sourceId());
+        syncRouteSchedule(previousSourceId, saved.sourceId());
         return TransferRouteMutationResponse.builder()
                 .operation(createMode ? "create" : "update")
                 .message("分拣路由保存成功")
@@ -204,5 +205,12 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
             return existing == null ? null : existing.pollCron();
         }
         return value.trim();
+    }
+
+    private void syncRouteSchedule(String previousSourceId, String currentSourceId) {
+        if (previousSourceId != null && !previousSourceId.equals(currentSourceId)) {
+            transferSourceScheduleCoordinator.syncSourceScheduleBySourceId(previousSourceId);
+        }
+        transferSourceScheduleCoordinator.syncSourceScheduleBySourceId(currentSourceId);
     }
 }

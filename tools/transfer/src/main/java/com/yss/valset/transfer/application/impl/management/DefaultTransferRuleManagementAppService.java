@@ -8,7 +8,10 @@ import com.yss.valset.transfer.domain.form.TransferFormTemplateNames;
 import com.yss.valset.transfer.domain.gateway.TransferRuleGateway;
 import com.yss.valset.transfer.domain.model.RuleDefinition;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -40,6 +43,7 @@ public class DefaultTransferRuleManagementAppService implements TransferRuleMana
 
     @Override
     public TransferRuleMutationResponse upsertRule(TransferRuleUpsertCommand command) {
+        validateCommand(command);
         boolean createMode = command.getRuleId() == null;
         RuleDefinition definition = new RuleDefinition(
                 command.getRuleId(),
@@ -55,7 +59,17 @@ public class DefaultTransferRuleManagementAppService implements TransferRuleMana
                 toInstant(command.getEffectiveTo()),
                 command.getRuleMeta() == null ? new HashMap<>() : command.getRuleMeta()
         );
-        RuleDefinition saved = transferRuleGateway.save(definition);
+        RuleDefinition saved;
+        try {
+            saved = transferRuleGateway.save(definition);
+        } catch (DataIntegrityViolationException exception) {
+            if (isRuleCodeDuplicate(exception)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "规则编码已存在，请使用其他编码，ruleCode=" + command.getRuleCode(),
+                        exception);
+            }
+            throw exception;
+        }
         return TransferRuleMutationResponse.builder()
                 .operation(createMode ? "create" : "update")
                 .message("路由规则保存成功")
@@ -101,5 +115,40 @@ public class DefaultTransferRuleManagementAppService implements TransferRuleMana
 
     private java.time.LocalDateTime toLocalDateTime(Instant value) {
         return value == null ? null : java.time.LocalDateTime.ofInstant(value, java.time.ZoneId.systemDefault());
+    }
+
+    private void validateCommand(TransferRuleUpsertCommand command) {
+        if (command == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "规则配置不能为空");
+        }
+        String ruleCode = command.getRuleCode() == null ? null : command.getRuleCode().trim();
+        if (ruleCode == null || ruleCode.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "规则编码不能为空");
+        }
+        transferRuleGateway.findByRuleCode(ruleCode)
+                .ifPresent(existing -> {
+                    if (command.getRuleId() == null || !command.getRuleId().equals(existing.ruleId())) {
+                        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                                "规则编码已存在，请使用其他编码，ruleCode=" + ruleCode);
+                    }
+                });
+    }
+
+    private boolean isRuleCodeDuplicate(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            String message = current.getMessage();
+            if (message != null) {
+                String normalized = message.toLowerCase();
+                if (normalized.contains("duplicate entry") && normalized.contains("uk_transfer_rule_code")) {
+                    return true;
+                }
+                if (normalized.contains("duplicate") && normalized.contains("rule_code")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

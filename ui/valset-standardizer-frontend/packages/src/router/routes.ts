@@ -21,6 +21,7 @@ export const workspaceNav: Array<{
 }> = transferSectionOptions.map((item) => {
   const iconMap: Record<string, Component> = {
     overview: DatabaseOutlined,
+    inbox: InboxOutlined,
     object: FileSearchOutlined,
     source: InboxOutlined,
     target: ApiOutlined,
@@ -41,6 +42,7 @@ export const workspaceNav: Array<{
 
 const transferPageComponentMap = {
   overview: () => import("@/views/TransferOverview/index.vue"),
+  inbox: () => import("@/views/TransferInbox/index.vue"),
   source: () => import("@/views/TransferSource/index.vue"),
   target: () => import("@/views/TransferTarget/index.vue"),
   rule: () => import("@/views/TransferRule/index.vue"),

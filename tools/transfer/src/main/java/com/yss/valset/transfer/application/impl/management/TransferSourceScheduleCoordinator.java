@@ -80,12 +80,11 @@ public class TransferSourceScheduleCoordinator {
                 null,
                 null,
                 null,
-                null,
+                true,
                 null,
                 null
         );
         return routes.stream()
-                .filter(TransferRoute::enabled)
                 .map(TransferRoute::pollCron)
                 .filter(this::hasText)
                 .findFirst()

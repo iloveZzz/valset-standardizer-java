@@ -1,5 +1,6 @@
 export const transferSectionOptions = [
   { label: "分拣总览", value: "overview" },
+  { label: "收件箱", value: "inbox" },
   { label: "来源管理", value: "source" },
   { label: "目标管理", value: "target" },
   { label: "分拣规则", value: "rule" },

@@ -2,8 +2,13 @@ package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yss.valset.transfer.application.impl.query.DefaultTransferObjectQueryService;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
+import com.yss.valset.transfer.domain.gateway.TransferMailInfoGateway;
+import com.yss.valset.transfer.domain.gateway.TransferDeliveryGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
+import com.yss.valset.transfer.domain.model.ProbeResult;
+import com.yss.valset.transfer.domain.model.TransferDeliveryRecord;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectAnalysis;
 import com.yss.valset.transfer.domain.model.TransferObjectExtensionCount;
@@ -12,20 +17,30 @@ import com.yss.valset.transfer.domain.model.TransferObjectPage;
 import com.yss.valset.transfer.domain.model.TransferObjectSourceAnalysis;
 import com.yss.valset.transfer.domain.model.TransferObjectStatusCount;
 import com.yss.valset.transfer.domain.model.TransferObjectSizeAnalysis;
+import com.yss.valset.transfer.domain.model.TransferMailInfo;
 import com.yss.valset.transfer.domain.model.TransferStatus;
+import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
 import com.yss.valset.transfer.infrastructure.convertor.TransferJsonMapper;
 import com.yss.valset.transfer.infrastructure.convertor.TransferObjectMapper;
+import com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectPO;
+import com.yss.valset.transfer.infrastructure.mapper.TransferObjectMybatisMapper;
 import com.yss.valset.transfer.infrastructure.mapper.TransferObjectRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -39,14 +54,17 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final TransferObjectRepository transferObjectRepository;
+    private final TransferMailInfoGateway transferMailInfoGateway;
     private final TransferObjectTagGateway transferObjectTagGateway;
+    private final TransferDeliveryGateway transferDeliveryGateway;
     private final TransferJsonMapper transferJsonMapper;
     private final TransferObjectMapper transferObjectMapper;
+    private final TransferObjectMybatisMapper transferObjectMybatisMapper;
 
     @Override
     public Optional<TransferObject> findById(String transferId) {
         TransferObjectPO po = transferObjectRepository.selectById(parseLong(transferId));
-        return Optional.ofNullable(po).map(this::toDomain);
+        return Optional.ofNullable(po).map(this::toDomain).map(this::hydrateMailInfo);
     }
 
     @Override
@@ -56,7 +74,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                         .eq(TransferObjectPO::getFingerprint, fingerprint)
                         .last("limit 1")
         );
-        return Optional.ofNullable(po).map(this::toDomain);
+        return Optional.ofNullable(po).map(this::toDomain).map(this::hydrateMailInfo);
     }
 
     @Override
@@ -64,6 +82,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                                           String sourceType,
                                           String sourceCode,
                                           String status,
+                                          String deliveryStatus,
                                           String mailId,
                                           String fingerprint,
                                           String routeId,
@@ -76,7 +95,9 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         int size = pageSize == null || pageSize <= 0 ? DEFAULT_PAGE_SIZE : pageSize;
         Long sourceIdValue = parseLong(sourceId);
         Long routeIdValue = parseLong(routeId);
+        String mailFilterSql = buildMailFilterSql(mailId);
         String tagFilterSql = buildTagFilterSql(tagId, tagCode, tagValue);
+        String deliveryFilterSql = buildDeliveryFilterSql(deliveryStatus);
         Page<TransferObjectPO> page = transferObjectRepository.selectPage(
                 new Page<>(current, size),
                 Wrappers.lambdaQuery(TransferObjectPO.class)
@@ -84,7 +105,9 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                         .eq(sourceType != null && !sourceType.isBlank(), TransferObjectPO::getSourceType, sourceType)
                         .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
                         .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
-                        .eq(mailId != null && !mailId.isBlank(), TransferObjectPO::getMailId, mailId)
+                        .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
+                        .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
+                        .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
                         .eq(fingerprint != null && !fingerprint.isBlank(), TransferObjectPO::getFingerprint, fingerprint)
                         .eq(routeIdValue != null, TransferObjectPO::getRouteId, routeIdValue)
                         .inSql(tagFilterSql != null, TransferObjectPO::getTransferId, tagFilterSql)
@@ -93,8 +116,51 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         );
         List<TransferObject> records = page.getRecords() == null ? Collections.emptyList() : page.getRecords().stream()
                 .map(this::toDomain)
+                .map(this::hydrateMailInfo)
                 .toList();
         return new TransferObjectPage(records, page.getTotal(), page.getCurrent() - 1, page.getSize());
+    }
+
+    @Override
+    public List<TransferObject> listEmailInboxObjects(String sourceCode, String mailId) {
+        String mailFilterSql = buildMailFilterSql(mailId);
+        List<TransferObject> objects = transferObjectRepository.selectList(
+                        Wrappers.lambdaQuery(TransferObjectPO.class)
+                                .eq(TransferObjectPO::getSourceType, "EMAIL")
+                                .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
+                                .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
+                                .orderByDesc(TransferObjectPO::getReceivedAt)
+                                .orderByDesc(TransferObjectPO::getTransferId)
+                )
+                .stream()
+                .map(this::toDomain)
+                .toList();
+        if (objects.isEmpty()) {
+            return objects;
+        }
+        List<String> transferIds = objects.stream()
+                .map(TransferObject::transferId)
+                .filter(this::hasText)
+                .toList();
+        if (transferIds.isEmpty()) {
+            return objects;
+        }
+        Map<String, TransferMailInfo> mailInfoMap = transferMailInfoGateway.listByTransferIds(transferIds).stream()
+                .collect(Collectors.toMap(
+                        TransferMailInfo::transferId,
+                        mailInfo -> mailInfo,
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
+        if (mailInfoMap.isEmpty()) {
+            return objects;
+        }
+        return objects.stream()
+                .map(object -> {
+                    TransferMailInfo mailInfo = mailInfoMap.get(object.transferId());
+                    return mailInfo == null ? object : object.withMailInfo(mailInfo);
+                })
+                .toList();
     }
 
     @Override
@@ -102,6 +168,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                                                  String sourceType,
                                                  String sourceCode,
                                                  String status,
+                                                 String deliveryStatus,
                                                  String mailId,
                                                  String fingerprint,
                                                  String routeId,
@@ -110,14 +177,18 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                                                  String tagValue) {
         Long sourceIdValue = parseLong(sourceId);
         Long routeIdValue = parseLong(routeId);
+        String mailFilterSql = buildMailFilterSql(mailId);
         String tagFilterSql = buildTagFilterSql(tagId, tagCode, tagValue);
+        String deliveryFilterSql = buildDeliveryFilterSql(deliveryStatus);
         List<TransferObject> objects = transferObjectRepository.selectList(
                         Wrappers.lambdaQuery(TransferObjectPO.class)
                                 .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
                                 .eq(sourceType != null && !sourceType.isBlank(), TransferObjectPO::getSourceType, sourceType)
                                 .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
                                 .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
-                                .eq(mailId != null && !mailId.isBlank(), TransferObjectPO::getMailId, mailId)
+                                .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
+                                .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
+                                .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
                                 .eq(fingerprint != null && !fingerprint.isBlank(), TransferObjectPO::getFingerprint, fingerprint)
                                 .eq(routeIdValue != null, TransferObjectPO::getRouteId, routeIdValue)
                                 .inSql(tagFilterSql != null, TransferObjectPO::getTransferId, tagFilterSql)
@@ -126,6 +197,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 )
                 .stream()
                 .map(this::toDomain)
+                .map(this::hydrateMailInfo)
                 .toList();
         long taggedCount = countTaggedObjects(objects);
         long untaggedCount = Math.max(0L, objects.size() - taggedCount);
@@ -151,11 +223,18 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                             ));
                     List<TransferObjectStatusCount> statusCounts = orderStatusCounts(statusCountMap);
                     List<TransferObjectMailFolderCount> mailFolderCounts = orderMailFolderCounts(mailFolderCountMap);
+                    Set<String> deliveredTransferIds = loadDeliveredTransferIds(sourceObjects);
+                    long undeliveredCount = sourceObjects.stream()
+                            .map(TransferObject::transferId)
+                            .filter(java.util.Objects::nonNull)
+                            .filter(transferId -> !deliveredTransferIds.contains(transferId))
+                            .count();
                     return new TransferObjectSourceAnalysis(
                             entry.getKey(),
                             (long) sourceObjects.size(),
                             statusCounts,
-                            mailFolderCounts
+                            mailFolderCounts,
+                            undeliveredCount
                     );
                 })
                 .sorted((left, right) -> {
@@ -183,7 +262,80 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         } else {
             transferObjectRepository.updateById(po);
         }
-        return toDomain(po);
+        saveMailInfo(resolveTransferId(po, transferObject), transferObject);
+        return hydrateMailInfo(toDomain(po));
+    }
+
+    @Override
+    public List<DefaultTransferObjectQueryService.InboxMailGroup> loadMailInboxGroups(String sourceCode, String mailId, String deliveryStatus, Integer offset, Integer limit) {
+        // 调用自定义SQL查询
+        List<MailInboxGroupDTO> dtoList = transferObjectMybatisMapper.loadMailInboxGroups(sourceCode, mailId, deliveryStatus, offset, limit);
+        
+        if (dtoList.isEmpty()) {
+            return List.of();
+        }
+
+        // 按mailKey分组
+        Map<String, List<MailInboxGroupDTO>> groupedMap = dtoList.stream()
+                .collect(Collectors.groupingBy(
+                        dto -> normalizeMailGroupKey(dto.getMailId(), dto.getTransferId()),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        // 转换为InboxMailGroup
+        List<DefaultTransferObjectQueryService.InboxMailGroup> groups = new ArrayList<>();
+        for (Map.Entry<String, List<MailInboxGroupDTO>> entry : groupedMap.entrySet()) {
+            String mailKey = entry.getKey();
+            List<MailInboxGroupDTO> items = entry.getValue();
+
+            if (items.isEmpty()) {
+                continue;
+            }
+
+            // 第一个是代表对象（row_num = 1）
+            MailInboxGroupDTO representativeDto = items.stream()
+                    .filter(dto -> dto.getRowNum() != null && dto.getRowNum() == 1)
+                    .findFirst()
+                    .orElse(items.get(0));
+
+            // 转换为TransferObject
+            TransferObject representative = toDomainFromDto(representativeDto);
+            
+            // 所有对象都作为附件
+            List<TransferObject> attachments = items.stream()
+                    .map(this::toDomainFromDto)
+                    .toList();
+
+            // 提取transferIds
+            List<String> transferIds = items.stream()
+                    .map(MailInboxGroupDTO::getTransferId)
+                    .filter(this::hasText)
+                    .toList();
+
+            // 判断是否已投递（所有transfer_id都已投递）
+            boolean delivered = items.stream().allMatch(dto -> dto.getDelivered() != null && dto.getDelivered() == 1);
+            
+            // 判断是否已打标（任一transfer_id已打标）
+            boolean tagged = items.stream().anyMatch(dto -> dto.getTagged() != null && dto.getTagged() == 1);
+
+            groups.add(new DefaultTransferObjectQueryService.InboxMailGroup(
+                    mailKey,
+                    representative,
+                    attachments,
+                    transferIds,
+                    null, // mailInfo will be hydrated later
+                    delivered,
+                    tagged
+            ));
+        }
+
+        return groups;
+    }
+
+    @Override
+    public long countMailInboxGroups(String sourceCode, String mailId, String deliveryStatus) {
+        return transferObjectMybatisMapper.countMailInboxGroups(sourceCode, mailId, deliveryStatus);
     }
 
     private TransferObjectPO toPO(TransferObject transferObject) {
@@ -192,6 +344,61 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
 
     private TransferObject toDomain(TransferObjectPO po) {
         return transferObjectMapper.toDomain(po, transferJsonMapper);
+    }
+
+    private TransferObject hydrateMailInfo(TransferObject transferObject) {
+        if (transferObject == null || transferObject.transferId() == null) {
+            return transferObject;
+        }
+        return transferMailInfoGateway.findByTransferId(transferObject.transferId())
+                .map(transferObject::withMailInfo)
+                .orElse(transferObject);
+    }
+
+    private void saveMailInfo(String transferId, TransferObject transferObject) {
+        if (transferObject == null || transferId == null || transferId.isBlank()) {
+            return;
+        }
+        TransferMailInfo mailInfo = new TransferMailInfo(
+                transferId,
+                transferObject.mailId(),
+                transferObject.mailFrom(),
+                transferObject.mailTo(),
+                transferObject.mailCc(),
+                transferObject.mailBcc(),
+                transferObject.mailSubject(),
+                transferObject.mailBody(),
+                transferObject.mailProtocol(),
+                transferObject.mailFolder()
+        );
+        if (!hasAnyMailField(mailInfo)) {
+            transferMailInfoGateway.deleteByTransferId(transferId);
+            return;
+        }
+        transferMailInfoGateway.save(mailInfo);
+    }
+
+    private String resolveTransferId(TransferObjectPO po, TransferObject transferObject) {
+        if (po != null && po.getTransferId() != null && !po.getTransferId().isBlank()) {
+            return po.getTransferId();
+        }
+        return transferObject == null ? null : transferObject.transferId();
+    }
+
+    private boolean hasAnyMailField(TransferMailInfo mailInfo) {
+        return hasText(mailInfo.mailId())
+                || hasText(mailInfo.mailFrom())
+                || hasText(mailInfo.mailTo())
+                || hasText(mailInfo.mailCc())
+                || hasText(mailInfo.mailBcc())
+                || hasText(mailInfo.mailSubject())
+                || hasText(mailInfo.mailBody())
+                || hasText(mailInfo.mailProtocol())
+                || hasText(mailInfo.mailFolder());
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String buildTagFilterSql(String tagId, String tagCode, String tagValue) {
@@ -210,6 +417,35 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
             hasFilter = true;
         }
         return hasFilter ? sql.toString() : null;
+    }
+
+    private String buildDeliveryFilterSql(String deliveryStatus) {
+        if (!"DELIVERED".equalsIgnoreCase(deliveryStatus) && !"UNDELIVERED".equalsIgnoreCase(deliveryStatus)) {
+            return null;
+        }
+        return "select transfer_id from t_transfer_delivery_record where execute_status = 'SUCCESS'";
+    }
+
+    private String buildMailFilterSql(String mailId) {
+        if (mailId == null || mailId.isBlank()) {
+            return null;
+        }
+        return "select transfer_id from t_transfer_mail_info where mail_id = '" + escapeSql(mailId.trim()) + "'";
+    }
+
+    private Set<String> loadDeliveredTransferIds(List<TransferObject> objects) {
+        List<String> transferIds = objects == null ? List.of() : objects.stream()
+                .map(TransferObject::transferId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (transferIds.isEmpty()) {
+            return Set.of();
+        }
+        return transferDeliveryGateway.listRecordsByTransferIds(transferIds, "SUCCESS").stream()
+                .map(TransferDeliveryRecord::transferId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 
     private String escapeSql(String value) {
@@ -327,5 +563,121 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
             return "无后缀";
         }
         return text.startsWith(".") ? text.toLowerCase(Locale.ROOT) : "." + text.toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeMailGroupKey(String mailId, String transferId) {
+        if (hasText(mailId)) {
+            return mailId.trim();
+        }
+        return "transfer:" + (transferId == null ? "" : transferId.trim());
+    }
+
+    private TransferObject toDomainFromDto(MailInboxGroupDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+
+        TransferStatus status = null;
+        if (hasText(dto.getStatus())) {
+            try {
+                status = TransferStatus.valueOf(dto.getStatus().trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // ignore
+            }
+        }
+
+        Instant receivedAt = null;
+        if (dto.getReceivedAt() != null) {
+            receivedAt = dto.getReceivedAt().atZone(ZoneId.systemDefault()).toInstant();
+        }
+
+        Instant storedAt = null;
+        if (dto.getStoredAt() != null) {
+            storedAt = dto.getStoredAt().atZone(ZoneId.systemDefault()).toInstant();
+        }
+
+        ProbeResult probeResult = parseProbeResultFromDto(dto);
+
+        return new TransferObject(
+                dto.getTransferId(),
+                dto.getSourceId(),
+                dto.getSourceType(),
+                dto.getSourceCode(),
+                dto.getOriginalName(),
+                dto.getExtension(),
+                dto.getMimeType(),
+                dto.getSizeBytes(),
+                dto.getFingerprint(),
+                dto.getSourceRef(),
+                dto.getMailId(),
+                dto.getMailFrom(),
+                dto.getMailTo(),
+                dto.getMailCc(),
+                dto.getMailBcc(),
+                dto.getMailSubject(),
+                dto.getMailBody(),
+                dto.getMailProtocol(),
+                dto.getMailFolder(),
+                dto.getLocalTempPath(),
+                status,
+                receivedAt,
+                storedAt,
+                dto.getRouteId(),
+                dto.getErrorMessage(),
+                probeResult,
+                mergeFileMetaFromDto(dto),
+                dto.getRealStoragePath()
+        );
+    }
+
+    private ProbeResult parseProbeResultFromDto(MailInboxGroupDTO dto) {
+        Map<String, Object> stored = transferJsonMapper.toMap(dto.getProbeResultJson());
+        if (stored == null || stored.isEmpty()) {
+            stored = transferJsonMapper.toMap(dto.getFileMetaJson());
+        }
+        if (stored == null || stored.isEmpty()) {
+            return null;
+        }
+        Object detectedRaw = stored.get("detected");
+        Object detectedTypeRaw = stored.get("detectedType");
+        Object attributesRaw = stored.get("attributes");
+        if (detectedRaw == null && detectedTypeRaw == null && attributesRaw == null) {
+            detectedRaw = stored.get(TransferConfigKeys.PROBE_DETECTED);
+            detectedTypeRaw = stored.get(TransferConfigKeys.PROBE_DETECTED_TYPE);
+            attributesRaw = stored.get(TransferConfigKeys.PROBE_ATTRIBUTES);
+        }
+        return new ProbeResult(
+                detectedRaw == null || Boolean.parseBoolean(String.valueOf(detectedRaw)),
+                detectedTypeRaw == null ? null : String.valueOf(detectedTypeRaw),
+                attributesRaw instanceof Map<?, ?> map ? safeMap(castMap(map)) : Map.of()
+        );
+    }
+
+    private Map<String, Object> mergeFileMetaFromDto(MailInboxGroupDTO dto) {
+        Map<String, Object> meta = new LinkedHashMap<>();
+        Map<String, Object> storedMeta = transferJsonMapper.toMap(dto.getFileMetaJson());
+        if (storedMeta != null) {
+            meta.putAll(storedMeta);
+        }
+        meta.putIfAbsent(TransferConfigKeys.SOURCE_TYPE, dto.getSourceType());
+        meta.putIfAbsent(TransferConfigKeys.SOURCE_CODE, dto.getSourceCode());
+        meta.putIfAbsent("realStoragePath", dto.getRealStoragePath());
+        return meta;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> castMap(Map<?, ?> source) {
+        Map<String, Object> target = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : source.entrySet()) {
+            target.put(String.valueOf(entry.getKey()), entry.getValue());
+        }
+        return target;
+    }
+
+    private Map<String, Object> safeMap(Map<String, Object> source) {
+        if (source == null) {
+            return Map.of();
+        }
+        return source;
     }
 }

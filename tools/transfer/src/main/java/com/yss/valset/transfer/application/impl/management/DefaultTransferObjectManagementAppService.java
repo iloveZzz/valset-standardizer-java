@@ -1,13 +1,20 @@
 package com.yss.valset.transfer.application.impl.management;
 
+import com.yss.valset.transfer.application.command.TransferObjectRetagCommand;
 import com.yss.valset.transfer.application.command.TransferObjectRedeliverCommand;
+import com.yss.valset.transfer.application.dto.TransferObjectRetagItemViewDTO;
+import com.yss.valset.transfer.application.dto.TransferObjectRetagResponse;
 import com.yss.valset.transfer.application.dto.TransferObjectRedeliverItemViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectRedeliverResponse;
 import com.yss.valset.transfer.application.service.TransferObjectManagementAppService;
+import com.yss.valset.transfer.application.service.TransferTaggingUseCase;
 import com.yss.valset.transfer.application.port.TransferProcessUseCase;
 import com.yss.valset.transfer.domain.gateway.TransferDeliveryGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
+import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
 import com.yss.valset.transfer.domain.model.TransferObject;
+import com.yss.valset.transfer.domain.model.TransferObjectPage;
+import com.yss.valset.transfer.domain.model.TransferObjectTag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,7 +24,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,9 +34,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultTransferObjectManagementAppService implements TransferObjectManagementAppService {
 
+    private static final int RETAG_PAGE_SIZE = 200;
+
     private final TransferObjectGateway transferObjectGateway;
     private final TransferDeliveryGateway transferDeliveryGateway;
     private final TransferProcessUseCase transferProcessUseCase;
+    private final TransferTaggingUseCase transferTaggingUseCase;
+    private final TransferTagGateway transferTagGateway;
 
     @Override
     public TransferObjectRedeliverResponse redeliver(TransferObjectRedeliverCommand command) {
@@ -89,6 +99,55 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                 .build();
     }
 
+    @Override
+    public TransferObjectRetagResponse retag(TransferObjectRetagCommand command) {
+        if (transferTagGateway.listEnabledTags().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前没有已激活的标签规则，无法重新打标");
+        }
+        List<TransferObject> transferObjects = loadMatchedTransferObjects(command);
+        if (transferObjects.isEmpty()) {
+            return TransferObjectRetagResponse.builder()
+                    .requestedCount(0)
+                    .successCount(0)
+                    .failureCount(0)
+                    .matchedTagCount(0)
+                    .items(List.of())
+                    .build();
+        }
+
+        int successCount = 0;
+        int failureCount = 0;
+        int matchedTagCount = 0;
+        List<TransferObjectRetagItemViewDTO> items = new ArrayList<>();
+
+        for (TransferObject transferObject : transferObjects) {
+            String transferId = trimToEmpty(transferObject.transferId());
+            if (!StringUtils.hasText(transferId)) {
+                failureCount++;
+                items.add(buildRetagItem(null, false, 0, "文件主对象缺少主键，无法重新打标"));
+                continue;
+            }
+            try {
+                List<TransferObjectTag> tags = transferTaggingUseCase.retag(transferId, true);
+                int tagCount = tags == null ? 0 : tags.size();
+                matchedTagCount += tagCount;
+                successCount++;
+                items.add(buildRetagItem(transferId, true, tagCount, "重新打标成功，命中 " + tagCount + " 条标签"));
+            } catch (RuntimeException exception) {
+                failureCount++;
+                items.add(buildRetagItem(transferId, false, 0, buildRetagFailureMessage(exception)));
+            }
+        }
+
+        return TransferObjectRetagResponse.builder()
+                .requestedCount(transferObjects.size())
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .matchedTagCount(matchedTagCount)
+                .items(items)
+                .build();
+    }
+
     private List<String> normalizeIds(List<String> transferIds) {
         if (transferIds == null || transferIds.isEmpty()) {
             return List.of();
@@ -112,11 +171,70 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                 .build();
     }
 
+    private TransferObjectRetagItemViewDTO buildRetagItem(String transferId,
+                                                          boolean success,
+                                                          int tagCount,
+                                                          String message) {
+        return TransferObjectRetagItemViewDTO.builder()
+                .transferId(transferId)
+                .success(success)
+                .tagCount(tagCount)
+                .message(message)
+                .build();
+    }
+
+    private List<TransferObject> loadMatchedTransferObjects(TransferObjectRetagCommand command) {
+        List<TransferObject> results = new ArrayList<>();
+        int pageIndex = 0;
+        while (true) {
+            TransferObjectPage page = transferObjectGateway.pageObjects(
+                    trimToNull(command == null ? null : command.getSourceId()),
+                    trimToNull(command == null ? null : command.getSourceType()),
+                    trimToNull(command == null ? null : command.getSourceCode()),
+                    trimToNull(command == null ? null : command.getStatus()),
+                    null,
+                    trimToNull(command == null ? null : command.getMailId()),
+                    trimToNull(command == null ? null : command.getFingerprint()),
+                    trimToNull(command == null ? null : command.getRouteId()),
+                    trimToNull(command == null ? null : command.getTagId()),
+                    trimToNull(command == null ? null : command.getTagCode()),
+                    trimToNull(command == null ? null : command.getTagValue()),
+                    pageIndex,
+                    RETAG_PAGE_SIZE
+            );
+            List<TransferObject> records = page == null || page.records() == null ? List.of() : page.records();
+            if (records.isEmpty()) {
+                break;
+            }
+            results.addAll(records);
+            long total = page.total();
+            if (results.size() >= total) {
+                break;
+            }
+            pageIndex++;
+        }
+        return results;
+    }
+
     private String buildFailureMessage(RuntimeException exception) {
         if (exception == null || !StringUtils.hasText(exception.getMessage())) {
             return "重新投递失败";
         }
         return "重新投递失败：" + exception.getMessage();
+    }
+
+    private String buildRetagFailureMessage(RuntimeException exception) {
+        if (exception == null || !StringUtils.hasText(exception.getMessage())) {
+            return "重新打标失败";
+        }
+        return "重新打标失败：" + exception.getMessage();
+    }
+
+    private String trimToNull(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
     }
 
     private String trimToEmpty(String value) {

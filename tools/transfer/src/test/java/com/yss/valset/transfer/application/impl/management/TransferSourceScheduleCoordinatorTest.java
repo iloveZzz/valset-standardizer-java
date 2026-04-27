@@ -6,8 +6,8 @@ import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
 import com.yss.valset.transfer.domain.model.SourceType;
 import com.yss.valset.transfer.domain.model.TargetType;
 import com.yss.valset.transfer.domain.model.TransferRoute;
-import com.yss.valset.transfer.domain.model.TransferStatus;
 import com.yss.valset.transfer.domain.model.TransferSource;
+import com.yss.valset.transfer.domain.model.TransferStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 class TransferSourceScheduleCoordinatorTest {
 
     @Test
-    void reconcileAllSourcesOnStartupShouldRestoreEnabledCronAndUnscheduleDisabledSources() {
+    void reconcileAllSourcesOnStartupShouldScheduleEnabledRoutesAndUnscheduleInactiveSources() {
         TransferSourceGateway transferSourceGateway = mock(TransferSourceGateway.class);
         TransferRouteGateway transferRouteGateway = mock(TransferRouteGateway.class);
         TransferJobScheduler transferJobScheduler = mock(TransferJobScheduler.class);
@@ -36,14 +36,14 @@ class TransferSourceScheduleCoordinatorTest {
                 transferJobScheduler
         );
 
-        TransferSource enabledSource = source("1", true, "legacy-cron");
-        TransferSource disabledSource = source("2", false, "0 */10 * * * ?");
+        TransferSource routeManagedSource = source("1", true, "legacy-cron");
+        TransferSource routeLessSource = source("2", true, "0 */10 * * * ?");
         TransferSource blankCronSource = source("3", true, "   ");
         TransferSource invalidCronSource = source("4", true, "legacy-cron");
 
         when(transferSourceGateway.listSources(null, null, null, null, null))
-                .thenReturn(List.of(enabledSource, disabledSource, blankCronSource, invalidCronSource));
-        when(transferRouteGateway.listRoutes(any(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+                .thenReturn(List.of(routeManagedSource, routeLessSource, blankCronSource, invalidCronSource));
+        when(transferRouteGateway.listRoutes(any(), isNull(), isNull(), isNull(), isNull(), isNull(), eq(Boolean.TRUE), isNull(), isNull()))
                 .thenAnswer(invocation -> {
                     String sourceId = invocation.getArgument(0);
                     return switch (sourceId) {

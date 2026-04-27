@@ -211,7 +211,7 @@ const actionConfig = useTableActionConfig({
           <a-switch
             :checked="Boolean(row.enabled)"
             :loading="page.isEnabledUpdating(row.sourceId)"
-            :disabled="page.isEnabledUpdating(row.sourceId)"
+            :disabled="page.isEnabledUpdating(row.sourceId) || page.hasEnabledRoutes(row)"
             checked-children="启用"
             un-checked-children="停用"
             @change="(checked) => page.toggleEnabled(row, checked === true)"
@@ -233,6 +233,14 @@ const actionConfig = useTableActionConfig({
       @ok="page.submitForm"
       @cancel="page.closeForm"
     >
+      <template v-if="page.formMode === 'edit' && page.editingRow?.enabledRouteCount > 0">
+        <a-alert
+          type="warning"
+          show-icon
+          style="margin-bottom: 16px"
+          :message="`该来源已存在 ${page.editingRow.enabledRouteCount} 条启用中的路由配置，无法修改启用状态。若要切换来源启用状态，请先处理相关路由配置。`"
+        />
+      </template>
       <template #selector>
         <TransferTypeSelector
           label="来源类型"
@@ -303,6 +311,9 @@ const actionConfig = useTableActionConfig({
           </a-descriptions-item>
           <a-descriptions-item label="启用状态">
             {{ page.formatEnabled(page.selectedRow.enabled) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="启用路由数">
+            {{ page.selectedRow.enabledRouteCount ?? 0 }}
           </a-descriptions-item>
           <a-descriptions-item label="收取状态">
             {{ page.formatIngestStatus(page.selectedRow.ingestStatus) }}

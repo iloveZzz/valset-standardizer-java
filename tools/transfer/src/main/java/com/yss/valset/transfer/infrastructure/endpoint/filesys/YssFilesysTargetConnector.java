@@ -82,8 +82,9 @@ public class YssFilesysTargetConnector implements TargetConnector {
                 messages.add("fileId=" + fileId);
                 messages.add("objectKey=" + result.getFileRecord().getObjectKey());
                 messages.add("storageSettingId=" + result.getFileRecord().getStorageSettingId());
+                return new TransferResult(true, fileId, result.getFileRecord().getObjectKey(), messages);
             }
-            return new TransferResult(true, fileId, messages);
+            return new TransferResult(true, fileId, directoryPath, messages);
         } catch (IOException e) {
             throw new IllegalStateException("上传文件到 yss-filesys 失败", e);
         }
@@ -110,7 +111,12 @@ public class YssFilesysTargetConnector implements TargetConnector {
         result = result.replace("${originalName}", firstNonBlank(transferObject.originalName(), ""));
         result = result.replace("${sourceCode}", firstNonBlank(transferObject.sourceCode(), ""));
         result = result.replace("${sourceId}", firstNonBlank(transferObject.sourceId(), ""));
+        result = result.replace("${sourceType}", firstNonBlank(transferObject.sourceType(), ""));
+        result = result.replace("${targetCode}", context.transferTarget() == null ? "" : firstNonBlank(context.transferTarget().targetCode(), ""));
+        result = result.replace("${routeId}", context.transferRoute() == null ? "" : firstNonBlank(context.transferRoute().routeId(), ""));
         result = result.replace("${transferId}", firstNonBlank(transferObject.transferId(), ""));
+        result = result.replace("${extension}", firstNonBlank(transferObject.extension(), ""));
+        result = result.replace("${mimeType}", firstNonBlank(transferObject.mimeType(), ""));
         result = result.replace("${yyyyMMdd}", LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE));
         result = result.replace("${yyyy-MM-dd}", LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE));
         return result;

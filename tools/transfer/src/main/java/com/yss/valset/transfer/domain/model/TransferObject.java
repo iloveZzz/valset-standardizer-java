@@ -33,8 +33,41 @@ public record TransferObject(
         String routeId,
         String errorMessage,
         ProbeResult probeResult,
-        Map<String, Object> fileMeta
+        Map<String, Object> fileMeta,
+        String realStoragePath
 ) {
+
+    public TransferObject(String transferId,
+                          String sourceId,
+                          String sourceType,
+                          String sourceCode,
+                          String originalName,
+                          String extension,
+                          String mimeType,
+                          Long sizeBytes,
+                          String fingerprint,
+                          String sourceRef,
+                          String mailId,
+                          String mailFrom,
+                          String mailTo,
+                          String mailCc,
+                          String mailBcc,
+                          String mailSubject,
+                          String mailBody,
+                          String mailProtocol,
+                          String mailFolder,
+                          String localTempPath,
+                          TransferStatus status,
+                          Instant receivedAt,
+                          Instant storedAt,
+                          String routeId,
+                          String errorMessage,
+                          ProbeResult probeResult,
+                          Map<String, Object> fileMeta) {
+        this(transferId, sourceId, sourceType, sourceCode, originalName, extension, mimeType, sizeBytes, fingerprint, sourceRef,
+                mailId, mailFrom, mailTo, mailCc, mailBcc, mailSubject, mailBody, mailProtocol, mailFolder, localTempPath,
+                status, receivedAt, storedAt, routeId, errorMessage, probeResult, fileMeta, null);
+    }
 
     public TransferObject withLocalTempPath(String localTempPath) {
         return new TransferObject(
@@ -64,7 +97,41 @@ public record TransferObject(
                 routeId,
                 errorMessage,
                 probeResult,
-                fileMeta
+                fileMeta,
+                realStoragePath
+        );
+    }
+
+    public TransferObject withRealStoragePath(String realStoragePath) {
+        return new TransferObject(
+                transferId,
+                sourceId,
+                sourceType,
+                sourceCode,
+                originalName,
+                extension,
+                mimeType,
+                sizeBytes,
+                fingerprint,
+                sourceRef,
+                mailId,
+                mailFrom,
+                mailTo,
+                mailCc,
+                mailBcc,
+                mailSubject,
+                mailBody,
+                mailProtocol,
+                mailFolder,
+                localTempPath,
+                status,
+                receivedAt,
+                storedAt,
+                routeId,
+                errorMessage,
+                probeResult,
+                fileMeta,
+                realStoragePath
         );
     }
 
@@ -96,7 +163,8 @@ public record TransferObject(
                 routeId,
                 errorMessage,
                 probeResult,
-                fileMeta
+                fileMeta,
+                realStoragePath
         );
     }
 
@@ -128,7 +196,8 @@ public record TransferObject(
                 routeId,
                 errorMessage,
                 probeResult,
-                fileMeta
+                fileMeta,
+                realStoragePath
         );
     }
 
@@ -160,7 +229,44 @@ public record TransferObject(
                 routeId,
                 errorMessage,
                 probeResult,
-                fileMeta
+                fileMeta,
+                realStoragePath
+        );
+    }
+
+    public TransferObject withMailInfo(TransferMailInfo mailInfo) {
+        if (mailInfo == null) {
+            return this;
+        }
+        return new TransferObject(
+                transferId,
+                sourceId,
+                sourceType,
+                sourceCode,
+                originalName,
+                extension,
+                mimeType,
+                sizeBytes,
+                fingerprint,
+                sourceRef,
+                mailInfo.mailId(),
+                mailInfo.mailFrom(),
+                mailInfo.mailTo(),
+                mailInfo.mailCc(),
+                mailInfo.mailBcc(),
+                mailInfo.mailSubject(),
+                mailInfo.mailBody(),
+                mailInfo.mailProtocol(),
+                mailInfo.mailFolder(),
+                localTempPath,
+                status,
+                receivedAt,
+                storedAt,
+                routeId,
+                errorMessage,
+                probeResult,
+                fileMeta,
+                realStoragePath
         );
     }
 }

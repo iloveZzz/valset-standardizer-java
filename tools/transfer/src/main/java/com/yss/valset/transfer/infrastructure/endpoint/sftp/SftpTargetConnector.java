@@ -19,6 +19,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -83,7 +87,7 @@ public class SftpTargetConnector implements TargetConnector {
             List<String> messages = new ArrayList<>();
             messages.add("SFTP 投递成功");
             messages.add("remotePath=" + remoteFilePath);
-            return new TransferResult(true, null, messages);
+            return new TransferResult(true, null, remoteFilePath, messages);
         } catch (Exception e) {
             throw new IllegalStateException("SFTP 投递失败，remoteDir=" + config.remoteDir(), e);
         } finally {
@@ -96,8 +100,8 @@ public class SftpTargetConnector implements TargetConnector {
         }
     }
 
-    private String buildRemoteFilePath(SftpTargetConfig config, TransferContext context, TransferObject transferObject) {
-        String routePath = firstNonBlank(
+    String buildRemoteFilePath(SftpTargetConfig config, TransferContext context, TransferObject transferObject) {
+        String remoteDir = firstNonBlank(
                 stringValue(context.transferRoute().routeMeta(), TransferConfigKeys.TARGET_PATH, null),
                 stringValue(context.transferRoute().routeMeta(), TransferConfigKeys.REMOTE_DIR, null),
                 stringValue(context.transferTarget() == null ? null : context.transferTarget().targetMeta(), TransferConfigKeys.TARGET_PATH, null),
@@ -106,13 +110,11 @@ public class SftpTargetConnector implements TargetConnector {
                 config.remoteDir()
         );
         String fileName = firstNonBlank(transferObject.originalName(), "transfer-file");
-        if (routePath.isBlank()) {
+        String resolvedRemoteDir = resolveTemplate(remoteDir, context, transferObject);
+        if (resolvedRemoteDir == null || resolvedRemoteDir.isBlank()) {
             return fileName;
         }
-        if (routePath.endsWith("/")) {
-            return routePath + fileName;
-        }
-        return routePath;
+        return joinRemotePath(resolvedRemoteDir, fileName);
     }
 
     private void ensureParentDirectory(ChannelSftp channelSftp, String remoteFilePath) throws Exception {
@@ -157,6 +159,44 @@ public class SftpTargetConnector implements TargetConnector {
         } catch (Exception ex) {
             return false;
         }
+    }
+
+    private String joinRemotePath(String remoteDir, String fileName) {
+        if (remoteDir == null || remoteDir.isBlank()) {
+            return fileName;
+        }
+        String normalizedRemoteDir = remoteDir.endsWith("/") && remoteDir.length() > 1
+                ? remoteDir.substring(0, remoteDir.length() - 1)
+                : remoteDir;
+        if (normalizedRemoteDir.endsWith("/")) {
+            return normalizedRemoteDir + fileName;
+        }
+        return normalizedRemoteDir + "/" + fileName;
+    }
+
+    private String resolveTemplate(String template, TransferContext context, TransferObject transferObject) {
+        if (template == null || template.isBlank()) {
+            return template;
+        }
+        Map<String, String> variables = new LinkedHashMap<>();
+        variables.put("fileName", firstNonBlank(transferObject.originalName(), ""));
+        variables.put("originalName", firstNonBlank(transferObject.originalName(), ""));
+        variables.put("sourceCode", firstNonBlank(transferObject.sourceCode(), ""));
+        variables.put("sourceId", firstNonBlank(transferObject.sourceId(), ""));
+        variables.put("sourceType", firstNonBlank(transferObject.sourceType(), ""));
+        variables.put("targetCode", context.transferTarget() == null ? "" : firstNonBlank(context.transferTarget().targetCode(), ""));
+        variables.put("routeId", context.transferRoute() == null ? "" : firstNonBlank(context.transferRoute().routeId(), ""));
+        variables.put("transferId", firstNonBlank(transferObject.transferId(), ""));
+        variables.put("extension", firstNonBlank(transferObject.extension(), ""));
+        variables.put("mimeType", firstNonBlank(transferObject.mimeType(), ""));
+        variables.put("yyyyMMdd", LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE));
+        variables.put("yyyy-MM-dd", LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.ISO_DATE));
+
+        String result = template;
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
+            result = result.replace("${" + entry.getKey() + "}", entry.getValue());
+        }
+        return result;
     }
 
     private String firstNonBlank(String... values) {

@@ -328,6 +328,19 @@ CREATE TABLE IF NOT EXISTS t_transfer_object (
     size_bytes BIGINT,
     fingerprint VARCHAR(128) NOT NULL,
     source_ref VARCHAR(1024),
+    local_temp_path VARCHAR(1024),
+    real_storage_path VARCHAR(1024),
+    status VARCHAR(32) NOT NULL,
+    received_at TIMESTAMP,
+    stored_at TIMESTAMP,
+    route_id BIGINT,
+    error_message VARCHAR(1024),
+    probe_result_json TEXT,
+    file_meta_json TEXT
+);
+
+CREATE TABLE IF NOT EXISTS t_transfer_mail_info (
+    transfer_id BIGINT PRIMARY KEY,
     mail_id VARCHAR(256),
     mail_from VARCHAR(512),
     mail_to VARCHAR(2048),
@@ -336,15 +349,7 @@ CREATE TABLE IF NOT EXISTS t_transfer_object (
     mail_subject VARCHAR(1024),
     mail_body TEXT,
     mail_protocol VARCHAR(32),
-    mail_folder VARCHAR(256),
-    local_temp_path VARCHAR(1024),
-    status VARCHAR(32) NOT NULL,
-    received_at TIMESTAMP,
-    stored_at TIMESTAMP,
-    route_id BIGINT,
-    error_message VARCHAR(1024),
-    probe_result_json TEXT,
-    file_meta_json TEXT
+    mail_folder VARCHAR(256)
 );
 
 CREATE TABLE IF NOT EXISTS t_transfer_source (

@@ -17,6 +17,8 @@ export interface TransferObjectViewDTO {
   fingerprint?: string;
   /** 本地临时文件路径。 */
   localTempPath?: string;
+  /** 真实文件存储地址。 */
+  realStoragePath?: string;
   /** 邮件密送人。 */
   mailBcc?: string;
   /** 邮件正文。 */

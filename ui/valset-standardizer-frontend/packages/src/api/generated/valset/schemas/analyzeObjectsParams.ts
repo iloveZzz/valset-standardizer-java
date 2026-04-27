@@ -23,6 +23,10 @@ export type AnalyzeObjectsParams = {
    */
   status?: string;
   /**
+   * 投递状态
+   */
+  deliveryStatus?: string;
+  /**
    * 邮件唯一标识
    */
   mailId?: string;

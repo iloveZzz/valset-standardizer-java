@@ -3,6 +3,7 @@ package com.yss.valset.transfer.application.impl.tagging;
 import com.yss.valset.transfer.application.command.TransferTagTestCommand;
 import com.yss.valset.transfer.application.dto.TransferTagTestResultDTO;
 import com.yss.valset.transfer.application.service.TransferTaggingUseCase;
+import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
 import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
 import com.yss.valset.transfer.domain.model.ProbeResult;
@@ -38,6 +39,7 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class DefaultTransferTaggingService implements TransferTaggingUseCase {
 
+    private final TransferObjectGateway transferObjectGateway;
     private final TransferTagGateway transferTagGateway;
     private final TransferObjectTagGateway transferObjectTagGateway;
     private final RuleEngine ruleEngine;
@@ -91,10 +93,18 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
         if (transferId == null || transferId.isBlank()) {
             return List.of();
         }
+        TransferObject transferObject = transferObjectGateway.findById(transferId).orElse(null);
+        if (transferObject == null) {
+            return List.of();
+        }
+        List<TransferTagDefinition> tagDefinitions = transferTagGateway.listEnabledTags();
+        if (tagDefinitions.isEmpty()) {
+            return List.of();
+        }
         if (overwrite) {
             transferObjectTagGateway.deleteByTransferId(transferId);
         }
-        return List.of();
+        return tag(transferObject, toRecognitionContext(transferObject), transferObject.probeResult());
     }
 
     @Override
@@ -245,6 +255,31 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
             variables.putIfAbsent("tags", List.of());
         }
         return variables;
+    }
+
+    private RecognitionContext toRecognitionContext(TransferObject transferObject) {
+        if (transferObject == null) {
+            return null;
+        }
+        Map<String, Object> fileMeta = transferObject.fileMeta() == null ? Map.of() : transferObject.fileMeta();
+        return new RecognitionContext(
+                parseSourceType(transferObject.sourceType()),
+                transferObject.sourceCode(),
+                transferObject.originalName(),
+                transferObject.mimeType(),
+                transferObject.sizeBytes(),
+                transferObject.mailFrom(),
+                transferObject.mailTo(),
+                transferObject.mailCc(),
+                transferObject.mailBcc(),
+                transferObject.mailSubject(),
+                transferObject.mailBody(),
+                transferObject.mailId(),
+                transferObject.mailProtocol(),
+                transferObject.mailFolder(),
+                transferObject.localTempPath(),
+                fileMeta
+        );
     }
 
     private String resolveTagPath(RecognitionContext recognitionContext, TransferObject transferObject) {

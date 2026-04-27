@@ -98,13 +98,22 @@ const stringifyJson = (value: unknown) => {
   }
 };
 
-const extractTemplateConfigValues = (values: Record<string, any>) => {
-  const next = { ...values };
-  SOURCE_TEMPLATE_BASE_KEYS.forEach((key) => {
-    delete next[key];
-  });
-  return next;
-};
+  const extractTemplateConfigValues = (values: Record<string, any>) => {
+    const next = { ...values };
+    SOURCE_TEMPLATE_BASE_KEYS.forEach((key) => {
+      delete next[key];
+    });
+    return next;
+  };
+
+  const normalizeConnectionConfig = (values: Record<string, any>) => {
+    const next = { ...values };
+    const directory = next.directory;
+    if (typeof directory === "string") {
+      next.directory = directory.trim();
+    }
+    return next;
+  };
 
 export const useTransferPage = (): { page: SourcePage } => {
   const query = reactive<QueryState>(defaultQuery());
@@ -125,6 +134,7 @@ export const useTransferPage = (): { page: SourcePage } => {
   const checkpointLoading = ref(false);
   const formVisible = ref(false);
   const formMode = ref<"create" | "edit">("create");
+  const editingRow = ref<TransferSourceViewDTO | null>(null);
   const formState = reactive<SourceFormState>(defaultForm());
   const templateNamePreview = ref("");
   const templateDescription = ref("");
@@ -317,6 +327,12 @@ export const useTransferPage = (): { page: SourcePage } => {
   const enabledCount = computed(
     () => rows.value.filter((row) => row.enabled === true).length,
   );
+  const hasEnabledRoutes = (row?: TransferSourceViewDTO | null) => {
+    if (!row) {
+      return false;
+    }
+    return Number(row.enabledRouteCount ?? 0) > 0;
+  };
   const templateBoundCount = computed(
     () => rows.value.filter((row) => Boolean(row.formTemplateName)).length,
   );
@@ -379,10 +395,12 @@ export const useTransferPage = (): { page: SourcePage } => {
   const resetForm = () => {
     Object.assign(formState, defaultForm());
     templateNamePreview.value = "";
+    editingRow.value = null;
   };
 
   const openCreateDialog = () => {
     formMode.value = "create";
+    editingRow.value = null;
     resetForm();
     formVisible.value = true;
     void syncTemplateBySourceType(formState.sourceType);
@@ -397,6 +415,7 @@ export const useTransferPage = (): { page: SourcePage } => {
       if (detail) {
         fillForm(detail);
       }
+      editingRow.value = detail ?? row;
       formVisible.value = true;
       await syncTemplateBySourceType(formState.sourceType);
       if (detail) {
@@ -475,6 +494,7 @@ export const useTransferPage = (): { page: SourcePage } => {
 
   const buildPayload = (): TransferSourceUpsertCommand => {
     const templateConfig = extractTemplateConfigValues(templateValues.value);
+    const connectionConfig = normalizeConnectionConfig(templateConfig);
 
     return {
       sourceId: formState.sourceId,
@@ -483,7 +503,7 @@ export const useTransferPage = (): { page: SourcePage } => {
       sourceType: String(formState.sourceType ?? "").trim(),
       enabled: Boolean(templateValues.value.enabled),
       connectionConfig:
-        Object.keys(templateConfig).length > 0 ? templateConfig : undefined,
+        Object.keys(connectionConfig).length > 0 ? connectionConfig : undefined,
       sourceMeta: undefined,
     };
   };
@@ -497,7 +517,7 @@ export const useTransferPage = (): { page: SourcePage } => {
     sourceName: String(row.sourceName ?? "").trim(),
     sourceType: String(row.sourceType ?? "").trim(),
     enabled,
-    connectionConfig: row.connectionConfig,
+    connectionConfig: normalizeConnectionConfig(row.connectionConfig ?? {}),
     sourceMeta: row.sourceMeta,
   });
 
@@ -551,6 +571,10 @@ export const useTransferPage = (): { page: SourcePage } => {
       message.error("来源主键缺失，无法切换状态");
       return;
     }
+    if (hasEnabledRoutes(row)) {
+      message.warning("该来源已存在启用中的路由配置，无法直接切换启用状态");
+      return;
+    }
 
     const previousEnabled = Boolean(row.enabled);
     if (previousEnabled === checked) {
@@ -598,6 +622,16 @@ export const useTransferPage = (): { page: SourcePage } => {
     try {
       const templateValidated = await validateTemplateForm();
       if (!templateValidated) {
+        return;
+      }
+
+      if (
+        formMode.value === "edit" &&
+        editingRow.value &&
+        hasEnabledRoutes(editingRow.value) &&
+        Boolean(templateValues.value.enabled) !== Boolean(formState.enabled)
+      ) {
+        message.warning("该来源已存在启用中的路由配置，无法修改启用状态");
         return;
       }
 
@@ -692,12 +726,14 @@ export const useTransferPage = (): { page: SourcePage } => {
     templateLoading,
     enabledUpdatingIds,
     isEnabledUpdating,
+    hasEnabledRoutes,
     isIngestRunning: isIngestBusy,
     isIngestBusy,
     formatIngestStatus,
     toggleEnabled,
     formVisible,
     formMode,
+    editingRow,
     formState,
     selectedRow,
     detailVisible,
