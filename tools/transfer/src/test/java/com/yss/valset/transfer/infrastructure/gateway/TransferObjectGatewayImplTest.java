@@ -7,9 +7,12 @@ import com.yss.valset.transfer.domain.model.ProbeResult;
 import com.yss.valset.transfer.domain.model.TransferMailInfo;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferStatus;
+import com.yss.valset.transfer.application.impl.query.DefaultTransferObjectQueryService;
 import com.yss.valset.transfer.infrastructure.convertor.TransferJsonMapper;
 import com.yss.valset.transfer.infrastructure.convertor.TransferObjectMapper;
+import com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectPO;
+import com.yss.valset.transfer.infrastructure.mapper.TransferObjectMybatisMapper;
 import com.yss.valset.transfer.infrastructure.mapper.TransferObjectRepository;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +37,7 @@ class TransferObjectGatewayImplTest {
         TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
         TransferJsonMapper transferJsonMapper = mock(TransferJsonMapper.class);
         TransferObjectMapper transferObjectMapper = mock(TransferObjectMapper.class);
+        TransferObjectMybatisMapper transferObjectMybatisMapper = mock(TransferObjectMybatisMapper.class);
 
         TransferObjectGatewayImpl gateway = new TransferObjectGatewayImpl(
                 transferObjectRepository,
@@ -41,7 +45,8 @@ class TransferObjectGatewayImplTest {
                 transferObjectTagGateway,
                 transferDeliveryGateway,
                 transferJsonMapper,
-                transferObjectMapper,null
+                transferObjectMapper,
+                transferObjectMybatisMapper
         );
 
         TransferObject transferObject = new TransferObject(
@@ -101,6 +106,7 @@ class TransferObjectGatewayImplTest {
         TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
         TransferJsonMapper transferJsonMapper = mock(TransferJsonMapper.class);
         TransferObjectMapper transferObjectMapper = mock(TransferObjectMapper.class);
+        TransferObjectMybatisMapper transferObjectMybatisMapper = mock(TransferObjectMybatisMapper.class);
 
         TransferObjectGatewayImpl gateway = new TransferObjectGatewayImpl(
                 transferObjectRepository,
@@ -108,7 +114,8 @@ class TransferObjectGatewayImplTest {
                 transferObjectTagGateway,
                 transferDeliveryGateway,
                 transferJsonMapper,
-                transferObjectMapper,null
+                transferObjectMapper,
+                transferObjectMybatisMapper
         );
 
         TransferObjectPO firstPo = new TransferObjectPO();
@@ -188,5 +195,71 @@ class TransferObjectGatewayImplTest {
         assertThat(objects.get(0).mailId()).isEqualTo("mail-1");
         assertThat(objects.get(1).mailId()).isEqualTo("mail-1");
         verify(transferMailInfoGateway).listByTransferIds(List.of("1001", "1002"));
+    }
+
+    @Test
+    void should_group_mail_inbox_rows_by_mail_key() {
+        TransferObjectRepository transferObjectRepository = mock(TransferObjectRepository.class);
+        TransferMailInfoGateway transferMailInfoGateway = mock(TransferMailInfoGateway.class);
+        TransferObjectTagGateway transferObjectTagGateway = mock(TransferObjectTagGateway.class);
+        TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
+        TransferJsonMapper transferJsonMapper = mock(TransferJsonMapper.class);
+        TransferObjectMapper transferObjectMapper = mock(TransferObjectMapper.class);
+        TransferObjectMybatisMapper transferObjectMybatisMapper = mock(TransferObjectMybatisMapper.class);
+
+        TransferObjectGatewayImpl gateway = new TransferObjectGatewayImpl(
+                transferObjectRepository,
+                transferMailInfoGateway,
+                transferObjectTagGateway,
+                transferDeliveryGateway,
+                transferJsonMapper,
+                transferObjectMapper,
+                transferObjectMybatisMapper
+        );
+
+        MailInboxGroupDTO firstAttachment = createMailInboxGroupDto("transfer-1", "mail-1", "mail-key-1", "a.xlsx", 1L, 1, 1);
+        MailInboxGroupDTO secondAttachment = createMailInboxGroupDto("transfer-2", "mail-1", "mail-key-1", "b.xlsx", 2L, 0, 1);
+        MailInboxGroupDTO otherMail = createMailInboxGroupDto("transfer-3", "mail-2", "mail-key-2", "c.xlsx", 1L, 1, 0);
+
+        when(transferObjectMybatisMapper.loadMailInboxGroups("source-code", null, "UNDELIVERED", 0, 10))
+                .thenReturn(List.of(firstAttachment, secondAttachment, otherMail));
+
+        List<DefaultTransferObjectQueryService.InboxMailGroup> groups = gateway.loadMailInboxGroups("source-code", null, "UNDELIVERED", 0, 10);
+
+        assertThat(groups).hasSize(2);
+        DefaultTransferObjectQueryService.InboxMailGroup firstGroup = groups.get(0);
+        assertThat(firstGroup.mailKey()).isEqualTo("mail-key-1");
+        assertThat(firstGroup.transferIds()).containsExactly("transfer-1", "transfer-2");
+        assertThat(firstGroup.attachments()).hasSize(2);
+        DefaultTransferObjectQueryService.InboxMailGroup secondGroup = groups.get(1);
+        assertThat(secondGroup.mailKey()).isEqualTo("mail-key-2");
+        assertThat(secondGroup.transferIds()).containsExactly("transfer-3");
+        assertThat(secondGroup.attachments()).hasSize(1);
+    }
+
+    private MailInboxGroupDTO createMailInboxGroupDto(String transferId,
+                                                      String mailId,
+                                                      String mailKey,
+                                                      String originalName,
+                                                      Long rowNum,
+                                                      Integer delivered,
+                                                      Integer tagged) {
+        MailInboxGroupDTO dto = new MailInboxGroupDTO();
+        dto.setTransferId(transferId);
+        dto.setMailId(mailId);
+        dto.setMailKey(mailKey);
+        dto.setOriginalName(originalName);
+        dto.setSourceId("source-1");
+        dto.setSourceType("EMAIL");
+        dto.setSourceCode("source-code");
+        dto.setMimeType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        dto.setSizeBytes(123L);
+        dto.setStatus("RECEIVED");
+        dto.setReceivedAt(java.time.LocalDateTime.parse("2026-04-27T12:00:00"));
+        dto.setStoredAt(java.time.LocalDateTime.parse("2026-04-27T12:00:01"));
+        dto.setDelivered(delivered);
+        dto.setTagged(tagged);
+        dto.setRowNum(rowNum);
+        return dto;
     }
 }

@@ -13,6 +13,11 @@ public class MailInboxGroupDTO {
     private String transferId;
 
     /**
+     * 邮件分组键。
+     */
+    private String mailKey;
+
+    /**
      * 来源主键。
      */
     private String sourceId;
@@ -168,6 +173,14 @@ public class MailInboxGroupDTO {
 
     public void setTransferId(String transferId) {
         this.transferId = transferId;
+    }
+
+    public String getMailKey() {
+        return mailKey;
+    }
+
+    public void setMailKey(String mailKey) {
+        this.mailKey = mailKey;
     }
 
     public String getSourceId() {

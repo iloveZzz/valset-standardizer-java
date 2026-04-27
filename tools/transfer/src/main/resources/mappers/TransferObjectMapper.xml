@@ -3,156 +3,192 @@
 <mapper namespace="com.yss.valset.transfer.infrastructure.mapper.TransferObjectMybatisMapper">
 
     <!-- 查询邮件收件箱分组列表 - MySQL -->
-    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="mysql">
+    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="MySQL">
+        WITH base AS (
+            SELECT
+                o.transfer_id,
+                o.source_id,
+                o.source_type,
+                o.source_code,
+                o.original_name,
+                o.extension,
+                o.mime_type,
+                o.size_bytes,
+                o.fingerprint,
+                o.source_ref,
+                o.local_temp_path,
+                o.real_storage_path,
+                o.status,
+                o.received_at,
+                o.stored_at,
+                o.route_id,
+                o.error_message,
+                o.probe_result_json,
+                o.file_meta_json,
+                m.mail_id,
+                COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)) AS mail_key,
+                m.mail_from,
+                m.mail_to,
+                m.mail_cc,
+                m.mail_bcc,
+                m.mail_subject,
+                m.mail_body,
+                m.mail_protocol,
+                m.mail_folder,
+                CASE WHEN dr.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS delivered,
+                CASE WHEN t.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS tagged
+            FROM t_transfer_object o
+            LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
+            LEFT JOIN (
+                SELECT DISTINCT transfer_id
+                FROM t_transfer_delivery_record
+                WHERE execute_status = 'SUCCESS'
+            ) dr ON o.transfer_id = dr.transfer_id
+            LEFT JOIN (
+                SELECT DISTINCT transfer_id
+                FROM t_transfer_object_tag
+            ) t ON o.transfer_id = t.transfer_id
+            WHERE o.source_type = 'EMAIL'
+            <if test="sourceCode != null and sourceCode != ''">
+                AND o.source_code = #{sourceCode}
+            </if>
+            <if test="mailId != null and mailId != ''">
+                AND m.mail_id = #{mailId}
+            </if>
+            <if test="deliveryStatus == 'DELIVERED'">
+                AND dr.transfer_id IS NOT NULL
+            </if>
+            <if test="deliveryStatus == 'UNDELIVERED'">
+                AND dr.transfer_id IS NULL
+            </if>
+        ),
+        page_keys AS (
+            SELECT
+                mail_key,
+                MAX(received_at) AS group_received_at,
+                MAX(transfer_id) AS group_transfer_id
+            FROM base
+            GROUP BY mail_key
+            ORDER BY group_received_at DESC, group_transfer_id DESC
+            <if test="offset != null and limit != null">
+                LIMIT #{limit} OFFSET #{offset}
+            </if>
+        )
         SELECT
-            o.transfer_id,
-            o.source_id,
-            o.source_type,
-            o.source_code,
-            o.original_name,
-            o.extension,
-            o.mime_type,
-            o.size_bytes,
-            o.fingerprint,
-            o.source_ref,
-            o.local_temp_path,
-            o.real_storage_path,
-            o.status,
-            o.received_at,
-            o.stored_at,
-            o.route_id,
-            o.error_message,
-            o.probe_result_json,
-            o.file_meta_json,
-            m.mail_id,
-            m.mail_from,
-            m.mail_to,
-            m.mail_cc,
-            m.mail_bcc,
-            m.mail_subject,
-            m.mail_body,
-            m.mail_protocol,
-            m.mail_folder,
-            CASE WHEN dr.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS delivered,
-            CASE WHEN t.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS tagged,
-            ROW_NUMBER() OVER (PARTITION BY COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)) ORDER BY o.received_at DESC, o.transfer_id DESC) AS row_num
-        FROM t_transfer_object o
-        LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
-        LEFT JOIN (
-            SELECT DISTINCT transfer_id
-            FROM t_transfer_delivery_record
-            WHERE execute_status = 'SUCCESS'
-        ) dr ON o.transfer_id = dr.transfer_id
-        LEFT JOIN (
-            SELECT DISTINCT transfer_id
-            FROM t_transfer_object_tag
-        ) t ON o.transfer_id = t.transfer_id
-        WHERE o.source_type = 'EMAIL'
-        <if test="sourceCode != null and sourceCode != ''">
-            AND o.source_code = #{sourceCode}
-        </if>
-        <if test="mailId != null and mailId != ''">
-            AND m.mail_id = #{mailId}
-        </if>
-        <if test="deliveryStatus == 'DELIVERED'">
-            AND dr.transfer_id IS NOT NULL
-        </if>
-        <if test="deliveryStatus == 'UNDELIVERED'">
-            AND dr.transfer_id IS NULL
-        </if>
-        ORDER BY o.received_at DESC, o.transfer_id DESC
-        <if test="offset != null and limit != null">
-            LIMIT #{limit} OFFSET #{offset}
-        </if>
+            base.*,
+            ROW_NUMBER() OVER (PARTITION BY base.mail_key ORDER BY base.received_at DESC, base.transfer_id DESC) AS row_num
+        FROM base
+        INNER JOIN page_keys pk ON base.mail_key = pk.mail_key
+        ORDER BY base.received_at DESC, base.transfer_id DESC
     </select>
 
     <!-- 查询邮件收件箱分组列表 - PostgreSQL -->
     <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="postgresql">
+        WITH base AS (
+            SELECT
+                o.transfer_id,
+                o.source_id,
+                o.source_type,
+                o.source_code,
+                o.original_name,
+                o.extension,
+                o.mime_type,
+                o.size_bytes,
+                o.fingerprint,
+                o.source_ref,
+                o.local_temp_path,
+                o.real_storage_path,
+                o.status,
+                o.received_at,
+                o.stored_at,
+                o.route_id,
+                o.error_message,
+                o.probe_result_json,
+                o.file_meta_json,
+                m.mail_id,
+                COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)) AS mail_key,
+                m.mail_from,
+                m.mail_to,
+                m.mail_cc,
+                m.mail_bcc,
+                m.mail_subject,
+                m.mail_body,
+                m.mail_protocol,
+                m.mail_folder,
+                CASE WHEN dr.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS delivered,
+                CASE WHEN t.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS tagged
+            FROM t_transfer_object o
+            LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
+            LEFT JOIN (
+                SELECT DISTINCT transfer_id
+                FROM t_transfer_delivery_record
+                WHERE execute_status = 'SUCCESS'
+            ) dr ON o.transfer_id = dr.transfer_id
+            LEFT JOIN (
+                SELECT DISTINCT transfer_id
+                FROM t_transfer_object_tag
+            ) t ON o.transfer_id = t.transfer_id
+            WHERE o.source_type = 'EMAIL'
+            <if test="sourceCode != null and sourceCode != ''">
+                AND o.source_code = #{sourceCode}
+            </if>
+            <if test="mailId != null and mailId != ''">
+                AND m.mail_id = #{mailId}
+            </if>
+            <if test="deliveryStatus == 'DELIVERED'">
+                AND dr.transfer_id IS NOT NULL
+            </if>
+            <if test="deliveryStatus == 'UNDELIVERED'">
+                AND dr.transfer_id IS NULL
+            </if>
+        ),
+        page_keys AS (
+            SELECT
+                mail_key,
+                MAX(received_at) AS group_received_at,
+                MAX(transfer_id) AS group_transfer_id
+            FROM base
+            GROUP BY mail_key
+            ORDER BY group_received_at DESC, group_transfer_id DESC
+            <if test="offset != null and limit != null">
+                LIMIT #{limit} OFFSET #{offset}
+            </if>
+        )
         SELECT
-            o.transfer_id,
-            o.source_id,
-            o.source_type,
-            o.source_code,
-            o.original_name,
-            o.extension,
-            o.mime_type,
-            o.size_bytes,
-            o.fingerprint,
-            o.source_ref,
-            o.local_temp_path,
-            o.real_storage_path,
-            o.status,
-            o.received_at,
-            o.stored_at,
-            o.route_id,
-            o.error_message,
-            o.probe_result_json,
-            o.file_meta_json,
-            m.mail_id,
-            m.mail_from,
-            m.mail_to,
-            m.mail_cc,
-            m.mail_bcc,
-            m.mail_subject,
-            m.mail_body,
-            m.mail_protocol,
-            m.mail_folder,
-            CASE WHEN dr.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS delivered,
-            CASE WHEN t.transfer_id IS NOT NULL THEN 1 ELSE 0 END AS tagged,
-            ROW_NUMBER() OVER (PARTITION BY COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)) ORDER BY o.received_at DESC, o.transfer_id DESC) AS row_num
-        FROM t_transfer_object o
-        LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
-        LEFT JOIN (
-            SELECT DISTINCT transfer_id
-            FROM t_transfer_delivery_record
-            WHERE execute_status = 'SUCCESS'
-        ) dr ON o.transfer_id = dr.transfer_id
-        LEFT JOIN (
-            SELECT DISTINCT transfer_id
-            FROM t_transfer_object_tag
-        ) t ON o.transfer_id = t.transfer_id
-        WHERE o.source_type = 'EMAIL'
-        <if test="sourceCode != null and sourceCode != ''">
-            AND o.source_code = #{sourceCode}
-        </if>
-        <if test="mailId != null and mailId != ''">
-            AND m.mail_id = #{mailId}
-        </if>
-        <if test="deliveryStatus == 'DELIVERED'">
-            AND dr.transfer_id IS NOT NULL
-        </if>
-        <if test="deliveryStatus == 'UNDELIVERED'">
-            AND dr.transfer_id IS NULL
-        </if>
-        ORDER BY o.received_at DESC, o.transfer_id DESC
-        <if test="offset != null and limit != null">
-            LIMIT #{limit} OFFSET #{offset}
-        </if>
+            base.*,
+            ROW_NUMBER() OVER (PARTITION BY base.mail_key ORDER BY base.received_at DESC, base.transfer_id DESC) AS row_num
+        FROM base
+        INNER JOIN page_keys pk ON base.mail_key = pk.mail_key
+        ORDER BY base.received_at DESC, base.transfer_id DESC
     </select>
 
     <!-- 统计邮件收件箱分组总数 -->
     <select id="countMailInboxGroups" resultType="long">
-        SELECT COUNT(DISTINCT COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)))
-        FROM t_transfer_object o
-        LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
-        LEFT JOIN (
-            SELECT DISTINCT transfer_id
-            FROM t_transfer_delivery_record
-            WHERE execute_status = 'SUCCESS'
-        ) dr ON o.transfer_id = dr.transfer_id
-        WHERE o.source_type = 'EMAIL'
-        <if test="sourceCode != null and sourceCode != ''">
-            AND o.source_code = #{sourceCode}
-        </if>
-        <if test="mailId != null and mailId != ''">
-            AND m.mail_id = #{mailId}
-        </if>
-        <if test="deliveryStatus == 'DELIVERED'">
-            AND dr.transfer_id IS NOT NULL
-        </if>
-        <if test="deliveryStatus == 'UNDELIVERED'">
-            AND dr.transfer_id IS NULL
-        </if>
+        WITH base AS (
+            SELECT
+                COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)) AS mail_key
+            FROM t_transfer_object o
+            LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
+            LEFT JOIN (
+                SELECT DISTINCT transfer_id
+                FROM t_transfer_delivery_record
+                WHERE execute_status = 'SUCCESS'
+            ) dr ON o.transfer_id = dr.transfer_id
+            WHERE o.source_type = 'EMAIL'
+            <if test="sourceCode != null and sourceCode != ''">
+                AND o.source_code = #{sourceCode}
+            </if>
+            <if test="mailId != null and mailId != ''">
+                AND m.mail_id = #{mailId}
+            </if>
+            <if test="deliveryStatus == 'DELIVERED'">
+                AND dr.transfer_id IS NOT NULL
+            </if>
+            <if test="deliveryStatus == 'UNDELIVERED'">
+                AND dr.transfer_id IS NULL
+            </if>
+        )
+        SELECT COUNT(DISTINCT mail_key) FROM base
     </select>
 
 </mapper>

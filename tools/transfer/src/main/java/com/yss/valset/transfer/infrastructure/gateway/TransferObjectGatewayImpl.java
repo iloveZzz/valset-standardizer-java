@@ -268,22 +268,16 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
 
     @Override
     public List<DefaultTransferObjectQueryService.InboxMailGroup> loadMailInboxGroups(String sourceCode, String mailId, String deliveryStatus, Integer offset, Integer limit) {
-        // 调用自定义SQL查询
         List<MailInboxGroupDTO> dtoList = transferObjectMybatisMapper.loadMailInboxGroups(sourceCode, mailId, deliveryStatus, offset, limit);
-        
         if (dtoList.isEmpty()) {
             return List.of();
         }
-
-        // 按mailKey分组
         Map<String, List<MailInboxGroupDTO>> groupedMap = dtoList.stream()
                 .collect(Collectors.groupingBy(
-                        dto -> normalizeMailGroupKey(dto.getMailId(), dto.getTransferId()),
+                        dto -> normalizeMailGroupKey(dto.getMailKey(), dto.getMailId(), dto.getTransferId()),
                         LinkedHashMap::new,
                         Collectors.toList()
                 ));
-
-        // 转换为InboxMailGroup
         List<DefaultTransferObjectQueryService.InboxMailGroup> groups = new ArrayList<>();
         for (Map.Entry<String, List<MailInboxGroupDTO>> entry : groupedMap.entrySet()) {
             String mailKey = entry.getKey();
@@ -292,31 +286,19 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
             if (items.isEmpty()) {
                 continue;
             }
-
-            // 第一个是代表对象（row_num = 1）
             MailInboxGroupDTO representativeDto = items.stream()
                     .filter(dto -> dto.getRowNum() != null && dto.getRowNum() == 1)
                     .findFirst()
                     .orElse(items.get(0));
-
-            // 转换为TransferObject
             TransferObject representative = toDomainFromDto(representativeDto);
-            
-            // 所有对象都作为附件
             List<TransferObject> attachments = items.stream()
                     .map(this::toDomainFromDto)
                     .toList();
-
-            // 提取transferIds
             List<String> transferIds = items.stream()
                     .map(MailInboxGroupDTO::getTransferId)
                     .filter(this::hasText)
                     .toList();
-
-            // 判断是否已投递（所有transfer_id都已投递）
             boolean delivered = items.stream().allMatch(dto -> dto.getDelivered() != null && dto.getDelivered() == 1);
-            
-            // 判断是否已打标（任一transfer_id已打标）
             boolean tagged = items.stream().anyMatch(dto -> dto.getTagged() != null && dto.getTagged() == 1);
 
             groups.add(new DefaultTransferObjectQueryService.InboxMailGroup(
@@ -565,11 +547,14 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         return text.startsWith(".") ? text.toLowerCase(Locale.ROOT) : "." + text.toLowerCase(Locale.ROOT);
     }
 
-    private String normalizeMailGroupKey(String mailId, String transferId) {
+    private String normalizeMailGroupKey(String mailKey, String mailId, String transferId) {
+        if (hasText(mailKey)) {
+            return mailKey.trim();
+        }
         if (hasText(mailId)) {
             return mailId.trim();
         }
-        return "transfer:" + (transferId == null ? "" : transferId.trim());
+        return hasText(transferId) ? "transfer:" + transferId.trim() : "-";
     }
 
     private TransferObject toDomainFromDto(MailInboxGroupDTO dto) {

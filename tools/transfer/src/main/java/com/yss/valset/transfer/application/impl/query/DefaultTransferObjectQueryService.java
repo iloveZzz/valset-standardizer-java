@@ -38,13 +38,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -568,7 +562,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
 
     private TransferObjectViewDTO toView(TransferObject transferObject, List<TransferObjectTag> tags, boolean delivered) {
         return TransferObjectViewDTO.builder()
-                .transferId(transferObject.transferId() == null ? null : String.valueOf(transferObject.transferId()))
+                .transferId(transferObject.transferId())
                 .sourceId(transferObject.sourceId() == null ? null : String.valueOf(transferObject.sourceId()))
                 .sourceType(transferObject.sourceType())
                 .sourceCode(transferObject.sourceCode())
@@ -606,16 +600,48 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
             throw new IllegalStateException("邮件分组缺少主文件主对象");
         }
         TransferObject hydrated = group.mailInfo() == null ? representative : representative.withMailInfo(group.mailInfo());
-        List<TransferObjectAttachmentViewDTO> attachments = group.attachments() == null ? List.of() : group.attachments().stream()
-                .map(this::toAttachmentView)
-                .toList();
+        List<TransferObject> attachments = group.attachments();
+        // 通过transferIds查询附件信息
         List<String> transferIds = group.transferIds() == null ? List.of() : group.transferIds();
+
         TransferObjectViewDTO view = toView(hydrated, List.of(), group.delivered());
         view.setPrimaryTransferId(hydrated.transferId());
         view.setTransferIds(transferIds);
-        view.setAttachments(attachments);
+        view.setAttachments(toTransferObjectAttachmentViewDTO(attachments));
         view.setAttachmentCount(attachments.size());
         return view;
+    }
+
+    private List<TransferObjectAttachmentViewDTO> toTransferObjectAttachmentViewDTO(List<TransferObject> attachments) {
+        if (attachments == null || attachments.isEmpty()) {
+            return List.of();
+        }
+        return attachments.stream()
+                .map(this::toAttachmentView)
+                .toList();
+    }
+
+    private List<TransferObjectAttachmentViewDTO> loadAttachmentsByTransferIds(List<String> transferIds, String primaryTransferId) {
+        if (transferIds == null || transferIds.isEmpty()) {
+            return List.of();
+        }
+        
+        // 过滤出附件的transferIds（排除主对象）
+        List<String> attachmentIds = transferIds.stream()
+                .filter(id -> !id.equals(primaryTransferId))
+                .toList();
+        
+        if (attachmentIds.isEmpty()) {
+            return List.of();
+        }
+        
+        // 批量查询附件对象
+        return attachmentIds.stream()
+                .map(transferId -> transferObjectGateway.findById(transferId))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(this::toAttachmentView)
+                .toList();
     }
 
     private TransferObjectAttachmentViewDTO toAttachmentView(TransferObject transferObject) {

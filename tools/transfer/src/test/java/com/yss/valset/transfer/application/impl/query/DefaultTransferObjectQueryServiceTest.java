@@ -350,8 +350,52 @@ class DefaultTransferObjectQueryServiceTest {
                 "2026-04-27T11:00:00Z"
         );
 
-        when(transferObjectGateway.listEmailInboxObjects("source-code", null))
-                .thenReturn(List.of(firstAttachment, secondAttachment, otherMail));
+        DefaultTransferObjectQueryService.InboxMailGroup firstGroup =
+                new DefaultTransferObjectQueryService.InboxMailGroup(
+                        "mail-2",
+                        otherMail,
+                        List.of(otherMail),
+                        List.of("transfer-3"),
+                        new TransferMailInfo(
+                                "transfer-3",
+                                "mail-2",
+                                "sender@example.com",
+                                "to@example.com",
+                                null,
+                                null,
+                                "subject-2",
+                                "body-2",
+                                "imap",
+                                "INBOX"
+                        ),
+                        true,
+                        false
+                );
+        DefaultTransferObjectQueryService.InboxMailGroup secondGroup =
+                new DefaultTransferObjectQueryService.InboxMailGroup(
+                        "mail-1",
+                        secondAttachment,
+                        List.of(secondAttachment, firstAttachment),
+                        List.of("transfer-2", "transfer-1"),
+                        new TransferMailInfo(
+                                "transfer-2",
+                                "mail-1",
+                                "sender@example.com",
+                                "to@example.com",
+                                null,
+                                null,
+                                "subject-1",
+                                "body-1",
+                                "imap",
+                                "INBOX"
+                        ),
+                        true,
+                        true
+                );
+
+        when(transferObjectGateway.countMailInboxGroups("source-code", null, null)).thenReturn(2L);
+        when(transferObjectGateway.loadMailInboxGroups("source-code", null, null, 0, 10))
+                .thenReturn(List.of(firstGroup, secondGroup));
         when(transferMailInfoGateway.listByTransferIds(List.of("transfer-2", "transfer-3"))).thenReturn(List.of(
                 new TransferMailInfo(
                         "transfer-2",
@@ -378,13 +422,6 @@ class DefaultTransferObjectQueryServiceTest {
                         "INBOX"
                 )
         ));
-        when(transferDeliveryGateway.listRecordsByTransferIds(List.of("transfer-1", "transfer-2", "transfer-3"), "SUCCESS"))
-                .thenReturn(List.of(
-                        new TransferDeliveryRecord(null, null, "transfer-1", null, null, "SUCCESS", null, null, null, null, null),
-                        new TransferDeliveryRecord(null, null, "transfer-2", null, null, "SUCCESS", null, null, null, null, null)
-                ));
-        when(transferObjectTagGateway.listByTransferIds(List.of("transfer-1", "transfer-2", "transfer-3")))
-                .thenReturn(List.of());
 
         PageResult<TransferObjectViewDTO> page = service.pageMailInbox("source-code", null, null, 0, 10);
 

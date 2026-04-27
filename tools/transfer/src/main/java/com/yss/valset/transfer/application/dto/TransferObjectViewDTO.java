@@ -18,6 +18,7 @@ public class TransferObjectViewDTO {
      * 文件主键。
      */
     private String transferId;
+
     /**
      * 来源主键。
      */

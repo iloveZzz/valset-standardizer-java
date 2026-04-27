@@ -57,12 +57,12 @@ const { page } = defineProps<{
           >
             <button
               v-for="row in page.filteredRows"
-              :key="row.transferId"
+              :key="page.getRowKey(row)"
               type="button"
               class="mail-inbox-item"
               :class="{
                 'mail-inbox-item--selected':
-                  page.selectedRow?.transferId === row.transferId,
+                  page.getRowKey(page.selectedRow) === page.getRowKey(row),
               }"
               @click="page.selectRow(row)"
             >

@@ -426,13 +426,16 @@ export const useTransferPage = (): { page: InboxPage } => {
     if (
       selectedRow.value &&
       filteredRows.value.some(
-        (row) => row.transferId === selectedRow.value?.transferId,
+        (row) => getRowKey(row) === getRowKey(selectedRow.value),
       )
     ) {
       return;
     }
     selectedRow.value = filteredRows.value[0];
   };
+
+  const getRowKey = (row?: InboxMailViewDTO | null) =>
+    getText(row?.primaryTransferId ?? row?.transferId ?? row?.mailId);
 
   const loadAnalysis = async () => {
     const requestId = ++analysisRequestId;
@@ -823,6 +826,7 @@ export const useTransferPage = (): { page: InboxPage } => {
       formatBytes(Number(value ?? 0)),
     formatDeliveryStatus,
     getSenderInitial,
+    getRowKey,
     getPreviewText,
     getFolderLabel,
     getAttachmentLabel,

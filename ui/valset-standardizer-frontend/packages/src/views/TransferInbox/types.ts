@@ -76,6 +76,7 @@ export type InboxPage = {
   formatBytes: (value?: string | number | null) => string;
   formatDeliveryStatus: (value?: string) => string;
   getSenderInitial: (row?: InboxMailViewDTO | null) => string;
+  getRowKey: (row?: InboxMailViewDTO | null) => string;
   getPreviewText: (row?: InboxMailViewDTO | null) => string;
   getFolderLabel: (value?: string | null) => string;
   getAttachmentLabel: (row?: InboxMailViewDTO | null) => string;
