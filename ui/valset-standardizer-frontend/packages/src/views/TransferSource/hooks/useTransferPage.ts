@@ -50,9 +50,17 @@ const SOURCE_TEMPLATE_BASE_KEYS = [
 
 const api = getJavaSpringBootQuartzApi();
 
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  LOCAL_DIR: "本地目录",
+  EMAIL: "邮件",
+  S3: "S3",
+  SFTP: "SFTP",
+  HTTP: "HTTP接口",
+};
+
 const sourceTypeOptions = Object.values(GetTemplateName1SourceType).map(
   (value) => ({
-    label: value,
+    label: SOURCE_TYPE_LABELS[value] ?? value,
     value,
   }),
 );
@@ -181,6 +189,10 @@ export const useTransferPage = (): { page: SourcePage } => {
   });
   const templateFormRef = ref<{ submit: () => Promise<unknown> } | null>(null);
   const templateLoading = ref(false);
+  const uploadVisible = ref(false);
+  const uploadSubmitting = ref(false);
+  const uploadSourceRow = ref<TransferSourceViewDTO | null>(null);
+  const uploadFiles = ref<File[]>([]);
   const listLoading = ref(false);
   const formSubmitting = ref(false);
   const enabledUpdatingIds = reactive<Record<string, boolean>>({});
@@ -617,6 +629,98 @@ export const useTransferPage = (): { page: SourcePage } => {
     }
   };
 
+  const resetUploadState = () => {
+    uploadFiles.value = [];
+    uploadSourceRow.value = null;
+  };
+
+  const isUploadAllowed = (row?: TransferSourceViewDTO | null) => {
+    return Boolean(row?.sourceId) && String(row?.sourceType ?? "").toUpperCase() === "HTTP";
+  };
+
+  const isUploadMultipleAllowed = () => {
+    const config = (uploadSourceRow.value?.connectionConfig ?? {}) as Record<string, any>;
+    return config.allowMultipleFiles !== false;
+  };
+
+  const uploadEndpoint = computed(() => {
+    if (!uploadSourceRow.value?.sourceId) {
+      return "";
+    }
+    return `/transfer-sources/${uploadSourceRow.value.sourceId}/upload`;
+  });
+
+  const openUploadDialog = (row: TransferSourceViewDTO) => {
+    if (!isUploadAllowed(row)) {
+      message.warning("当前仅 HTTP 来源支持文件上传");
+      return;
+    }
+    uploadSourceRow.value = row;
+    uploadFiles.value = [];
+    uploadVisible.value = true;
+  };
+
+  const closeUploadDialog = () => {
+    uploadVisible.value = false;
+    uploadSubmitting.value = false;
+    resetUploadState();
+  };
+
+  const handleUploadInputChange = (event: Event) => {
+    const input = event.target as HTMLInputElement | null;
+    const nextFiles = Array.from(input?.files ?? []);
+    if (!nextFiles.length) {
+      return;
+    }
+
+    if (isUploadMultipleAllowed()) {
+      const merged = [...uploadFiles.value, ...nextFiles];
+      const seen = new Set<string>();
+      uploadFiles.value = merged.filter((file) => {
+        const key = `${file.name}:${file.size}:${file.lastModified}`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+    } else {
+      uploadFiles.value = [nextFiles[0]];
+    }
+
+    if (input) {
+      input.value = "";
+    }
+  };
+
+  const removeUploadFile = (index: number) => {
+    uploadFiles.value.splice(index, 1);
+  };
+
+  const submitUpload = async () => {
+    if (!uploadSourceRow.value?.sourceId) {
+      message.error("来源主键缺失，无法上传");
+      return;
+    }
+    if (!uploadFiles.value.length) {
+      message.warning("请选择要上传的文件");
+      return;
+    }
+
+    uploadSubmitting.value = true;
+    try {
+      await api.uploadSourceFiles(uploadSourceRow.value.sourceId, uploadFiles.value);
+      message.success("文件上传成功");
+      closeUploadDialog();
+      await loadList();
+    } catch (error) {
+      console.error("HTTP 来源文件上传失败:", error);
+      message.error(error instanceof Error ? error.message : "文件上传失败");
+    } finally {
+      uploadSubmitting.value = false;
+    }
+  };
+
   const submitForm = async () => {
     formSubmitting.value = true;
     try {
@@ -724,6 +828,18 @@ export const useTransferPage = (): { page: SourcePage } => {
       templateFormRef.value = instance;
     },
     templateLoading,
+    uploadVisible,
+    uploadSubmitting,
+    uploadSourceRow,
+    uploadFiles,
+    uploadEndpoint,
+    isUploadAllowed,
+    isUploadMultipleAllowed,
+    openUploadDialog,
+    closeUploadDialog,
+    handleUploadInputChange,
+    removeUploadFile,
+    submitUpload,
     enabledUpdatingIds,
     isEnabledUpdating,
     hasEnabledRoutes,
@@ -749,6 +865,7 @@ export const useTransferPage = (): { page: SourcePage } => {
     runQuery,
     resetQuery,
     submitForm,
+    canUploadSource: isUploadAllowed,
     closeForm: () => {
       formVisible.value = false;
     },

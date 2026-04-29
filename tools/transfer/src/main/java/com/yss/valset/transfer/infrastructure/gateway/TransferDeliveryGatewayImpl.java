@@ -36,12 +36,12 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
     private final TransferDeliveryRecordMapper transferDeliveryRecordMapper;
 
     @Override
-    public void recordResult(String routeId, String transferId, TransferResult transferResult) {
-        recordResult(routeId, transferId, transferResult, 0);
+    public TransferDeliveryRecord recordResult(String routeId, String transferId, TransferResult transferResult) {
+        return recordResult(routeId, transferId, transferResult, 0);
     }
 
     @Override
-    public void recordResult(String routeId, String transferId, TransferResult transferResult, Integer retryCount) {
+    public TransferDeliveryRecord recordResult(String routeId, String transferId, TransferResult transferResult, Integer retryCount) {
         TransferRoute route = transferRouteGateway.findById(routeId).orElse(null);
         TransferDeliveryRecordPO po = new TransferDeliveryRecordPO();
         po.setRouteId(routeId);
@@ -54,6 +54,7 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
         po.setResponseSnapshotJson(transferJsonMapper.toJson(buildResponseSnapshot(transferResult)));
         po.setDeliveredAt(LocalDateTime.now());
         transferDeliveryRecordRepository.insert(po);
+        return toDomain(po);
     }
 
     @Override

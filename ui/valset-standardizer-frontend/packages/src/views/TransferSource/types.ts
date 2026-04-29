@@ -25,6 +25,18 @@ export interface SourcePage {
   templateValues: Record<string, any>;
   templateScope: Record<string, any>;
   templateLoading: boolean;
+  uploadVisible: boolean;
+  uploadSubmitting: boolean;
+  uploadSourceRow: any | null;
+  uploadFiles: File[];
+  uploadEndpoint: string;
+  isUploadAllowed: (row?: any | null) => boolean;
+  isUploadMultipleAllowed: () => boolean;
+  openUploadDialog: (row: any) => void;
+  closeUploadDialog: () => void;
+  handleUploadInputChange: (event: Event) => void;
+  removeUploadFile: (index: number) => void;
+  submitUpload: () => Promise<void> | void;
   enabledUpdatingIds: Record<string, boolean>;
   templateDetailOptions: Record<string, any>;
   templateGridDefaults: Record<string, any>;
@@ -63,6 +75,7 @@ export interface SourcePage {
   runQuery: () => void;
   resetQuery: () => void;
   submitForm: () => Promise<void> | void;
+  canUploadSource: (row?: any | null) => boolean;
   closeForm: () => void;
   closeDetail: () => void;
   formatEnabled: (value: boolean | undefined) => string;

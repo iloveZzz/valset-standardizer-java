@@ -1,6 +1,6 @@
 package com.yss.valset.batch.executor;
 
-import com.yss.valset.application.port.ExtractDataExecutionUseCase;
+import com.yss.valset.extract.application.port.ExtractDataExecutionUseCase;
 import com.yss.valset.batch.task.TaskExecutor;
 import com.yss.valset.domain.model.TaskType;
 import lombok.extern.slf4j.Slf4j;

@@ -164,6 +164,35 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     }
 
     @Override
+    public List<TransferObject> listParseQueueCandidates(String sourceId,
+                                                        String sourceCode,
+                                                        String routeId,
+                                                        String status,
+                                                        String deliveryStatus,
+                                                        Integer limit) {
+        Long sourceIdValue = parseLong(sourceId);
+        Long routeIdValue = parseLong(routeId);
+        String deliveryFilterSql = buildDeliveryFilterSql(deliveryStatus);
+        var query = Wrappers.lambdaQuery(TransferObjectPO.class)
+                .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
+                .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
+                .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
+                .eq(routeIdValue != null, TransferObjectPO::getRouteId, routeIdValue)
+                .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
+                .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
+                .orderByDesc(TransferObjectPO::getReceivedAt)
+                .orderByDesc(TransferObjectPO::getTransferId);
+        if (limit != null && limit > 0) {
+            query.last("limit " + limit);
+        }
+        return transferObjectRepository.selectList(query)
+                .stream()
+                .map(this::toDomain)
+                .map(this::hydrateMailInfo)
+                .toList();
+    }
+
+    @Override
     public TransferObjectAnalysis analyzeObjects(String sourceId,
                                                  String sourceType,
                                                  String sourceCode,
@@ -607,6 +636,9 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 status,
                 receivedAt,
                 storedAt,
+                dto.getBusinessDate(),
+                dto.getBusinessId(),
+                dto.getReceiveDate(),
                 dto.getRouteId(),
                 dto.getErrorMessage(),
                 probeResult,

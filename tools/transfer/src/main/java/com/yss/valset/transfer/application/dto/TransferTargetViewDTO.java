@@ -39,6 +39,10 @@ public class TransferTargetViewDTO {
      */
     private Boolean enabled;
     /**
+     * 已关联的分拣路由数量。
+     */
+    private Long referencedRouteCount;
+    /**
      * 投递路径模板。
      */
     private String targetPathTemplate;

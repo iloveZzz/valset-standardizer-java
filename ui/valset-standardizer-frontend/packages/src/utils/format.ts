@@ -26,5 +26,33 @@ export const formatDateTime = (value?: string) => {
   }).format(date);
 };
 
+export const formatDate = (value?: string) => {
+  if (!value) return "-";
+  const text = String(value).trim();
+  if (!text) return "-";
+
+  const directMatch = text.match(/^(\d{4})[-/]?(\d{2})[-/]?(\d{2})$/);
+  if (directMatch) {
+    const [, year, month, day] = directMatch;
+    return `${year}-${month}-${day}`;
+  }
+
+  const chineseMatch = text.match(
+    /^(\d{4})年(\d{1,2})月(\d{1,2})日?$/,
+  );
+  if (chineseMatch) {
+    const [, year, month, day] = chineseMatch;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return text;
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+};
+
 export const formatCount = (value?: number) =>
   value === undefined || value === null ? "-" : String(value);

@@ -2,7 +2,7 @@ package com.yss.valset.controller;
 
 import com.yss.cloud.dto.response.SingleResult;
 import com.yss.valset.application.command.EvaluateMappingTaskCommand;
-import com.yss.valset.application.command.ExtractDataTaskCommand;
+import com.yss.valset.extract.application.command.ExtractDataTaskCommand;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.dto.TaskCreateResponse;
@@ -11,11 +11,7 @@ import com.yss.valset.application.service.TaskAppService;
 import com.yss.valset.application.service.TaskQueryAppService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 /**

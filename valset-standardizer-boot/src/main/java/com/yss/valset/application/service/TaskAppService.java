@@ -1,7 +1,7 @@
 package com.yss.valset.application.service;
 
 import com.yss.valset.application.command.EvaluateMappingTaskCommand;
-import com.yss.valset.application.command.ExtractDataTaskCommand;
+import com.yss.valset.extract.application.command.ExtractDataTaskCommand;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.dto.TaskCreateResponse;

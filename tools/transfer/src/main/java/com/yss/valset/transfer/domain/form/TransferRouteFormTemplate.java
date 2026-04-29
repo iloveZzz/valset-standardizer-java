@@ -67,7 +67,8 @@ public class TransferRouteFormTemplate extends FormTemplate {
                                         YssFormilyDsl.option(SourceType.LOCAL_DIR.name(), "本地目录"),
                                         YssFormilyDsl.option(SourceType.EMAIL.name(), "邮件"),
                                         YssFormilyDsl.option(SourceType.S3.name(), "S3"),
-                                        YssFormilyDsl.option(SourceType.SFTP.name(), "SFTP")
+                                        YssFormilyDsl.option(SourceType.SFTP.name(), "SFTP"),
+                                        YssFormilyDsl.option(SourceType.HTTP.name(), "HTTP接口")
                                 )
                                 .gridSpan(1),
                         YssFormilyDsl.input(TransferConfigKeys.SOURCE_CODE, "来源编码").required().placeholder("例如：source-default").gridSpan(2),

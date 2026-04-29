@@ -2,6 +2,7 @@ package com.yss.valset.transfer.application.impl.tagging;
 
 import com.yss.valset.transfer.application.command.TransferTagTestCommand;
 import com.yss.valset.transfer.application.dto.TransferTagTestResultDTO;
+import com.yss.valset.transfer.application.service.TransferObjectBusinessFieldProjectionUseCase;
 import com.yss.valset.transfer.application.service.TransferTaggingUseCase;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
@@ -42,6 +43,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
     private final TransferObjectGateway transferObjectGateway;
     private final TransferTagGateway transferTagGateway;
     private final TransferObjectTagGateway transferObjectTagGateway;
+    private final TransferObjectBusinessFieldProjectionUseCase transferObjectBusinessFieldProjectionUseCase;
     private final RuleEngine ruleEngine;
 
     @Override
@@ -58,32 +60,40 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
                 transferObject.originalName(),
                 tagPath);
         List<TransferTagDefinition> tagDefinitions = transferTagGateway.listEnabledTags();
-        if (tagDefinitions.isEmpty()) {
-            return List.of();
-        }
         List<TransferObjectTag> tags = new ArrayList<>();
-        for (TransferTagDefinition tagDefinition : tagDefinitions) {
-            TagEvaluation evaluation = evaluate(tagDefinition, effectiveRecognitionContext, probeResult, transferObject);
-            if (!evaluation.matched()) {
-                continue;
+        if (!tagDefinitions.isEmpty()) {
+            for (TransferTagDefinition tagDefinition : tagDefinitions) {
+                TagEvaluation evaluation = evaluate(tagDefinition, effectiveRecognitionContext, probeResult, transferObject);
+                if (!evaluation.matched()) {
+                    continue;
+                }
+                tags.add(new TransferObjectTag(
+                        null,
+                        transferObject.transferId(),
+                        tagDefinition.tagId(),
+                        tagDefinition.tagCode(),
+                        tagDefinition.tagName(),
+                        tagDefinition.tagValue(),
+                        tagDefinition.matchStrategy(),
+                        evaluation.message(),
+                        evaluation.matchedField(),
+                        evaluation.matchedValue(),
+                        evaluation.snapshot(),
+                        Instant.now()
+                ));
             }
-            tags.add(new TransferObjectTag(
-                    null,
-                    transferObject.transferId(),
-                    tagDefinition.tagId(),
-                    tagDefinition.tagCode(),
-                    tagDefinition.tagName(),
-                    tagDefinition.tagValue(),
-                    tagDefinition.matchStrategy(),
-                    evaluation.message(),
-                    evaluation.matchedField(),
-                    evaluation.matchedValue(),
-                    evaluation.snapshot(),
-                    Instant.now()
-            ));
+            if (!tags.isEmpty()) {
+                transferObjectTagGateway.saveAll(tags);
+            }
         }
-        if (!tags.isEmpty()) {
-            transferObjectTagGateway.saveAll(tags);
+        try {
+            transferObjectBusinessFieldProjectionUseCase.project(transferObject, tags);
+        } catch (Exception exception) {
+            log.warn("文件对象业务字段回填失败，继续执行后续流程，transferId={}，sourceId={}，sourceCode={}",
+                    transferObject.transferId(),
+                    transferObject.sourceId(),
+                    transferObject.sourceCode(),
+                    exception);
         }
         return tags;
     }

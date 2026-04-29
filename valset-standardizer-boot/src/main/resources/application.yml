@@ -79,18 +79,41 @@ logging:
 
 subject:
   match:
+    parse-queue-observer:
+      # 是否启用待解析事件观察者
+      enabled: true
+      # 每次轮询最多处理多少条待解析事件
+      batch-size: ${PARSE_QUEUE_OBSERVER_BATCH_SIZE:10}
+      # 定时轮询的固定间隔，单位毫秒
+      fixed-delay-ms: ${PARSE_QUEUE_OBSERVER_FIXED_DELAY_MS:3000}
+      # 订阅待解析事件时写入的观察者名称
+      subscriber-name: ${PARSE_QUEUE_OBSERVER_SUBSCRIBER_NAME:解析观察者}
+      # 启动后首次轮询前的随机抖动上限，单位毫秒
+      startup-jitter-ms: ${PARSE_QUEUE_OBSERVER_STARTUP_JITTER_MS:3000}
+      # 每处理完一批待解析事件后的暂停时长，单位毫秒
+      batch-pause-ms: ${PARSE_QUEUE_OBSERVER_BATCH_PAUSE_MS:200}
     transfer:
+      # 传输链路加密密钥
       crypto:
         secret-key: ${TRANSFER_CRYPTO_SECRET_KEY:valset-standardizer-transfer-secret-v1}
     filesys:
+      # 文件系统父目录标识
       parent-id: ${FILESYS_PARENT_ID:283e6c2a0fcf4b1488db5856ad074806}
+      # 文件系统存储配置标识
       storage-setting-id: ${FILESYS_STORAGE_SETTING_ID:9a4350d87d4b4085a5fa1a4e8038e09d}
+      # 单次分片大小，单位字节
       chunk-size: ${FILESYS_CHUNK_SIZE:102400000}
+    # 标准化输出目录
     output-dir: output
+    # 本地上传临时目录
     upload-dir: ${user.home}/.tmp/valset-standardizer/uploads
     workflow:
+      # 是否跳过 Excel 样式解析
       skip-excel-style-parsing: false
+      # 是否启用匹配流程
       enable-match-process: true
+      # 是否持久化标准化后的 DWD 明细
       persist-standardized-dwd-details: false
     run-log-cleanup:
+      # 运行日志清理定时表达式
       cron: ${TRANSFER_RUN_LOG_CLEANUP_CRON:0 0 23 * * ?}

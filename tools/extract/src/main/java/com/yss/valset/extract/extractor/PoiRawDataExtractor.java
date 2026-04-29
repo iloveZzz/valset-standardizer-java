@@ -3,8 +3,9 @@ package com.yss.valset.extract.extractor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.yss.valset.common.support.SpreadsheetXmlSupport;
 import com.yss.valset.domain.exception.FileAccessException;
-import com.yss.valset.domain.extractor.RawDataExtractor;
+import com.yss.valset.extract.domain.extractor.RawDataExtractor;
 import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
@@ -23,9 +24,9 @@ import org.apache.fesod.sheet.read.listener.ReadListener;
 import org.apache.fesod.sheet.read.metadata.holder.ReadRowHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.lang.Nullable;
 
 import java.math.BigDecimal;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -71,6 +72,33 @@ public class PoiRawDataExtractor implements RawDataExtractor {
         }
 
         long startedAt = System.currentTimeMillis();
+        try {
+            if (SpreadsheetXmlSupport.isSpreadsheetXml(filePath)) {
+                try (ExcelUniverSnapshotSupport snapshotSupport = skipExcelStyleParsing ? null : new ExcelUniverSnapshotSupport(filePath)) {
+                    SpreadsheetXmlSupport.SpreadsheetXmlWorkbook workbook = SpreadsheetXmlSupport.read(filePath);
+                    FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId, snapshotSupport, skipExcelStyleParsing);
+                    for (SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet : workbook.sheets()) {
+                        List<List<String>> sheetRows = sheet.rows();
+                        for (int rowIndex = 0; rowIndex < sheetRows.size(); rowIndex++) {
+                            List<String> rowValues = normalizeSpreadsheetXmlRow(sheetRows.get(rowIndex));
+                            if (rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.isBlank())) {
+                                continue;
+                            }
+                            listener.acceptRow(sheet.sheetName(), rowIndex, rowValues);
+                        }
+                        listener.finishSheet();
+                    }
+                    log.info("SpreadsheetML 原始数据提取完成，filePath={}, rowCount={}, durationMs={}",
+                            filePath, listener.getPersistedRows(), System.currentTimeMillis() - startedAt);
+                    return listener.getPersistedRows();
+                }
+            }
+        } catch (IOException exception) {
+            throw new FileAccessException(config.getSourceUri());
+        } catch (FileAccessException exception) {
+            throw exception;
+        }
+
         try (ExcelUniverSnapshotSupport snapshotSupport = skipExcelStyleParsing ? null : new ExcelUniverSnapshotSupport(filePath)) {
             FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId, snapshotSupport, skipExcelStyleParsing);
             FesodSheet.read(filePath.toString(), listener)
@@ -86,6 +114,22 @@ public class PoiRawDataExtractor implements RawDataExtractor {
         } catch (Exception exception) {
             throw new IllegalStateException("使用 Fesod 读取 Excel 原始数据失败，filePath=" + filePath, exception);
         }
+    }
+
+    private List<String> normalizeSpreadsheetXmlRow(List<String> rowValues) {
+        if (rowValues == null || rowValues.isEmpty()) {
+            return List.of();
+        }
+        List<String> normalized = new ArrayList<>(rowValues.size());
+        for (String value : rowValues) {
+            if (value == null) {
+                normalized.add(null);
+                continue;
+            }
+            String trimmed = value.trim();
+            normalized.add(trimmed.isEmpty() ? null : trimmed);
+        }
+        return normalized;
     }
 
     @Override
@@ -129,6 +173,15 @@ public class PoiRawDataExtractor implements RawDataExtractor {
             }
 
             String sheetName = currentSheetName(context);
+            List<String> rowValues = buildDenseRow(data, context);
+            int sheetRowIndex = context == null ? rowSequence : Math.max(context.getCurrentRowNum(), 0);
+            acceptRow(sheetName, sheetRowIndex, rowValues);
+        }
+
+        private void acceptRow(String sheetName, int sheetRowIndex, List<String> rowValues) {
+            if (rowValues == null || rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.isBlank())) {
+                return;
+            }
             if (sheetName == null) {
                 sheetName = "Sheet1";
             }
@@ -139,13 +192,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                 currentSheetName = sheetName;
             }
 
-            List<String> rowValues = buildDenseRow(data, context);
-            if (rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.isBlank())) {
-                return;
-            }
-
             int rowDataNumber = ++rowSequence;
-            int sheetRowIndex = context == null ? rowDataNumber - 1 : Math.max(context.getCurrentRowNum(), 0);
 
             try {
                 boolean includeStyle = !skipExcelStyleParsing && rowDataNumber <= HEADER_PREVIEW_ROWS;
@@ -174,6 +221,10 @@ public class PoiRawDataExtractor implements RawDataExtractor {
             } catch (JsonProcessingException exception) {
                 log.error("第 {} 行序列化为 JSON 失败，已跳过", rowDataNumber, exception);
             }
+        }
+
+        private void finishSheet() {
+            flushCurrentSheet();
         }
 
         @Override

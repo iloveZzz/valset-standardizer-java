@@ -12,12 +12,12 @@ import org.mapstruct.Mapping;
 public interface TransferObjectTagMapper extends TransferMapstructSupport {
 
     @Mapping(target = "id", expression = "java(tag.id())")
-    @Mapping(target = "matchSnapshotJson", source = "matchSnapshot")
+    @Mapping(target = "matchSnapshotJson", source = "matchSnapshot", qualifiedByName = "transferToJson")
     @Mapping(target = "createdAt", expression = "java(toLocalDateTime(tag.createdAt()))")
     TransferObjectTagPO toPO(TransferObjectTag tag);
 
     @Mapping(target = "id", expression = "java(stringValue(po.getId()))")
-    @Mapping(target = "matchSnapshot", source = "matchSnapshotJson")
+    @Mapping(target = "matchSnapshot", source = "matchSnapshotJson", qualifiedByName = "transferToJson")
     @Mapping(target = "createdAt", expression = "java(toInstant(po.getCreatedAt()))")
     TransferObjectTag toDomain(TransferObjectTagPO po);
 }

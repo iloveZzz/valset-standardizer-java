@@ -1,6 +1,5 @@
 package com.yss.valset.transfer.application.impl.query;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.cloud.dto.response.PageResult;
 import com.yss.valset.transfer.application.dto.TransferObjectDownloadViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectAnalysisViewDTO;
@@ -30,6 +29,7 @@ import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
 import com.yss.valset.transfer.domain.model.TransferMailInfo;
 import com.yss.valset.transfer.domain.model.TransferStatus;
+import com.yss.valset.transfer.infrastructure.convertor.TransferJsonMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -52,7 +52,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     private final TransferObjectTagGateway transferObjectTagGateway;
     private final TransferDeliveryGateway transferDeliveryGateway;
     private final TransferMailInfoGateway transferMailInfoGateway;
-    private final ObjectMapper objectMapper;
+    private final TransferJsonMapper transferJsonMapper;
 
     @Override
     public TransferObjectViewDTO getObject(String transferId) {
@@ -587,9 +587,12 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .deliveryStatus(delivered ? "已投递" : "未投递")
                 .receivedAt(transferObject.receivedAt() == null ? null : java.time.LocalDateTime.ofInstant(transferObject.receivedAt(), java.time.ZoneId.systemDefault()))
                 .storedAt(transferObject.storedAt() == null ? null : java.time.LocalDateTime.ofInstant(transferObject.storedAt(), java.time.ZoneId.systemDefault()))
+                .businessDate(transferObject.businessDate())
+                .businessId(transferObject.businessId())
+                .receiveDate(transferObject.receiveDate())
                 .routeId(transferObject.routeId() == null ? null : String.valueOf(transferObject.routeId()))
                 .errorMessage(transferObject.errorMessage())
-                .fileMetaJson(toJson(transferObject.fileMeta()))
+                .fileMetaJson(transferJsonMapper.toCompactJson(transferObject.fileMeta()))
                 .tags(tags == null ? List.of() : tags.stream().map(this::toTagView).toList())
                 .build();
     }
@@ -669,17 +672,6 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .matchedValue(tag.matchedValue())
                 .createdAt(tag.createdAt() == null ? null : java.time.LocalDateTime.ofInstant(tag.createdAt(), java.time.ZoneId.systemDefault()))
                 .build();
-    }
-
-    private String toJson(Object value) {
-        if (value == null) {
-            return null;
-        }
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (Exception exception) {
-            throw new IllegalStateException("文件元数据序列化失败", exception);
-        }
     }
 
     private String resolveDownloadFileName(TransferObject transferObject, Path filePath) {

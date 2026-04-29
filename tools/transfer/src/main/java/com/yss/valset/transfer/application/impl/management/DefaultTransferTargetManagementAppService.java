@@ -50,6 +50,13 @@ public class DefaultTransferTargetManagementAppService implements TransferTarget
         TargetType targetType = TargetType.valueOf(command.getTargetType());
         TransferTarget existing = command.getTargetId() == null ? null : transferTargetGateway.findById(parseLong(command.getTargetId()))
                 .orElseThrow(() -> new IllegalStateException("未找到投递目标，targetId=" + command.getTargetId()));
+        long referencedRouteCount = existing == null ? 0L : transferRouteGateway.countByTargetCode(existing.targetCode());
+        if (existing != null && Boolean.TRUE.equals(existing.enabled()) && Boolean.FALSE.equals(command.getEnabled()) && referencedRouteCount > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "存在 " + referencedRouteCount + " 条分拣路由配置引用了该目标（targetId=" + command.getTargetId() + "，targetCode=" + existing.targetCode() + "），请先解除路由配置后再停用"
+            );
+        }
         Map<String, Object> connectionConfig = mergeSensitiveConfig(
                 existing == null ? null : existing.connectionConfig(),
                 command.getConnectionConfig()
@@ -104,6 +111,7 @@ public class DefaultTransferTargetManagementAppService implements TransferTarget
                 .targetType(target.targetType() == null ? null : target.targetType().name())
                 .formTemplateName(TransferFormTemplateNames.targetTemplateName(target.targetType()))
                 .enabled(target.enabled())
+                .referencedRouteCount(target.targetCode() == null ? 0L : transferRouteGateway.countByTargetCode(target.targetCode()))
                 .targetPathTemplate(target.targetPathTemplate())
                 .connectionConfig(transferSecretCodec.maskMap(target.connectionConfig()))
                 .targetMeta(transferSecretCodec.maskMap(target.targetMeta()))

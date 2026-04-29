@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.yss.valset.domain.exception.FileAccessException;
-import com.yss.valset.domain.extractor.RawDataExtractor;
+import com.yss.valset.extract.domain.extractor.RawDataExtractor;
 import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;

@@ -15,6 +15,10 @@ export interface TransferObjectViewDTO {
   fileMetaJson?: string;
   /** 文件指纹。 */
   fingerprint?: string;
+  /** 业务日期。 */
+  businessDate?: string;
+  /** 业务ID。 */
+  businessId?: string;
   /** 本地临时文件路径。 */
   localTempPath?: string;
   /** 真实文件存储地址。 */
@@ -43,6 +47,8 @@ export interface TransferObjectViewDTO {
   originalName?: string;
   /** 收取时间。 */
   receivedAt?: string;
+  /** 收取日期。 */
+  receiveDate?: string;
   /** 路由主键。 */
   routeId?: string;
   /** 文件大小，单位字节。 */

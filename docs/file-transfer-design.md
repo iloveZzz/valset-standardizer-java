@@ -440,6 +440,12 @@ public interface RuleEngine {
 
 保存收取后的文件主数据。
 
+建议新增业务字段：
+
+- `business_date`：业务日期，优先由标签规则从文件名或附件名提取后回填。
+- `business_id`：业务标识，先预留，可为空。
+- `receive_date`：收取日期，保存当前收取来源的日期。
+
 ### `t_transfer_route`
 
 保存路由结果。

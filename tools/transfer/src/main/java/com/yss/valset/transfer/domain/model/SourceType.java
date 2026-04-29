@@ -7,5 +7,6 @@ public enum SourceType {
     LOCAL_DIR,
     EMAIL,
     S3,
-    SFTP
+    SFTP,
+    HTTP
 }

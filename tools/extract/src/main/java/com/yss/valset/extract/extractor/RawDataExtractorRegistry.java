@@ -1,10 +1,8 @@
 package com.yss.valset.extract.extractor;
 
 import com.yss.valset.domain.exception.UnsupportedDataSourceException;
-import com.yss.valset.domain.extractor.RawDataExtractor;
+import com.yss.valset.extract.domain.extractor.RawDataExtractor;
 import com.yss.valset.domain.model.DataSourceType;
-import com.yss.valset.extract.extractor.CsvRawDataExtractor;
-import com.yss.valset.extract.extractor.PoiRawDataExtractor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

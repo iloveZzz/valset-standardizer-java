@@ -29,6 +29,7 @@ export interface TargetPage {
   templateGridDefaults: Record<string, any>;
   setTemplateFormRef: (instance: any) => void;
   isEnabledUpdating: (targetId?: number) => boolean;
+  hasReferencedRoutes: (row?: any | null) => boolean;
   toggleEnabled: (row: any, checked: boolean) => Promise<void>;
   enabledCount: number;
   templateBoundCount: number;

@@ -1,0 +1,79 @@
+@import "../TransferRunLog/index.less";
+
+.parse-queue-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.parse-queue-stat-card {
+  padding: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.parse-queue-stat-label {
+  color: rgba(15, 23, 42, 0.52);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.parse-queue-stat-value {
+  margin-top: 8px;
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.parse-queue-stat-desc {
+  margin-top: 6px;
+  color: rgba(15, 23, 42, 0.54);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.parse-queue-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 12px 0 16px;
+}
+
+.parse-queue-json-block {
+  margin-top: 16px;
+}
+
+.parse-queue-json-block h4 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.parse-queue-json-block pre {
+  margin: 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.03);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+  font-size: 12px;
+}
+
+@media (max-width: 1200px) {
+  .parse-queue-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .parse-queue-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}

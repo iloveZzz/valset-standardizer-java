@@ -1,5 +1,6 @@
 package com.yss.valset.extract.support;
 
+import com.yss.valset.common.support.SpreadsheetXmlSupport;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.BorderStyle;
@@ -38,12 +39,23 @@ import java.util.Map;
 @Slf4j
 public class ExcelUniverSnapshotSupport implements Closeable {
 
+    private static final int XML_DEFAULT_COLUMN_WIDTH = 56;
+    private static final int XML_DEFAULT_ROW_HEIGHT = 20;
+
     private final Workbook workbook;
+    private final SpreadsheetXmlSupport.SpreadsheetXmlWorkbook spreadsheetXmlWorkbook;
 
     public ExcelUniverSnapshotSupport(Path filePath) {
         try {
-            InputStream inputStream = Files.newInputStream(filePath);
-            this.workbook = WorkbookFactory.create(inputStream);
+            if (SpreadsheetXmlSupport.isSpreadsheetXml(filePath)) {
+                this.workbook = null;
+                this.spreadsheetXmlWorkbook = SpreadsheetXmlSupport.read(filePath);
+                return;
+            }
+            try (InputStream inputStream = Files.newInputStream(filePath)) {
+                this.workbook = WorkbookFactory.create(inputStream);
+            }
+            this.spreadsheetXmlWorkbook = null;
         } catch (Exception exception) {
             throw new IllegalStateException("打开 Excel 工作簿失败，filePath=" + filePath, exception);
         }
@@ -77,38 +89,50 @@ public class ExcelUniverSnapshotSupport implements Closeable {
      * 构建表头预览元数据。
      */
     public Map<String, Object> buildHeaderMeta(String sheetName, List<RowSnapshot> previewRows) {
-        Sheet sheet = sheet(sheetName);
-        Map<String, Object> headerMeta = new LinkedHashMap<>();
-        headerMeta.put("sheetName", sheetName);
-        headerMeta.put("previewRowCount", previewRows == null ? 0 : previewRows.size());
-        headerMeta.put("rowCount", sheet == null ? 0 : sheet.getLastRowNum() + 1);
-        headerMeta.put("columnCount", resolveColumnCount(sheet));
-        headerMeta.put("defaultColumnWidth", resolveDefaultColumnWidth(sheet));
-        headerMeta.put("defaultRowHeight", resolveDefaultRowHeight(sheet));
-        headerMeta.put("mergeData", buildMergeData(sheet));
-        headerMeta.put("headerRowNumbers", previewRows == null ? List.of() : previewRows.stream()
-                .map(RowSnapshot::getRowIndex)
-                .toList());
-        Map<Integer, Map<Integer, Map<String, Object>>> cellData = new LinkedHashMap<>();
-        if (previewRows != null) {
-            for (RowSnapshot previewRow : previewRows) {
-                if (previewRow.getRowCellData() != null && !previewRow.getRowCellData().isEmpty()) {
-                    cellData.put(previewRow.getRowIndex(), previewRow.getRowCellData());
+        if (workbook != null) {
+            Sheet sheet = sheet(sheetName);
+            Map<String, Object> headerMeta = new LinkedHashMap<>();
+            headerMeta.put("sheetName", sheetName);
+            headerMeta.put("previewRowCount", previewRows == null ? 0 : previewRows.size());
+            headerMeta.put("rowCount", sheet == null ? 0 : sheet.getLastRowNum() + 1);
+            headerMeta.put("columnCount", resolveColumnCount(sheet));
+            headerMeta.put("defaultColumnWidth", resolveDefaultColumnWidth(sheet));
+            headerMeta.put("defaultRowHeight", resolveDefaultRowHeight(sheet));
+            headerMeta.put("mergeData", buildMergeData(sheet));
+            headerMeta.put("headerRowNumbers", previewRows == null ? List.of() : previewRows.stream()
+                    .map(RowSnapshot::getRowIndex)
+                    .toList());
+            Map<Integer, Map<Integer, Map<String, Object>>> cellData = new LinkedHashMap<>();
+            if (previewRows != null) {
+                for (RowSnapshot previewRow : previewRows) {
+                    if (previewRow.getRowCellData() != null && !previewRow.getRowCellData().isEmpty()) {
+                        cellData.put(previewRow.getRowIndex(), previewRow.getRowCellData());
+                    }
                 }
             }
+            headerMeta.put("cellData", cellData);
+            return headerMeta;
         }
-        headerMeta.put("cellData", cellData);
-        return headerMeta;
+        return buildSpreadsheetXmlHeaderMeta(sheetName, previewRows);
     }
 
     public String getSheetName(int sheetIndex) {
-        if (sheetIndex < 0 || sheetIndex >= workbook.getNumberOfSheets()) {
+        if (workbook != null) {
+            if (sheetIndex < 0 || sheetIndex >= workbook.getNumberOfSheets()) {
+                return null;
+            }
+            return workbook.getSheetName(sheetIndex);
+        }
+        if (sheetIndex < 0 || spreadsheetXmlWorkbook == null || sheetIndex >= spreadsheetXmlWorkbook.sheets().size()) {
             return null;
         }
-        return workbook.getSheetName(sheetIndex);
+        return spreadsheetXmlWorkbook.sheets().get(sheetIndex).sheetName();
     }
 
     public Sheet sheet(String sheetName) {
+        if (workbook == null) {
+            return null;
+        }
         if (sheetName == null) {
             return workbook.getSheetAt(0);
         }
@@ -121,7 +145,9 @@ public class ExcelUniverSnapshotSupport implements Closeable {
 
     @Override
     public void close() throws IOException {
-        workbook.close();
+        if (workbook != null) {
+            workbook.close();
+        }
     }
 
     private Map<String, Object> buildCellData(Cell cell, String rawValue, boolean includeStyle) {
@@ -309,6 +335,76 @@ public class ExcelUniverSnapshotSupport implements Closeable {
             maxColumnCount = Math.max(maxColumnCount, row.getLastCellNum());
         }
         return Math.max(maxColumnCount, 0);
+    }
+
+    private Map<String, Object> buildSpreadsheetXmlHeaderMeta(String sheetName, List<RowSnapshot> previewRows) {
+        SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet = spreadsheetXmlSheet(sheetName);
+        Map<String, Object> headerMeta = new LinkedHashMap<>();
+        headerMeta.put("sheetName", sheet == null ? sheetName : sheet.sheetName());
+        headerMeta.put("previewRowCount", previewRows == null ? 0 : previewRows.size());
+        headerMeta.put("rowCount", sheet == null ? 0 : sheet.rows().size());
+        headerMeta.put("columnCount", resolveColumnCount(sheet));
+        headerMeta.put("defaultColumnWidth", XML_DEFAULT_COLUMN_WIDTH);
+        headerMeta.put("defaultRowHeight", XML_DEFAULT_ROW_HEIGHT);
+        headerMeta.put("mergeData", buildMergeData(sheet));
+        headerMeta.put("headerRowNumbers", previewRows == null ? List.of() : previewRows.stream()
+                .map(RowSnapshot::getRowIndex)
+                .toList());
+        Map<Integer, Map<Integer, Map<String, Object>>> cellData = new LinkedHashMap<>();
+        if (previewRows != null) {
+            for (RowSnapshot previewRow : previewRows) {
+                if (previewRow.getRowCellData() != null && !previewRow.getRowCellData().isEmpty()) {
+                    cellData.put(previewRow.getRowIndex(), previewRow.getRowCellData());
+                }
+            }
+        }
+        headerMeta.put("cellData", cellData);
+        return headerMeta;
+    }
+
+    private SpreadsheetXmlSupport.SpreadsheetXmlSheet spreadsheetXmlSheet(String sheetName) {
+        if (spreadsheetXmlWorkbook == null || spreadsheetXmlWorkbook.sheets().isEmpty()) {
+            return null;
+        }
+        if (sheetName == null) {
+            return spreadsheetXmlWorkbook.sheets().get(0);
+        }
+        for (SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet : spreadsheetXmlWorkbook.sheets()) {
+            if (sheetName.equals(sheet.sheetName())) {
+                return sheet;
+            }
+        }
+        return spreadsheetXmlWorkbook.sheets().get(0);
+    }
+
+    private int resolveColumnCount(SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet) {
+        if (sheet == null || sheet.rows() == null) {
+            return 0;
+        }
+        int maxColumnCount = 0;
+        for (List<String> row : sheet.rows()) {
+            if (row == null) {
+                continue;
+            }
+            maxColumnCount = Math.max(maxColumnCount, row.size());
+        }
+        return Math.max(maxColumnCount, 0);
+    }
+
+    private List<Map<String, Object>> buildMergeData(SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet) {
+        if (sheet == null || sheet.mergeRegions() == null || sheet.mergeRegions().isEmpty()) {
+            return List.of();
+        }
+        List<Map<String, Object>> mergeData = new ArrayList<>(sheet.mergeRegions().size());
+        for (SpreadsheetXmlSupport.SpreadsheetXmlMergeRegion range : sheet.mergeRegions()) {
+            Map<String, Object> merge = new LinkedHashMap<>();
+            merge.put("startRow", range.startRow());
+            merge.put("startColumn", range.startColumn());
+            merge.put("endRow", range.endRow());
+            merge.put("endColumn", range.endColumn());
+            mergeData.add(merge);
+        }
+        return mergeData;
     }
 
     private int resolveDefaultColumnWidth(Sheet sheet) {

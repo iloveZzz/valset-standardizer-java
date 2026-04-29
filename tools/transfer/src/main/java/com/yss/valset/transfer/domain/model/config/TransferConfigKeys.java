@@ -38,6 +38,9 @@ public final class TransferConfigKeys {
     /** 是否启用 STARTTLS。 */
     public static final String START_TLS = "startTls";
 
+    /** HTTP 来源是否允许一次上传多个文件。 */
+    public static final String ALLOW_MULTIPLE_FILES = "allowMultipleFiles";
+
     /** S3 桶名称。 */
     public static final String BUCKET = "bucket";
     /** S3 区域。 */

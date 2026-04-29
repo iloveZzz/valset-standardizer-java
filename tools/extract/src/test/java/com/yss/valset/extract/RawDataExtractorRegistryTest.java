@@ -2,7 +2,7 @@ package com.yss.valset.extract;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.domain.exception.UnsupportedDataSourceException;
-import com.yss.valset.domain.extractor.RawDataExtractor;
+import com.yss.valset.extract.domain.extractor.RawDataExtractor;
 import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.extract.extractor.CsvRawDataExtractor;
 import com.yss.valset.extract.extractor.PoiRawDataExtractor;

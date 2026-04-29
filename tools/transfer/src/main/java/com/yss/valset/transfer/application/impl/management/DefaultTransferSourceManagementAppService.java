@@ -15,22 +15,31 @@ import com.yss.valset.transfer.domain.model.TransferSource;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpoint;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpointItem;
 import com.yss.valset.transfer.domain.model.TransferTriggerType;
+import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
 import com.yss.valset.transfer.application.port.TransferJobScheduler;
 import com.yss.valset.transfer.infrastructure.convertor.TransferSecretCodec;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -49,6 +58,8 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
     private final TransferSecretCodec transferSecretCodec;
     private final TransferSourceScheduleCoordinator transferSourceScheduleCoordinator;
     private final TransferJobScheduler transferJobScheduler;
+    @Value("${subject.match.upload-dir:${user.home}/.tmp/valset-standardizer/uploads}")
+    private String uploadRoot;
 
     @Override
     public List<TransferSourceViewDTO> listSources(String sourceType, String sourceCode, String sourceName, Boolean enabled, Integer limit) {
@@ -173,6 +184,55 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
     }
 
     @Override
+    public TransferSourceMutationResponse uploadFiles(String sourceId, List<MultipartFile> files) {
+        TransferSource source = cleanupExpiredIngestIfNeeded(transferSourceGateway.findById(sourceId)
+                .orElseThrow(() -> new IllegalStateException("未找到文件来源，sourceId=" + sourceId)));
+        if (source.sourceType() != SourceType.HTTP) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前来源不是 HTTP 来源，无法通过上传接口接收文件");
+        }
+
+        List<MultipartFile> validFiles = normalizeUploadFiles(files);
+        if (validFiles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请选择要上传的文件");
+        }
+
+        HttpSourceUploadConfig config = HttpSourceUploadConfig.from(source);
+        if (!config.allowMultipleFiles() && validFiles.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前 HTTP 来源仅允许上传单个文件");
+        }
+        if (config.limit() > 0 && validFiles.size() > config.limit()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前 HTTP 来源一次最多允许上传 " + config.limit() + " 个文件");
+        }
+
+        List<Path> storedPaths = storeHttpFiles(source, validFiles);
+        String message = "已接收 " + storedPaths.size() + " 个文件";
+        try {
+            TransferSource current = cleanupExpiredIngestIfNeeded(transferSourceGateway.findById(sourceId).orElse(source));
+            if (Boolean.TRUE.equals(current.enabled()) && !isIngestBusy(current)) {
+                triggerSource(sourceId);
+                message = message + "，并已触发收取";
+            } else if (isIngestBusy(current)) {
+                message = message + "，当前来源正在收取中，稍后会继续处理";
+            } else {
+                message = message + "，来源当前未启用，待启用后可处理";
+            }
+        } catch (Exception exception) {
+            log.warn("HTTP 来源上传后自动触发失败，sourceId={}，sourceCode={}",
+                    source.sourceId(),
+                    source.sourceCode(),
+                    exception);
+            message = message + "，但自动触发收取失败";
+        }
+        TransferSource refreshed = cleanupExpiredIngestIfNeeded(transferSourceGateway.findById(sourceId).orElse(source));
+        return TransferSourceMutationResponse.builder()
+                .operation("upload")
+                .message(message)
+                .formTemplateName(TransferFormTemplateNames.sourceTemplateName(refreshed.sourceType()))
+                .source(toView(refreshed))
+                .build();
+    }
+
+    @Override
     public TransferSourceMutationResponse stopSource(String sourceId) {
         TransferSource source = cleanupExpiredIngestIfNeeded(transferSourceGateway.findById(sourceId)
                 .orElseThrow(() -> new IllegalStateException("未找到文件来源，sourceId=" + sourceId)));
@@ -237,6 +297,103 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 .stream()
                 .map(this::toCheckpointItemView)
                 .toList();
+    }
+
+    private List<MultipartFile> normalizeUploadFiles(List<MultipartFile> files) {
+        if (files == null) {
+            return List.of();
+        }
+        return files.stream()
+                .filter(file -> file != null && !file.isEmpty())
+                .toList();
+    }
+
+    private List<Path> storeHttpFiles(TransferSource source, List<MultipartFile> files) {
+        List<Path> storedPaths = new ArrayList<>();
+        Path sourceDir = resolveHttpSourceUploadDirectory(source.sourceId());
+        for (MultipartFile file : files) {
+            storedPaths.add(storeHttpFile(sourceDir, file));
+        }
+        return storedPaths;
+    }
+
+    private Path storeHttpFile(Path sourceDir, MultipartFile file) {
+        try {
+            Files.createDirectories(sourceDir);
+            String fileName = sanitizeFileName(file.getOriginalFilename());
+            Path targetPath = resolveHttpFileTargetPath(sourceDir, fileName);
+            try (InputStream inputStream = file.getInputStream()) {
+                Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
+            return targetPath.toAbsolutePath();
+        } catch (IOException exception) {
+            throw new IllegalStateException("HTTP 来源文件保存失败，fileName=" + file.getOriginalFilename(), exception);
+        }
+    }
+
+    private Path resolveHttpFileTargetPath(Path sourceDir, String fileName) {
+        Path targetPath = sourceDir.resolve(fileName);
+        if (!Files.exists(targetPath)) {
+            return targetPath;
+        }
+
+        String baseName = fileName;
+        String extension = "";
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex > 0 && dotIndex < fileName.length() - 1) {
+            baseName = fileName.substring(0, dotIndex);
+            extension = fileName.substring(dotIndex);
+        }
+
+        int sequence = 1;
+        while (Files.exists(targetPath)) {
+            targetPath = sourceDir.resolve(baseName + "-" + sequence + extension);
+            sequence++;
+        }
+        return targetPath;
+    }
+
+    private Path resolveHttpSourceUploadDirectory(String sourceId) {
+        return Path.of(resolveUploadRoot(uploadRoot))
+                .resolve("http")
+                .resolve(sourceId);
+    }
+
+    private String resolveUploadRoot(String configuredUploadRoot) {
+        if (configuredUploadRoot != null && !configuredUploadRoot.isBlank()) {
+            return configuredUploadRoot;
+        }
+        return Path.of(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
+    }
+
+    private String sanitizeFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "upload-file";
+        }
+        String sanitized = fileName.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+        return sanitized.isBlank() ? "upload-file" : sanitized;
+    }
+
+    private record HttpSourceUploadConfig(boolean allowMultipleFiles, int limit) {
+        static HttpSourceUploadConfig from(TransferSource source) {
+            Map<String, Object> config = source.connectionConfig() == null ? Map.of() : source.connectionConfig();
+            boolean allowMultipleFiles = booleanValue(config, TransferConfigKeys.ALLOW_MULTIPLE_FILES, true);
+            int limit = intValue(config, TransferConfigKeys.LIMIT, 0);
+            return new HttpSourceUploadConfig(allowMultipleFiles, limit);
+        }
+
+        private static int intValue(Map<String, Object> config, String key, int defaultValue) {
+            Object raw = config.get(key);
+            if (raw == null || String.valueOf(raw).isBlank()) {
+                return defaultValue;
+            }
+            return Integer.parseInt(String.valueOf(raw));
+        }
+
+        private static boolean booleanValue(Map<String, Object> config, String key, boolean defaultValue) {
+            Object raw = config.get(key);
+            return raw == null ? defaultValue : Boolean.parseBoolean(String.valueOf(raw));
+        }
     }
 
     private boolean isIngestBusy(TransferSource source) {

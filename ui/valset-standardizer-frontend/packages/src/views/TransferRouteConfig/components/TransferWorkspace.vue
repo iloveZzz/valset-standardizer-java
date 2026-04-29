@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
-import { YButton, YCard, YCron } from "@yss-ui/components";
+import { YButton, YCard, YCron, YFileImport } from "@yss-ui/components";
 import { formatDateTime } from "@/utils/format";
 import type { RouteConfigPage } from "../types";
 
@@ -67,16 +67,18 @@ watch(
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">来源 → 路由映射 → 目标</span>
-            <span class="workspace-pill">支持手动收取 / 停止收取 / 轮询配置</span>
+            <span class="workspace-pill"
+              >支持手动收取 / 停止收取 / 轮询配置</span
+            >
           </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
-            <YButton size="small" type="primary" @click="page.openCreateDialog">
+            <YButton type="primary" @click="page.openCreateDialog">
               <template #icon><PlusOutlined /></template>
               新建路由
             </YButton>
-            <YButton size="small" @click="page.runQuery">
+            <YButton @click="page.runQuery">
               <template #icon><ReloadOutlined /></template>
               刷新列表
             </YButton>
@@ -293,6 +295,14 @@ watch(
                     @click="page.stopSource(row)"
                   >
                     停止
+                  </YButton>
+                  <YButton
+                    size="small"
+                    type="primary"
+                    :disabled="!page.canUploadRouteSource(row)"
+                    @click="page.openUploadDialog(row)"
+                  >
+                    上传文件
                   </YButton>
                   <YButton size="small" @click="page.openDetailDrawer(row)"
                     >详情</YButton
@@ -537,6 +547,32 @@ watch(
       </a-form>
     </a-modal>
 
+    <YFileImport
+      v-model:model-value="page.uploadVisible"
+      title="HTTP 路由上传文件"
+      class="fileImport"
+      :width="720"
+      :multiple="page.isUploadMultipleAllowed()"
+      :file-type-list="['xlsx', 'csv', 'txt', 'xls']"
+      :import-result="page.uploadImportResult"
+      :loadings="page.uploadSubmitting ? ['route-http-upload'] : []"
+      :upload-props="{
+        multiple: page.isUploadMultipleAllowed(),
+        accept: '',
+        showUploadList: true,
+        beforeUpload: () => false,
+      }"
+      @update:model-value="
+        (visible) => {
+          if (!visible) {
+            page.closeUploadDialog();
+          }
+        }
+      "
+      @final-import="page.submitUpload"
+      @export-error-data="page.exportErrorData"
+    />
+
     <a-drawer
       class="source-detail-drawer"
       :open="page.detailVisible"
@@ -602,17 +638,17 @@ watch(
               <a-descriptions-item label="来源类型">
                 {{ page.selectedRow.sourceType || "-" }}
               </a-descriptions-item>
-            <a-descriptions-item label="来源编码">
-              {{ page.selectedRow.sourceCode || "-" }}
-            </a-descriptions-item>
-            <a-descriptions-item label="轮询表达式">
-              {{ page.selectedRow.pollCron || "-" }}
-            </a-descriptions-item>
-            <a-descriptions-item label="触发方式">
-              {{
-                page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
-                  ? page.getSourceIngestState(page.selectedRow)
-                      ?.ingestTriggerType === "CRON"
+              <a-descriptions-item label="来源编码">
+                {{ page.selectedRow.sourceCode || "-" }}
+              </a-descriptions-item>
+              <a-descriptions-item label="轮询表达式">
+                {{ page.selectedRow.pollCron || "-" }}
+              </a-descriptions-item>
+              <a-descriptions-item label="触发方式">
+                {{
+                  page.getSourceIngestState(page.selectedRow)?.ingestTriggerType
+                    ? page.getSourceIngestState(page.selectedRow)
+                        ?.ingestTriggerType === "CRON"
                       ? "cron 定时"
                       : page.getSourceIngestState(page.selectedRow)
                             ?.ingestTriggerType === "MANUAL"

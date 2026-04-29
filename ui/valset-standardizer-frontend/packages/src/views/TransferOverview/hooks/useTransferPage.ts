@@ -165,7 +165,7 @@ export const useTransferPage = () => {
   const objectAnalysis = ref<TransferObjectAnalysisViewDTO | null>(null);
   const runLogRows = ref<TransferRunLogViewDTO[]>([]);
   const recentDeliveryPagination = ref<YTablePagination>({
-    current: 1,
+    current: 0,
     pageSize: 10,
     total: 10,
     showSizeChanger: true,
@@ -925,7 +925,7 @@ export const useTransferPage = () => {
   const paged = <T>(items: T[]) => items;
 
   const mapRecentDeliveryPageQuery = (
-    current = recentDeliveryPagination.value.current || 1,
+    current = recentDeliveryPagination.value.current || 0,
     pageSize = recentDeliveryPagination.value.pageSize || 10,
   ): PageRecordsParams => ({
     pageIndex: Math.max(current - 1, 0),
@@ -933,7 +933,7 @@ export const useTransferPage = () => {
   });
 
   const loadRecentDeliveries = async (
-    current = recentDeliveryPagination.value.current || 1,
+    current = recentDeliveryPagination.value.current || 0,
     pageSize = recentDeliveryPagination.value.pageSize || 10,
   ) => {
     try {
@@ -945,8 +945,9 @@ export const useTransferPage = () => {
       recentDeliveryPagination.value.total = Number(
         res?.totalCount ?? records.length,
       );
-      recentDeliveryPagination.value.current =
-        Number(res?.pageIndex ?? Math.max(current - 1, 0)) + 1;
+      recentDeliveryPagination.value.current = Number(
+        res?.pageIndex ?? Math.max(current - 1, 0),
+      );
       recentDeliveryPagination.value.pageSize = Number(
         res?.pageSize ?? pageSize,
       );

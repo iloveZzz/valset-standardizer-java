@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.domain.rule;
 
 import com.alibaba.qlexpress4.annotation.QLFunction;
+import com.yss.valset.common.support.SpreadsheetXmlSupport;
 import com.yss.valset.domain.exception.FileAccessException;
 
 import org.apache.commons.csv.CSVFormat;
@@ -470,6 +471,9 @@ public class TransferRuleFunctions {
     }
 
     private List<List<String>> readExcelDataWithin(Path filePath, int maxRows) throws IOException {
+        if (SpreadsheetXmlSupport.isSpreadsheetXml(filePath)) {
+            return readSpreadsheetXmlData(filePath, maxRows);
+        }
         if (isXlsx(filePath)) {
             return readExcelDataWithinXlsx(filePath, maxRows);
         }
@@ -496,6 +500,19 @@ public class TransferRuleFunctions {
         }
     }
 
+    private List<List<String>> readSpreadsheetXmlData(Path filePath, int maxRows) throws IOException {
+        List<List<String>> rows = SpreadsheetXmlSupport.readFirstSheetRows(filePath);
+        int limit = normalizeScanLimit(maxRows);
+        List<List<String>> data = new ArrayList<>();
+        for (List<String> row : rows) {
+            if (data.size() >= limit) {
+                break;
+            }
+            data.add(normalizeSpreadsheetXmlRow(row));
+        }
+        return data;
+    }
+
     private List<String> readExcelRow(Row row, DataFormatter formatter, FormulaEvaluator evaluator) {
         if (row == null) {
             return List.of();
@@ -516,6 +533,22 @@ public class TransferRuleFunctions {
             values.add(value == null || value.isBlank() ? null : value);
         }
         return values;
+    }
+
+    private List<String> normalizeSpreadsheetXmlRow(List<String> row) {
+        if (row == null || row.isEmpty()) {
+            return List.of();
+        }
+        List<String> normalized = new ArrayList<>(row.size());
+        for (String value : row) {
+            if (value == null) {
+                normalized.add(null);
+                continue;
+            }
+            String trimmed = value.trim();
+            normalized.add(trimmed.isEmpty() ? null : trimmed);
+        }
+        return normalized;
     }
 
     private List<List<String>> readCsvData(Path filePath, Charset charset) throws IOException {

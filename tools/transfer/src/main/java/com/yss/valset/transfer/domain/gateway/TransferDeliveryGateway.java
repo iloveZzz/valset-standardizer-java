@@ -12,9 +12,9 @@ import java.util.Optional;
  */
 public interface TransferDeliveryGateway {
 
-    void recordResult(String routeId, String transferId, TransferResult transferResult);
+    TransferDeliveryRecord recordResult(String routeId, String transferId, TransferResult transferResult);
 
-    void recordResult(String routeId, String transferId, TransferResult transferResult, Integer retryCount);
+    TransferDeliveryRecord recordResult(String routeId, String transferId, TransferResult transferResult, Integer retryCount);
 
     long countByRouteId(String routeId);
 

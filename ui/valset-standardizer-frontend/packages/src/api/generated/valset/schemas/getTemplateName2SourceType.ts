@@ -14,4 +14,5 @@ export const GetTemplateName2SourceType = {
   EMAIL: "EMAIL",
   S3: "S3",
   SFTP: "SFTP",
+  HTTP: "HTTP",
 } as const;

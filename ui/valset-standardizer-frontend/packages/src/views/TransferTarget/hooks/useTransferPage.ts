@@ -470,12 +470,24 @@ export const useTransferPage = (): { page: TargetPage } => {
     return Boolean(enabledUpdatingIds[targetId]);
   };
 
+  const hasReferencedRoutes = (row?: TransferTargetViewDTO | null) => {
+    return Boolean(
+      row?.enabled && Number(row?.referencedRouteCount ?? 0) > 0,
+    );
+  };
+
   const toggleEnabled = async (
     row: TransferTargetViewDTO,
     checked: boolean,
   ) => {
     if (!row.targetId) {
       message.error("目标主键缺失，无法切换状态");
+      return;
+    }
+    if (row.enabled && Number(row.referencedRouteCount ?? 0) > 0 && !checked) {
+      message.warning(
+        "该目标已被分拣路由引用，无法停用，请先解除关联路由配置",
+      );
       return;
     }
 
@@ -631,6 +643,7 @@ export const useTransferPage = (): { page: TargetPage } => {
     templateLoading,
     enabledUpdatingIds,
     isEnabledUpdating,
+    hasReferencedRoutes,
     toggleEnabled,
     formVisible,
     formMode,

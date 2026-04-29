@@ -24,7 +24,15 @@ class TransferObjectMapperTest {
     void shouldPersistAndRestoreProbeResultSeparately() {
         Map<String, Object> probeAttributes = new LinkedHashMap<>();
         probeAttributes.put("fileName", "report.xlsx");
+        probeAttributes.put("emptyText", "   ");
+        probeAttributes.put("emptyMap", Map.of());
         probeAttributes.put("mimeType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+        Map<String, Object> fileMeta = new LinkedHashMap<>();
+        fileMeta.put("sourceCode", "qq-mail");
+        fileMeta.put("triggerType", "MANUAL");
+        fileMeta.put("blankValue", "");
+        fileMeta.put("nestedEmpty", Map.of("child", "   "));
 
         TransferObject transferObject = new TransferObject(
                 "1001",
@@ -52,19 +60,24 @@ class TransferObjectMapperTest {
                 Instant.parse("2026-04-24T00:01:00Z"),
                 "3001",
                 null,
-                new ProbeResult(true, "EMAIL_ATTACHMENT", probeAttributes),
-                Map.of("sourceCode", "qq-mail", "triggerType", "MANUAL")
+                new ProbeResult(true, null, probeAttributes),
+                fileMeta
         ).withRealStoragePath("/data/archive/report.xlsx");
 
         TransferObjectPO po = mapper.toPO(transferObject, transferJsonMapper);
-        assertThat(po.getProbeResultJson()).contains("EMAIL_ATTACHMENT");
+        assertThat(po.getProbeResultJson()).contains("\"detected\":true");
+        assertThat(po.getProbeResultJson()).doesNotContain("detectedType");
+        assertThat(po.getProbeResultJson()).doesNotContain("emptyText");
+        assertThat(po.getProbeResultJson()).doesNotContain("emptyMap");
         assertThat(po.getFileMetaJson()).contains("triggerType");
+        assertThat(po.getFileMetaJson()).doesNotContain("blankValue");
+        assertThat(po.getFileMetaJson()).doesNotContain("nestedEmpty");
         assertThat(po.getRealStoragePath()).isEqualTo("/data/archive/report.xlsx");
 
         TransferObject restored = mapper.toDomain(po, transferJsonMapper);
         assertThat(restored.probeResult()).isNotNull();
         assertThat(restored.probeResult().detected()).isTrue();
-        assertThat(restored.probeResult().detectedType()).isEqualTo("EMAIL_ATTACHMENT");
+        assertThat(restored.probeResult().detectedType()).isNull();
         assertThat(restored.probeResult().attributes()).containsEntry("fileName", "report.xlsx");
         assertThat(restored.fileMeta()).containsEntry("sourceCode", "qq-mail");
         assertThat(restored.realStoragePath()).isEqualTo("/data/archive/report.xlsx");

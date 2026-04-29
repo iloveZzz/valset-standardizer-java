@@ -415,6 +415,31 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
+   * @summary 通过 HTTP 接口上传文件到文件来源。
+   */
+  const uploadSourceFiles = (sourceId: string, files: File[]) => {
+    const formData = new FormData();
+    const validFiles = (files ?? []).filter((file): file is File => Boolean(file));
+    if (validFiles.length <= 1) {
+      const file = validFiles[0];
+      if (file) {
+        formData.append("file", file);
+      }
+    } else {
+      validFiles.forEach((file) => {
+        formData.append("files", file);
+      });
+    }
+
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources/${sourceId}/upload`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
+    });
+  };
+
+  /**
    * @summary 查询来源对应表单模板名。
    */
   const getTemplateName2 = (params: GetTemplateName2Params) => {
@@ -1181,6 +1206,7 @@ export const getJavaSpringBootQuartzApi = () => {
     getSource,
     deleteSource,
     updateSource,
+    uploadSourceFiles,
     getTemplateName2,
     triggerSource,
     stopSource,

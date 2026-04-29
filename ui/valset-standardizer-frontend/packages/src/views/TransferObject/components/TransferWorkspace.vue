@@ -9,6 +9,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
+import { formatDate, formatDateTime } from "@/utils/format";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import { useTransferObjectColumns } from "../../TransferShared/hooks/useTransferTableColumns";
@@ -44,7 +45,6 @@ const confirmRetag = () => {
     cancelText: "取消",
     okButtonProps: {
       danger: true,
-      loading: page.retagLoading,
     },
     onOk: () => page.retagObjects(),
   });
@@ -508,11 +508,20 @@ const actionConfig = useTableActionConfig({
           <a-descriptions-item label="文件大小">
             {{ page.selectedRow.sizeBytes ?? "-" }}
           </a-descriptions-item>
+          <a-descriptions-item label="业务日期">
+            {{ formatDate(page.selectedRow.businessDate) }}
+          </a-descriptions-item>
+          <a-descriptions-item label="业务ID">
+            {{ page.selectedRow.businessId || "-" }}
+          </a-descriptions-item>
+          <a-descriptions-item label="收取日期">
+            {{ formatDate(page.selectedRow.receiveDate) }}
+          </a-descriptions-item>
           <a-descriptions-item label="指纹">
             {{ page.selectedRow.fingerprint || "-" }}
           </a-descriptions-item>
           <a-descriptions-item label="收取时间">
-            {{ page.selectedRow.receivedAt || "-" }}
+            {{ formatDateTime(page.selectedRow.receivedAt) }}
           </a-descriptions-item>
           <a-descriptions-item label="落库时间">
             {{ page.selectedRow.storedAt || "-" }}

@@ -140,7 +140,10 @@ const actionConfig = useTableActionConfig({
           <a-switch
             :checked="Boolean(row.enabled)"
             :loading="page.isEnabledUpdating(row.targetId)"
-            :disabled="page.isEnabledUpdating(row.targetId)"
+            :disabled="
+              page.isEnabledUpdating(row.targetId) ||
+              page.hasReferencedRoutes(row)
+            "
             checked-children="启用"
             un-checked-children="停用"
             @change="(checked) => page.toggleEnabled(row, checked === true)"

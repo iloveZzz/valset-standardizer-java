@@ -5,6 +5,8 @@ import com.yss.valset.transfer.application.dto.TransferSourceCheckpointItemViewD
 import com.yss.valset.transfer.application.dto.TransferSourceCheckpointViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceMutationResponse;
 import com.yss.valset.transfer.application.dto.TransferSourceViewDTO;
+import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -22,6 +24,8 @@ public interface TransferSourceManagementAppService {
     TransferSourceMutationResponse deleteSource(String sourceId);
 
     TransferSourceMutationResponse triggerSource(String sourceId);
+
+    TransferSourceMutationResponse uploadFiles(String sourceId, List<MultipartFile> files);
 
     TransferSourceMutationResponse stopSource(String sourceId);
 

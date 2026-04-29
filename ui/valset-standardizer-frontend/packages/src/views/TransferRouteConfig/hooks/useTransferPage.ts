@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { message, Modal } from "ant-design-vue";
+import type { UploadFile } from "ant-design-vue";
 import type { YTablePagination } from "@yss-ui/components";
 import { formatDateTime } from "@/utils/format";
 import { copyToClipboard } from "@/utils";
@@ -85,6 +86,24 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
   FILESYS: "文件服务",
 };
 
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  LOCAL_DIR: "本地目录",
+  EMAIL: "邮件",
+  S3: "S3",
+  SFTP: "SFTP",
+  HTTP: "HTTP接口",
+};
+
+const formatSourceTypeLabel = (value?: string) => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toUpperCase();
+  if (!normalized) {
+    return "";
+  }
+  return SOURCE_TYPE_LABELS[normalized] ?? normalized;
+};
+
 const defaultForm = (): RouteFormState => ({
   routeId: undefined,
   sourceId: undefined,
@@ -117,7 +136,7 @@ const uniqueByKey = <T>(
 };
 
 const buildSourceOption = (item: TransferSourceViewDTO) => ({
-  label: [item.sourceCode, item.sourceName, item.sourceType]
+  label: [item.sourceCode, item.sourceName, formatSourceTypeLabel(item.sourceType)]
     .filter(Boolean)
     .join(" · "),
   value: item.sourceCode ?? "",
@@ -526,6 +545,17 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const formRef = ref<{ validate: () => Promise<void> } | null>(null);
   const sourceActionLoadingIds = reactive<Record<string, boolean>>({});
   const routeActionLoadingIds = reactive<Record<string, boolean>>({});
+  const uploadVisible = ref(false);
+  const uploadSubmitting = ref(false);
+  const uploadRouteRow = ref<TransferRouteViewDTO | null>(null);
+  const uploadSourceRow = ref<TransferSourceViewDTO | null>(null);
+  const uploadImportResult = ref({
+    successkey: "1",
+    failkey: "0",
+    success: 0,
+    fail: 0,
+    total: 0,
+  });
   const sourceIngestStates = reactive<Record<string, SourceIngestState>>({});
   const routeExecutionStates = reactive<Record<string, RouteExecutionState>>({});
   const routeFlowFactMessages = reactive<
@@ -534,7 +564,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const sourceIngestMessages = reactive<Record<string, SourceIngestMessage[]>>({});
   const sourceTypeOptions = Object.values(GetTemplateName1SourceType).map(
     (value) => ({
-      label: value,
+      label: SOURCE_TYPE_LABELS[value] ?? value,
       value,
     }),
   );
@@ -551,6 +581,12 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const sourceOptions = computed(() => sourceRows.value.map(buildSourceOption));
   const targetOptions = computed(() => targetRows.value.map(buildTargetOption));
   const ruleOptions = computed(() => ruleRows.value.map(buildRuleOption));
+  const uploadEndpoint = computed(() => {
+    if (!uploadRouteRow.value?.sourceId) {
+      return "";
+    }
+    return `/transfer-sources/${uploadRouteRow.value.sourceId}/upload`;
+  });
   const sourceProgressUnsubscribers = new Map<string, () => void>();
   const visibleRows = computed(() => {
     const current = pagination.value.current || 1;
@@ -1422,6 +1458,117 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     return unwrapSingleResult(await api.getSource(row.sourceId));
   };
 
+  const resetUploadState = () => {
+    uploadRouteRow.value = null;
+    uploadSourceRow.value = null;
+    uploadImportResult.value = {
+      successkey: "1",
+      failkey: "0",
+      success: 0,
+      fail: 0,
+      total: 0,
+    };
+  };
+
+  const canUploadRouteSource = (row?: TransferRouteViewDTO | null) => {
+    return Boolean(row?.sourceId) && String(row?.sourceType ?? "").toUpperCase() === "HTTP";
+  };
+
+  const isUploadMultipleAllowed = () => {
+    const config = (uploadSourceRow.value?.connectionConfig ?? {}) as Record<string, any>;
+    return config.allowMultipleFiles !== false;
+  };
+
+  const openUploadDialog = async (row: TransferRouteViewDTO) => {
+    if (!canUploadRouteSource(row)) {
+      message.warning("当前仅 HTTP 来源路由支持文件上传");
+      return;
+    }
+    if (!row.sourceId) {
+      message.error("来源主键缺失，无法上传");
+      return;
+    }
+
+    try {
+      const source = await loadSourceDetailByRoute(row);
+      if (!source) {
+        message.error("加载来源详情失败");
+        return;
+      }
+      if (String(source.sourceType ?? "").toUpperCase() !== "HTTP") {
+        message.warning("当前仅 HTTP 来源路由支持文件上传");
+        return;
+      }
+      uploadRouteRow.value = row;
+      uploadSourceRow.value = source;
+      uploadImportResult.value = {
+        successkey: "1",
+        failkey: "0",
+        success: 0,
+        fail: 0,
+        total: 0,
+      };
+      uploadVisible.value = true;
+    } catch (error) {
+      console.error("加载 HTTP 来源详情失败:", error);
+      message.error(error instanceof Error ? error.message : "加载来源详情失败");
+    }
+  };
+
+  const closeUploadDialog = () => {
+    uploadVisible.value = false;
+    uploadSubmitting.value = false;
+    resetUploadState();
+  };
+
+  const normalizeUploadFiles = (fileList: UploadFile[] = []) => {
+    return fileList
+      .map((item) => item.originFileObj)
+      .filter(Boolean) as File[];
+  };
+
+  const submitUpload = async (payload?: {
+    close?: () => void;
+    fileList?: UploadFile[];
+  }) => {
+    const sourceId = uploadRouteRow.value?.sourceId;
+    if (!sourceId) {
+      message.error("来源主键缺失，无法上传");
+      return;
+    }
+
+    const files = normalizeUploadFiles(payload?.fileList ?? []);
+    if (!files.length) {
+      message.warning("请选择要上传的文件");
+      return;
+    }
+
+    uploadSubmitting.value = true;
+    try {
+      await api.uploadSourceFiles(sourceId, files);
+      uploadImportResult.value = {
+        successkey: "1",
+        failkey: "0",
+        success: files.length,
+        fail: 0,
+        total: files.length,
+      };
+      message.success("文件上传成功");
+      payload?.close?.();
+      closeUploadDialog();
+      await loadList();
+    } catch (error) {
+      console.error("HTTP 路由文件上传失败:", error);
+      message.error(error instanceof Error ? error.message : "文件上传失败");
+    } finally {
+      uploadSubmitting.value = false;
+    }
+  };
+
+  const exportErrorData = async () => {
+    message.info("当前上传结果没有错误文件可导出");
+  };
+
   const triggerSource = async (row: TransferRouteViewDTO) => {
     const sourceId = row.sourceId;
     if (!sourceId) {
@@ -1804,6 +1951,18 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     sourceIngestStates,
     routeFlowFactMessages,
     sourceIngestMessages,
+    uploadVisible,
+    uploadSubmitting,
+    uploadRouteRow,
+    uploadSourceRow,
+    uploadImportResult,
+    uploadEndpoint,
+    canUploadRouteSource,
+    isUploadMultipleAllowed,
+    openUploadDialog,
+    closeUploadDialog,
+    submitUpload,
+    exportErrorData,
     formVisible,
     formMode,
     formState,

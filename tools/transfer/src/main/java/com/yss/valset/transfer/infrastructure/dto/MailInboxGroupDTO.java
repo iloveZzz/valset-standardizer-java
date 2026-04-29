@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.dto;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
  * 邮件收件箱分组数据传输对象。
@@ -86,6 +87,21 @@ public class MailInboxGroupDTO {
      * 落库时间。
      */
     private LocalDateTime storedAt;
+
+    /**
+     * 业务日期。
+     */
+    private LocalDate businessDate;
+
+    /**
+     * 业务标识。
+     */
+    private String businessId;
+
+    /**
+     * 收取日期。
+     */
+    private LocalDate receiveDate;
 
     /**
      * 路由主键。
@@ -293,6 +309,30 @@ public class MailInboxGroupDTO {
 
     public void setStoredAt(LocalDateTime storedAt) {
         this.storedAt = storedAt;
+    }
+
+    public LocalDate getBusinessDate() {
+        return businessDate;
+    }
+
+    public void setBusinessDate(LocalDate businessDate) {
+        this.businessDate = businessDate;
+    }
+
+    public String getBusinessId() {
+        return businessId;
+    }
+
+    public void setBusinessId(String businessId) {
+        this.businessId = businessId;
+    }
+
+    public LocalDate getReceiveDate() {
+        return receiveDate;
+    }
+
+    public void setReceiveDate(LocalDate receiveDate) {
+        this.receiveDate = receiveDate;
     }
 
     public String getRouteId() {

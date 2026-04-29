@@ -61,6 +61,40 @@ class TransferRuleFunctionsTest {
     }
 
     @Test
+    void shouldReadSpreadsheetXmlExcelDataAsNestedStringList() throws IOException {
+        Path excelFile = tempDir.resolve("sample.xls");
+        Files.writeString(excelFile, """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?mso-application progid="Excel.Sheet"?>
+                <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+                          xmlns:o="urn:schemas-microsoft-com:office:office"
+                          xmlns:x="urn:schemas-microsoft-com:office:excel"
+                          xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+                  <Worksheet ss:Name="Sheet1">
+                    <Table>
+                      <Row>
+                        <Cell><Data ss:Type="String">姓名</Data></Cell>
+                        <Cell><Data ss:Type="String">年龄</Data></Cell>
+                      </Row>
+                      <Row>
+                        <Cell><Data ss:Type="String">张三</Data></Cell>
+                        <Cell><Data ss:Type="Number">18</Data></Cell>
+                      </Row>
+                    </Table>
+                  </Worksheet>
+                </Workbook>
+                """, StandardCharsets.UTF_8);
+
+        TransferRuleFunctions functions = new TransferRuleFunctions();
+        List<List<String>> data = functions.readExcelData(excelFile);
+
+        assertThat(data).containsExactly(
+                List.of("姓名", "年龄"),
+                List.of("张三", "18")
+        );
+    }
+
+    @Test
     void shouldReadCsvDataAsNestedStringList() throws IOException {
         Path csvFile = tempDir.resolve("sample.csv");
         Files.writeString(csvFile, "姓名,年龄\n张三,18\n李四,\n", StandardCharsets.UTF_8);

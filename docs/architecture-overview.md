@@ -47,7 +47,7 @@
 
 - `knowledge`：标准科目、历史映射、评估样本等知识加载
 - `extract`：原始数据抽取、标准化辅助、匹配引擎
-- `analysis`：基于 ODS 原始行数据的结构化解析
+- `analysis`：待解析事件订阅、队列状态管理、结构化解析执行
 - `batch`：任务调度、任务路由、执行器分派
 
 ### 2.5 `boot`
@@ -69,6 +69,8 @@ flowchart LR
     Q --> E2["解析执行器<br/>ParseExecutionAppServiceImpl"]
     Q --> E3["匹配执行器<br/>MatchExecutionAppServiceImpl"]
     E1 --> ODS["ODS 原始行表<br/>t_ods_valuation_filedata"]
+    A --> PQ["待解析事件队列<br/>t_parse_queue"]
+    PQ --> E2
     E2 --> STG["STG / DWD 结构化结果<br/>t_dwd_external_valuation_* / t_stg_external_valuation_*"]
     E2 --> TR["标准落地表<br/>t_tr_jjhzgzb / t_tr_index"]
     E3 --> RES["匹配结果表<br/>t_subject_match_result"]
@@ -96,28 +98,35 @@ flowchart LR
 4. `ExtractDataExecutionAppServiceImpl` 按行写入 `t_ods_valuation_filedata`。
 5. 同时保存 sheet 样式等原始辅助信息。
 
-### 4.3 结构化解析
+### 4.3 待解析事件订阅
 
-1. `ParseExecutionAppServiceImpl` 从任务表读取入参。
+1. `DefaultDeliverService` 在投递成功后发布待解析事件。
+2. `DefaultParseQueueManagementAppService` 生成或更新 `t_parse_queue`。
+3. `t_parse_queue` 记录订阅者、订阅时间、解析状态和快照信息。
+4. 订阅者接管 `PENDING` 事件后将状态推进到 `PARSING`。
+
+### 4.4 结构化解析
+
+1. `ParseExecutionAppServiceImpl` 从任务表读取入参 `ParseTaskCommand`。
 2. 通过 `ValuationDataParserProvider` 路由到对应解析器。
 3. 当前主线是 `OdsValuationDataParser` 和 `CsvValuationDataParser`。
 4. 解析得到标题、基础信息、多层表头、科目行、指标行。
 5. 解析结果落入 STG / DWD / 标准落地表。
 
-### 4.4 标准化
+### 4.5 标准化
 
 1. `ExternalValuationStandardizationService` 对表头做映射。
 2. 标准化后的科目和指标补齐标准编码、映射来源、映射置信度。
 3. 标准化结果可根据配置写入额外明细表。
 
-### 4.5 匹配
+### 4.6 匹配
 
 1. `MatchExecutionAppServiceImpl` 优先使用已落地的标准化结果。
 2. 加载标准科目和历史映射提示。
 3. `SimpleValsetMatcher` 执行锚点选择、候选召回、规则打分和置信度分类。
 4. `MatchResultGatewayImpl` 持久化匹配结果。
 
-### 4.6 查询
+### 4.7 查询
 
 按 `fileId` 查询：
 
@@ -185,14 +194,20 @@ flowchart LR
 
 用于管理任务执行、阶段耗时和计划调度。
 
-### 6.3 ODS 层
+### 6.3 待解析事件层
+
+- `t_parse_queue`
+
+用于管理投递成功后的待解析事件、订阅状态、解析结果快照和失败重试信息。
+
+### 6.4 ODS 层
 
 - `t_ods_valuation_filedata`
 - `t_ods_valuation_sheet_style`
 
 用于保留原始行数据和 sheet 样式，作为可追溯入口。
 
-### 6.4 STG 层
+### 6.5 STG 层
 
 - `t_stg_external_valuation`
 - `t_stg_external_valuation_basic_info`
@@ -202,7 +217,7 @@ flowchart LR
 
 用于保存解析后的结构化视图。
 
-### 6.5 DWD 层
+### 6.6 DWD 层
 
 - `t_dwd_external_valuation`
 - `t_dwd_external_valuation_basic_info`
@@ -212,7 +227,7 @@ flowchart LR
 
 用于保存标准化后的结构化事实。
 
-### 6.6 知识层
+### 6.7 知识层
 
 - `t_ods_standard_subject`
 - `t_ods_mapping_hint`
@@ -220,7 +235,7 @@ flowchart LR
 
 用于提供标准科目、历史映射和评估样本。
 
-### 6.7 结果层
+### 6.8 结果层
 
 - `t_subject_match_result`
 - `t_tr_jjhzgzb`

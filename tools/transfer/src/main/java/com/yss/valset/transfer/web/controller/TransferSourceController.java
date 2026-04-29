@@ -21,13 +21,17 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 文件来源管理接口。
@@ -99,7 +103,7 @@ public class TransferSourceController {
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "创建文件来源", description = "创建新的本地目录、邮箱、S3 或 SFTP 文件来源配置。")
+    @Operation(summary = "创建文件来源", description = "创建新的本地目录、邮箱、S3、SFTP 或 HTTP 文件来源配置。")
     public SingleResult<TransferSourceMutationResponse> createSource(@Valid @RequestBody TransferSourceUpsertCommand command) {
         command.setSourceId(null);
         return SingleResult.of(transferSourceManagementAppService.upsertSource(command));
@@ -142,6 +146,33 @@ public class TransferSourceController {
     @Operation(summary = "立即触发文件来源收取", description = "根据来源配置立即执行一次收取，然后继续完成规则识别、路由和投递。")
     public SingleResult<TransferSourceMutationResponse> triggerSource(@PathVariable String sourceId) {
         return SingleResult.of(transferSourceManagementAppService.triggerSource(sourceId));
+    }
+
+    /**
+     * 通过 HTTP 接口上传文件到来源。
+     *
+     * @param sourceId 来源主键
+     * @param file 单文件上传
+     * @param files 多文件上传
+     * @return 文件来源变更结果
+     */
+    @PostMapping(value = "/{sourceId}/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "通过 HTTP 接口上传文件", description = "支持单文件或多文件上传；上传后会先进入 HTTP 来源收件目录，再按收取链路处理。")
+    public SingleResult<TransferSourceMutationResponse> uploadSourceFiles(@PathVariable String sourceId,
+                                                                         @RequestPart(value = "file", required = false) MultipartFile file,
+                                                                         @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+        List<MultipartFile> uploadFiles = new ArrayList<>();
+        if (file != null && !file.isEmpty()) {
+            uploadFiles.add(file);
+        }
+        if (files != null) {
+            for (MultipartFile candidate : files) {
+                if (candidate != null && !candidate.isEmpty()) {
+                    uploadFiles.add(candidate);
+                }
+            }
+        }
+        return SingleResult.of(transferSourceManagementAppService.uploadFiles(sourceId, uploadFiles));
     }
 
     /**

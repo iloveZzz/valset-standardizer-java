@@ -3,7 +3,7 @@ package com.yss.valset.application.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.EvaluateMappingTaskCommand;
-import com.yss.valset.application.command.ExtractDataTaskCommand;
+import com.yss.valset.extract.application.command.ExtractDataTaskCommand;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.dto.TaskCreateResponse;

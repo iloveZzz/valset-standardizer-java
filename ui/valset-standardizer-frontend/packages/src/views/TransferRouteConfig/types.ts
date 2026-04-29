@@ -102,6 +102,18 @@ export interface RouteConfigPage {
   selectLoading: boolean;
   sourceActionLoadingIds: Record<string, boolean>;
   routeActionLoadingIds: Record<string, boolean>;
+  uploadVisible: boolean;
+  uploadSubmitting: boolean;
+  uploadRouteRow: TransferRouteViewDTO | null;
+  uploadSourceRow: TransferSourceViewDTO | null;
+  uploadImportResult: {
+    successkey: string;
+    failkey: string;
+    success: number;
+    fail: number;
+    total: number;
+  };
+  uploadEndpoint: string;
   sourceIngestStates: Record<
     string,
     {
@@ -154,6 +166,22 @@ export interface RouteConfigPage {
   getRouteChainStatusColor: (statusKey: string) => string;
   getRouteEnabledLabel: (enabled?: boolean | null) => string;
   getRuleDisplayName: (ruleId?: string | number | null) => string;
+  canUploadRouteSource: (row?: TransferRouteViewDTO | null) => boolean;
+  isUploadMultipleAllowed: () => boolean;
+  openUploadDialog: (row: TransferRouteViewDTO) => Promise<void> | void;
+  closeUploadDialog: () => void;
+  submitUpload: (payload?: {
+    close?: () => void;
+    fileList?: Array<{
+      originFileObj?: File | null;
+    }>;
+  }) => Promise<void> | void;
+  exportErrorData: (payload?: {
+    close?: () => void;
+    fileList?: Array<{
+      originFileObj?: File | null;
+    }>;
+  }) => Promise<void> | void;
   triggerSource: (row: TransferRouteViewDTO) => Promise<void> | void;
   stopSource: (row: TransferRouteViewDTO) => Promise<void> | void;
   isSourceTriggering: (sourceId?: string) => boolean;

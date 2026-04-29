@@ -30,6 +30,7 @@ export const workspaceNav: Array<{
     "route-config": ApartmentOutlined,
     log: SwapOutlined,
     "run-log": HistoryOutlined,
+    "parse-queue": FileSearchOutlined,
     guide: FileTextOutlined,
   };
 
@@ -50,6 +51,7 @@ const transferPageComponentMap = {
   "route-config": () => import("@/views/TransferRouteConfig/index.vue"),
   log: () => import("@/views/TransferLog/index.vue"),
   "run-log": () => import("@/views/TransferRunLog/index.vue"),
+  "parse-queue": () => import("@/views/ParseQueue/index.vue"),
   guide: () => import("@/views/TransferGuide/index.vue"),
   object: () => import("@/views/TransferObject/index.vue"),
 } as const;

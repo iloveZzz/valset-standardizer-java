@@ -3,6 +3,7 @@ package com.yss.valset.transfer.application.impl.tagging;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
 import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
+import com.yss.valset.transfer.application.service.TransferObjectBusinessFieldProjectionUseCase;
 import com.yss.valset.transfer.domain.model.ProbeResult;
 import com.yss.valset.transfer.domain.model.RecognitionContext;
 import com.yss.valset.transfer.domain.model.RuleContext;
@@ -32,12 +33,14 @@ class DefaultTransferTaggingServiceTest {
         TransferObjectGateway transferObjectGateway = mock(TransferObjectGateway.class);
         TransferTagGateway transferTagGateway = mock(TransferTagGateway.class);
         TransferObjectTagGateway transferObjectTagGateway = mock(TransferObjectTagGateway.class);
+        TransferObjectBusinessFieldProjectionUseCase transferObjectBusinessFieldProjectionUseCase = mock(TransferObjectBusinessFieldProjectionUseCase.class);
         RuleEngine ruleEngine = mock(RuleEngine.class);
 
         DefaultTransferTaggingService service = new DefaultTransferTaggingService(
                 transferObjectGateway,
                 transferTagGateway,
                 transferObjectTagGateway,
+                transferObjectBusinessFieldProjectionUseCase,
                 ruleEngine
         );
 
@@ -114,6 +117,7 @@ class DefaultTransferTaggingServiceTest {
         ArgumentCaptor<List<TransferObjectTag>> tagCaptor = ArgumentCaptor.forClass(List.class);
         verify(ruleEngine).evaluate(org.mockito.ArgumentMatchers.any(), contextCaptor.capture());
         verify(transferObjectTagGateway).saveAll(tagCaptor.capture());
+        verify(transferObjectBusinessFieldProjectionUseCase).project(org.mockito.ArgumentMatchers.eq(transferObject), org.mockito.ArgumentMatchers.anyList());
 
         RuleContext captured = contextCaptor.getValue();
         assertThat(captured.recognitionContext().path()).isEqualTo(transferObject.localTempPath());
@@ -131,12 +135,14 @@ class DefaultTransferTaggingServiceTest {
         TransferObjectGateway transferObjectGateway = mock(TransferObjectGateway.class);
         TransferTagGateway transferTagGateway = mock(TransferTagGateway.class);
         TransferObjectTagGateway transferObjectTagGateway = mock(TransferObjectTagGateway.class);
+        TransferObjectBusinessFieldProjectionUseCase transferObjectBusinessFieldProjectionUseCase = mock(TransferObjectBusinessFieldProjectionUseCase.class);
         RuleEngine ruleEngine = mock(RuleEngine.class);
 
         DefaultTransferTaggingService service = new DefaultTransferTaggingService(
                 transferObjectGateway,
                 transferTagGateway,
                 transferObjectTagGateway,
+                transferObjectBusinessFieldProjectionUseCase,
                 ruleEngine
         );
 
@@ -195,5 +201,6 @@ class DefaultTransferTaggingServiceTest {
         assertThat(tags.get(0).transferId()).isEqualTo("transfer-1");
         verify(transferObjectTagGateway).deleteByTransferId("transfer-1");
         verify(transferObjectTagGateway).saveAll(any());
+        verify(transferObjectBusinessFieldProjectionUseCase).project(org.mockito.ArgumentMatchers.eq(transferObject), org.mockito.ArgumentMatchers.anyList());
     }
 }

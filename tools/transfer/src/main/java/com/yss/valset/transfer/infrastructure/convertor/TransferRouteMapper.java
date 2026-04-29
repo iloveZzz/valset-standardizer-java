@@ -19,7 +19,7 @@ public interface TransferRouteMapper extends TransferMapstructSupport {
     @Mapping(target = "ruleId", expression = "java(transferRoute.ruleId())")
     @Mapping(target = "enabled", expression = "java(transferRoute.enabled())")
     @Mapping(target = "pollCron", expression = "java(transferRoute.pollCron())")
-    @Mapping(target = "routeMetaJson", source = "routeMeta")
+    @Mapping(target = "routeMetaJson", source = "routeMeta", qualifiedByName = "transferToJson")
     TransferRoutePO toPO(TransferRoute transferRoute);
 
     @Mapping(target = "sourceType", expression = "java(sourceTypeOf(po.getSourceType()))")
@@ -30,6 +30,6 @@ public interface TransferRouteMapper extends TransferMapstructSupport {
     @Mapping(target = "ruleId", expression = "java(stringValue(po.getRuleId()))")
     @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(po.getEnabled()))")
     @Mapping(target = "pollCron", expression = "java(po.getPollCron())")
-    @Mapping(target = "routeMeta", source = "routeMetaJson")
+    @Mapping(target = "routeMeta", source = "routeMetaJson", qualifiedByName = "transferToJson")
     TransferRoute toDomain(TransferRoutePO po);
 }

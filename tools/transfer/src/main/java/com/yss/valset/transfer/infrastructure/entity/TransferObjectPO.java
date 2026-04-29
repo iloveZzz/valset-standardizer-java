@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -104,6 +105,24 @@ public class TransferObjectPO {
      */
     @TableField("stored_at")
     private LocalDateTime storedAt;
+
+    /**
+     * 业务日期。
+     */
+    @TableField("business_date")
+    private LocalDate businessDate;
+
+    /**
+     * 业务标识。
+     */
+    @TableField("business_id")
+    private String businessId;
+
+    /**
+     * 收取日期。
+     */
+    @TableField("receive_date")
+    private LocalDate receiveDate;
 
     /**
      * 路由主键。

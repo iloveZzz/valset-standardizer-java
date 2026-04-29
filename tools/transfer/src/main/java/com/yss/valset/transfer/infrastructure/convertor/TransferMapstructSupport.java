@@ -5,6 +5,7 @@ import com.yss.valset.transfer.domain.model.TargetType;
 import com.yss.valset.transfer.domain.model.TransferStatus;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.LinkedHashMap;
@@ -44,8 +45,16 @@ public interface TransferMapstructSupport {
         return localDateTime == null ? null : localDateTime.atZone(ZoneId.systemDefault()).toInstant();
     }
 
+    default LocalDate toLocalDate(LocalDateTime localDateTime) {
+        return localDateTime == null ? null : localDateTime.toLocalDate();
+    }
+
     default LocalDateTime toLocalDateTime(Instant instant) {
         return instant == null ? null : LocalDateTime.ofInstant(instant, ZoneId.systemDefault());
+    }
+
+    default LocalDateTime toLocalDateTime(LocalDate localDate) {
+        return localDate == null ? null : localDate.atStartOfDay();
     }
 
     default String stringValue(Map<String, Object> source, String key) {

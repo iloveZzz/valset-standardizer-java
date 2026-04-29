@@ -1,6 +1,6 @@
 package com.yss.valset.extract.rule;
 
-import com.yss.valset.extract.support.ExcelParsingSupport;
+import com.yss.valset.common.support.ExcelParsingSupport;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;

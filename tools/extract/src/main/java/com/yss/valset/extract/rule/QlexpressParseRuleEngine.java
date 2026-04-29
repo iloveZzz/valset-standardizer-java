@@ -8,7 +8,7 @@ import com.yss.valset.domain.rule.ParseRuleTraceContext;
 import com.yss.valset.domain.rule.ParseRuleTraceContextHolder;
 import com.yss.valset.domain.rule.ParseRuleTraceRecord;
 import com.yss.valset.domain.rule.ParseRuleTraceRecorder;
-import com.yss.valset.extract.support.ExcelParsingSupport;
+import com.yss.valset.common.support.ExcelParsingSupport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

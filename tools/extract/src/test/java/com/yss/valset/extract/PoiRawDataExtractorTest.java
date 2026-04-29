@@ -6,6 +6,7 @@ import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.extract.extractor.PoiRawDataExtractor;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
+import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.valset.extract.repository.mapper.ValuationSheetStyleMapper;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -107,6 +108,33 @@ class PoiRawDataExtractorTest {
     }
 
     @Test
+    void extractSpreadsheetXmlWorkbookReadsXmlWorkbook() throws Exception {
+        Path file = tempDir.resolve("sample-spreadsheetml.xls");
+        createSpreadsheetXml(file);
+
+        ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
+        ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
+
+        int count = extractor.extract(
+                DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
+                103L,
+                203L
+        );
+
+        assertThat(count).isEqualTo(2);
+        ArgumentCaptor<List<ValuationFileDataPO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mapper).insert(captor.capture(), eq(1000));
+        List<ValuationFileDataPO> rows = captor.getValue();
+        assertThat(rows).hasSize(2);
+        List<Object> firstRow = new ObjectMapper().readValue(rows.get(0).getRowDataJson(), List.class);
+        assertThat(firstRow).containsExactly("姓名", "年龄");
+        List<Object> secondRow = new ObjectMapper().readValue(rows.get(1).getRowDataJson(), List.class);
+        assertThat(secondRow).containsExactly("张三", "18");
+        verify(sheetStyleMapper).insert(any(ValuationSheetStylePO.class));
+    }
+
+    @Test
     void extractMissingWorkbookThrowsFileAccessException() {
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
@@ -155,5 +183,30 @@ class PoiRawDataExtractorTest {
                 workbook.write(outputStream);
             }
         }
+    }
+
+    private void createSpreadsheetXml(Path file) throws Exception {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <?mso-application progid="Excel.Sheet"?>
+                <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+                          xmlns:o="urn:schemas-microsoft-com:office:office"
+                          xmlns:x="urn:schemas-microsoft-com:office:excel"
+                          xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+                  <Worksheet ss:Name="Sheet1">
+                    <Table>
+                      <Row>
+                        <Cell><Data ss:Type="String">姓名</Data></Cell>
+                        <Cell><Data ss:Type="String">年龄</Data></Cell>
+                      </Row>
+                      <Row>
+                        <Cell><Data ss:Type="String">张三</Data></Cell>
+                        <Cell><Data ss:Type="Number">18</Data></Cell>
+                      </Row>
+                    </Table>
+                  </Worksheet>
+                </Workbook>
+                """;
+        Files.writeString(file, xml);
     }
 }

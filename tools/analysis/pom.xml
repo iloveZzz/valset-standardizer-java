@@ -21,12 +21,21 @@
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
-            <artifactId>valset-standardizer-infra</artifactId>
+            <artifactId>valset-standardizer-extract</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
-            <artifactId>valset-standardizer-extract</artifactId>
+            <artifactId>valset-standardizer-transfer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.cloud</groupId>
+            <artifactId>yss-component-dto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-infra</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -38,25 +47,30 @@
             <artifactId>spring-web</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-csv</artifactId>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
 
         <dependency>

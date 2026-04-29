@@ -447,6 +447,103 @@
   padding: 32px 0 8px;
 }
 
+.http-upload-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.http-upload-panel-copy h4 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.http-upload-panel-copy p {
+  margin: 0;
+  color: rgba(15, 23, 42, 0.68);
+  line-height: 1.7;
+}
+
+.http-upload-panel-copy code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
+.http-upload-panel-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.http-upload-input-label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.http-upload-input-label input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed rgba(22, 119, 255, 0.28);
+  border-radius: 12px;
+  background: rgba(22, 119, 255, 0.04);
+}
+
+.http-upload-hint {
+  color: rgba(15, 23, 42, 0.56);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.http-upload-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.http-upload-file-list-title {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.http-upload-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.88);
+}
+
+.http-upload-file-item-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.http-upload-file-name {
+  overflow: hidden;
+  color: #0f172a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.http-upload-file-size {
+  color: rgba(15, 23, 42, 0.52);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 @keyframes transfer-source-rise {
   from {
     opacity: 0;

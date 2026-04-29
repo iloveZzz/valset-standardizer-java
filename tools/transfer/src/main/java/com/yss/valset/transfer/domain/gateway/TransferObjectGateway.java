@@ -44,6 +44,13 @@ public interface TransferObjectGateway {
                                           String tagValue);
 
     List<TransferObject> listEmailInboxObjects(String sourceCode, String mailId);
+
+    List<TransferObject> listParseQueueCandidates(String sourceId,
+                                                  String sourceCode,
+                                                  String routeId,
+                                                  String status,
+                                                  String deliveryStatus,
+                                                  Integer limit);
     
     /**
      * 加载邮件收件箱分组（支持分页）。

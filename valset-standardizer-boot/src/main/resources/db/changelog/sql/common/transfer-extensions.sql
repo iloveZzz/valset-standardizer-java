@@ -157,6 +157,22 @@ ALTER TABLE t_transfer_object
 ALTER TABLE t_transfer_object
     ALTER COLUMN mime_type TYPE VARCHAR(512);
 
+--changeset codex:20260428-01-mysql-transfer-object-business-fields dbms:mysql
+ALTER TABLE t_transfer_object
+    ADD COLUMN business_date DATE NULL,
+    ADD COLUMN business_id VARCHAR(128) NULL,
+    ADD COLUMN receive_date DATE NULL;
+
+--changeset codex:20260428-01-postgres-transfer-object-business-fields dbms:postgresql
+ALTER TABLE t_transfer_object
+    ADD COLUMN business_date DATE;
+
+ALTER TABLE t_transfer_object
+    ADD COLUMN business_id VARCHAR(128);
+
+ALTER TABLE t_transfer_object
+    ADD COLUMN receive_date DATE;
+
 --changeset codex:20260423-04-mysql-transfer-route-drop-transfer-id dbms:mysql
 ALTER TABLE t_transfer_route
     DROP INDEX idx_transfer_route_transfer_id;
@@ -243,3 +259,78 @@ CREATE TABLE t_transfer_source_checkpoint_item (
 CREATE INDEX idx_transfer_source_checkpoint_item_source_id ON t_transfer_source_checkpoint_item (source_id);
 CREATE INDEX idx_transfer_source_checkpoint_item_source_type ON t_transfer_source_checkpoint_item (source_type);
 CREATE INDEX idx_transfer_source_checkpoint_item_processed_at ON t_transfer_source_checkpoint_item (processed_at);
+
+--changeset codex:20260429-01-mysql-parse-queue dbms:mysql
+CREATE TABLE t_parse_queue (
+    queue_id BIGINT PRIMARY KEY,
+    business_key VARCHAR(256) NOT NULL,
+    transfer_id BIGINT NOT NULL,
+    original_name VARCHAR(512),
+    source_id BIGINT,
+    source_type VARCHAR(32),
+    source_code VARCHAR(128),
+    route_id BIGINT,
+    delivery_id BIGINT,
+    tag_id BIGINT,
+    tag_code VARCHAR(128),
+    tag_name VARCHAR(256),
+    file_status VARCHAR(32),
+    delivery_status VARCHAR(32),
+    parse_status VARCHAR(32) NOT NULL,
+    trigger_mode VARCHAR(32) NOT NULL,
+    retry_count INT NOT NULL DEFAULT 0,
+    claimed_by VARCHAR(128),
+    claimed_at DATETIME,
+    parsed_at DATETIME,
+    last_error_message VARCHAR(1024),
+    object_snapshot_json TEXT,
+    delivery_snapshot_json TEXT,
+    parse_request_json TEXT,
+    parse_result_json TEXT,
+    created_at DATETIME,
+    updated_at DATETIME,
+    UNIQUE KEY uk_parse_queue_business_key (business_key),
+    KEY idx_parse_queue_transfer_id (transfer_id),
+    KEY idx_parse_queue_source_code (source_code),
+    KEY idx_parse_queue_route_id (route_id),
+    KEY idx_parse_queue_tag_code (tag_code),
+    KEY idx_parse_queue_parse_status (parse_status)
+);
+
+--changeset codex:20260429-01-postgres-parse-queue dbms:postgresql
+CREATE TABLE t_parse_queue (
+    queue_id BIGINT PRIMARY KEY,
+    business_key VARCHAR(256) NOT NULL,
+    transfer_id BIGINT NOT NULL,
+    original_name VARCHAR(512),
+    source_id BIGINT,
+    source_type VARCHAR(32),
+    source_code VARCHAR(128),
+    route_id BIGINT,
+    delivery_id BIGINT,
+    tag_id BIGINT,
+    tag_code VARCHAR(128),
+    tag_name VARCHAR(256),
+    file_status VARCHAR(32),
+    delivery_status VARCHAR(32),
+    parse_status VARCHAR(32) NOT NULL,
+    trigger_mode VARCHAR(32) NOT NULL,
+    retry_count INT NOT NULL DEFAULT 0,
+    claimed_by VARCHAR(128),
+    claimed_at TIMESTAMP,
+    parsed_at TIMESTAMP,
+    last_error_message VARCHAR(1024),
+    object_snapshot_json TEXT,
+    delivery_snapshot_json TEXT,
+    parse_request_json TEXT,
+    parse_result_json TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uk_parse_queue_business_key UNIQUE (business_key)
+);
+
+CREATE INDEX idx_parse_queue_transfer_id ON t_parse_queue (transfer_id);
+CREATE INDEX idx_parse_queue_source_code ON t_parse_queue (source_code);
+CREATE INDEX idx_parse_queue_route_id ON t_parse_queue (route_id);
+CREATE INDEX idx_parse_queue_tag_code ON t_parse_queue (tag_code);
+CREATE INDEX idx_parse_queue_parse_status ON t_parse_queue (parse_status);

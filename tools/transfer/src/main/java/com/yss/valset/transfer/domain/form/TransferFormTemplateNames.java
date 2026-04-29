@@ -12,6 +12,7 @@ public final class TransferFormTemplateNames {
     public static final String TRANSFER_SOURCE_EMAIL = "transfer_source_email";
     public static final String TRANSFER_SOURCE_S3 = "transfer_source_s3";
     public static final String TRANSFER_SOURCE_SFTP = "transfer_source_sftp";
+    public static final String TRANSFER_SOURCE_HTTP = "transfer_source_http";
 
     public static final String TRANSFER_TARGET_EMAIL = "transfer_target_email";
     public static final String TRANSFER_TARGET_S3 = "transfer_target_s3";
@@ -21,6 +22,7 @@ public final class TransferFormTemplateNames {
     public static final String TRANSFER_RULE = "transfer_rule";
     public static final String TRANSFER_ROUTE = "transfer_route";
     public static final String TRANSFER_TAG = "transfer_tag";
+    public static final String TRANSFER_TAG_BUSINESS_DATE = "transfer_tag_business_date";
 
     private TransferFormTemplateNames() {
     }
@@ -40,6 +42,7 @@ public final class TransferFormTemplateNames {
             case EMAIL -> TRANSFER_SOURCE_EMAIL;
             case S3 -> TRANSFER_SOURCE_S3;
             case SFTP -> TRANSFER_SOURCE_SFTP;
+            case HTTP -> TRANSFER_SOURCE_HTTP;
         };
     }
 

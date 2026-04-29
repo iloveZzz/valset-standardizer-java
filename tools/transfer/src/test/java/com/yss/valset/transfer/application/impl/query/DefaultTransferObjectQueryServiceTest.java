@@ -19,6 +19,8 @@ import com.yss.valset.transfer.domain.model.TransferObjectSizeAnalysis;
 import com.yss.valset.transfer.domain.model.TransferMailInfo;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
 import com.yss.valset.transfer.domain.model.TransferStatus;
+import com.yss.valset.transfer.infrastructure.config.TransferCryptoProperties;
+import com.yss.valset.transfer.infrastructure.convertor.TransferJsonMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -39,6 +41,26 @@ class DefaultTransferObjectQueryServiceTest {
     @TempDir
     Path tempDir;
 
+    private DefaultTransferObjectQueryService newService(
+            TransferObjectGateway transferObjectGateway,
+            TransferObjectTagGateway transferObjectTagGateway,
+            TransferDeliveryGateway transferDeliveryGateway,
+            TransferMailInfoGateway transferMailInfoGateway
+    ) {
+        return new DefaultTransferObjectQueryService(
+                transferObjectGateway,
+                transferObjectTagGateway,
+                transferDeliveryGateway,
+                transferMailInfoGateway,
+                new TransferJsonMapper(
+                        new ObjectMapper(),
+                        new com.yss.valset.transfer.infrastructure.convertor.TransferSecretCodec(
+                                new TransferCryptoProperties()
+                        )
+                )
+        );
+    }
+
     @Test
     void shouldForwardDeliveryStatusFilterToGateway() {
         TransferObjectGateway transferObjectGateway = mock(TransferObjectGateway.class);
@@ -46,12 +68,11 @@ class DefaultTransferObjectQueryServiceTest {
         TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
         TransferMailInfoGateway transferMailInfoGateway = mock(TransferMailInfoGateway.class);
 
-        DefaultTransferObjectQueryService service = new DefaultTransferObjectQueryService(
+        DefaultTransferObjectQueryService service = newService(
                 transferObjectGateway,
                 transferObjectTagGateway,
                 transferDeliveryGateway,
-                transferMailInfoGateway,
-                new ObjectMapper()
+                transferMailInfoGateway
         );
 
         TransferObject transferObject = new TransferObject(
@@ -143,12 +164,11 @@ class DefaultTransferObjectQueryServiceTest {
         TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
         TransferMailInfoGateway transferMailInfoGateway = mock(TransferMailInfoGateway.class);
 
-        DefaultTransferObjectQueryService service = new DefaultTransferObjectQueryService(
+        DefaultTransferObjectQueryService service = newService(
                 transferObjectGateway,
                 transferObjectTagGateway,
                 transferDeliveryGateway,
-                transferMailInfoGateway,
-                new ObjectMapper()
+                transferMailInfoGateway
         );
 
         TransferObjectAnalysis analysis = new TransferObjectAnalysis(
@@ -191,12 +211,11 @@ class DefaultTransferObjectQueryServiceTest {
         TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
         TransferMailInfoGateway transferMailInfoGateway = mock(TransferMailInfoGateway.class);
 
-        DefaultTransferObjectQueryService service = new DefaultTransferObjectQueryService(
+        DefaultTransferObjectQueryService service = newService(
                 transferObjectGateway,
                 transferObjectTagGateway,
                 transferDeliveryGateway,
-                transferMailInfoGateway,
-                new ObjectMapper()
+                transferMailInfoGateway
         );
 
         Path filePath = tempDir.resolve("分拣对象导出.xlsx");
@@ -249,12 +268,11 @@ class DefaultTransferObjectQueryServiceTest {
         TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
         TransferMailInfoGateway transferMailInfoGateway = mock(TransferMailInfoGateway.class);
 
-        DefaultTransferObjectQueryService service = new DefaultTransferObjectQueryService(
+        DefaultTransferObjectQueryService service = newService(
                 transferObjectGateway,
                 transferObjectTagGateway,
                 transferDeliveryGateway,
-                transferMailInfoGateway,
-                new ObjectMapper()
+                transferMailInfoGateway
         );
 
         TransferObject transferObject = new TransferObject(
@@ -323,12 +341,11 @@ class DefaultTransferObjectQueryServiceTest {
         TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
         TransferMailInfoGateway transferMailInfoGateway = mock(TransferMailInfoGateway.class);
 
-        DefaultTransferObjectQueryService service = new DefaultTransferObjectQueryService(
+        DefaultTransferObjectQueryService service = newService(
                 transferObjectGateway,
                 transferObjectTagGateway,
                 transferDeliveryGateway,
-                transferMailInfoGateway,
-                new ObjectMapper()
+                transferMailInfoGateway
         );
 
         TransferObject firstAttachment = createEmailObject(

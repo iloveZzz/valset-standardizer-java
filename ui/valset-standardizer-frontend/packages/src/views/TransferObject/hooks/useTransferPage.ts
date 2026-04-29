@@ -35,29 +35,7 @@ type AnalyzeObjectsRequestParams = AnalyzeObjectsParams & {
   tagValue?: string;
 };
 
-type TransferMailInfoViewDTO = Pick<
-  TransferObjectViewDTO,
-  | "transferId"
-  | "mailId"
-  | "mailFrom"
-  | "mailTo"
-  | "mailCc"
-  | "mailBcc"
-  | "mailSubject"
-  | "mailBody"
-  | "mailProtocol"
-  | "mailFolder"
->;
-
 const api = getJavaSpringBootQuartzApi();
-
-const loadMailInfo = async (transferId: string) => {
-  const response = await customInstance<{ data?: TransferMailInfoViewDTO }>({
-    url: `/transfer-objects/${transferId}/mail-info`,
-    method: "GET",
-  });
-  return unwrapSingleResult(response) as TransferMailInfoViewDTO | null;
-};
 
 const statusOrder = [
   "PENDING",
@@ -622,16 +600,10 @@ export const useTransferPage = () => {
 
   const openDetailDrawer = async (row: TransferObjectViewDTO) => {
     try {
-      const detail = row.transferId
-        ? unwrapSingleResult(await api.getObject(row.transferId))
+      selectedRow.value = row.transferId
+        ? (unwrapSingleResult(await api.getObject(row.transferId)) ??
+          row)
         : row;
-      const mailInfo = row.transferId
-        ? await loadMailInfo(row.transferId).catch(() => null)
-        : null;
-      selectedRow.value = {
-        ...(detail ?? row),
-        ...(mailInfo ?? {}),
-      } as TransferObjectViewDTO;
       detailVisible.value = true;
     } catch (error) {
       console.error("加载主对象详情失败:", error);

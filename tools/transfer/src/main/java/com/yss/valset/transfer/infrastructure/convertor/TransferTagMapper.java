@@ -13,14 +13,14 @@ public interface TransferTagMapper extends TransferMapstructSupport {
 
     @Mapping(target = "tagId", expression = "java(definition.tagId())")
     @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(definition.enabled()))")
-    @Mapping(target = "tagMetaJson", source = "tagMeta")
+    @Mapping(target = "tagMetaJson", source = "tagMeta", qualifiedByName = "transferToJson")
     @Mapping(target = "createdAt", expression = "java(toLocalDateTime(definition.createdAt()))")
     @Mapping(target = "updatedAt", expression = "java(toLocalDateTime(definition.updatedAt()))")
     TransferTagPO toPO(TransferTagDefinition definition);
 
     @Mapping(target = "tagId", expression = "java(stringValue(po.getTagId()))")
     @Mapping(target = "enabled", expression = "java(Boolean.TRUE.equals(po.getEnabled()))")
-    @Mapping(target = "tagMeta", source = "tagMetaJson")
+    @Mapping(target = "tagMeta", source = "tagMetaJson", qualifiedByName = "transferToJson")
     @Mapping(target = "createdAt", expression = "java(toInstant(po.getCreatedAt()))")
     @Mapping(target = "updatedAt", expression = "java(toInstant(po.getUpdatedAt()))")
     TransferTagDefinition toDomain(TransferTagPO po);

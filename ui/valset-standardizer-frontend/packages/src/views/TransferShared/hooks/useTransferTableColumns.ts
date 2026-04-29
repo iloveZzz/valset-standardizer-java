@@ -1,6 +1,14 @@
 import { computed } from "vue";
 import type { YTableColumn } from "@yss-ui/components";
-import { formatDateTime } from "@/utils/format";
+import { formatDate, formatDateTime } from "@/utils/format";
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  LOCAL_DIR: "本地目录",
+  EMAIL: "邮件",
+  S3: "S3",
+  SFTP: "SFTP",
+  HTTP: "HTTP接口",
+};
 
 export const useTransferSourceColumns = () =>
   computed<YTableColumn[]>(() => [
@@ -24,6 +32,12 @@ export const useTransferSourceColumns = () =>
       field: "sourceType",
       title: "来源类型",
       width: 120,
+      formatter: (params: any) => {
+        const value = String(params?.cellValue ?? "")
+          .trim()
+          .toUpperCase();
+        return value ? (SOURCE_TYPE_LABELS[value] ?? value) : "-";
+      },
     },
     {
       field: "formTemplateName",
@@ -155,18 +169,13 @@ export const useTransferObjectColumns = () =>
       fixed: "left" as const,
     },
     {
-      field: "transferId",
-      title: "分拣ID",
-      width: 110,
+      field: "originalName",
+      title: "附件名称",
+      width: 320,
     },
     {
       field: "sourceCode",
       title: "来源编码",
-      width: 120,
-    },
-    {
-      field: "sourceType",
-      title: "来源类型",
       width: 120,
     },
     {
@@ -203,19 +212,32 @@ export const useTransferObjectColumns = () =>
       width: 120,
     },
     {
+      field: "transferId",
+      title: "分拣ID",
+      width: 110,
+    },
+    {
+      field: "businessDate",
+      title: "业务日期",
+      width: 120,
+      formatter: (params: any) => formatDate(params?.cellValue),
+    },
+    {
+      field: "receiveDate",
+      title: "收取日期",
+      width: 120,
+      formatter: (params: any) => formatDate(params?.cellValue),
+    },
+    {
       field: "receivedAt",
       title: "收取时间",
       width: 180,
+      formatter: (params: any) => formatDateTime(params?.cellValue),
     },
     {
       field: "tags",
       title: "标签",
       width: 180,
-    },
-    {
-      field: "originalName",
-      title: "附件名称",
-      width: 240,
     },
   ]);
 
@@ -295,6 +317,12 @@ export const useTransferRunLogColumns = () =>
       field: "sourceType",
       title: "来源类型",
       width: 120,
+      formatter: (params: any) => {
+        const value = String(params?.cellValue ?? "")
+          .trim()
+          .toUpperCase();
+        return value ? (SOURCE_TYPE_LABELS[value] ?? value) : "-";
+      },
     },
     {
       field: "runStage",

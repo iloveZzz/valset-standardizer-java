@@ -72,8 +72,7 @@ const columns: YTableColumn[] = [
         <div class="workspace-header-copy">
           <h2>标签管理</h2>
           <p>
-            配置标签名称、标签值、QLExpress4
-            规则与正则表达式，并在对象收集完成后自动打标。
+            配置业务日期提取标签的名称、标签值与正则表达式，并在对象收集完成后自动打标。
           </p>
           <div class="workspace-header-pills">
             <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
@@ -177,9 +176,9 @@ const columns: YTableColumn[] = [
     <TransferTemplateDialog
       :open="page.formVisible"
       :title="page.formMode === 'create' ? '新建标签' : '编辑标签'"
-      hint="标签新增窗体固定加载 transfer_tag 模板，无需选择来源类型。"
+      hint="标签新增窗体固定加载业务日期提取模板，无需选择来源类型。"
       panel-title="标签配置"
-      panel-subtitle="维护标签编码、名称、值和命中规则"
+      panel-subtitle="维护业务日期标签编码、名称、值和命中规则"
       :loading="page.templateLoading"
       :has-schema="Boolean(page.templateSchema)"
       empty-description="标签模板尚未加载成功，请稍后重试"
