@@ -10,9 +10,6 @@ public final class BatchSchedulerTasks {
     public static final TaskDescriptor<BatchDispatchTaskData> DISPATCH_ONCE_TASK =
             TaskDescriptor.of("batch-dispatch-once", BatchDispatchTaskData.class);
 
-    public static final TaskDescriptor<BatchScheduleTaskData> DISPATCH_CRON_TASK =
-            TaskDescriptor.of("batch-dispatch-cron", BatchScheduleTaskData.class);
-
     private BatchSchedulerTasks() {
     }
 }

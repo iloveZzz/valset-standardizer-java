@@ -72,6 +72,7 @@ export type ParseQueuePage = {
   handlePageChange: (params: { current: number; pageSize: number }) => void;
   openDetailDrawer: (row: ParseQueueRow) => void;
   closeDetail: () => void;
+  openLifecyclePage: (row: ParseQueueRow) => void;
   generateQueue: (row: ParseQueueRow, forceRebuild?: boolean) => void;
   retryQueue: (row: ParseQueueRow) => void;
   subscribeQueue: (row: ParseQueueRow) => void;

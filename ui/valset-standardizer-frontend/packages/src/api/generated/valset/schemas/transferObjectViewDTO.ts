@@ -4,9 +4,20 @@
  * Java 外部估值表标准化工程，基于 Spring Boot 和 Quartz
  * OpenAPI spec version: v1.0.0
  */
+import type { TransferObjectAttachmentViewDTO } from "./transferObjectAttachmentViewDTO";
 import type { TransferObjectTagViewDTO } from "./transferObjectTagViewDTO";
 
 export interface TransferObjectViewDTO {
+  /** 当前邮件分组的附件数量。 */
+  attachmentCount?: number;
+  /** 当前邮件分组包含的附件列表。 */
+  attachments?: TransferObjectAttachmentViewDTO[];
+  /** 业务日期。 */
+  businessDate?: string;
+  /** 业务标识。 */
+  businessId?: string;
+  /** 投递状态。 */
+  deliveryStatus?: string;
   /** 错误信息。 */
   errorMessage?: string;
   /** 文件扩展名。 */
@@ -15,14 +26,8 @@ export interface TransferObjectViewDTO {
   fileMetaJson?: string;
   /** 文件指纹。 */
   fingerprint?: string;
-  /** 业务日期。 */
-  businessDate?: string;
-  /** 业务ID。 */
-  businessId?: string;
   /** 本地临时文件路径。 */
   localTempPath?: string;
-  /** 真实文件存储地址。 */
-  realStoragePath?: string;
   /** 邮件密送人。 */
   mailBcc?: string;
   /** 邮件正文。 */
@@ -45,6 +50,10 @@ export interface TransferObjectViewDTO {
   mimeType?: string;
   /** 原始文件名。 */
   originalName?: string;
+  /** 邮件分组的主文件主键。 */
+  primaryTransferId?: string;
+  /** 真实文件存储地址。 */
+  realStoragePath?: string;
   /** 收取时间。 */
   receivedAt?: string;
   /** 收取日期。 */
@@ -63,12 +72,12 @@ export interface TransferObjectViewDTO {
   sourceType?: string;
   /** 文件状态。 */
   status?: string;
-  /** 投递状态。 */
-  deliveryStatus?: string;
   /** 落库时间。 */
   storedAt?: string;
   /** 文件标签列表。 */
   tags?: TransferObjectTagViewDTO[];
   /** 文件主键。 */
   transferId?: string;
+  /** 当前邮件分组包含的文件主键列表。 */
+  transferIds?: string[];
 }

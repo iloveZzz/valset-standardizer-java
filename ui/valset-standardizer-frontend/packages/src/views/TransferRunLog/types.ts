@@ -41,6 +41,12 @@ export type RunLogQueryState = {
   keyword: string;
 };
 
+export type RunLogCleanupCommand = {
+  startInclusive: string;
+  endExclusive: string;
+  cleanupLabel: string;
+};
+
 export type RunLogPage = {
   loading: boolean;
   analysisLoading: boolean;
@@ -56,7 +62,7 @@ export type RunLogPage = {
   openDetailDrawer: (row: TransferRunLogViewDTO) => void;
   runQuery: () => void;
   resetQuery: () => void;
-  cleanupLogs: () => void;
+  cleanupLogs: (command: RunLogCleanupCommand) => Promise<void>;
   closeDetail: () => void;
   handlePageChange: (params: { current: number; pageSize: number }) => void;
   applyStageFilter: (runStage?: string) => void;

@@ -149,7 +149,8 @@ const goTo = (path: string) => {
 }
 
 .workspace-menu :deep(.ant-menu-item),
-.recursive-menu :deep(.ant-menu-item) {
+.recursive-menu :deep(.ant-menu-item),
+.recursive-menu :deep(.ant-menu-submenu-title) {
   display: flex;
   align-items: center;
   margin-inline: 0;
@@ -166,13 +167,15 @@ const goTo = (path: string) => {
 }
 
 .workspace-menu :deep(.ant-menu-item:hover),
-.recursive-menu :deep(.ant-menu-item:hover) {
+.recursive-menu :deep(.ant-menu-item:hover),
+.recursive-menu :deep(.ant-menu-submenu-title:hover) {
   color: #1677ff;
   background: rgba(22, 119, 255, 0.06);
 }
 
 .workspace-menu :deep(.ant-menu-item .anticon),
-.recursive-menu :deep(.ant-menu-item .anticon) {
+.recursive-menu :deep(.ant-menu-item .anticon),
+.recursive-menu :deep(.ant-menu-submenu-title .anticon) {
   font-size: 18px;
   color: inherit;
 }

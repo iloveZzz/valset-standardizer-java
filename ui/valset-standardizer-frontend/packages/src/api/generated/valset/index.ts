@@ -6,6 +6,7 @@
  */
 import type {
   AnalyzeLogsParams,
+  AnalyzeMailInboxParams,
   AnalyzeObjectsParams,
   AnalyzeRequest,
   EvaluateMappingTaskCommand,
@@ -27,6 +28,7 @@ import type {
   ListTracesParams,
   MatchRequest,
   MatchTaskCommand,
+  MultiResultParseQueueViewDTO,
   MultiResultParseRuleProfileViewDTO,
   MultiResultParseRuleTraceViewDTO,
   MultiResultTransferDeliveryRecordViewDTO,
@@ -43,13 +45,22 @@ import type {
   MultiResultValsetFileIngestLogViewDTO,
   MultiResultValuationSheetStyleViewDTO,
   PageLogsParams,
+  PageMailInboxParams,
   PageObjectsParams,
+  PageQueuesParams,
   PageRecordsParams,
+  PageResultParseQueueViewDTO,
   PageResultTransferDeliveryRecordViewDTO,
   PageResultTransferObjectViewDTO,
   PageResultTransferRunLogViewDTO,
   PageResultTransferTagViewDTO,
   PageTagsParams,
+  ParseQueueBackfillCommand,
+  ParseQueueCompleteCommand,
+  ParseQueueFailCommand,
+  ParseQueueGenerateCommand,
+  ParseQueueRetryCommand,
+  ParseQueueSubscribeCommand,
   ParseRuleProfileUpsertCommand,
   ParseRulePublishCommand,
   ParseRuleRollbackCommand,
@@ -60,6 +71,8 @@ import type {
   SingleResultFullWorkflowResponse,
   SingleResultKnowledgeImportResponse,
   SingleResultMatchResultViewDTO,
+  SingleResultParseQueueObserverRunSummary,
+  SingleResultParseQueueViewDTO,
   SingleResultParseRuleBundleViewDTO,
   SingleResultParseRuleMutationResponse,
   SingleResultParseRuleRegressionViewDTO,
@@ -71,13 +84,17 @@ import type {
   SingleResultTaskViewDTO,
   SingleResultTransferDeliveryRecordViewDTO,
   SingleResultTransferFormTemplateViewDTO,
+  SingleResultTransferMailInfoViewDTO,
   SingleResultTransferObjectAnalysisViewDTO,
+  SingleResultTransferObjectRedeliverResponse,
+  SingleResultTransferObjectRetagResponse,
   SingleResultTransferObjectViewDTO,
   SingleResultTransferRouteMutationResponse,
   SingleResultTransferRouteViewDTO,
   SingleResultTransferRuleMutationResponse,
   SingleResultTransferRuleViewDTO,
   SingleResultTransferRunLogAnalysisViewDTO,
+  SingleResultTransferRunLogCleanupResponse,
   SingleResultTransferRunLogRedeliverResponse,
   SingleResultTransferSourceMutationResponse,
   SingleResultTransferSourceViewDTO,
@@ -87,9 +104,13 @@ import type {
   SingleResultTransferTargetMutationResponse,
   SingleResultTransferTargetViewDTO,
   SingleResultUploadValuationFileResponse,
+  SingleResultValsetFileInfoRepairResultDTO,
   SingleResultValsetFileInfoViewDTO,
   SseEmitter,
   StreamLogsParams,
+  SubscribeParams,
+  TransferObjectRedeliverCommand,
+  TransferObjectRetagCommand,
   TransferRouteUpsertCommand,
   TransferRouteViewDTO,
   TransferRuleUpsertCommand,
@@ -98,6 +119,8 @@ import type {
   TransferTagTestCommand,
   TransferTagUpsertCommand,
   TransferTargetUpsertCommand,
+  UploadSourceFilesRequest,
+  ValsetFileInfoRepairCommand,
 } from "./schemas";
 import { customInstance } from "../../mutator";
 
@@ -182,6 +205,17 @@ export const getJavaSpringBootQuartzApi = () => {
     return customInstance<SingleResultTaskViewDTO>({
       url: `/tasks/${taskId}`,
       method: "GET",
+    });
+  };
+
+  /**
+   * @summary subscribe
+   */
+  const subscribe = (params?: SubscribeParams) => {
+    return customInstance<SseEmitter>({
+      url: `/parse-lifecycle-events/stream`,
+      method: "GET",
+      params,
     });
   };
 
@@ -415,31 +449,6 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
-   * @summary 通过 HTTP 接口上传文件到文件来源。
-   */
-  const uploadSourceFiles = (sourceId: string, files: File[]) => {
-    const formData = new FormData();
-    const validFiles = (files ?? []).filter((file): file is File => Boolean(file));
-    if (validFiles.length <= 1) {
-      const file = validFiles[0];
-      if (file) {
-        formData.append("file", file);
-      }
-    } else {
-      validFiles.forEach((file) => {
-        formData.append("files", file);
-      });
-    }
-
-    return customInstance<SingleResultTransferSourceMutationResponse>({
-      url: `/transfer-sources/${sourceId}/upload`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
    * @summary 查询来源对应表单模板名。
    */
   const getTemplateName2 = (params: GetTemplateName2Params) => {
@@ -457,6 +466,30 @@ export const getJavaSpringBootQuartzApi = () => {
     return customInstance<SingleResultTransferSourceMutationResponse>({
       url: `/transfer-sources/${sourceId}/trigger`,
       method: "POST",
+    });
+  };
+
+  /**
+   * @summary 通过 HTTP 接口上传文件到来源。
+   */
+  const uploadSourceFiles = (
+    sourceId: string,
+    uploadSourceFilesRequest: UploadSourceFilesRequest,
+  ) => {
+    const formData = new FormData();
+    formData.append("sourceId", uploadSourceFilesRequest.sourceId);
+    if (uploadSourceFilesRequest.file !== undefined) {
+      formData.append("file", uploadSourceFilesRequest.file);
+    }
+    if (uploadSourceFilesRequest.files !== undefined) {
+      formData.append("files", uploadSourceFilesRequest.files);
+    }
+
+    return customInstance<SingleResultTransferSourceMutationResponse>({
+      url: `/transfer-sources/${sourceId}/upload`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
     });
   };
 
@@ -568,6 +601,16 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
+   * @summary 立即执行一轮待解析事件观察。
+   */
+  const run = () => {
+    return customInstance<SingleResultParseQueueObserverRunSummary>({
+      url: `/parse-queue-observer/run`,
+      method: "POST",
+    });
+  };
+
+  /**
    * @summary createTag
    */
   const createTag = (transferTagUpsertCommand: TransferTagUpsertCommand) => {
@@ -653,7 +696,7 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 上传外部估值表并完成 ODS 原始提取。
    */
-  const upload = (uploadRequest: File) => {
+  const upload = (boolean: boolean) => {
     const formData = new FormData();
     formData.append("data", uploadRequest.toString());
 
@@ -741,7 +784,7 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 上传文件并串联执行提取、解析、匹配。
    */
-  const fullProcess = (fullProcessRequest: File) => {
+  const fullProcess = (boolean: boolean) => {
     const formData = new FormData();
     formData.append("data", fullProcessRequest.toString());
 
@@ -797,7 +840,7 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 手动上传文件并执行 ODS 提取。
    */
-  const upload1 = (upload1Request: File) => {
+  const upload1 = (boolean: boolean) => {
     const formData = new FormData();
     formData.append("data", upload1Request.toString());
 
@@ -847,6 +890,20 @@ export const getJavaSpringBootQuartzApi = () => {
     return customInstance<MultiResultValuationSheetStyleViewDTO>({
       url: `/files/${fileId}/sheet-styles`,
       method: "GET",
+    });
+  };
+
+  /**
+   * @summary 按 TransferObject 回填文件主数据。
+   */
+  const repairFromTransfer = (
+    valsetFileInfoRepairCommand: ValsetFileInfoRepairCommand,
+  ) => {
+    return customInstance<SingleResultValsetFileInfoRepairResultDTO>({
+      url: `/files/repair-from-transfer`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: valsetFileInfoRepairCommand,
     });
   };
 
@@ -931,6 +988,115 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
+   * @summary pageQueues
+   */
+  const pageQueues = (params?: PageQueuesParams) => {
+    return customInstance<PageResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary getQueue
+   */
+  const getQueue = (queueId: string) => {
+    return customInstance<SingleResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues/${queueId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary generateQueue
+   */
+  const generateQueue = (
+    parseQueueGenerateCommand: ParseQueueGenerateCommand,
+  ) => {
+    return customInstance<SingleResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues/generate`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: parseQueueGenerateCommand,
+    });
+  };
+
+  /**
+   * @summary backfillQueues
+   */
+  const backfillQueues = (
+    parseQueueBackfillCommand: ParseQueueBackfillCommand,
+  ) => {
+    return customInstance<MultiResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues/backfill`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: parseQueueBackfillCommand,
+    });
+  };
+
+  /**
+   * @summary subscribeQueue
+   */
+  const subscribeQueue = (
+    queueId: string,
+    parseQueueSubscribeCommand: ParseQueueSubscribeCommand,
+  ) => {
+    return customInstance<SingleResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues/${queueId}/subscribe`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: parseQueueSubscribeCommand,
+    });
+  };
+
+  /**
+   * @summary completeQueue
+   */
+  const completeQueue = (
+    queueId: string,
+    parseQueueCompleteCommand: ParseQueueCompleteCommand,
+  ) => {
+    return customInstance<SingleResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues/${queueId}/complete`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: parseQueueCompleteCommand,
+    });
+  };
+
+  /**
+   * @summary failQueue
+   */
+  const failQueue = (
+    queueId: string,
+    parseQueueFailCommand: ParseQueueFailCommand,
+  ) => {
+    return customInstance<SingleResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues/${queueId}/fail`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: parseQueueFailCommand,
+    });
+  };
+
+  /**
+   * @summary retryQueue
+   */
+  const retryQueue = (
+    queueId: string,
+    parseQueueRetryCommand: ParseQueueRetryCommand,
+  ) => {
+    return customInstance<SingleResultParseQueueViewDTO>({
+      url: `/transfer-parse-queues/${queueId}/retry`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: parseQueueRetryCommand,
+    });
+  };
+
+  /**
    * @summary 查询文件收发运行日志列表。
    */
   const listLogs = (params?: ListLogsParams) => {
@@ -978,6 +1144,16 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
+   * @summary 清理前一天产生的文件收发运行日志。
+   */
+  const cleanupYesterdayLogs = () => {
+    return customInstance<SingleResultTransferRunLogCleanupResponse>({
+      url: `/transfer-run-logs/cleanup-yesterday`,
+      method: "POST",
+    });
+  };
+
+  /**
    * @summary 订阅文件收发运行日志流。
    */
   const streamLogs = (params?: StreamLogsParams) => {
@@ -999,11 +1175,42 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
+   * @summary 查询文件主对象邮件信息。
+   */
+  const getMailInfo = (transferId: string) => {
+    return customInstance<SingleResultTransferMailInfoViewDTO>({
+      url: `/transfer-objects/${transferId}/mail-info`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 下载文件主对象对应的本地临时文件。
+   */
+  const downloadObject = (transferId: string) => {
+    return customInstance<unknown>({
+      url: `/transfer-objects/${transferId}/download`,
+      method: "GET",
+    });
+  };
+
+  /**
    * @summary 分页查询文件主对象列表。
    */
   const pageObjects = (params?: PageObjectsParams) => {
     return customInstance<PageResultTransferObjectViewDTO>({
       url: `/transfer-objects`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 分页查询邮件收件箱列表。
+   */
+  const pageMailInbox = (params?: PageMailInboxParams) => {
+    return customInstance<PageResultTransferObjectViewDTO>({
+      url: `/transfer-objects/mail-inbox`,
       method: "GET",
       params,
     });
@@ -1017,6 +1224,43 @@ export const getJavaSpringBootQuartzApi = () => {
       url: `/transfer-objects/analysis`,
       method: "GET",
       params,
+    });
+  };
+
+  /**
+   * @summary 统计分析邮件收件箱。
+   */
+  const analyzeMailInbox = (params?: AnalyzeMailInboxParams) => {
+    return customInstance<SingleResultTransferObjectAnalysisViewDTO>({
+      url: `/transfer-objects/mail-inbox/analysis`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 重新投递文件主对象。
+   */
+  const redeliver1 = (
+    transferObjectRedeliverCommand: TransferObjectRedeliverCommand,
+  ) => {
+    return customInstance<SingleResultTransferObjectRedeliverResponse>({
+      url: `/transfer-objects/redeliver`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferObjectRedeliverCommand,
+    });
+  };
+
+  /**
+   * @summary 重新打标文件主对象。
+   */
+  const retag = (transferObjectRetagCommand: TransferObjectRetagCommand) => {
+    return customInstance<SingleResultTransferObjectRetagResponse>({
+      url: `/transfer-objects/retag`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferObjectRetagCommand,
     });
   };
 
@@ -1186,6 +1430,7 @@ export const getJavaSpringBootQuartzApi = () => {
     createEvaluateTask,
     createExtractTask,
     queryTask,
+    subscribe,
     listTemplates,
     listGroupedTemplates,
     getTemplate,
@@ -1206,9 +1451,9 @@ export const getJavaSpringBootQuartzApi = () => {
     getSource,
     deleteSource,
     updateSource,
-    uploadSourceFiles,
     getTemplateName2,
     triggerSource,
+    uploadSourceFiles,
     stopSource,
     clearProcessedMailIds,
     listCheckpoints,
@@ -1217,6 +1462,7 @@ export const getJavaSpringBootQuartzApi = () => {
     importStandardSubjects,
     importMappingHints,
     importMappingSamples,
+    run,
     createTag,
     pageTags,
     getTag,
@@ -1237,6 +1483,7 @@ export const getJavaSpringBootQuartzApi = () => {
     searchFileInfos,
     queryIngestLogs,
     querySheetStyles,
+    repairFromTransfer,
     createRoute,
     listRoutes1,
     getRoute1,
@@ -1244,14 +1491,29 @@ export const getJavaSpringBootQuartzApi = () => {
     updateRoute,
     enableRoute,
     disableRoute,
+    pageQueues,
+    getQueue,
+    generateQueue,
+    backfillQueues,
+    subscribeQueue,
+    completeQueue,
+    failQueue,
+    retryQueue,
     listLogs,
     pageLogs,
     analyzeLogs,
     redeliver,
+    cleanupYesterdayLogs,
     streamLogs,
     getObject,
+    getMailInfo,
+    downloadObject,
     pageObjects,
+    pageMailInbox,
     analyzeObjects,
+    analyzeMailInbox,
+    redeliver1,
+    retag,
     createProfile,
     listProfiles,
     getProfile,
@@ -1302,6 +1564,11 @@ export type CreateExtractTaskResult = NonNullable<
 export type QueryTaskResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryTask"]>
+  >
+>;
+export type SubscribeResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["subscribe"]>
   >
 >;
 export type ListTemplatesResult = NonNullable<
@@ -1418,6 +1685,13 @@ export type TriggerSourceResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["triggerSource"]>
   >
 >;
+export type UploadSourceFilesResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["uploadSourceFiles"]
+    >
+  >
+>;
 export type StopSourceResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stopSource"]>
@@ -1469,6 +1743,9 @@ export type ImportMappingSamplesResult = NonNullable<
       ReturnType<typeof getJavaSpringBootQuartzApi>["importMappingSamples"]
     >
   >
+>;
+export type RunResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["run"]>>
 >;
 export type CreateTagResult = NonNullable<
   Awaited<
@@ -1562,6 +1839,13 @@ export type QuerySheetStylesResult = NonNullable<
     >
   >
 >;
+export type RepairFromTransferResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["repairFromTransfer"]
+    >
+  >
+>;
 export type CreateRouteResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createRoute"]>
@@ -1597,6 +1881,44 @@ export type DisableRouteResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["disableRoute"]>
   >
 >;
+export type PageQueuesResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageQueues"]>
+  >
+>;
+export type GetQueueResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getQueue"]>>
+>;
+export type GenerateQueueResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["generateQueue"]>
+  >
+>;
+export type BackfillQueuesResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["backfillQueues"]>
+  >
+>;
+export type SubscribeQueueResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["subscribeQueue"]>
+  >
+>;
+export type CompleteQueueResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["completeQueue"]>
+  >
+>;
+export type FailQueueResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["failQueue"]>
+  >
+>;
+export type RetryQueueResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["retryQueue"]>
+  >
+>;
 export type ListLogsResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listLogs"]>>
 >;
@@ -1613,6 +1935,13 @@ export type RedeliverResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["redeliver"]>
   >
 >;
+export type CleanupYesterdayLogsResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["cleanupYesterdayLogs"]
+    >
+  >
+>;
 export type StreamLogsResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["streamLogs"]>
@@ -1623,15 +1952,45 @@ export type GetObjectResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getObject"]>
   >
 >;
+export type GetMailInfoResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getMailInfo"]>
+  >
+>;
+export type DownloadObjectResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["downloadObject"]>
+  >
+>;
 export type PageObjectsResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageObjects"]>
+  >
+>;
+export type PageMailInboxResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageMailInbox"]>
   >
 >;
 export type AnalyzeObjectsResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyzeObjects"]>
   >
+>;
+export type AnalyzeMailInboxResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["analyzeMailInbox"]
+    >
+  >
+>;
+export type Redeliver1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["redeliver1"]>
+  >
+>;
+export type RetagResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["retag"]>>
 >;
 export type CreateProfileResult = NonNullable<
   Awaited<

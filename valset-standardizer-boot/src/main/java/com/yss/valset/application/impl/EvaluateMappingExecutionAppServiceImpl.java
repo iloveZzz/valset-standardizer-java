@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.EvaluateMappingTaskCommand;
 import com.yss.valset.application.port.EvaluateMappingExecutionUseCase;
 import com.yss.valset.domain.exporter.ResultExporter;
-import com.yss.valset.domain.gateway.TaskGateway;
+import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.knowledge.MappingSampleLoader;
 import com.yss.valset.domain.matcher.ValsetMatcher;
 import com.yss.valset.domain.model.*;
@@ -27,7 +27,7 @@ import java.util.Map;
 @Service
 public class EvaluateMappingExecutionAppServiceImpl implements EvaluateMappingExecutionUseCase {
 
-    private final TaskGateway taskGateway;
+    private final WorkflowTaskGateway taskGateway;
     private final MappingSampleLoader mappingSampleLoader;
     private final StandardSubjectLoaderRegistry standardSubjectLoaderRegistry;
     private final ValsetMatcher subjectMatcher;
@@ -36,7 +36,7 @@ public class EvaluateMappingExecutionAppServiceImpl implements EvaluateMappingEx
     private final String outputRoot;
 
     public EvaluateMappingExecutionAppServiceImpl(
-            TaskGateway taskGateway,
+            WorkflowTaskGateway taskGateway,
             MappingSampleLoader mappingSampleLoader,
             StandardSubjectLoaderRegistry standardSubjectLoaderRegistry,
             ValsetMatcher subjectMatcher,
@@ -59,8 +59,8 @@ public class EvaluateMappingExecutionAppServiceImpl implements EvaluateMappingEx
     @Override
     public void execute(Long taskId) {
         try {
-            TaskInfo taskInfo = taskGateway.findById(taskId);
-            EvaluateMappingTaskCommand command = objectMapper.readValue(taskInfo.getInputPayload(), EvaluateMappingTaskCommand.class);
+            WorkflowTask workflowTask = taskGateway.findById(taskId);
+            EvaluateMappingTaskCommand command = objectMapper.readValue(workflowTask.getInputPayload(), EvaluateMappingTaskCommand.class);
 
             List<MappingSample> samples = MappingEvaluationSupport.deduplicateSamples(
                     mappingSampleLoader.load()

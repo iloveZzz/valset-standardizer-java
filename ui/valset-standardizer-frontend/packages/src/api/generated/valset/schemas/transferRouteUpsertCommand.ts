@@ -9,6 +9,8 @@ import type { Object } from "./object";
 export interface TransferRouteUpsertCommand {
   /** 是否启用。 */
   enabled?: boolean;
+  /** 轮询表达式。 */
+  pollCron?: string;
   /** 重命名模板。 */
   renamePattern?: string;
   /** 路由主键。 */
@@ -25,8 +27,6 @@ export interface TransferRouteUpsertCommand {
   sourceId?: string;
   /** 来源类型。 */
   sourceType: string;
-  /** 轮询表达式。 */
-  pollCron?: string;
   /** 目标编码。 */
   targetCode: string;
   /** 目标路径。 */

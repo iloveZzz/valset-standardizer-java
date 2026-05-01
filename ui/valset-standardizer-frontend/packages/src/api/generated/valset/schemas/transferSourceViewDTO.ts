@@ -13,10 +13,10 @@ export interface TransferSourceViewDTO {
   createdAt?: string;
   /** 是否启用。 */
   enabled?: boolean;
-  /** 当前使用的来源表单模板名。 */
-  formTemplateName?: string;
   /** 已启用路由数量。 */
   enabledRouteCount?: number;
+  /** 当前使用的来源表单模板名。 */
+  formTemplateName?: string;
   /** 是否仍在收取锁定中。 */
   ingestBusy?: boolean;
   /** 收取结束时间。 */

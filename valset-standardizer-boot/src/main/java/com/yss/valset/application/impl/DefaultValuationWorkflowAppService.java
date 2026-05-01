@@ -11,13 +11,13 @@ import com.yss.valset.application.dto.UploadValuationFileResponse;
 import com.yss.valset.analysis.application.port.ParseExecutionUseCase;
 import com.yss.valset.extract.application.port.ExtractDataExecutionUseCase;
 import com.yss.valset.application.port.MatchExecutionUseCase;
-import com.yss.valset.application.service.TaskQueryAppService;
+import com.yss.valset.application.service.WorkflowTaskQueryAppService;
 import com.yss.valset.application.service.ValuationWorkflowAppService;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.gateway.ValsetFileIngestLogGateway;
 import com.yss.valset.application.support.UploadedFileStorageService;
-import com.yss.valset.application.support.TaskReuseService;
-import com.yss.valset.domain.gateway.TaskGateway;
+import com.yss.valset.application.support.WorkflowTaskReuseService;
+import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.domain.model.ValsetFileIngestLog;
 import com.yss.valset.domain.model.ValsetFileSourceChannel;
@@ -25,7 +25,7 @@ import com.yss.valset.domain.model.ValsetFileStatus;
 import com.yss.valset.domain.model.ValsetFileStorageType;
 import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.common.exception.TaskExecutionException;
-import com.yss.valset.domain.model.TaskInfo;
+import com.yss.valset.domain.model.WorkflowTask;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskType;
@@ -36,6 +36,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -50,13 +53,13 @@ import java.util.function.Supplier;
 public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppService {
 
     private final UploadedFileStorageService uploadedFileStorageService;
-    private final TaskGateway taskGateway;
-    private final TaskQueryAppService taskQueryAppService;
+    private final WorkflowTaskGateway taskGateway;
+    private final WorkflowTaskQueryAppService taskQueryAppService;
     private final ExtractDataExecutionUseCase extractDataExecutionUseCase;
     private final ParseExecutionUseCase parseExecutionUseCase;
     private final MatchExecutionUseCase matchExecutionUseCase;
     private final ObjectMapper objectMapper;
-    private final TaskReuseService taskReuseService;
+    private final WorkflowTaskReuseService taskReuseService;
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final ValsetFileIngestLogGateway subjectMatchFileIngestLogGateway;
     private final Tracer tracer;
@@ -64,13 +67,13 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     private boolean enableMatchProcess;
 
     public DefaultValuationWorkflowAppService(UploadedFileStorageService uploadedFileStorageService,
-                                              TaskGateway taskGateway,
-                                              TaskQueryAppService taskQueryAppService,
+                                              WorkflowTaskGateway taskGateway,
+                                              WorkflowTaskQueryAppService taskQueryAppService,
                                               ExtractDataExecutionUseCase extractDataExecutionUseCase,
                                               ParseExecutionUseCase parseExecutionUseCase,
                                               MatchExecutionUseCase matchExecutionUseCase,
                                               ObjectMapper objectMapper,
-                                              TaskReuseService taskReuseService,
+                                              WorkflowTaskReuseService taskReuseService,
                                               ValsetFileInfoGateway subjectMatchFileInfoGateway,
                                               ValsetFileIngestLogGateway subjectMatchFileIngestLogGateway,
                                               Tracer tracer) {
@@ -97,8 +100,9 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         // Step 1: 文件入库与指纹登记
         StoredFileDTO storedFile = uploadedFileStorageService.store(file, dataSourceType);
         ValsetFileInfo fileInfo = registerUploadedFile(storedFile, createdBy);
+        String workbookPath = resolveWorkbookPath(fileInfo);
         ExtractDataTaskCommand command = new ExtractDataTaskCommand();
-        command.setWorkbookPath(fileInfo.getStorageUri());
+        command.setWorkbookPath(workbookPath);
         command.setDataSourceType(storedFile.getDataSourceType());
         command.setCreatedBy(createdBy);
         command.setFileFingerprint(storedFile.getFileFingerprint());
@@ -106,7 +110,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         command.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
 
         String businessKey = buildExtractBusinessKey(command);
-        TaskInfo reusableTask = taskReuseService.findReusableSuccessfulTask(TaskType.EXTRACT_DATA, businessKey, command.getForceRebuild());
+        WorkflowTask reusableTask = taskReuseService.findReusableSuccessfulTask(TaskType.EXTRACT_DATA, businessKey, command.getForceRebuild());
         boolean reusedExistingTask = reusableTask != null;
         TaskViewDTO extractTask = reusedExistingTask
                 ? taskQueryAppService.queryTask(reusableTask.getTaskId())
@@ -132,7 +136,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                     reusedExistingTask);
             return UploadValuationFileResponse.builder()
                     .fileId(toStringValue(fileInfo.getFileId() == null ? fileId : fileInfo.getFileId()))
-                    .workbookPath(fileInfo.getStorageUri())
+                    .workbookPath(workbookPath)
                     .dataSourceType(storedFile.getDataSourceType())
                     .fileSizeBytes(storedFile.getFileSizeBytes() == null ? null : String.valueOf(storedFile.getFileSizeBytes()))
                     .fileFingerprint(storedFile.getFileFingerprint())
@@ -302,7 +306,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                                 Object command,
                                 TaskExecution taskExecution) {
         boolean forceRebuild = isForceRebuild(command);
-        TaskInfo reusableTask = taskReuseService.findReusableSuccessfulTask(taskType, businessKey, forceRebuild);
+        WorkflowTask reusableTask = taskReuseService.findReusableSuccessfulTask(taskType, businessKey, forceRebuild);
         if (reusableTask != null) {
             log.info("任务复用成功，taskType={}, businessKey={}, taskId={}", taskType, businessKey, reusableTask.getTaskId());
             return taskQueryAppService.queryTask(reusableTask.getTaskId());
@@ -337,7 +341,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
 
     private Long createTask(TaskType taskType, String businessKey, Long fileId, Object command) {
         try {
-            TaskInfo taskInfo = TaskInfo.builder()
+            WorkflowTask workflowTask = WorkflowTask.builder()
                     .taskType(taskType)
                     .taskStatus(TaskStatus.PENDING)
                     .taskStage(inferTaskStage(taskType))
@@ -345,7 +349,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                     .fileId(fileId)
                     .inputPayload(objectMapper.writeValueAsString(command))
                     .build();
-            return taskGateway.save(taskInfo);
+            return taskGateway.save(workflowTask);
         } catch (Exception exception) {
             throw new IllegalStateException("创建任务失败，taskType=" + taskType, exception);
         }
@@ -441,6 +445,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 .sourceUri(resolveSourceUri(storedFile))
                 .storageType(ValsetFileStorageType.LOCAL)
                 .storageUri(storedFile.getAbsolutePath())
+                .localTempPath(storedFile.getAbsolutePath())
                 .fileFormat(normalizeDataSourceType(storedFile.getDataSourceType()))
                 .fileStatus(ValsetFileStatus.READY_FOR_EXTRACT)
                 .createdBy(createdBy)
@@ -470,6 +475,21 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             return "filesys:" + storedFile.getFilesysFileId();
         }
         return storedFile.getAbsolutePath();
+    }
+
+    private String resolveWorkbookPath(ValsetFileInfo fileInfo) {
+        if (fileInfo == null) {
+            return null;
+        }
+        String localTempPath = firstReadablePath(fileInfo.getLocalTempPath());
+        if (localTempPath != null) {
+            return localTempPath;
+        }
+        String realStoragePath = firstReadablePath(fileInfo.getRealStoragePath());
+        if (realStoragePath != null) {
+            return realStoragePath;
+        }
+        return null;
     }
 
     private String buildSourceMetaJson(StoredFileDTO storedFile) {
@@ -562,6 +582,21 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             return "EXCEL";
         }
         return dataSourceType.trim().toUpperCase();
+    }
+
+    private String firstReadablePath(String candidate) {
+        if (candidate == null || candidate.isBlank()) {
+            return null;
+        }
+        try {
+            Path path = Paths.get(candidate.trim());
+            if (Files.exists(path) && Files.isReadable(path)) {
+                return path.toString();
+            }
+        } catch (Exception exception) {
+            log.warn("解析文件路径失败，path={}", candidate, exception);
+        }
+        return null;
     }
 
     @FunctionalInterface

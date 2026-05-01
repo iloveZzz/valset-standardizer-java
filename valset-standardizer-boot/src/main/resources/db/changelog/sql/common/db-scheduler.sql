@@ -16,8 +16,23 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     PRIMARY KEY (task_name, task_instance)
 );
 
-CREATE INDEX execution_time_idx ON scheduled_tasks (execution_time);
-CREATE INDEX last_heartbeat_idx ON scheduled_tasks (last_heartbeat);
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'scheduled_tasks' AND index_name = 'execution_time_idx') = 0,
+    'CREATE INDEX execution_time_idx ON scheduled_tasks (execution_time)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'scheduled_tasks' AND index_name = 'last_heartbeat_idx') = 0,
+    'CREATE INDEX last_heartbeat_idx ON scheduled_tasks (last_heartbeat)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 --changeset codex:20260423-08-postgres-db-scheduler dbms:postgresql
 CREATE TABLE IF NOT EXISTS scheduled_tasks (

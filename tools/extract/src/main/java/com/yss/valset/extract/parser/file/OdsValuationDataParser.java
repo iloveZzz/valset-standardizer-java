@@ -1,27 +1,37 @@
 package com.yss.valset.extract.parser.file;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yss.valset.common.support.ExcelParsingSupport;
+import com.yss.valset.common.support.SpreadsheetXmlSupport;
+import com.yss.valset.common.support.SubjectHierarchySupport;
+import com.yss.valset.domain.exception.FileAccessException;
 import com.yss.valset.domain.model.DataSourceConfig;
+import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.domain.model.HeaderColumnMeta;
 import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
 import com.yss.valset.domain.parser.ValuationDataParser;
-import com.yss.valset.common.support.ExcelParsingSupport;
-import com.yss.valset.common.support.SubjectHierarchySupport;
-import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
-import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.valset.extract.rule.ParseRuleExpressions;
 import com.yss.valset.extract.rule.ParseRuleSupport;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,50 +39,45 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * 基于 ODS 原始行数据的估值分析器。
+ * 基于工作簿文件的估值分析器。
  */
 @Slf4j
 @Component
 public class OdsValuationDataParser implements ValuationDataParser {
 
     private static final String DEFAULT_SHEET_NAME = "ODS_RAW_DATA";
+    private static final String DEFAULT_CSV_SHEET_NAME = "CSV_RAW_DATA";
+    private static final List<String> FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
 
-    private final ValuationFileDataMapper valuationFileDataMapper;
     private final ObjectMapper objectMapper;
     private final QlexpressParseRuleEngine parseRuleEngine;
     private final ParseRuleTemplateResolver parseRuleTemplateResolver;
 
-    public OdsValuationDataParser(ValuationFileDataMapper valuationFileDataMapper, ObjectMapper objectMapper) {
-        this(valuationFileDataMapper, objectMapper, new QlexpressParseRuleEngine(), null);
+    public OdsValuationDataParser(ObjectMapper objectMapper) {
+        this(objectMapper, null);
     }
 
     @Autowired
     public OdsValuationDataParser(
-            ValuationFileDataMapper valuationFileDataMapper,
             ObjectMapper objectMapper,
-            QlexpressParseRuleEngine parseRuleEngine,
             ParseRuleTemplateResolver parseRuleTemplateResolver
     ) {
-        this.valuationFileDataMapper = valuationFileDataMapper;
         this.objectMapper = objectMapper;
-        this.parseRuleEngine = parseRuleEngine;
+        this.parseRuleEngine = new QlexpressParseRuleEngine();
         this.parseRuleTemplateResolver = parseRuleTemplateResolver;
     }
 
     @Override
     public ParsedValuationData parse(DataSourceConfig config) {
-        Long fileId = resolveFileId(config.getAdditionalParams());
-        if (fileId == null) {
-            throw new IllegalStateException("ODS 原始数据分析需要提供 fileId");
-        }
+        Path sourcePath = resolveSourcePath(config);
+        log.info("开始基于文件路径进行估值分析，sourceUri={}, resolvedPath={}", config.getSourceUri(), sourcePath);
 
-        log.info("开始基于原始数据表进行估值分析，sourceUri={}, fileId={}", config.getSourceUri(), fileId);
-        List<ValuationFileDataPO> rawRows = valuationFileDataMapper.findByFileId(fileId);
-        if (rawRows == null || rawRows.isEmpty()) {
-            log.warn("未找到 fileId={} 对应的原始数据行", fileId);
+        List<List<Object>> rows = readRows(sourcePath, config);
+        if (rows.isEmpty()) {
+            log.warn("文件没有可解析的原始数据行，sourceUri={}", config.getSourceUri());
             return ParsedValuationData.builder()
                     .workbookPath(config.getSourceUri())
-                    .sheetName(DEFAULT_SHEET_NAME)
+                    .sheetName(defaultSheetName(config))
                     .title("")
                     .basicInfo(Map.of())
                     .headers(List.of())
@@ -83,9 +88,6 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     .build();
         }
 
-        List<List<Object>> rows = rawRows.stream()
-                .map(this::readRowValues)
-                .toList();
         String fileTypeName = resolveFileTypeName(config);
         String fileScene = resolveFileScene(config);
         String headerExpr = parseRuleTemplateResolver == null
@@ -108,8 +110,8 @@ public class OdsValuationDataParser implements ValuationDataParser {
         TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerRowIndex);
         SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex, rowClassifyExpr, subjectCodePattern);
 
-        log.info("基于原始数据表的估值分析完成，fileId={}, headerRow={}, dataStartRow={}, subjectCount={}, metricCount={}",
-                fileId,
+        log.info("基于文件路径的估值分析完成，sourceUri={}, headerRow={}, dataStartRow={}, subjectCount={}, metricCount={}",
+                config.getSourceUri(),
                 headerRowIndex + 1,
                 dataStartRowIndex + 1,
                 splitResult.subjects().size(),
@@ -117,7 +119,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
         return ParsedValuationData.builder()
                 .workbookPath(config.getSourceUri())
-                .sheetName(DEFAULT_SHEET_NAME)
+                .sheetName(defaultSheetName(config))
                 .headerRowNumber(headerRowIndex + 1)
                 .dataStartRowNumber(dataStartRowIndex + 1)
                 .title(titleAndInfo.title())
@@ -130,23 +132,82 @@ public class OdsValuationDataParser implements ValuationDataParser {
                 .build();
     }
 
-    private Long resolveFileId(String additionalParams) {
-        if (additionalParams == null || additionalParams.isBlank()) {
-            return null;
+    private Path resolveSourcePath(DataSourceConfig config) {
+        if (config == null || config.getSourceUri() == null || config.getSourceUri().isBlank()) {
+            throw new IllegalStateException("估值表解析需要提供 sourceUri");
+        }
+        Path sourcePath = Paths.get(config.getSourceUri()).toAbsolutePath().normalize();
+        if (!Files.exists(sourcePath) || !Files.isReadable(sourcePath)) {
+            throw new FileAccessException(config.getSourceUri());
+        }
+        return sourcePath;
+    }
+
+    private List<List<Object>> readRows(Path sourcePath, DataSourceConfig config) {
+        DataSourceType sourceType = config == null ? null : config.getSourceType();
+        if (sourceType != null && sourceType != DataSourceType.EXCEL) {
+            throw new IllegalArgumentException("OdsValuationDataParser 仅支持 EXCEL 来源，当前类型=" + sourceType);
         }
         try {
-            return Long.parseLong(additionalParams.trim());
-        } catch (NumberFormatException ignored) {
-            return null;
+            if (SpreadsheetXmlSupport.isSpreadsheetXml(sourcePath)) {
+                return readSpreadsheetXmlRows(sourcePath);
+            }
+            return readWorkbookRows(sourcePath);
+        } catch (FileAccessException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new IllegalStateException("读取 Excel 工作簿失败，sourceUri=" + sourcePath, exception);
         }
     }
 
-    private List<Object> readRowValues(ValuationFileDataPO po) {
+    private List<List<Object>> readWorkbookRows(Path sourcePath) throws Exception {
+        List<List<Object>> rows = new ArrayList<>();
+        try (InputStream inputStream = Files.newInputStream(sourcePath);
+             Workbook workbook = WorkbookFactory.create(inputStream)) {
+            DataFormatter formatter = new DataFormatter();
+            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+            for (int sheetIndex = 0; sheetIndex < workbook.getNumberOfSheets(); sheetIndex++) {
+                Sheet sheet = workbook.getSheetAt(sheetIndex);
+                if (sheet == null) {
+                    continue;
+                }
+                for (Row row : sheet) {
+                    List<Object> rowValues = ExcelParsingSupport.readRowValues(row, evaluator, formatter);
+                    if (isBlankRow(rowValues)) {
+                        continue;
+                    }
+                    rows.add(rowValues);
+                }
+            }
+        }
+        return rows;
+    }
+
+    private List<List<Object>> readSpreadsheetXmlRows(Path sourcePath) {
         try {
-            return objectMapper.readValue(po.getRowDataJson(), new TypeReference<List<Object>>() {
-            });
-        } catch (Exception e) {
-            throw new IllegalStateException("无法解析原始行数据 JSON，fileId=" + po.getFileId() + ", rowDataNumber=" + po.getRowDataNumber(), e);
+            SpreadsheetXmlSupport.SpreadsheetXmlWorkbook workbook = SpreadsheetXmlSupport.read(sourcePath);
+            List<List<Object>> rows = new ArrayList<>();
+            if (workbook == null || workbook.sheets() == null) {
+                return rows;
+            }
+            for (SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet : workbook.sheets()) {
+                if (sheet == null || sheet.rows() == null) {
+                    continue;
+                }
+                for (List<String> row : sheet.rows()) {
+                    List<Object> rowValues = new ArrayList<>();
+                    if (row != null) {
+                        rowValues.addAll(row);
+                    }
+                    if (isBlankRow(rowValues)) {
+                        continue;
+                    }
+                    rows.add(rowValues);
+                }
+            }
+            return rows;
+        } catch (Exception exception) {
+            throw new IllegalStateException("读取 SpreadsheetML 工作簿失败，sourceUri=" + sourcePath, exception);
         }
     }
 
@@ -262,8 +323,8 @@ public class OdsValuationDataParser implements ValuationDataParser {
         return normalized;
     }
 
-    private boolean isBlankRow(List<String> rowTexts) {
-        return rowTexts == null || rowTexts.stream().allMatch(String::isBlank);
+    private boolean isBlankRow(List<?> rowValues) {
+        return rowValues == null || rowValues.stream().allMatch(value -> value == null || ExcelParsingSupport.normalizeText(value).isBlank());
     }
 
     private TitleAndInfo extractTitleAndBasicInfo(List<List<Object>> rows, int headerRowIndex) {
@@ -322,7 +383,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
             if (isFooterRow(rowValues)) {
                 break;
             }
-            String rowType = parseRuleEngine.classifyRow(rowValues, List.of("制表", "复核", "打印", "备注"), subjectCodePattern, rowClassifyExpr);
+            String rowType = parseRuleEngine.classifyRow(rowValues, FOOTER_KEYWORDS, subjectCodePattern, rowClassifyExpr);
             if ("SUBJECT".equalsIgnoreCase(rowType) || ExcelParsingSupport.isSubjectDataRow(rowValues, subjectCodePattern)) {
                 subjects.add(extractSubjectRecord(rowIndex, rowValues, headers, headerIndex));
                 continue;
@@ -504,7 +565,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private boolean isFooterRow(List<Object> rowValues) {
-        return parseRuleEngine.matchesFooterRow(rowValues, List.of("制表", "复核", "打印", "备注"));
+        return parseRuleEngine.matchesFooterRow(rowValues, FOOTER_KEYWORDS);
     }
 
     private String findNextMeaningfulText(List<String> rowTexts, int startIndex) {
@@ -595,5 +656,13 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private record SplitResult(List<SubjectRecord> subjects, List<MetricRecord> metrics) {
+    }
+
+    private String defaultSheetName(DataSourceConfig config) {
+        DataSourceType sourceType = config == null ? null : config.getSourceType();
+        if (sourceType == DataSourceType.CSV) {
+            return DEFAULT_CSV_SHEET_NAME;
+        }
+        return DEFAULT_SHEET_NAME;
     }
 }

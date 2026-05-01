@@ -17,22 +17,6 @@ public class BatchSchedulerConfiguration {
             @Override
             public void triggerNow(Long taskId) {
             }
-
-            @Override
-            public void scheduleCron(Long scheduleId, String scheduleKey, String cronExpression) {
-            }
-
-            @Override
-            public void pause(String scheduleKey) {
-            }
-
-            @Override
-            public void resume(String scheduleKey) {
-            }
-
-            @Override
-            public void delete(String scheduleKey) {
-            }
         };
     }
 }

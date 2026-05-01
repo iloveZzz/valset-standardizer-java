@@ -19,12 +19,20 @@
       "description": "解析模板管理接口。"
     },
     {
+      "name": "ParseQueueObserverController",
+      "description": "待解析观察者管理接口。"
+    },
+    {
       "name": "FileManagementController",
       "description": "文件信息管理接口。"
     },
     {
       "name": "TransferRunLogController",
       "description": "文件收发运行日志查询接口。"
+    },
+    {
+      "name": "ParseQueueController",
+      "description": "待解析任务接口。"
     },
     {
       "name": "TransferRouteController",
@@ -37,6 +45,10 @@
     {
       "name": "KnowledgeImportController",
       "description": "知识库导入接口。"
+    },
+    {
+      "name": "ParseLifecycleEventController",
+      "description": "解析生命周期事件流控制器。"
     },
     {
       "name": "TaskController",
@@ -155,6 +167,17 @@
             "description": "目标编码",
             "required": false,
             "name": "targetCode"
+          },
+          {
+            "schema": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "in": "query",
+            "description": "启用状态",
+            "required": false,
+            "example": true,
+            "name": "enabled"
           },
           {
             "schema": {
@@ -363,6 +386,82 @@
             "required": true,
             "example": 0,
             "name": "taskId"
+          }
+        ]
+      }
+    },
+    "/parse-lifecycle-events/stream": {
+      "get": {
+        "summary": "subscribe",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseLifecycleEventController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SseEmitter"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "subscribe",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "source"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "queueId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "transferId"
+          },
+          {
+            "schema": {
+              "format": "int64",
+              "type": "number"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "taskId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "stage"
           }
         ]
       }
@@ -1150,7 +1249,8 @@
                 "LOCAL_DIR",
                 "EMAIL",
                 "S3",
-                "SFTP"
+                "SFTP",
+                "HTTP"
               ]
             },
             "in": "query",
@@ -1203,6 +1303,58 @@
             "name": "sourceId"
           }
         ]
+      }
+    },
+    "/transfer-sources/{sourceId}/upload": {
+      "post": {
+        "summary": "通过 HTTP 接口上传文件到来源。",
+        "deprecated": false,
+        "tags": [
+          "TransferSourceController"
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sourceId": {
+                    "format": "string",
+                    "description": "来源主键",
+                    "type": "string"
+                  },
+                  "file": {
+                    "format": "binary",
+                    "description": "单文件上传",
+                    "type": "string"
+                  },
+                  "files": {
+                    "format": "binary",
+                    "description": "多文件上传(array of file)",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "sourceId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferSourceMutationResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "uploadSourceFiles",
+        "parameters": []
       }
     },
     "/transfer-sources/{sourceId}/stop": {
@@ -1528,6 +1680,38 @@
           }
         },
         "operationId": "importMappingSamples",
+        "parameters": []
+      }
+    },
+    "/parse-queue-observer/run": {
+      "post": {
+        "summary": "立即执行一轮待解析事件观察。",
+        "deprecated": false,
+        "tags": [
+          "ParseQueueObserverController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultParseQueueObserverRunSummary"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "run",
         "parameters": []
       }
     },
@@ -2368,6 +2552,38 @@
         ]
       }
     },
+    "/files/repair-from-transfer": {
+      "post": {
+        "summary": "按 TransferObject 回填文件主数据。",
+        "deprecated": false,
+        "tags": [
+          "FileManagementController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValsetFileInfoRepairCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultValsetFileInfoRepairResultDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "repairFromTransfer",
+        "parameters": []
+      }
+    },
     "/transfer-route-configs": {
       "post": {
         "summary": "创建路由配置。",
@@ -2487,6 +2703,7 @@
             "in": "query",
             "description": "启用状态",
             "required": false,
+            "example": true,
             "name": "enabled"
           },
           {
@@ -2618,7 +2835,7 @@
             "name": "routeId"
           }
         ]
-      },
+      }
     },
     "/transfer-route-configs/{routeId}/enable": {
       "post": {
@@ -2627,6 +2844,15 @@
         "tags": [
           "TransferRouteConfigController"
         ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -2661,6 +2887,15 @@
         "tags": [
           "TransferRouteConfigController"
         ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -2684,6 +2919,420 @@
             "description": "路由主键",
             "required": true,
             "name": "routeId"
+          }
+        ]
+      }
+    },
+    "/transfer-parse-queues": {
+      "get": {
+        "summary": "pageQueues",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pageQueues",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "transferId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "businessKey"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "sourceCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "routeId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "tagCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "fileStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "deliveryStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "parseStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "name": "triggerMode"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "No comments found.",
+            "required": false,
+            "example": 0,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/transfer-parse-queues/{queueId}": {
+      "get": {
+        "summary": "getQueue",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getQueue",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "queueId"
+          }
+        ]
+      }
+    },
+    "/transfer-parse-queues/generate": {
+      "post": {
+        "summary": "generateQueue",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseQueueGenerateCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "generateQueue",
+        "parameters": []
+      }
+    },
+    "/transfer-parse-queues/backfill": {
+      "post": {
+        "summary": "backfillQueues",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseQueueBackfillCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/MultiResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "backfillQueues",
+        "parameters": []
+      }
+    },
+    "/transfer-parse-queues/{queueId}/subscribe": {
+      "post": {
+        "summary": "subscribeQueue",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseQueueSubscribeCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "subscribeQueue",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "queueId"
+          }
+        ]
+      }
+    },
+    "/transfer-parse-queues/{queueId}/complete": {
+      "post": {
+        "summary": "completeQueue",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseQueueCompleteCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "completeQueue",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "queueId"
+          }
+        ]
+      }
+    },
+    "/transfer-parse-queues/{queueId}/fail": {
+      "post": {
+        "summary": "failQueue",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseQueueFailCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "failQueue",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "queueId"
+          }
+        ]
+      }
+    },
+    "/transfer-parse-queues/{queueId}/retry": {
+      "post": {
+        "summary": "retryQueue",
+        "deprecated": false,
+        "description": "",
+        "tags": [
+          "ParseQueueController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseQueueRetryCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultParseQueueViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "retryQueue",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "No comments found.",
+            "required": true,
+            "name": "queueId"
           }
         ]
       }
@@ -3025,6 +3674,38 @@
         "parameters": []
       }
     },
+    "/transfer-run-logs/cleanup-yesterday": {
+      "post": {
+        "summary": "清理前一天产生的文件收发运行日志。",
+        "deprecated": false,
+        "tags": [
+          "TransferRunLogController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferRunLogCleanupResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "cleanupYesterdayLogs",
+        "parameters": []
+      }
+    },
     "/transfer-run-logs/stream": {
       "get": {
         "summary": "订阅文件收发运行日志流。",
@@ -3154,6 +3835,72 @@
         ]
       }
     },
+    "/transfer-objects/{transferId}/mail-info": {
+      "get": {
+        "summary": "查询文件主对象邮件信息。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferMailInfoViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getMailInfo",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件主键",
+            "required": true,
+            "name": "transferId"
+          }
+        ]
+      }
+    },
+    "/transfer-objects/{transferId}/download": {
+      "get": {
+        "summary": "下载文件主对象对应的本地临时文件。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "operationId": "downloadObject",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "path",
+            "description": "文件主键",
+            "required": true,
+            "name": "transferId"
+          }
+        ]
+      }
+    },
     "/transfer-objects": {
       "get": {
         "summary": "分页查询文件主对象列表。",
@@ -3221,6 +3968,16 @@
               "type": "string"
             },
             "in": "query",
+            "description": "投递状态",
+            "required": false,
+            "name": "deliveryStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
             "description": "邮件唯一标识",
             "required": false,
             "name": "mailId"
@@ -3274,6 +4031,82 @@
             "description": "标签值",
             "required": false,
             "name": "tagValue"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "页码",
+            "required": false,
+            "example": 0,
+            "name": "pageIndex"
+          },
+          {
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "in": "query",
+            "description": "每页条数",
+            "required": false,
+            "example": 0,
+            "name": "pageSize"
+          }
+        ]
+      }
+    },
+    "/transfer-objects/mail-inbox": {
+      "get": {
+        "summary": "分页查询邮件收件箱列表。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResultTransferObjectViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "pageMailInbox",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源编码",
+            "required": false,
+            "name": "sourceCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "邮件唯一标识",
+            "required": false,
+            "name": "mailId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "投递状态",
+            "required": false,
+            "name": "deliveryStatus"
           },
           {
             "schema": {
@@ -3367,6 +4200,16 @@
               "type": "string"
             },
             "in": "query",
+            "description": "投递状态",
+            "required": false,
+            "name": "deliveryStatus"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
             "description": "邮件唯一标识",
             "required": false,
             "name": "mailId"
@@ -3422,6 +4265,124 @@
             "name": "tagValue"
           }
         ]
+      }
+    },
+    "/transfer-objects/mail-inbox/analysis": {
+      "get": {
+        "summary": "统计分析邮件收件箱。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferObjectAnalysisViewDTO"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "analyzeMailInbox",
+        "parameters": [
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "来源编码",
+            "required": false,
+            "name": "sourceCode"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "邮件唯一标识",
+            "required": false,
+            "name": "mailId"
+          },
+          {
+            "schema": {
+              "format": "string",
+              "type": "string"
+            },
+            "in": "query",
+            "description": "投递状态",
+            "required": false,
+            "name": "deliveryStatus"
+          }
+        ]
+      }
+    },
+    "/transfer-objects/redeliver": {
+      "post": {
+        "summary": "重新投递文件主对象。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferObjectRedeliverCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferObjectRedeliverResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "redeliver_1",
+        "parameters": []
+      }
+    },
+    "/transfer-objects/retag": {
+      "post": {
+        "summary": "重新打标文件主对象。",
+        "deprecated": false,
+        "tags": [
+          "TransferObjectController"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferObjectRetagCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/SingleResultTransferObjectRetagResponse"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "retag",
+        "parameters": []
       }
     },
     "/parse-rules/profiles": {
@@ -3925,16 +4886,6 @@
           },
           {
             "schema": {
-              "format": "boolean",
-              "type": "boolean"
-            },
-            "in": "query",
-            "description": "启用状态",
-            "required": false,
-            "name": "enabled"
-          },
-          {
-            "schema": {
               "format": "string",
               "type": "string"
             },
@@ -4103,12 +5054,6 @@
             "description": "来源编码。",
             "type": "string"
           },
-          "enabled": {
-            "format": "boolean",
-            "description": "是否启用。",
-            "type": "boolean",
-            "example": true
-          },
           "ruleId": {
             "format": "string",
             "description": "规则主键。",
@@ -4122,6 +5067,17 @@
           "targetCode": {
             "format": "string",
             "description": "目标编码。",
+            "type": "string"
+          },
+          "enabled": {
+            "format": "boolean",
+            "description": "是否启用。",
+            "type": "boolean",
+            "example": true
+          },
+          "pollCron": {
+            "format": "string",
+            "description": "轮询表达式。",
             "type": "string"
           },
           "targetPath": {
@@ -4208,6 +5164,19 @@
             "description": "是否为空列。",
             "type": "boolean",
             "example": true
+          }
+        }
+      },
+      "TransferObjectRedeliverCommand": {
+        "type": "object",
+        "properties": {
+          "transferIds": {
+            "description": "文件主键集合。",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
           }
         }
       },
@@ -4409,6 +5378,61 @@
           }
         }
       },
+      "TransferMailInfoViewDTO": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "format": "string",
+            "description": "文件主键。",
+            "type": "string"
+          },
+          "mailId": {
+            "format": "string",
+            "description": "邮件唯一标识。",
+            "type": "string"
+          },
+          "mailFrom": {
+            "format": "string",
+            "description": "邮件发件人。",
+            "type": "string"
+          },
+          "mailTo": {
+            "format": "string",
+            "description": "邮件收件人。",
+            "type": "string"
+          },
+          "mailCc": {
+            "format": "string",
+            "description": "邮件抄送人。",
+            "type": "string"
+          },
+          "mailBcc": {
+            "format": "string",
+            "description": "邮件密送人。",
+            "type": "string"
+          },
+          "mailSubject": {
+            "format": "string",
+            "description": "邮件主题。",
+            "type": "string"
+          },
+          "mailBody": {
+            "format": "string",
+            "description": "邮件正文。",
+            "type": "string"
+          },
+          "mailProtocol": {
+            "format": "string",
+            "description": "邮件协议。",
+            "type": "string"
+          },
+          "mailFolder": {
+            "format": "string",
+            "description": "邮件文件夹。",
+            "type": "string"
+          }
+        }
+      },
       "TaskCreateResponse": {
         "type": "object",
         "properties": {
@@ -4591,6 +5615,40 @@
           "rule": {
             "description": "路由规则详情。(object)",
             "$ref": "#/components/schemas/TransferRuleViewDTO"
+          }
+        }
+      },
+      "SingleResultTransferMailInfoViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferMailInfoViewDTO"
           }
         }
       },
@@ -4790,6 +5848,41 @@
           }
         }
       },
+      "TransferObjectAttachmentViewDTO": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "format": "string",
+            "description": "文件主键。",
+            "type": "string"
+          },
+          "originalName": {
+            "format": "string",
+            "description": "原始文件名。",
+            "type": "string"
+          },
+          "localTempPath": {
+            "format": "string",
+            "description": "本地临时文件路径。",
+            "type": "string"
+          },
+          "realStoragePath": {
+            "format": "string",
+            "description": "真实文件存储地址。",
+            "type": "string"
+          },
+          "mimeType": {
+            "format": "string",
+            "description": "文件类型。",
+            "type": "string"
+          },
+          "sizeBytes": {
+            "format": "string",
+            "description": "文件大小，单位字节。",
+            "type": "string"
+          }
+        }
+      },
       "SingleResultStgExternalValuationViewDTO": {
         "type": "object",
         "properties": {
@@ -4916,6 +6009,53 @@
             "format": "string",
             "description": "样例状态。",
             "type": "string"
+          }
+        }
+      },
+      "ParseQueueObserverRunSummary": {
+        "type": "object",
+        "properties": {
+          "batchSize": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "successCount": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "failedCount": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "skippedCount": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "totalSuccessCount": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "totalFailedCount": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
+          },
+          "totalSkippedCount": {
+            "format": "int64",
+            "description": "No comments found.",
+            "type": "number",
+            "example": 0
           }
         }
       },
@@ -5193,12 +6333,130 @@
           }
         }
       },
+      "PageResultParseQueueViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "totalCount": {
+            "format": "int64",
+            "description": "总数",
+            "type": "number",
+            "example": 0
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "页数",
+            "type": "integer",
+            "example": 0
+          },
+          "pageIndex": {
+            "format": "int32",
+            "description": "当前页数",
+            "type": "integer",
+            "example": 0
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParseQueueViewDTO"
+            }
+          }
+        }
+      },
       "Object": {
         "type": "object",
         "properties": {
           "mapKey": {
             "description": "A map key.(object)",
             "$ref": "#/components/schemas/Object"
+          }
+        }
+      },
+      "SingleResultTransferObjectRedeliverResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferObjectRedeliverResponse"
+          }
+        }
+      },
+      "TransferRunLogCleanupResponse": {
+        "type": "object",
+        "properties": {
+          "cleanupDate": {
+            "format": "string",
+            "description": "清理日期。",
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "startInclusive": {
+            "format": "string",
+            "description": "清理起始时间。",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "endExclusive": {
+            "format": "string",
+            "description": "清理结束时间。",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "deletedCount": {
+            "format": "int64",
+            "description": "清理数量。",
+            "type": "number",
+            "example": 0
           }
         }
       },
@@ -5239,6 +6497,98 @@
           }
         }
       },
+      "ValsetFileInfoRepairResultDTO": {
+        "type": "object",
+        "properties": {
+          "dryRun": {
+            "format": "boolean",
+            "description": "是否预览模式。",
+            "type": "boolean",
+            "example": true
+          },
+          "transferId": {
+            "format": "string",
+            "description": "本次扫描的 transferId。",
+            "type": "string"
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "分批大小。",
+            "type": "integer",
+            "example": 0
+          },
+          "scannedCount": {
+            "format": "int64",
+            "description": "扫描到的文件主对象数量。",
+            "type": "number",
+            "example": 0
+          },
+          "matchedCount": {
+            "format": "int64",
+            "description": "已存在且成功对齐的文件主数据数量。",
+            "type": "number",
+            "example": 0
+          },
+          "createdCount": {
+            "format": "int64",
+            "description": "新增的文件主数据数量。",
+            "type": "number",
+            "example": 0
+          },
+          "updatedCount": {
+            "format": "int64",
+            "description": "更新的文件主数据数量。",
+            "type": "number",
+            "example": 0
+          },
+          "skippedCount": {
+            "format": "int64",
+            "description": "跳过的数量。",
+            "type": "number",
+            "example": 0
+          },
+          "failedCount": {
+            "format": "int64",
+            "description": "失败数量。",
+            "type": "number",
+            "example": 0
+          }
+        }
+      },
+      "SingleResultTransferObjectRetagResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferObjectRetagResponse"
+          }
+        }
+      },
       "SingleResultParseRuleBundleViewDTO": {
         "type": "object",
         "properties": {
@@ -5270,6 +6620,42 @@
           "data": {
             "description": "返回的单条数据(object)",
             "$ref": "#/components/schemas/ParseRuleBundleViewDTO"
+          }
+        }
+      },
+      "TransferObjectRetagResponse": {
+        "type": "object",
+        "properties": {
+          "requestedCount": {
+            "format": "int32",
+            "description": "请求数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "successCount": {
+            "format": "int32",
+            "description": "成功数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "failureCount": {
+            "format": "int32",
+            "description": "失败数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "matchedTagCount": {
+            "format": "int32",
+            "description": "命中标签总数。",
+            "type": "integer",
+            "example": 0
+          },
+          "items": {
+            "description": "处理明细。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectRetagItemViewDTO"
+            }
           }
         }
       },
@@ -5434,9 +6820,19 @@
             "description": "本地临时文件路径。",
             "type": "string"
           },
+          "realStoragePath": {
+            "format": "string",
+            "description": "真实文件存储地址。",
+            "type": "string"
+          },
           "status": {
             "format": "string",
             "description": "文件状态。",
+            "type": "string"
+          },
+          "deliveryStatus": {
+            "format": "string",
+            "description": "投递状态。",
             "type": "string"
           },
           "receivedAt": {
@@ -5450,6 +6846,23 @@
             "description": "落库时间。",
             "type": "string",
             "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "businessDate": {
+            "format": "string",
+            "description": "业务日期。",
+            "type": "string",
+            "example": "yyyy-MM-dd"
+          },
+          "businessId": {
+            "format": "string",
+            "description": "业务标识。",
+            "type": "string"
+          },
+          "receiveDate": {
+            "format": "string",
+            "description": "收取日期。",
+            "type": "string",
+            "example": "yyyy-MM-dd"
           },
           "routeId": {
             "format": "string",
@@ -5472,6 +6885,32 @@
             "items": {
               "$ref": "#/components/schemas/TransferObjectTagViewDTO"
             }
+          },
+          "primaryTransferId": {
+            "format": "string",
+            "description": "邮件分组的主文件主键。",
+            "type": "string"
+          },
+          "transferIds": {
+            "description": "当前邮件分组包含的文件主键列表。",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": "\"\"\",\"\"\""
+          },
+          "attachments": {
+            "description": "当前邮件分组包含的附件列表。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectAttachmentViewDTO"
+            }
+          },
+          "attachmentCount": {
+            "format": "int32",
+            "description": "当前邮件分组的附件数量。",
+            "type": "integer",
+            "example": 0
           }
         }
       },
@@ -5591,6 +7030,208 @@
           }
         }
       },
+      "ParseQueueViewDTO": {
+        "type": "object",
+        "properties": {
+          "queueId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "businessKey": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "transferId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "originalName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "sourceId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "sourceType": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "sourceCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "routeId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "deliveryId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagName": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "fileStatus": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "deliveryStatus": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "parseStatus": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "triggerMode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "retryCount": {
+            "format": "int32",
+            "description": "No comments found.",
+            "type": "integer",
+            "example": 0
+          },
+          "subscribedBy": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "subscribedAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "parsedAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "lastErrorMessage": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "objectSnapshotJson": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "deliverySnapshotJson": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "parseRequestJson": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "parseResultJson": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          },
+          "updatedAt": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string",
+            "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "ParseQueueBackfillCommand": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "sourceId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "sourceCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "routeId": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "tagCode": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "status": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "deliveryStatus": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "parseStatus": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          },
+          "forceRebuild": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
+          "dryRun": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
       "SingleResultTransferRunLogAnalysisViewDTO": {
         "type": "object",
         "properties": {
@@ -5659,6 +7300,42 @@
           }
         }
       },
+      "TransferObjectRedeliverResponse": {
+        "type": "object",
+        "properties": {
+          "requestedCount": {
+            "format": "int32",
+            "description": "请求数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "successCount": {
+            "format": "int32",
+            "description": "成功数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "failureCount": {
+            "format": "int32",
+            "description": "失败数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "skippedCount": {
+            "format": "int32",
+            "description": "跳过数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "items": {
+            "description": "处理明细。",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TransferObjectRedeliverItemViewDTO"
+            }
+          }
+        }
+      },
       "YssFormDefinition": {
         "type": "object",
         "properties": {
@@ -5723,6 +7400,74 @@
             "items": {
               "$ref": "#/components/schemas/FieldEffect"
             }
+          }
+        }
+      },
+      "SingleResultParseQueueObserverRunSummary": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/ParseQueueObserverRunSummary"
+          }
+        }
+      },
+      "SingleResultParseQueueViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/ParseQueueViewDTO"
           }
         }
       },
@@ -5820,6 +7565,61 @@
           "data": {
             "description": "返回的单条数据(object)",
             "$ref": "#/components/schemas/FullWorkflowResponse"
+          }
+        }
+      },
+      "TransferObjectRetagCommand": {
+        "type": "object",
+        "properties": {
+          "sourceId": {
+            "format": "string",
+            "description": "来源主键。",
+            "type": "string"
+          },
+          "sourceType": {
+            "format": "string",
+            "description": "来源类型。",
+            "type": "string"
+          },
+          "sourceCode": {
+            "format": "string",
+            "description": "来源编码。",
+            "type": "string"
+          },
+          "status": {
+            "format": "string",
+            "description": "文件状态。",
+            "type": "string"
+          },
+          "mailId": {
+            "format": "string",
+            "description": "邮件唯一标识。",
+            "type": "string"
+          },
+          "fingerprint": {
+            "format": "string",
+            "description": "文件指纹。",
+            "type": "string"
+          },
+          "routeId": {
+            "format": "string",
+            "description": "路由主键。",
+            "type": "string"
+          },
+          "tagId": {
+            "format": "string",
+            "description": "标签主键。",
+            "type": "string"
+          },
+          "tagCode": {
+            "format": "string",
+            "description": "标签编码。",
+            "type": "string"
+          },
+          "tagValue": {
+            "format": "string",
+            "description": "标签值。",
+            "type": "string"
           }
         }
       },
@@ -6016,6 +7816,32 @@
           }
         }
       },
+      "TransferObjectRedeliverItemViewDTO": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "format": "string",
+            "description": "文件主键。",
+            "type": "string"
+          },
+          "routeId": {
+            "format": "string",
+            "description": "路由主键。",
+            "type": "string"
+          },
+          "success": {
+            "format": "boolean",
+            "description": "是否成功。",
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "format": "string",
+            "description": "处理说明。",
+            "type": "string"
+          }
+        }
+      },
       "SingleResultTransferSourceMutationResponse": {
         "type": "object",
         "properties": {
@@ -6097,6 +7923,33 @@
           "rollbackFromVersion": {
             "format": "string",
             "description": "回滚来源版本。",
+            "type": "string"
+          }
+        }
+      },
+      "TransferObjectRetagItemViewDTO": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "format": "string",
+            "description": "文件主键。",
+            "type": "string"
+          },
+          "success": {
+            "format": "boolean",
+            "description": "是否成功。",
+            "type": "boolean",
+            "example": true
+          },
+          "tagCount": {
+            "format": "int32",
+            "description": "命中标签数量。",
+            "type": "integer",
+            "example": 0
+          },
+          "message": {
+            "format": "string",
+            "description": "处理说明。",
             "type": "string"
           }
         }
@@ -6556,6 +8409,12 @@
             "description": "当前使用的来源表单模板名。",
             "type": "string"
           },
+          "enabledRouteCount": {
+            "format": "int64",
+            "description": "已启用路由数量。",
+            "type": "number",
+            "example": 0
+          },
           "enabled": {
             "format": "boolean",
             "description": "是否启用。",
@@ -6639,6 +8498,12 @@
             "items": {
               "$ref": "#/components/schemas/TransferObjectMailFolderCountViewDTO"
             }
+          },
+          "undeliveredCount": {
+            "format": "int64",
+            "description": "未投递数量。",
+            "type": "number",
+            "example": 0
           }
         }
       },
@@ -6859,6 +8724,16 @@
           }
         }
       },
+      "ParseQueueFailCommand": {
+        "type": "object",
+        "properties": {
+          "errorMessage": {
+            "format": "string",
+            "description": "No comments found.",
+            "type": "string"
+          }
+        }
+      },
       "TransferRunLogRedeliverItemViewDTO": {
         "type": "object",
         "properties": {
@@ -7021,6 +8896,12 @@
             "description": "是否启用。",
             "type": "boolean",
             "example": true
+          },
+          "referencedRouteCount": {
+            "format": "int64",
+            "description": "已关联的分拣路由数量。",
+            "type": "number",
+            "example": 0
           },
           "targetPathTemplate": {
             "format": "string",
@@ -8380,6 +10261,17 @@
           "workbookPath"
         ]
       },
+      "ParseQueueRetryCommand": {
+        "type": "object",
+        "properties": {
+          "forceRebuild": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
       "ParseRuleRegressionCaseViewDTO": {
         "type": "object",
         "properties": {
@@ -8523,6 +10415,34 @@
           }
         }
       },
+      "ValsetFileInfoRepairCommand": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "format": "string",
+            "description": "指定待修复的 transferId，留空则全量扫描。",
+            "type": "string"
+          },
+          "pageSize": {
+            "format": "int32",
+            "description": "分批扫描数量。\nValidation[Min(value=1, message=批量大小必须大于 0); Max(value=1000, message=批量大小不能超过 1000)]",
+            "type": "integer",
+            "example": 0
+          },
+          "createMissing": {
+            "format": "boolean",
+            "description": "是否在文件主数据缺失时自动创建。",
+            "type": "boolean",
+            "example": true
+          },
+          "dryRun": {
+            "format": "boolean",
+            "description": "是否只预览不落库。",
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
       "TransferSourceCheckpointViewDTO": {
         "type": "object",
         "properties": {
@@ -8566,6 +10486,40 @@
             "description": "修改时间。",
             "type": "string",
             "example": "yyyy-MM-dd HH:mm:ss"
+          }
+        }
+      },
+      "SingleResultTransferRunLogCleanupResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/TransferRunLogCleanupResponse"
           }
         }
       },
@@ -8641,6 +10595,40 @@
           "attributes": {
             "description": "No comments found.(object)",
             "$ref": "#/components/schemas/Object"
+          }
+        }
+      },
+      "SingleResultValsetFileInfoRepairResultDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回的单条数据(object)",
+            "$ref": "#/components/schemas/ValsetFileInfoRepairResultDTO"
           }
         }
       },
@@ -8734,6 +10722,16 @@
           "storageUri": {
             "format": "string",
             "description": "存储 URI。",
+            "type": "string"
+          },
+          "localTempPath": {
+            "format": "string",
+            "description": "本地临时路径。",
+            "type": "string"
+          },
+          "realStoragePath": {
+            "format": "string",
+            "description": "真实存储路径。",
             "type": "string"
           },
           "fileFormat": {
@@ -9141,12 +11139,6 @@
             "description": "来源编码。",
             "type": "string"
           },
-          "enabled": {
-            "format": "boolean",
-            "description": "是否启用。",
-            "type": "boolean",
-            "example": true
-          },
           "ruleId": {
             "format": "string",
             "description": "规则主键。",
@@ -9160,6 +11152,17 @@
           "targetCode": {
             "format": "string",
             "description": "目标编码。",
+            "type": "string"
+          },
+          "enabled": {
+            "format": "boolean",
+            "description": "是否启用。",
+            "type": "boolean",
+            "example": true
+          },
+          "pollCron": {
+            "format": "string",
+            "description": "轮询表达式。",
             "type": "string"
           },
           "targetPath": {
@@ -9536,6 +11539,45 @@
           }
         }
       },
+      "ParseQueueGenerateCommand": {
+        "type": "object",
+        "properties": {
+          "transferId": {
+            "format": "string",
+            "description": "文件主键。",
+            "type": "string"
+          },
+          "businessKey": {
+            "format": "string",
+            "description": "业务键。",
+            "type": "string"
+          },
+          "sourceId": {
+            "format": "string",
+            "description": "来源主键。",
+            "type": "string"
+          },
+          "routeId": {
+            "format": "string",
+            "description": "路由主键。",
+            "type": "string"
+          },
+          "tagCode": {
+            "format": "string",
+            "description": "标签编码。",
+            "type": "string"
+          },
+          "forceRebuild": {
+            "format": "boolean",
+            "description": "是否强制重建。",
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "transferId"
+        ]
+      },
       "YssSchema": {
         "type": "object",
         "properties": {
@@ -9547,6 +11589,16 @@
           "properties": {
             "description": "属性节点映射。(object)",
             "$ref": "#/components/schemas/YssSchemaNode"
+          }
+        }
+      },
+      "ParseQueueSubscribeCommand": {
+        "type": "object",
+        "properties": {
+          "subscribedBy": {
+            "format": "string",
+            "description": "订阅人。",
+            "type": "string"
           }
         }
       },
@@ -9592,6 +11644,18 @@
           "totalCount": {
             "format": "int64",
             "description": "总数。",
+            "type": "number",
+            "example": 0
+          },
+          "taggedCount": {
+            "format": "int64",
+            "description": "已打标对象数。",
+            "type": "number",
+            "example": 0
+          },
+          "untaggedCount": {
+            "format": "int64",
+            "description": "未打标对象数。",
             "type": "number",
             "example": 0
           },
@@ -9971,6 +12035,15 @@
           }
         }
       },
+      "ParseQueueCompleteCommand": {
+        "type": "object",
+        "properties": {
+          "parseResultJson": {
+            "description": "No comments found.(object)",
+            "type": "object"
+          }
+        }
+      },
       "PageResultTransferRunLogViewDTO": {
         "type": "object",
         "properties": {
@@ -10130,6 +12203,43 @@
           "data": {
             "description": "返回的单条数据(object)",
             "$ref": "#/components/schemas/TransferRuleViewDTO"
+          }
+        }
+      },
+      "MultiResultParseQueueViewDTO": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "format": "boolean",
+            "description": "状态",
+            "type": "boolean",
+            "example": true
+          },
+          "dataType": {
+            "format": "string",
+            "description": "返回数据格式",
+            "type": "string"
+          },
+          "code": {
+            "description": "返回状态码(object)",
+            "type": "object"
+          },
+          "message": {
+            "format": "string",
+            "description": "返回消息",
+            "type": "string"
+          },
+          "tips": {
+            "format": "string",
+            "description": "返回提示消息",
+            "type": "string"
+          },
+          "data": {
+            "description": "返回数据",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParseQueueViewDTO"
+            }
           }
         }
       },

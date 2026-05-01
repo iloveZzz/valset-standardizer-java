@@ -4,9 +4,12 @@ import com.yss.cloud.dto.response.MultiResult;
 import com.yss.cloud.dto.response.SingleResult;
 import com.yss.valset.application.dto.ValsetFileIngestLogViewDTO;
 import com.yss.valset.application.dto.ValsetFileInfoViewDTO;
+import com.yss.valset.application.dto.ValsetFileInfoRepairResultDTO;
 import com.yss.valset.application.dto.UploadValuationFileResponse;
 import com.yss.valset.application.dto.ValuationSheetStyleViewDTO;
+import com.yss.valset.application.command.ValsetFileInfoRepairCommand;
 import com.yss.valset.application.service.FileManagementQueryAppService;
+import com.yss.valset.application.service.ValsetFileInfoRepairAppService;
 import com.yss.valset.application.service.ValuationWorkflowAppService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -16,12 +19,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import jakarta.validation.Valid;
 
 /**
  * 文件信息管理接口。
@@ -32,11 +38,14 @@ public class FileManagementController {
 
     private final ValuationWorkflowAppService valuationWorkflowAppService;
     private final FileManagementQueryAppService fileManagementQueryAppService;
+    private final ValsetFileInfoRepairAppService valsetFileInfoRepairAppService;
 
     public FileManagementController(ValuationWorkflowAppService valuationWorkflowAppService,
-                                    FileManagementQueryAppService fileManagementQueryAppService) {
+                                    FileManagementQueryAppService fileManagementQueryAppService,
+                                    ValsetFileInfoRepairAppService valsetFileInfoRepairAppService) {
         this.valuationWorkflowAppService = valuationWorkflowAppService;
         this.fileManagementQueryAppService = fileManagementQueryAppService;
+        this.valsetFileInfoRepairAppService = valsetFileInfoRepairAppService;
     }
 
     /**
@@ -70,6 +79,19 @@ public class FileManagementController {
     }
 
     /**
+     * 通过路径查询文件主数据。
+     *
+     * @param path 文件路径
+     * @return 文件主数据
+     */
+    @GetMapping("/by-path")
+    @Operation(summary = "通过路径查询文件主数据",
+            description = "优先通过 localTempPath / realStoragePath 定位文件主数据，不依赖 fileId。")
+    public SingleResult<ValsetFileInfoViewDTO> queryFileInfoByPath(@RequestParam("path") String path) {
+        return SingleResult.of(fileManagementQueryAppService.queryFileInfoByPath(path));
+    }
+
+    /**
      * 按条件搜索文件主数据。
      *
      * @param sourceChannel 来源渠道
@@ -100,6 +122,19 @@ public class FileManagementController {
     }
 
     /**
+     * 通过路径查询文件接入日志。
+     *
+     * @param path 文件路径
+     * @return 文件接入日志列表
+     */
+    @GetMapping("/by-path/ingest-logs")
+    @Operation(summary = "通过路径查询文件接入日志",
+            description = "按 localTempPath / realStoragePath 定位文件后回查接入日志，不依赖 fileId。")
+    public MultiResult<ValsetFileIngestLogViewDTO> queryIngestLogsByPath(@RequestParam("path") String path) {
+        return MultiResult.of(fileManagementQueryAppService.queryIngestLogsByPath(path));
+    }
+
+    /**
      * 查询文件对应的 Excel sheet 样式快照。
      *
      * @param fileId 文件主键
@@ -110,5 +145,31 @@ public class FileManagementController {
             description = "仅 Excel 文件会写入 sheet 样式快照，返回标题、header 与合并区域相关的 Univer 结构。")
     public MultiResult<ValuationSheetStyleViewDTO> querySheetStyles(@PathVariable Long fileId) {
         return MultiResult.of(fileManagementQueryAppService.querySheetStyles(fileId));
+    }
+
+    /**
+     * 通过路径查询文件对应的 Excel sheet 样式快照。
+     *
+     * @param path 文件路径
+     * @return sheet 样式快照列表
+     */
+    @GetMapping("/by-path/sheet-styles")
+    @Operation(summary = "通过路径查询文件对应的 Excel sheet 样式快照",
+            description = "按 localTempPath / realStoragePath 定位文件后回查 sheet 样式，不依赖 fileId。")
+    public MultiResult<ValuationSheetStyleViewDTO> querySheetStylesByPath(@RequestParam("path") String path) {
+        return MultiResult.of(fileManagementQueryAppService.querySheetStylesByPath(path));
+    }
+
+    /**
+     * 按 TransferObject 回填文件主数据。
+     *
+     * @param command 回填命令
+     * @return 回填结果
+     */
+    @PostMapping("/repair-from-transfer")
+    @Operation(summary = "按 TransferObject 回填文件主数据",
+            description = "当历史文件主数据缺失或路径信息不完整时，按 TransferObject 重新回填文件主数据。")
+    public SingleResult<ValsetFileInfoRepairResultDTO> repairFromTransfer(@Valid @RequestBody(required = false) ValsetFileInfoRepairCommand command) {
+        return SingleResult.of(valsetFileInfoRepairAppService.repair(command));
     }
 }

@@ -18,6 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,6 +63,15 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     }
 
     @Override
+    public ValsetFileInfoViewDTO queryFileInfoByPath(String path) {
+        ValsetFileInfo fileInfo = resolveFileInfoByPath(path);
+        if (fileInfo == null) {
+            throw new ResponseStatusException(NOT_FOUND, "未找到 path 对应的文件主数据: " + path);
+        }
+        return toView(fileInfo);
+    }
+
+    @Override
     public List<ValsetFileInfoViewDTO> searchFileInfos(String sourceChannel,
                                                             String fileStatus,
                                                             String fileFingerprint,
@@ -84,6 +96,15 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
             return Collections.emptyList();
         }
         return ingestLogs.stream().map(this::toView).toList();
+    }
+
+    @Override
+    public List<ValsetFileIngestLogViewDTO> queryIngestLogsByPath(String path) {
+        ValsetFileInfo fileInfo = resolveFileInfoByPath(path);
+        if (fileInfo == null || fileInfo.getFileId() == null) {
+            return Collections.emptyList();
+        }
+        return queryIngestLogs(fileInfo.getFileId());
     }
 
     @Override
@@ -113,6 +134,8 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
                 .sourceUri(fileInfo.getSourceUri())
                 .storageType(fileInfo.getStorageType() == null ? null : fileInfo.getStorageType().name())
                 .storageUri(fileInfo.getStorageUri())
+                .localTempPath(fileInfo.getLocalTempPath())
+                .realStoragePath(fileInfo.getRealStoragePath())
                 .fileFormat(fileInfo.getFileFormat())
                 .fileStatus(fileInfo.getFileStatus() == null ? null : fileInfo.getFileStatus().name())
                 .createdBy(fileInfo.getCreatedBy())
@@ -125,6 +148,15 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
                 .storageMetaJson(fileInfo.getStorageMetaJson())
                 .remark(fileInfo.getRemark())
                 .build();
+    }
+
+    @Override
+    public List<ValuationSheetStyleViewDTO> querySheetStylesByPath(String path) {
+        ValsetFileInfo fileInfo = resolveFileInfoByPath(path);
+        if (fileInfo == null || fileInfo.getFileId() == null) {
+            return Collections.emptyList();
+        }
+        return querySheetStyles(fileInfo.getFileId());
     }
 
     private ValsetFileIngestLogViewDTO toView(ValsetFileIngestLog ingestLog) {
@@ -287,6 +319,41 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
             return ValsetFileStatus.valueOf(fileStatus.trim().toUpperCase());
         } catch (Exception exception) {
             throw new ResponseStatusException(BAD_REQUEST, "不支持的 fileStatus: " + fileStatus, exception);
+        }
+    }
+
+    private ValsetFileInfo resolveFileInfoByPath(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        String trimmedPath = path.trim();
+        ValsetFileInfo fileInfo = subjectMatchFileInfoGateway.findByPath(trimmedPath);
+        if (fileInfo != null) {
+            return fileInfo;
+        }
+        for (String candidate : normalizePathVariants(trimmedPath)) {
+            if (candidate.equals(trimmedPath)) {
+                continue;
+            }
+            fileInfo = subjectMatchFileInfoGateway.findByPath(candidate);
+            if (fileInfo != null) {
+                return fileInfo;
+            }
+        }
+        return null;
+    }
+
+    private List<String> normalizePathVariants(String path) {
+        try {
+            Path candidatePath = Paths.get(path);
+            Path absolute = candidatePath.toAbsolutePath().normalize();
+            if (absolute.toString().equals(path)) {
+                return List.of();
+            }
+            return List.of(absolute.toString());
+        } catch (InvalidPathException exception) {
+            log.warn("文件路径无效，无法解析文件主数据，path={}", path, exception);
+            return List.of();
         }
     }
 }

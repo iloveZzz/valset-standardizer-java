@@ -10,7 +10,7 @@ import javax.persistence.Id;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("t_subject_match_file_ingest_log")
+@TableName("t_valset_file_ingest_log")
 public class ValsetFileIngestLogPO {
     @Id
     @TableId(value = "ingest_id", type = IdType.ASSIGN_ID)

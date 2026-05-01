@@ -1,19 +1,12 @@
 --liquibase formatted sql
 
 --changeset codex:20260415-06-mysql-indexes dbms:mysql
+--validCheckSum: 9:d958671d7e28e6cf64baf3bfd18a4e5f
 --preconditions onFail:MARK_RAN onError:MARK_RAN
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_file_info' AND index_name = 'uk_subject_match_file_fingerprint'
-CREATE UNIQUE INDEX uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_file_info' AND index_name = 'idx_subject_match_file_channel_status'
-CREATE INDEX idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_file_info' AND index_name = 'idx_subject_match_file_received_at'
-CREATE INDEX idx_subject_match_file_received_at ON t_subject_match_file_info(received_at);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_file_info' AND index_name = 'idx_subject_match_file_last_task_id'
-CREATE INDEX idx_subject_match_file_last_task_id ON t_subject_match_file_info(last_task_id);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_file_ingest_log' AND index_name = 'idx_subject_match_ingest_file_id'
-CREATE INDEX idx_subject_match_ingest_file_id ON t_subject_match_file_ingest_log(file_id);
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_file_ingest_log' AND index_name = 'idx_subject_match_ingest_channel_msg'
-CREATE INDEX idx_subject_match_ingest_channel_msg ON t_subject_match_file_ingest_log(source_channel, channel_message_id);
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_valset_file_ingest_log' AND index_name = 'idx_valset_ingest_file_id'
+CREATE INDEX idx_valset_ingest_file_id ON t_valset_file_ingest_log(file_id);
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_valset_file_ingest_log' AND index_name = 'idx_valset_ingest_channel_msg'
+CREATE INDEX idx_valset_ingest_channel_msg ON t_valset_file_ingest_log(source_channel, channel_message_id);
 
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_ods_valuation_filedata' AND index_name = 'idx_ods_filedata_task_id'
 CREATE INDEX idx_ods_filedata_task_id ON t_ods_valuation_filedata(task_id);
@@ -26,8 +19,6 @@ CREATE UNIQUE INDEX uk_ods_sheet_style_file_sheet_scope ON t_ods_valuation_sheet
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_ods_valuation_sheet_style' AND index_name = 'idx_ods_sheet_style_task_id'
 CREATE INDEX idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
 
---precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_parsed_workbook' AND index_name = 'idx_pwb_file_id'
-CREATE INDEX idx_pwb_file_id ON t_subject_match_parsed_workbook(file_id);
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_subject_match_result' AND index_name = 'idx_match_result_file_id'
 CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 
@@ -80,12 +71,9 @@ CREATE INDEX idx_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
 CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
 
 --changeset codex:20260415-06-postgres-indexes dbms:postgresql
-CREATE UNIQUE INDEX uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
-CREATE INDEX idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);
-CREATE INDEX idx_subject_match_file_received_at ON t_subject_match_file_info(received_at);
-CREATE INDEX idx_subject_match_file_last_task_id ON t_subject_match_file_info(last_task_id);
-CREATE INDEX idx_subject_match_ingest_file_id ON t_subject_match_file_ingest_log(file_id);
-CREATE INDEX idx_subject_match_ingest_channel_msg ON t_subject_match_file_ingest_log(source_channel, channel_message_id);
+--validCheckSum: 9:d958671d7e28e6cf64baf3bfd18a4e5f
+CREATE INDEX idx_valset_ingest_file_id ON t_valset_file_ingest_log(file_id);
+CREATE INDEX idx_valset_ingest_channel_msg ON t_valset_file_ingest_log(source_channel, channel_message_id);
 
 CREATE INDEX idx_ods_filedata_task_id ON t_ods_valuation_filedata(task_id);
 CREATE INDEX idx_ods_filedata_file_id ON t_ods_valuation_filedata(file_id);
@@ -93,7 +81,6 @@ CREATE INDEX idx_ods_filedata_task_row ON t_ods_valuation_filedata(task_id, row_
 CREATE UNIQUE INDEX uk_ods_sheet_style_file_sheet_scope ON t_ods_valuation_sheet_style(file_id, sheet_name, style_scope);
 CREATE INDEX idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
 
-CREATE INDEX idx_pwb_file_id ON t_subject_match_parsed_workbook(file_id);
 CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 
 CREATE INDEX idx_stg_val_file_id ON t_stg_external_valuation(file_id);
@@ -123,12 +110,9 @@ CREATE INDEX idx_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
 CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
 
 --changeset codex:20260415-06-oracle-indexes dbms:oracle
-CREATE UNIQUE INDEX uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
-CREATE INDEX idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);
-CREATE INDEX idx_subject_match_file_received_at ON t_subject_match_file_info(received_at);
-CREATE INDEX idx_subject_match_file_last_task_id ON t_subject_match_file_info(last_task_id);
-CREATE INDEX idx_subject_match_ingest_file_id ON t_subject_match_file_ingest_log(file_id);
-CREATE INDEX idx_subject_match_ingest_channel_msg ON t_subject_match_file_ingest_log(source_channel, channel_message_id);
+--validCheckSum: 9:d958671d7e28e6cf64baf3bfd18a4e5f
+CREATE INDEX idx_valset_ingest_file_id ON t_valset_file_ingest_log(file_id);
+CREATE INDEX idx_valset_ingest_channel_msg ON t_valset_file_ingest_log(source_channel, channel_message_id);
 
 CREATE INDEX idx_ods_filedata_task_id ON t_ods_valuation_filedata(task_id);
 CREATE INDEX idx_ods_filedata_file_id ON t_ods_valuation_filedata(file_id);
@@ -136,7 +120,6 @@ CREATE INDEX idx_ods_filedata_task_row ON t_ods_valuation_filedata(task_id, row_
 CREATE UNIQUE INDEX uk_ods_sheet_style_file_sheet_scope ON t_ods_valuation_sheet_style(file_id, sheet_name, style_scope);
 CREATE INDEX idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
 
-CREATE INDEX idx_pwb_file_id ON t_subject_match_parsed_workbook(file_id);
 CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 
 CREATE INDEX idx_stg_val_file_id ON t_stg_external_valuation(file_id);

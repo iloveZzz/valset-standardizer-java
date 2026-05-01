@@ -3,6 +3,7 @@ package com.yss.valset.extract.parser.facade;
 import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.domain.parser.ValuationDataParserProvider;
+import com.yss.valset.extract.parser.file.CsvValuationDataParser;
 import com.yss.valset.extract.parser.api.ApiValuationDataParser;
 import com.yss.valset.extract.parser.db.DbValuationDataParser;
 import com.yss.valset.extract.parser.file.OdsValuationDataParser;
@@ -25,10 +26,11 @@ public class ValuationAnalysisFacade implements ValuationDataParserProvider {
     private final Map<DataSourceType, ValuationDataParser> parserMap = new ConcurrentHashMap<>();
 
     public ValuationAnalysisFacade(OdsValuationDataParser odsValuationDataParser,
+                                   CsvValuationDataParser csvValuationDataParser,
                                    ApiValuationDataParser apiValuationDataParser,
                                    DbValuationDataParser dbValuationDataParser) {
         parserMap.put(DataSourceType.EXCEL, odsValuationDataParser);
-        parserMap.put(DataSourceType.CSV, odsValuationDataParser);
+        parserMap.put(DataSourceType.CSV, csvValuationDataParser);
         parserMap.put(DataSourceType.API, apiValuationDataParser);
         parserMap.put(DataSourceType.DB, dbValuationDataParser);
     }

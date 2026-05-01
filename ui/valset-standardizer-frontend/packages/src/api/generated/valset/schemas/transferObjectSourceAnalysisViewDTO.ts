@@ -10,12 +10,12 @@ import type { TransferObjectStatusCountViewDTO } from "./transferObjectStatusCou
 export interface TransferObjectSourceAnalysisViewDTO {
   /** 邮件文件夹统计列表。 */
   mailFolderCounts?: TransferObjectMailFolderCountViewDTO[];
-  /** 未投递数量。 */
-  undeliveredCount?: number;
   /** 来源类型。 */
   sourceType?: string;
   /** 状态统计列表。 */
   statusCounts?: TransferObjectStatusCountViewDTO[];
   /** 总数。 */
   totalCount?: number;
+  /** 未投递数量。 */
+  undeliveredCount?: number;
 }

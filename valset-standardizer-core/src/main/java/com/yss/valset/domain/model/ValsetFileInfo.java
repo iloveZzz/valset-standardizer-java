@@ -26,6 +26,8 @@ public class ValsetFileInfo {
     private String sourceUri;
     private ValsetFileStorageType storageType;
     private String storageUri;
+    private String localTempPath;
+    private String realStoragePath;
     private String fileFormat;
     private ValsetFileStatus fileStatus;
     private String createdBy;

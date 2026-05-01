@@ -1,11 +1,9 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yss.valset.transfer.domain.gateway.TransferDeliveryGateway;
 import com.yss.valset.transfer.domain.gateway.TransferRouteGateway;
 import com.yss.valset.transfer.domain.model.TransferDeliveryRecord;
-import com.yss.valset.transfer.domain.model.TransferDeliveryRecordPage;
 import com.yss.valset.transfer.domain.model.TransferResult;
 import com.yss.valset.transfer.domain.model.TransferRoute;
 import com.yss.valset.transfer.infrastructure.convertor.TransferDeliveryRecordMapper;
@@ -27,8 +25,6 @@ import java.util.Optional;
 @Repository
 @RequiredArgsConstructor
 public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
-
-    private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final TransferDeliveryRecordRepository transferDeliveryRecordRepository;
     private final TransferRouteGateway transferRouteGateway;
@@ -67,11 +63,6 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
                 Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
                         .eq(TransferDeliveryRecordPO::getRouteId, id)
         );
-    }
-
-    @Override
-    public Optional<TransferDeliveryRecord> findById(String deliveryId) {
-        return Optional.ofNullable(transferDeliveryRecordRepository.selectById(parseLong(deliveryId))).map(this::toDomain);
     }
 
     @Override
@@ -117,33 +108,6 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
                 .stream()
                 .map(this::toDomain)
                 .toList();
-    }
-
-    @Override
-    public TransferDeliveryRecordPage pageRecords(String routeId,
-                                                  String transferId,
-                                                  String targetCode,
-                                                  String executeStatus,
-                                                  Integer pageIndex,
-                                                  Integer pageSize) {
-        int current = pageIndex == null || pageIndex < 0 ? 1 : pageIndex + 1;
-        int size = pageSize == null || pageSize <= 0 ? DEFAULT_PAGE_SIZE : pageSize;
-        Long routeIdValue = parseLong(routeId);
-        Long transferIdValue = parseLong(transferId);
-        Page<TransferDeliveryRecordPO> page = transferDeliveryRecordRepository.selectPage(
-                new Page<>(current, size),
-                Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
-                        .eq(routeIdValue != null, TransferDeliveryRecordPO::getRouteId, routeIdValue)
-                        .eq(transferIdValue != null, TransferDeliveryRecordPO::getTransferId, transferIdValue)
-                        .like(targetCode != null && !targetCode.isBlank(), TransferDeliveryRecordPO::getTargetCode, targetCode)
-                        .eq(executeStatus != null && !executeStatus.isBlank(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
-                        .orderByDesc(TransferDeliveryRecordPO::getDeliveredAt)
-                        .orderByDesc(TransferDeliveryRecordPO::getDeliveryId)
-        );
-        List<TransferDeliveryRecord> records = page.getRecords() == null ? List.of() : page.getRecords().stream()
-                .map(this::toDomain)
-                .toList();
-        return new TransferDeliveryRecordPage(records, page.getTotal(), page.getCurrent() - 1, page.getSize());
     }
 
     private Long parseLong(String value) {

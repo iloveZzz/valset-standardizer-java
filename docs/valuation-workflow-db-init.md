@@ -6,7 +6,7 @@
 
 项目已提供一套独立的 Liquibase changelog 入口：
 
-- `subject-match-boot/src/main/resources/db/changelog/db.changelog-master.xml`
+- `valset-standardizer-boot/src/main/resources/db/changelog/db.changelog-master.xml`
 
 默认不自动执行，需要在启动时显式开启：
 
@@ -16,7 +16,7 @@
 
 - `LIQUIBASE_CHANGE_LOG=classpath:/db/changelog/db.changelog-master.xml`
 
-当前这套 Liquibase 脚本已经整理为项目当前使用的完整 schema 基线，覆盖任务、调度、文件主表、接入日志、ODS 原始表、DWD 标准表、匹配结果表、标准科目表、知识样本表、`leaf_alloc` 以及 legacy 估值表。若你的环境已经使用本文档中的 SQL 或人工变更完成初始化，请先比对差异，再将 Liquibase 拆成增量 changeSet 执行迁移。
+当前这套 Liquibase 脚本已经整理为项目当前使用的完整 schema 基线，覆盖任务、调度、文件主对象、接入日志、ODS 原始表、DWD 标准表、匹配结果表、标准科目表、知识样本表、`leaf_alloc` 以及 legacy 估值表。若你的环境已经使用本文档中的 SQL 或人工变更完成初始化，请先比对差异，再将 Liquibase 拆成增量 changeSet 执行迁移。
 
 当前全流程依赖以下数据表：
 
@@ -38,20 +38,24 @@ SQL 文件：
 - `t_ods_valuation_sheet_style` 仅保存 Excel 的 sheet 级样式快照
 - 样式快照只保留标题、header、合并单元格及其预览行，不保存所有明细行样式
 
-### 文件主数据表
+### 文件主对象层
 
-- `t_subject_match_file_info`
-- `t_subject_match_file_ingest_log`
+- `t_transfer_object`
+- `t_transfer_object_tag`
+- `t_valset_file_ingest_log`
 
 SQL 文件：
 
-- `subject-match-infra/src/main/resources/db/migration/t_subject_match_file_info.sql`
+- `tools/transfer/src/main/resources/db/migration/transfer.sql`
+- `tools/transfer/src/main/resources/db/migration/transfer-tag.sql`
 
 用途：
 
-- 保存文件身份、来源渠道、存储位置、处理状态和内容指纹
-- 记录每一次文件接入事件，支持手动上传、邮件收取和对象存储接入
-- `file_id` 由文件主表统一发放，不再从任务表倒推
+- 文件主数据统一写入 `t_transfer_object`
+- 估值文件通过 `VALUATION_TABLE` 标签识别
+- 文件相关的附加信息写入 `fileMeta` JSON
+- `file_id` 继续作为任务关联键，不再依赖独立文件主表
+- `t_valset_file_ingest_log` 记录每一次文件接入事件，支持手动上传、邮件收取和对象存储接入
 
 ### STG 外部估值解析表
 
@@ -63,7 +67,7 @@ SQL 文件：
 
 SQL 文件：
 
-- `subject-match-infra/src/main/resources/db/migration/t_dwd_external_valuation.sql`
+- `valset-standardizer-infra/src/main/resources/db/migration/t_dwd_external_valuation.sql`
 
 用途：
 
@@ -79,7 +83,7 @@ SQL 文件：
 
 SQL 文件：
 
-- `subject-match-infra/src/main/resources/db/migration/t_dwd_external_valuation.sql`
+- `valset-standardizer-infra/src/main/resources/db/migration/t_dwd_external_valuation.sql`
 
 用途：
 
@@ -100,7 +104,7 @@ SQL 文件：
 
 ### 任务表
 
-- `t_subject_match_task`
+- `t_valset_workflow_task`
 
 用途：
 
@@ -117,7 +121,7 @@ SQL 文件：
 
 建议按下面顺序执行：
 
-1. 初始化文件主数据表 `t_subject_match_file_info` / `t_subject_match_file_ingest_log`
+1. 初始化文件主对象层 `t_transfer_object` / `t_transfer_object_tag` / `t_valset_file_ingest_log`
 2. 初始化 ODS 表 `t_ods_valuation_filedata` / `t_ods_valuation_sheet_style`
 3. 初始化 STG 表 `t_stg_external_valuation*` 和 DWD 表 `t_dwd_external_valuation_subject` / `t_dwd_external_valuation_metric`
 4. 初始化任务与匹配结果相关表

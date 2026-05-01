@@ -8,30 +8,60 @@
 }
 
 .parse-queue-stat-card {
+  position: relative;
+  min-height: 128px;
   padding: 16px;
+  overflow: hidden;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.parse-queue-stat-card::after {
+  position: absolute;
+  right: -18px;
+  bottom: -26px;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: rgba(22, 119, 255, 0.1);
+  content: "";
+}
+
+.parse-queue-stat-card--pending::after {
+  background: rgba(82, 196, 26, 0.14);
+}
+
+.parse-queue-stat-card--parsing::after {
+  background: rgba(250, 173, 20, 0.16);
+}
+
+.parse-queue-stat-card--failed::after {
+  background: rgba(255, 77, 79, 0.14);
 }
 
 .parse-queue-stat-label {
-  color: rgba(15, 23, 42, 0.52);
+  color: rgba(15, 23, 42, 0.56);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .parse-queue-stat-value {
-  margin-top: 8px;
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
   color: #0f172a;
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1;
+  font-size: 24px;
+  font-weight: 850;
+  line-height: 1.2;
 }
 
 .parse-queue-stat-desc {
-  margin-top: 6px;
-  color: rgba(15, 23, 42, 0.54);
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  color: rgba(15, 23, 42, 0.56);
   font-size: 12px;
   line-height: 1.6;
 }

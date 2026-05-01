@@ -7,6 +7,7 @@ import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.valset.extract.repository.mapper.ValuationSheetStyleMapper;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -60,9 +61,9 @@ class DefaultFileManagementQueryAppServiceTest {
                 .hasSize(1)
                 .first()
                 .satisfies(dto -> {
-                    assertThat(dto.getId()).isEqualTo(101L);
-                    assertThat(dto.getTaskId()).isEqualTo(202L);
-                    assertThat(dto.getFileId()).isEqualTo(303L);
+                    assertThat(dto.getId()).isEqualTo("101");
+                    assertThat(dto.getTaskId()).isEqualTo("202");
+                    assertThat(dto.getFileId()).isEqualTo("303");
                     assertThat(dto.getSheetName()).isEqualTo("Sheet1");
                     assertThat(dto.getStyleScope()).isEqualTo("HEADER_PREVIEW");
                     assertThat(dto.getSheetStyleJson()).contains("估值表标题");
@@ -70,6 +71,33 @@ class DefaultFileManagementQueryAppServiceTest {
                     assertThat(dto.getHeaderRows()).hasSize(1);
                     assertThat(dto.getMergeAreas()).hasSize(1);
                     assertThat(dto.getPreviewRowCount()).isEqualTo(10);
+                });
+    }
+
+    @Test
+    void queryFileInfoByPathShouldResolveNormalizedPath() {
+        ValsetFileInfoGateway fileInfoGateway = mock(ValsetFileInfoGateway.class);
+        ValsetFileIngestLogGateway ingestLogGateway = mock(ValsetFileIngestLogGateway.class);
+        ValuationSheetStyleMapper styleMapper = mock(ValuationSheetStyleMapper.class);
+        DefaultFileManagementQueryAppService service =
+                new DefaultFileManagementQueryAppService(fileInfoGateway, ingestLogGateway, styleMapper, new ObjectMapper());
+
+        String relativePath = "./input/valset-demo.xlsx";
+        String absolutePath = Path.of(relativePath).toAbsolutePath().normalize().toString();
+        com.yss.valset.domain.model.ValsetFileInfo fileInfo = com.yss.valset.domain.model.ValsetFileInfo.builder()
+                .fileId(808L)
+                .fileNameOriginal("valset-demo.xlsx")
+                .localTempPath(absolutePath)
+                .build();
+
+        when(fileInfoGateway.findByPath(relativePath)).thenReturn(null);
+        when(fileInfoGateway.findByPath(absolutePath)).thenReturn(fileInfo);
+
+        assertThat(service.queryFileInfoByPath(relativePath))
+                .satisfies(dto -> {
+                    assertThat(dto.getFileId()).isEqualTo("808");
+                    assertThat(dto.getFileNameOriginal()).isEqualTo("valset-demo.xlsx");
+                    assertThat(dto.getLocalTempPath()).isEqualTo(absolutePath);
                 });
     }
 }

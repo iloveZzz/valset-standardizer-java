@@ -1,6 +1,8 @@
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
 import type { YTablePagination } from "@yss-ui/components";
+import { useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import {
   backfillParseQueue,
   completeParseQueue,
@@ -164,6 +166,8 @@ const isPageResult = (
 } => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 export const useParseQueuePage = (): { page: ParseQueuePage } => {
+  const router = useRouter();
+  const route = useRoute();
   const query = reactive<ParseQueueQueryState>(defaultQuery());
   const rows = ref<ParseQueueRow[]>([]);
   const pagination = ref<YTablePagination>({
@@ -205,6 +209,21 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     if (next) {
       selectedRow.value = next;
     }
+  };
+
+  const normalizeRouteValue = (value: unknown) => {
+    if (Array.isArray(value)) {
+      return String(value[0] ?? "");
+    }
+    return String(value ?? "");
+  };
+
+  const openQueueFromRoute = async () => {
+    const queueId = normalizeRouteValue(route.query.queueId);
+    if (!queueId) {
+      return;
+    }
+    await openDetailDrawer({ queueId } as ParseQueueRow);
   };
 
   const loadList = async () => {
@@ -273,6 +292,16 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     } catch {
       selectedRow.value = row;
     }
+  };
+
+  const openLifecyclePage = (row: ParseQueueRow) => {
+    void router.push({
+      path: "/transfer/parse-lifecycle",
+      query: {
+        queueId: row.queueId || undefined,
+        transferId: row.transferId || undefined,
+      },
+    });
   };
 
   const closeDetail = () => {
@@ -466,6 +495,17 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
 
   void loadList();
 
+  watch(
+    () => route.query,
+    () => {
+      void openQueueFromRoute();
+    },
+    {
+      deep: true,
+      immediate: true,
+    },
+  );
+
   const page = reactive({
     loading,
     listLoading,
@@ -486,6 +526,7 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     handlePageChange,
     openDetailDrawer,
     closeDetail,
+    openLifecyclePage,
     generateQueue,
     retryQueue,
     subscribeQueue,

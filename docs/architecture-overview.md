@@ -63,7 +63,7 @@ flowchart LR
     U["用户/调用方"] --> C["REST API<br/>ValuationWorkflowController"]
     C --> A["应用编排层<br/>DefaultValuationWorkflowAppService"]
     A --> F["文件主数据与接入日志"]
-    A --> T["任务服务<br/>TaskAppServiceImpl / TaskReuseService"]
+    A --> T["任务服务<br/>WorkflowTaskAppServiceImpl / WorkflowTaskReuseService"]
     T --> Q["db-scheduler 调度<br/>DefaultTaskDispatcher"]
     Q --> E1["原始抽取执行器<br/>ExtractDataExecutionAppServiceImpl"]
     Q --> E2["解析执行器<br/>ParseExecutionAppServiceImpl"]
@@ -173,8 +173,8 @@ flowchart LR
 
 ### 5.4 任务编排方式
 
-- `TaskAppServiceImpl` 创建任务并立即触发
-- `TaskReuseService` 根据 `businessKey` 和 `forceRebuild` 决定是否复用成功任务
+- `WorkflowTaskAppServiceImpl` 创建任务并立即触发
+- `WorkflowTaskReuseService` 根据 `businessKey` 和 `forceRebuild` 决定是否复用成功任务
 - 调度服务只负责触发，不承载业务逻辑
 - `DefaultTaskDispatcher` 按 `TaskType` 路由到执行器
 
@@ -182,17 +182,17 @@ flowchart LR
 
 ### 6.1 文件层
 
-- `t_subject_match_file_info`
-- `t_subject_match_file_ingest_log`
+- `t_transfer_object`
+- `t_transfer_object_tag`
+- `t_valset_file_ingest_log`
 
-用于管理文件身份、来源、存储位置和生命周期。
+用于管理文件身份、来源、标签、存储位置和生命周期。
 
 ### 6.2 任务层
 
-- `t_subject_match_task`
-- `t_subject_match_schedule`
+- `t_valset_workflow_task`
 
-用于管理任务执行、阶段耗时和计划调度。
+用于管理任务执行和阶段耗时。
 
 ### 6.3 待解析事件层
 

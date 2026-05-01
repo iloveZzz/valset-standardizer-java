@@ -2,12 +2,9 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { getJavaSpringBootQuartzApi } from "@/api";
 import { unwrapMultiResult, unwrapSingleResult } from "@/utils/api-response";
 import { transferSectionOptions } from "../schemas/transferSchemas";
-import type { YTablePagination } from "@yss-ui/components";
 import type {
-  PageRecordsParams,
   PageLogsParams,
   TransferObjectAnalysisViewDTO,
-  TransferDeliveryRecordViewDTO,
   TransferRuleViewDTO,
   TransferRunLogAnalysisViewDTO,
   TransferRunLogStageAnalysisViewDTO,
@@ -156,22 +153,13 @@ export const useTransferPage = () => {
   const ruleRows = ref<TransferRuleViewDTO[]>([]);
   const targets = targetRows;
   const rules = ruleRows;
-  const logs = ref<TransferDeliveryRecordViewDTO[]>(buildRecentDeliveries());
-  const recentDeliveryRows = ref<TransferDeliveryRecordViewDTO[]>([]);
+  const logs = ref<any[]>(buildRecentDeliveries());
   const deliveryTotal = ref(logs.value.length);
   const trendWindow = ref<3 | 7 | 30>(3);
   const trendSeries = ref(buildTrendSeries());
   const runLogAnalysis = ref<TransferRunLogAnalysisViewDTO | null>(null);
   const objectAnalysis = ref<TransferObjectAnalysisViewDTO | null>(null);
   const runLogRows = ref<TransferRunLogViewDTO[]>([]);
-  const recentDeliveryPagination = ref<YTablePagination>({
-    current: 0,
-    pageSize: 10,
-    total: 10,
-    showSizeChanger: true,
-    showQuickJumper: true,
-    pageSizeOptions: ["10", "20", "50", "100"],
-  });
   const searchModel = reactive({
     keyword: "",
     enabledStatus: "all",
@@ -875,20 +863,6 @@ export const useTransferPage = () => {
         ],
   }));
 
-  const recentDeliveryTableData = computed(() => recentDeliveryRows.value);
-
-  const handleRecentDeliveryPageChange = ({
-    current,
-    pageSize,
-  }: {
-    current: number;
-    pageSize: number;
-  }) => {
-    recentDeliveryPagination.value.current = current;
-    recentDeliveryPagination.value.pageSize = pageSize;
-    void loadRecentDeliveries(current, pageSize);
-  };
-
   const setTrendWindow = (window: 3 | 7 | 30) => {
     trendWindow.value = window;
   };
@@ -924,39 +898,6 @@ export const useTransferPage = () => {
   const formatJson = (value: unknown) => JSON.stringify(value ?? {}, null, 2);
   const paged = <T>(items: T[]) => items;
 
-  const mapRecentDeliveryPageQuery = (
-    current = recentDeliveryPagination.value.current || 0,
-    pageSize = recentDeliveryPagination.value.pageSize || 10,
-  ): PageRecordsParams => ({
-    pageIndex: Math.max(current - 1, 0),
-    pageSize,
-  });
-
-  const loadRecentDeliveries = async (
-    current = recentDeliveryPagination.value.current || 0,
-    pageSize = recentDeliveryPagination.value.pageSize || 10,
-  ) => {
-    try {
-      const res = await api.pageRecords(
-        mapRecentDeliveryPageQuery(current, pageSize),
-      );
-      const records = res?.data ?? [];
-      recentDeliveryRows.value = records;
-      recentDeliveryPagination.value.total = Number(
-        res?.totalCount ?? records.length,
-      );
-      recentDeliveryPagination.value.current = Number(
-        res?.pageIndex ?? Math.max(current - 1, 0),
-      );
-      recentDeliveryPagination.value.pageSize = Number(
-        res?.pageSize ?? pageSize,
-      );
-    } catch (error) {
-      console.error("加载总览最近投递失败:", error);
-      recentDeliveryRows.value = [];
-    }
-  };
-
   const mapRunLogPageQuery = (): PageLogsParams => ({
     pageIndex: 0,
     pageSize: 6,
@@ -978,7 +919,6 @@ export const useTransferPage = () => {
         sources,
         targets,
         rules,
-        logsPage,
         analysisResult,
         objectAnalysisResult,
         runLogsPage,
@@ -986,7 +926,6 @@ export const useTransferPage = () => {
         api.listSources(),
         api.listTargets(),
         api.listRules(),
-        api.pageRecords({ pageIndex: 0, pageSize: 200 }),
         api.analyzeLogs(),
         api.analyzeObjects(),
         api.pageLogs(mapRunLogPageQuery()),
@@ -995,41 +934,14 @@ export const useTransferPage = () => {
       sourceRows.value = unwrapMultiResult(sources);
       targetRows.value = unwrapMultiResult(targets);
       ruleRows.value = unwrapMultiResult(rules);
-
-      const page = logsPage as
-        | { data?: TransferDeliveryRecordViewDTO[]; totalCount?: number }
-        | undefined;
-      const snapshotRows = page?.data ?? [];
-      logs.value = snapshotRows;
-      deliveryTotal.value = Number(page?.totalCount ?? snapshotRows.length);
-      trendSeries.value = snapshotRows.length
-        ? [
-            ...snapshotRows
-              .reduce<Map<string, number>>((series, item) => {
-                const deliveredAt = String(item.deliveredAt ?? "");
-                const datePart = deliveredAt.slice(5, 10);
-                if (!datePart) {
-                  return series;
-                }
-                series.set(datePart, (series.get(datePart) ?? 0) + 1);
-                return series;
-              }, new Map())
-              .entries(),
-          ]
-            .sort(([left], [right]) => left.localeCompare(right))
-            .map(([label, value]) => ({ label, value }))
-        : buildTrendSeries();
+      logs.value = buildRecentDeliveries();
+      deliveryTotal.value = logs.value.length;
+      trendSeries.value = buildTrendSeries();
 
       const analysis = unwrapSingleResult(analysisResult);
       runLogAnalysis.value = analysis ?? null;
       objectAnalysis.value = unwrapSingleResult(objectAnalysisResult) ?? null;
       runLogRows.value = runLogsPage?.data ?? [];
-
-      recentDeliveryPagination.value.total = deliveryTotal.value;
-      await loadRecentDeliveries(
-        1,
-        recentDeliveryPagination.value.pageSize || 10,
-      );
     } catch (error) {
       console.error("加载分拣总览数据失败:", error);
       logs.value = buildRecentDeliveries();
@@ -1037,10 +949,6 @@ export const useTransferPage = () => {
       runLogAnalysis.value = null;
       objectAnalysis.value = null;
       await loadOverviewRunLogs();
-      await loadRecentDeliveries(
-        1,
-        recentDeliveryPagination.value.pageSize || 10,
-      );
     } finally {
       loading.value = false;
     }
@@ -1071,10 +979,6 @@ export const useTransferPage = () => {
     overviewStageChartOption,
     overviewStatusHighlights,
     overviewStageHighlights,
-    recentDeliveryRows,
-    recentDeliveryTableData,
-    recentDeliveryPagination,
-    handleRecentDeliveryPageChange,
     setTrendWindow,
     searchModel,
     targetDraft,

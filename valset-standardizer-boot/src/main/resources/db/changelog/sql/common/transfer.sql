@@ -1,7 +1,7 @@
 --liquibase formatted sql
 
 --changeset codex:20260420-01-mysql-transfer dbms:mysql
-CREATE TABLE t_transfer_object (
+CREATE TABLE IF NOT EXISTS t_transfer_object (
     transfer_id BIGINT PRIMARY KEY,
     source_id BIGINT,
     source_type VARCHAR(32),
@@ -23,7 +23,7 @@ CREATE TABLE t_transfer_object (
     UNIQUE KEY uk_transfer_object_fingerprint (fingerprint)
 );
 
-CREATE TABLE t_transfer_rule (
+CREATE TABLE IF NOT EXISTS t_transfer_rule (
     rule_id BIGINT PRIMARY KEY,
     rule_code VARCHAR(128) NOT NULL,
     rule_name VARCHAR(256) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE t_transfer_rule (
     UNIQUE KEY uk_transfer_rule_code (rule_code)
 );
 
-CREATE TABLE t_transfer_route (
+CREATE TABLE IF NOT EXISTS t_transfer_route (
     route_id BIGINT PRIMARY KEY,
     transfer_id BIGINT NOT NULL,
     rule_id BIGINT NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE t_transfer_route (
     KEY idx_transfer_route_transfer_id (transfer_id)
 );
 
-CREATE TABLE t_transfer_delivery_record (
+CREATE TABLE IF NOT EXISTS t_transfer_delivery_record (
     delivery_id BIGINT PRIMARY KEY,
     route_id BIGINT NOT NULL,
     transfer_id BIGINT,
@@ -67,7 +67,7 @@ CREATE TABLE t_transfer_delivery_record (
     KEY idx_transfer_delivery_route_id (route_id)
 );
 
-CREATE TABLE t_transfer_target (
+CREATE TABLE IF NOT EXISTS t_transfer_target (
     target_id BIGINT PRIMARY KEY,
     target_code VARCHAR(128) NOT NULL,
     target_name VARCHAR(256) NOT NULL,
@@ -161,6 +161,8 @@ CREATE TABLE t_transfer_target (
 );
 
 --changeset codex:20260424-01-mysql-transfer-probe-result dbms:mysql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 't_transfer_object' AND column_name = 'probe_result_json'
 ALTER TABLE t_transfer_object
     ADD COLUMN probe_result_json TEXT AFTER error_message;
 
@@ -169,5 +171,7 @@ ALTER TABLE t_transfer_object
     ADD COLUMN probe_result_json TEXT;
 
 --changeset codex:20260427-01-transfer-real-storage-path dbms:mysql,postgresql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 't_transfer_object' AND column_name = 'real_storage_path'
 ALTER TABLE t_transfer_object
     ADD COLUMN real_storage_path VARCHAR(1024);

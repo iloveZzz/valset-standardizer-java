@@ -8,8 +8,8 @@ CREATE TABLE t_stg_external_valuation (
     file_id               BIGINT      NOT NULL COMMENT '文件标识',
     workbook_path         VARCHAR(512)         COMMENT '源文件路径',
     sheet_name            VARCHAR(128)         COMMENT '工作表名称',
-    header_row_number     INT                  COMMENT '表头起始行号',
-    data_start_row_number INT                  COMMENT '数据起始行号',
+    header_row_number     INT         NOT NULL COMMENT '表头起始行号',
+    data_start_row_number INT         NOT NULL COMMENT '数据起始行号',
     title                 VARCHAR(512)         COMMENT '标题'
 ) COMMENT='STG 外部估值主表';
 

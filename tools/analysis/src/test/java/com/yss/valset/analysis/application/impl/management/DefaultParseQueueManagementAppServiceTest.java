@@ -191,7 +191,8 @@ class DefaultParseQueueManagementAppServiceTest {
                 transferObjectGateway,
                 transferObjectTagGateway,
                 transferDeliveryGateway,
-                transferJsonMapper
+                transferJsonMapper,
+                null
         );
         return new ServiceFixture(service, transferParseQueueGateway, transferObjectGateway, transferObjectTagGateway, transferDeliveryGateway, transferJsonMapper);
     }

@@ -2,7 +2,7 @@
 
 --changeset codex:20260422-04-mysql-transfer-source dbms:mysql
 --validCheckSum 9:322a1e7b48250fababbebf09e33d355a
-CREATE TABLE t_transfer_source (
+CREATE TABLE IF NOT EXISTS t_transfer_source (
     source_id BIGINT PRIMARY KEY,
     source_code VARCHAR(128) NOT NULL,
     source_name VARCHAR(256) NOT NULL,
@@ -15,24 +15,65 @@ CREATE TABLE t_transfer_source (
 );
 
 --changeset codex:20260422-07-mysql-transfer-route-source dbms:mysql
-ALTER TABLE t_transfer_route
-    ADD COLUMN source_id BIGINT NULL,
-    ADD COLUMN source_type VARCHAR(32) NULL,
-    ADD COLUMN source_code VARCHAR(128) NULL;
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND column_name = 'source_id') = 0,
+    'ALTER TABLE t_transfer_route ADD COLUMN source_id BIGINT NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-CREATE INDEX idx_transfer_route_source_code ON t_transfer_route (source_code);
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND column_name = 'source_type') = 0,
+    'ALTER TABLE t_transfer_route ADD COLUMN source_type VARCHAR(32) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND column_name = 'source_code') = 0,
+    'ALTER TABLE t_transfer_route ADD COLUMN source_code VARCHAR(128) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND index_name = 'idx_transfer_route_source_code') = 0,
+    'CREATE INDEX idx_transfer_route_source_code ON t_transfer_route (source_code)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 --changeset codex:20260426-02-mysql-transfer-route-poll-cron dbms:mysql
-ALTER TABLE t_transfer_route
-    ADD COLUMN poll_cron VARCHAR(128) NULL;
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND column_name = 'poll_cron') = 0,
+    'ALTER TABLE t_transfer_route ADD COLUMN poll_cron VARCHAR(128) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 --changeset codex:20260426-02-postgres-transfer-route-poll-cron dbms:postgresql
 ALTER TABLE t_transfer_route
     ADD COLUMN poll_cron VARCHAR(128) NULL;
 
 --changeset codex:20260426-03-mysql-transfer-route-enabled dbms:mysql
-ALTER TABLE t_transfer_route
-    ADD COLUMN enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER target_code;
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND column_name = 'enabled') = 0,
+    'ALTER TABLE t_transfer_route ADD COLUMN enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER target_code',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 --changeset codex:20260426-03-postgres-transfer-route-enabled dbms:postgresql
 ALTER TABLE t_transfer_route
@@ -113,7 +154,7 @@ ALTER TABLE t_transfer_target
     ADD COLUMN updated_at DATETIME NULL;
 
 --changeset codex:20260423-02-mysql-transfer-run-log dbms:mysql
-CREATE TABLE t_transfer_run_log (
+CREATE TABLE IF NOT EXISTS t_transfer_run_log (
     run_log_id BIGINT PRIMARY KEY,
     source_id BIGINT,
     source_type VARCHAR(32),
@@ -158,10 +199,32 @@ ALTER TABLE t_transfer_object
     ALTER COLUMN mime_type TYPE VARCHAR(512);
 
 --changeset codex:20260428-01-mysql-transfer-object-business-fields dbms:mysql
-ALTER TABLE t_transfer_object
-    ADD COLUMN business_date DATE NULL,
-    ADD COLUMN business_id VARCHAR(128) NULL,
-    ADD COLUMN receive_date DATE NULL;
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_object' AND column_name = 'business_date') = 0,
+    'ALTER TABLE t_transfer_object ADD COLUMN business_date DATE NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_object' AND column_name = 'business_id') = 0,
+    'ALTER TABLE t_transfer_object ADD COLUMN business_id VARCHAR(128) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_object' AND column_name = 'receive_date') = 0,
+    'ALTER TABLE t_transfer_object ADD COLUMN receive_date DATE NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 --changeset codex:20260428-01-postgres-transfer-object-business-fields dbms:postgresql
 ALTER TABLE t_transfer_object
@@ -174,20 +237,32 @@ ALTER TABLE t_transfer_object
     ADD COLUMN receive_date DATE;
 
 --changeset codex:20260423-04-mysql-transfer-route-drop-transfer-id dbms:mysql
-ALTER TABLE t_transfer_route
-    DROP INDEX idx_transfer_route_transfer_id;
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND index_name = 'idx_transfer_route_transfer_id') > 0,
+    'ALTER TABLE t_transfer_route DROP INDEX idx_transfer_route_transfer_id',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE t_transfer_route
-    DROP COLUMN transfer_id;
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 't_transfer_route' AND column_name = 'transfer_id') > 0,
+    'ALTER TABLE t_transfer_route DROP COLUMN transfer_id',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 --changeset codex:20260423-04-postgres-transfer-route-drop-transfer-id dbms:postgresql
 DROP INDEX IF EXISTS idx_transfer_route_transfer_id;
 
 ALTER TABLE t_transfer_route
-    DROP COLUMN transfer_id;
+    DROP COLUMN IF EXISTS transfer_id;
 
 --changeset codex:20260423-07-mysql-transfer-checkpoint dbms:mysql
-CREATE TABLE t_transfer_source_checkpoint (
+CREATE TABLE IF NOT EXISTS t_transfer_source_checkpoint (
     checkpoint_id BIGINT PRIMARY KEY,
     source_id BIGINT NOT NULL,
     source_type VARCHAR(32) NOT NULL,
@@ -201,7 +276,7 @@ CREATE TABLE t_transfer_source_checkpoint (
     KEY idx_transfer_source_checkpoint_source_type (source_type)
 );
 
-CREATE TABLE t_transfer_source_checkpoint_item (
+CREATE TABLE IF NOT EXISTS t_transfer_source_checkpoint_item (
     checkpoint_item_id BIGINT PRIMARY KEY,
     source_id BIGINT NOT NULL,
     source_type VARCHAR(32) NOT NULL,
@@ -261,7 +336,7 @@ CREATE INDEX idx_transfer_source_checkpoint_item_source_type ON t_transfer_sourc
 CREATE INDEX idx_transfer_source_checkpoint_item_processed_at ON t_transfer_source_checkpoint_item (processed_at);
 
 --changeset codex:20260429-01-mysql-parse-queue dbms:mysql
-CREATE TABLE t_parse_queue (
+CREATE TABLE IF NOT EXISTS t_parse_queue (
     queue_id BIGINT PRIMARY KEY,
     business_key VARCHAR(256) NOT NULL,
     transfer_id BIGINT NOT NULL,

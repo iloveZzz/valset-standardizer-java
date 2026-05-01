@@ -1,5 +1,6 @@
 package com.yss.valset.transfer.web.controller;
 
+import com.yss.valset.transfer.application.command.TransferRunLogCleanupCommand;
 import com.yss.valset.transfer.application.command.TransferRunLogRedeliverCommand;
 import com.yss.valset.transfer.application.dto.TransferRunLogCleanupResponse;
 import com.yss.valset.transfer.application.dto.TransferRunLogRedeliverResponse;
@@ -126,6 +127,18 @@ public class TransferRunLogController {
     @Operation(summary = "批量重新投递失败的文件收发运行日志", description = "仅支持对目标投递失败的运行日志执行批量重新投递，输入运行日志主键集合即可。")
     public SingleResult<TransferRunLogRedeliverResponse> redeliver(@RequestBody TransferRunLogRedeliverCommand command) {
         return SingleResult.of(transferRunLogManagementAppService.redeliver(command));
+    }
+
+    /**
+     * 按时间区间清理文件收发运行日志。
+     *
+     * @param command 清理命令
+     * @return 清理结果
+     */
+    @PostMapping("/cleanup")
+    @Operation(summary = "按时间区间清理文件收发运行日志", description = "按 Asia/Shanghai 时区清理指定时间区间内产生的运行日志，起始时间包含，结束时间不包含。")
+    public SingleResult<TransferRunLogCleanupResponse> cleanupLogs(@RequestBody TransferRunLogCleanupCommand command) {
+        return SingleResult.of(transferRunLogManagementAppService.cleanupLogs(command));
     }
 
     /**

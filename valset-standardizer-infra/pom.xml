@@ -19,6 +19,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-transfer</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.yss.cloud</groupId>
             <artifactId>yss-component-mybatis-starter</artifactId>
         </dependency>

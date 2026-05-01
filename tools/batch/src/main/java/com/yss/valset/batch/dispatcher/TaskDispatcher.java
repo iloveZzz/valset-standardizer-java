@@ -8,9 +8,4 @@ public interface TaskDispatcher {
      * 通过 id 调度任务。
      */
     void dispatchTask(Long taskId);
-
-    /**
-     * 按计划 ID 调度计划任务。
-     */
-    void dispatchSchedule(Long scheduleId);
 }

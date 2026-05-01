@@ -1,37 +1,13 @@
 --liquibase formatted sql
 
 --changeset codex:20260415-01-mysql-core dbms:mysql
+--validCheckSum: 9:bca0e4e496a402a86d2b1311f226fe69
 CREATE TABLE leaf_alloc (
     biz_tag VARCHAR(128) PRIMARY KEY,
     max_id BIGINT NOT NULL,
     step INT NOT NULL,
     description VARCHAR(256),
     update_time VARCHAR(64)
-);
-
-CREATE TABLE t_subject_match_file_info (
-    file_id BIGINT PRIMARY KEY,
-    file_name_original VARCHAR(512) NOT NULL,
-    file_name_normalized VARCHAR(512),
-    file_extension VARCHAR(32),
-    mime_type VARCHAR(128),
-    file_size_bytes BIGINT,
-    file_fingerprint VARCHAR(128) NOT NULL,
-    source_channel VARCHAR(64) NOT NULL,
-    source_uri VARCHAR(1024),
-    storage_type VARCHAR(32) NOT NULL,
-    storage_uri VARCHAR(1024),
-    file_format VARCHAR(32),
-    file_status VARCHAR(32) NOT NULL,
-    created_by VARCHAR(128),
-    received_at DATETIME,
-    stored_at DATETIME,
-    last_processed_at DATETIME,
-    last_task_id BIGINT,
-    error_message VARCHAR(1024),
-    source_meta_json TEXT,
-    storage_meta_json TEXT,
-    remark VARCHAR(1024)
 );
 
 CREATE TABLE t_subject_match_task (
@@ -47,34 +23,6 @@ CREATE TABLE t_subject_match_task (
     parse_task_time_ms BIGINT,
     standardize_time_ms BIGINT,
     match_standard_subject_time_ms BIGINT
-);
-
-CREATE TABLE t_subject_match_schedule (
-    schedule_id BIGINT PRIMARY KEY,
-    schedule_name VARCHAR(256),
-    task_type VARCHAR(64) NOT NULL,
-    cron_expression VARCHAR(128) NOT NULL,
-    enabled TINYINT(1),
-    schedule_payload TEXT,
-    last_trigger_time DATETIME,
-    next_trigger_time DATETIME
-);
-
-CREATE TABLE t_subject_match_parsed_workbook (
-    id BIGINT PRIMARY KEY,
-    task_id BIGINT,
-    file_id BIGINT,
-    workbook_path VARCHAR(512),
-    sheet_name VARCHAR(128),
-    header_row_number INT,
-    data_start_row_number INT,
-    title VARCHAR(512),
-    basic_info_json TEXT,
-    headers_json TEXT,
-    header_details_json TEXT,
-    header_columns_json TEXT,
-    subjects_json TEXT,
-    metrics_json TEXT
 );
 
 CREATE TABLE t_subject_match_result (
@@ -106,7 +54,7 @@ CREATE TABLE t_subject_match_result (
     top_candidates_json TEXT
 );
 
-CREATE TABLE t_subject_match_file_ingest_log (
+CREATE TABLE t_valset_file_ingest_log (
     ingest_id BIGINT PRIMARY KEY,
     file_id BIGINT NOT NULL,
     source_channel VARCHAR(64) NOT NULL,
@@ -120,37 +68,13 @@ CREATE TABLE t_subject_match_file_ingest_log (
 );
 
 --changeset codex:20260415-01-postgres-core dbms:postgresql
+--validCheckSum: 9:bca0e4e496a402a86d2b1311f226fe69
 CREATE TABLE leaf_alloc (
     biz_tag VARCHAR(128) PRIMARY KEY,
     max_id BIGINT NOT NULL,
     step INTEGER NOT NULL,
     description VARCHAR(256),
     update_time VARCHAR(64)
-);
-
-CREATE TABLE t_subject_match_file_info (
-    file_id BIGINT PRIMARY KEY,
-    file_name_original VARCHAR(512) NOT NULL,
-    file_name_normalized VARCHAR(512),
-    file_extension VARCHAR(32),
-    mime_type VARCHAR(128),
-    file_size_bytes BIGINT,
-    file_fingerprint VARCHAR(128) NOT NULL,
-    source_channel VARCHAR(64) NOT NULL,
-    source_uri VARCHAR(1024),
-    storage_type VARCHAR(32) NOT NULL,
-    storage_uri VARCHAR(1024),
-    file_format VARCHAR(32),
-    file_status VARCHAR(32) NOT NULL,
-    created_by VARCHAR(128),
-    received_at TIMESTAMP,
-    stored_at TIMESTAMP,
-    last_processed_at TIMESTAMP,
-    last_task_id BIGINT,
-    error_message VARCHAR(1024),
-    source_meta_json TEXT,
-    storage_meta_json TEXT,
-    remark VARCHAR(1024)
 );
 
 CREATE TABLE t_subject_match_task (
@@ -166,34 +90,6 @@ CREATE TABLE t_subject_match_task (
     parse_task_time_ms BIGINT,
     standardize_time_ms BIGINT,
     match_standard_subject_time_ms BIGINT
-);
-
-CREATE TABLE t_subject_match_schedule (
-    schedule_id BIGINT PRIMARY KEY,
-    schedule_name VARCHAR(256),
-    task_type VARCHAR(64) NOT NULL,
-    cron_expression VARCHAR(128) NOT NULL,
-    enabled BOOLEAN,
-    schedule_payload TEXT,
-    last_trigger_time TIMESTAMP,
-    next_trigger_time TIMESTAMP
-);
-
-CREATE TABLE t_subject_match_parsed_workbook (
-    id BIGINT PRIMARY KEY,
-    task_id BIGINT,
-    file_id BIGINT,
-    workbook_path VARCHAR(512),
-    sheet_name VARCHAR(128),
-    header_row_number INTEGER,
-    data_start_row_number INTEGER,
-    title VARCHAR(512),
-    basic_info_json TEXT,
-    headers_json TEXT,
-    header_details_json TEXT,
-    header_columns_json TEXT,
-    subjects_json TEXT,
-    metrics_json TEXT
 );
 
 CREATE TABLE t_subject_match_result (
@@ -225,7 +121,7 @@ CREATE TABLE t_subject_match_result (
     top_candidates_json TEXT
 );
 
-CREATE TABLE t_subject_match_file_ingest_log (
+CREATE TABLE t_valset_file_ingest_log (
     ingest_id BIGINT PRIMARY KEY,
     file_id BIGINT NOT NULL,
     source_channel VARCHAR(64) NOT NULL,
@@ -239,37 +135,13 @@ CREATE TABLE t_subject_match_file_ingest_log (
 );
 
 --changeset codex:20260415-01-oracle-core dbms:oracle
+--validCheckSum: 9:bca0e4e496a402a86d2b1311f226fe69
 CREATE TABLE leaf_alloc (
     biz_tag VARCHAR2(128 CHAR) PRIMARY KEY,
     max_id NUMBER(19) NOT NULL,
     step NUMBER(10) NOT NULL,
     description VARCHAR2(256 CHAR),
     update_time VARCHAR2(64 CHAR)
-);
-
-CREATE TABLE t_subject_match_file_info (
-    file_id NUMBER(19) PRIMARY KEY,
-    file_name_original VARCHAR2(512 CHAR) NOT NULL,
-    file_name_normalized VARCHAR2(512 CHAR),
-    file_extension VARCHAR2(32 CHAR),
-    mime_type VARCHAR2(128 CHAR),
-    file_size_bytes NUMBER(19),
-    file_fingerprint VARCHAR2(128 CHAR) NOT NULL,
-    source_channel VARCHAR2(64 CHAR) NOT NULL,
-    source_uri VARCHAR2(1024 CHAR),
-    storage_type VARCHAR2(32 CHAR) NOT NULL,
-    storage_uri VARCHAR2(1024 CHAR),
-    file_format VARCHAR2(32 CHAR),
-    file_status VARCHAR2(32 CHAR) NOT NULL,
-    created_by VARCHAR2(128 CHAR),
-    received_at TIMESTAMP,
-    stored_at TIMESTAMP,
-    last_processed_at TIMESTAMP,
-    last_task_id NUMBER(19),
-    error_message VARCHAR2(1024 CHAR),
-    source_meta_json CLOB,
-    storage_meta_json CLOB,
-    remark VARCHAR2(1024 CHAR)
 );
 
 CREATE TABLE t_subject_match_task (
@@ -285,34 +157,6 @@ CREATE TABLE t_subject_match_task (
     parse_task_time_ms NUMBER(19),
     standardize_time_ms NUMBER(19),
     match_standard_subject_time_ms NUMBER(19)
-);
-
-CREATE TABLE t_subject_match_schedule (
-    schedule_id NUMBER(19) PRIMARY KEY,
-    schedule_name VARCHAR2(256 CHAR),
-    task_type VARCHAR2(64 CHAR) NOT NULL,
-    cron_expression VARCHAR2(128 CHAR) NOT NULL,
-    enabled NUMBER(1),
-    schedule_payload CLOB,
-    last_trigger_time TIMESTAMP,
-    next_trigger_time TIMESTAMP
-);
-
-CREATE TABLE t_subject_match_parsed_workbook (
-    id NUMBER(19) PRIMARY KEY,
-    task_id NUMBER(19),
-    file_id NUMBER(19),
-    workbook_path VARCHAR2(512 CHAR),
-    sheet_name VARCHAR2(128 CHAR),
-    header_row_number NUMBER(10),
-    data_start_row_number NUMBER(10),
-    title VARCHAR2(512 CHAR),
-    basic_info_json CLOB,
-    headers_json CLOB,
-    header_details_json CLOB,
-    header_columns_json CLOB,
-    subjects_json CLOB,
-    metrics_json CLOB
 );
 
 CREATE TABLE t_subject_match_result (
@@ -344,7 +188,7 @@ CREATE TABLE t_subject_match_result (
     top_candidates_json CLOB
 );
 
-CREATE TABLE t_subject_match_file_ingest_log (
+CREATE TABLE t_valset_file_ingest_log (
     ingest_id NUMBER(19) PRIMARY KEY,
     file_id NUMBER(19) NOT NULL,
     source_channel VARCHAR2(64 CHAR) NOT NULL,

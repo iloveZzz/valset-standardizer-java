@@ -35,9 +35,11 @@ public class DwdExternalValuationPO {
     private String sheetName;
 
     @TableField("header_row_number")
+    @Column(nullable = false)
     private Integer headerRowNumber;
 
     @TableField("data_start_row_number")
+    @Column(nullable = false)
     private Integer dataStartRowNumber;
 
     @TableField("title")

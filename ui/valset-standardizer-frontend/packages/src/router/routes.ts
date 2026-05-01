@@ -6,6 +6,7 @@ import {
   FileSearchOutlined,
   HistoryOutlined,
   InboxOutlined,
+  ProjectOutlined,
   SwapOutlined,
   ThunderboltOutlined,
   TagsOutlined,
@@ -14,32 +15,48 @@ import type { Component } from "vue";
 import type { RouteRecordRaw } from "vue-router";
 import { transferSectionOptions } from "@/views/TransferOverview/schemas/transferSchemas";
 
+const transferSectionIconMap: Record<string, Component> = {
+  overview: DatabaseOutlined,
+  inbox: InboxOutlined,
+  object: FileSearchOutlined,
+  source: InboxOutlined,
+  target: ApiOutlined,
+  rule: ThunderboltOutlined,
+  tag: TagsOutlined,
+  "route-config": ApartmentOutlined,
+  log: SwapOutlined,
+  "run-log": HistoryOutlined,
+  "parse-queue": FileSearchOutlined,
+  "parse-lifecycle": HistoryOutlined,
+  guide: FileTextOutlined,
+};
+
 export const workspaceNav: Array<{
   title: string;
   path: string;
   icon: Component;
-}> = transferSectionOptions.map((item) => {
-  const iconMap: Record<string, Component> = {
-    overview: DatabaseOutlined,
-    inbox: InboxOutlined,
-    object: FileSearchOutlined,
-    source: InboxOutlined,
-    target: ApiOutlined,
-    rule: ThunderboltOutlined,
-    tag: TagsOutlined,
-    "route-config": ApartmentOutlined,
-    log: SwapOutlined,
-    "run-log": HistoryOutlined,
-    "parse-queue": FileSearchOutlined,
-    guide: FileTextOutlined,
-  };
-
-  return {
-    title: item.label,
-    path: `/transfer/${item.value}`,
-    icon: iconMap[item.value] || FileTextOutlined,
-  };
-});
+  children?: Array<{
+    title: string;
+    path: string;
+    icon: Component;
+  }>;
+}> = [
+  {
+    title: "源数据分拣",
+    path: "/transfer",
+    icon: DatabaseOutlined,
+    children: transferSectionOptions.map((item) => ({
+      title: item.label,
+      path: `/transfer/${item.value}`,
+      icon: transferSectionIconMap[item.value] || FileTextOutlined,
+    })),
+  },
+  {
+    title: "委外数据任务",
+    path: "/outsourced-data-tasks",
+    icon: ProjectOutlined,
+  },
+];
 
 const transferPageComponentMap = {
   overview: () => import("@/views/TransferOverview/index.vue"),
@@ -49,9 +66,9 @@ const transferPageComponentMap = {
   rule: () => import("@/views/TransferRule/index.vue"),
   tag: () => import("@/views/TransferTag/index.vue"),
   "route-config": () => import("@/views/TransferRouteConfig/index.vue"),
-  log: () => import("@/views/TransferLog/index.vue"),
   "run-log": () => import("@/views/TransferRunLog/index.vue"),
   "parse-queue": () => import("@/views/ParseQueue/index.vue"),
+  "parse-lifecycle": () => import("@/views/ParseLifecycle/index.vue"),
   guide: () => import("@/views/TransferGuide/index.vue"),
   object: () => import("@/views/TransferObject/index.vue"),
 } as const;
@@ -76,6 +93,15 @@ export const routes: RouteRecordRaw[] = [
   {
     path: "/transfer",
     redirect: "/transfer/overview",
+  },
+  {
+    path: "/outsourced-data-tasks",
+    name: "outsourced-data-tasks",
+    component: () => import("@/views/OutsourcedDataTask/index.vue"),
+    meta: {
+      title: "委外数据任务",
+      keepAlive: false,
+    },
   },
   ...transferSectionRoutes,
   {

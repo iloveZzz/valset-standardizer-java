@@ -17,6 +17,7 @@
         <module>knowledge</module>
         <module>extract</module>
         <module>analysis</module>
+        <module>task</module>
         <module>batch</module>
         <module>transfer</module>
     </modules>

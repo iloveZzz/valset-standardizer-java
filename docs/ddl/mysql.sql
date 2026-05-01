@@ -1,32 +1,7 @@
 -- Generated from PO classes in valset-standardizer.
 -- This DDL matches the current workflow task model with task_stage and per-stage timing fields.
 
-CREATE TABLE t_subject_match_file_info (
-    file_id BIGINT PRIMARY KEY,
-    file_name_original VARCHAR(512) NOT NULL,
-    file_name_normalized VARCHAR(512),
-    file_extension VARCHAR(32),
-    mime_type VARCHAR(128),
-    file_size_bytes BIGINT,
-    file_fingerprint VARCHAR(128) NOT NULL,
-    source_channel VARCHAR(64) NOT NULL,
-    source_uri VARCHAR(1024),
-    storage_type VARCHAR(32) NOT NULL,
-    storage_uri VARCHAR(1024),
-    file_format VARCHAR(32),
-    file_status VARCHAR(32) NOT NULL,
-    created_by VARCHAR(128),
-    received_at DATETIME,
-    stored_at DATETIME,
-    last_processed_at DATETIME,
-    last_task_id BIGINT,
-    error_message VARCHAR(1024),
-    source_meta_json TEXT,
-    storage_meta_json TEXT,
-    remark VARCHAR(1024)
-);
-
-CREATE TABLE t_subject_match_task (
+CREATE TABLE t_valset_workflow_task (
     task_id BIGINT PRIMARY KEY,
     task_type VARCHAR(64) NOT NULL,
     task_stage VARCHAR(32),
@@ -39,17 +14,6 @@ CREATE TABLE t_subject_match_task (
     parse_task_time_ms BIGINT,
     standardize_time_ms BIGINT,
     match_standard_subject_time_ms BIGINT
-);
-
-CREATE TABLE t_subject_match_schedule (
-    schedule_id BIGINT PRIMARY KEY,
-    schedule_name VARCHAR(256),
-    task_type VARCHAR(64) NOT NULL,
-    cron_expression VARCHAR(128) NOT NULL,
-    enabled TINYINT(1),
-    schedule_payload TEXT,
-    last_trigger_time DATETIME,
-    next_trigger_time DATETIME
 );
 
 CREATE TABLE t_subject_match_result (
@@ -81,7 +45,7 @@ CREATE TABLE t_subject_match_result (
     top_candidates_json TEXT
 );
 
-CREATE TABLE t_subject_match_file_ingest_log (
+CREATE TABLE t_valset_file_ingest_log (
     ingest_id BIGINT PRIMARY KEY,
     file_id BIGINT NOT NULL,
     source_channel VARCHAR(64) NOT NULL,
@@ -119,8 +83,8 @@ CREATE TABLE t_dwd_external_valuation (
     file_id BIGINT NOT NULL,
     workbook_path VARCHAR(512),
     sheet_name VARCHAR(128),
-    header_row_number INT,
-    data_start_row_number INT,
+    header_row_number INT NOT NULL,
+    data_start_row_number INT NOT NULL,
     title VARCHAR(512)
 );
 
@@ -227,19 +191,10 @@ CREATE INDEX idx_dwd_header_vid_col ON t_dwd_external_valuation_header(valuation
 CREATE INDEX idx_dwd_subject_vid_row ON t_dwd_external_valuation_subject(valuation_id, row_data_number);
 CREATE INDEX idx_dwd_metric_vid_row ON t_dwd_external_valuation_metric(valuation_id, row_data_number);
 
-CREATE UNIQUE INDEX uk_subject_match_file_fingerprint
-    ON t_subject_match_file_info(file_fingerprint);
-CREATE INDEX idx_subject_match_file_channel_status
-    ON t_subject_match_file_info(source_channel, file_status);
-CREATE INDEX idx_subject_match_file_received_at
-    ON t_subject_match_file_info(received_at);
-CREATE INDEX idx_subject_match_file_last_task_id
-    ON t_subject_match_file_info(last_task_id);
-
-CREATE INDEX idx_subject_match_ingest_file_id
-    ON t_subject_match_file_ingest_log(file_id);
-CREATE INDEX idx_subject_match_ingest_channel_msg
-    ON t_subject_match_file_ingest_log(source_channel, channel_message_id);
+CREATE INDEX idx_valset_ingest_file_id
+    ON t_valset_file_ingest_log(file_id);
+CREATE INDEX idx_valset_ingest_channel_msg
+    ON t_valset_file_ingest_log(source_channel, channel_message_id);
 
 CREATE INDEX idx_ods_mapping_sample_org ON t_ods_mapping_sample(org_name);
 CREATE INDEX idx_ods_mapping_sample_ext_code ON t_ods_mapping_sample(external_code);

@@ -43,7 +43,7 @@ export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318/v1/traces
 启动应用（示例）：
 
 ```bash
-./mvnw -pl subject-match-boot spring-boot:run
+./mvnw -pl valset-standardizer-boot spring-boot:run
 ```
 
 ## 3. 触发链路

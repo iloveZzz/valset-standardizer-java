@@ -7,7 +7,7 @@ import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
 import com.yss.valset.domain.gateway.MappingHintGateway;
 import com.yss.valset.domain.exporter.ResultExporter;
 import com.yss.valset.domain.gateway.MatchResultGateway;
-import com.yss.valset.domain.gateway.TaskGateway;
+import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.gateway.StandardSubjectGateway;
 import com.yss.valset.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.valset.domain.matcher.ValsetMatcher;
@@ -36,7 +36,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
 
-    private final TaskGateway taskGateway;
+    private final WorkflowTaskGateway taskGateway;
     private final ValuationDataParserProvider parserProvider;
     private final StandardSubjectGateway standardSubjectGateway;
     private final MappingHintGateway mappingHintGateway;
@@ -54,8 +54,8 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
         try {
             log.info("开始执行主题匹配任务，taskId={}", taskId);
             // 核心步骤 1：查询任务信息并反序列化匹配指令参数
-            TaskInfo taskInfo = taskGateway.findById(taskId);
-            MatchTaskCommand command = objectMapper.readValue(taskInfo.getInputPayload(), MatchTaskCommand.class);
+            WorkflowTask workflowTask = taskGateway.findById(taskId);
+            MatchTaskCommand command = objectMapper.readValue(workflowTask.getInputPayload(), MatchTaskCommand.class);
 
             long matchStartMs = System.currentTimeMillis();
             // 核心步骤 2：加载并解析外部待匹配的估值表数据源
@@ -74,7 +74,7 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
             List<ValsetMatchResult> results = doMatch(parsedValuationData, matchContext, command);
 
             // 核心步骤 7：持久化匹配结果以及产出相关数据报表，并更新任务执行状态
-            persistResults(taskId, taskInfo.getFileId(), results);
+            persistResults(taskId, workflowTask.getFileId(), results);
             long matchStandardSubjectTimeMs = System.currentTimeMillis() - matchStartMs;
             taskGateway.updateTaskTimings(taskId, null, null, matchStandardSubjectTimeMs);
             String resultPayload = buildResultPayload( parsedValuationData, standardSubjects, results);

@@ -26,10 +26,23 @@ CREATE TABLE IF NOT EXISTS t_file_parse_profile (
     published_time DATETIME COMMENT '发布时间'
 ) COMMENT='文件解析模板主表';
 
-ALTER TABLE t_file_parse_profile
-    ADD UNIQUE KEY uk_file_parse_profile_code_version (profile_code, version);
-ALTER TABLE t_file_parse_profile
-    ADD KEY idx_file_parse_profile_status_modify (status, modify_time);
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_profile' AND index_name = 'uk_file_parse_profile_code_version') = 0,
+    'ALTER TABLE t_file_parse_profile ADD UNIQUE KEY uk_file_parse_profile_code_version (profile_code, version)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_profile' AND index_name = 'idx_file_parse_profile_status_modify') = 0,
+    'ALTER TABLE t_file_parse_profile ADD KEY idx_file_parse_profile_status_modify (status, modify_time)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS t_file_parse_rule_step (
     id BIGINT PRIMARY KEY COMMENT '主键',
@@ -50,10 +63,23 @@ CREATE TABLE IF NOT EXISTS t_file_parse_rule_step (
     modify_time DATETIME COMMENT '修改时间'
 ) COMMENT='文件解析规则步骤表';
 
-ALTER TABLE t_file_parse_rule_step
-    ADD UNIQUE KEY uk_file_parse_rule_step_profile_name (profile_id, step_name);
-ALTER TABLE t_file_parse_rule_step
-    ADD KEY idx_file_parse_rule_step_profile_priority (profile_id, priority, id);
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_rule_step' AND index_name = 'uk_file_parse_rule_step_profile_name') = 0,
+    'ALTER TABLE t_file_parse_rule_step ADD UNIQUE KEY uk_file_parse_rule_step_profile_name (profile_id, step_name)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_rule_step' AND index_name = 'idx_file_parse_rule_step_profile_priority') = 0,
+    'ALTER TABLE t_file_parse_rule_step ADD KEY idx_file_parse_rule_step_profile_priority (profile_id, priority, id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS t_file_parse_case (
     id BIGINT PRIMARY KEY COMMENT '主键',
@@ -73,8 +99,14 @@ CREATE TABLE IF NOT EXISTS t_file_parse_case (
     modify_time DATETIME COMMENT '修改时间'
 ) COMMENT='文件解析规则回归样例表';
 
-ALTER TABLE t_file_parse_case
-    ADD KEY idx_file_parse_case_profile_sample (profile_id, sample_file_id);
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_case' AND index_name = 'idx_file_parse_case_profile_sample') = 0,
+    'ALTER TABLE t_file_parse_case ADD KEY idx_file_parse_case_profile_sample (profile_id, sample_file_id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS t_file_parse_publish_log (
     id BIGINT PRIMARY KEY COMMENT '主键',
@@ -88,8 +120,14 @@ CREATE TABLE IF NOT EXISTS t_file_parse_publish_log (
     rollback_from_version VARCHAR(64) COMMENT '回滚来源版本'
 ) COMMENT='文件解析规则发布日志表';
 
-ALTER TABLE t_file_parse_publish_log
-    ADD KEY idx_file_parse_publish_log_profile_time (profile_id, publish_time, id);
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_publish_log' AND index_name = 'idx_file_parse_publish_log_profile_time') = 0,
+    'ALTER TABLE t_file_parse_publish_log ADD KEY idx_file_parse_publish_log_profile_time (profile_id, publish_time, id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS t_file_parse_rule_trace (
     id BIGINT PRIMARY KEY COMMENT '主键',
@@ -110,10 +148,23 @@ CREATE TABLE IF NOT EXISTS t_file_parse_rule_trace (
     trace_time DATETIME COMMENT '追踪时间'
 ) COMMENT='文件解析规则追踪表';
 
-ALTER TABLE t_file_parse_rule_trace
-    ADD KEY idx_file_parse_rule_trace_profile_time (profile_id, trace_time, id);
-ALTER TABLE t_file_parse_rule_trace
-    ADD KEY idx_file_parse_rule_trace_file_task_type (file_id, task_id, trace_type, trace_time);
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_rule_trace' AND index_name = 'idx_file_parse_rule_trace_profile_time') = 0,
+    'ALTER TABLE t_file_parse_rule_trace ADD KEY idx_file_parse_rule_trace_profile_time (profile_id, trace_time, id)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @ddl := IF(
+    (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_file_parse_rule_trace' AND index_name = 'idx_file_parse_rule_trace_file_task_type') = 0,
+    'ALTER TABLE t_file_parse_rule_trace ADD KEY idx_file_parse_rule_trace_file_task_type (file_id, task_id, trace_type, trace_time)',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 --changeset codex:20260419-01-postgres-qlexpress-rule-engine dbms:postgresql
 CREATE TABLE t_file_parse_profile (

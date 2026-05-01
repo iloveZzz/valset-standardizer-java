@@ -1,5 +1,6 @@
 package com.yss.valset.transfer.application.impl.management;
 
+import com.yss.valset.transfer.application.command.TransferRunLogCleanupCommand;
 import com.yss.valset.transfer.application.command.TransferRunLogRedeliverCommand;
 import com.yss.valset.transfer.application.dto.TransferRunLogCleanupResponse;
 import com.yss.valset.transfer.application.dto.TransferRunLogRedeliverItemViewDTO;
@@ -105,20 +106,20 @@ public class DefaultTransferRunLogManagementAppService implements TransferRunLog
     public TransferRunLogCleanupResponse cleanupYesterdayLogs() {
         LocalDate today = LocalDate.now(CLEANUP_ZONE_ID);
         LocalDate yesterday = today.minusDays(1);
-        LocalDateTime startInclusive = yesterday.atStartOfDay();
-        LocalDateTime endExclusive = today.atStartOfDay();
-        long deletedCount = transferRunLogGateway.deleteLogsCreatedBetween(startInclusive, endExclusive);
-        log.info("文件收发运行日志手动清理完成，cleanupDate={}，startInclusive={}，endExclusive={}，deletedCount={}",
-                yesterday,
-                startInclusive,
-                endExclusive,
-                deletedCount);
-        return TransferRunLogCleanupResponse.builder()
-                .cleanupDate(yesterday)
-                .startInclusive(startInclusive)
-                .endExclusive(endExclusive)
-                .deletedCount(deletedCount)
-                .build();
+        return cleanupLogs(yesterday.atStartOfDay(), today.atStartOfDay(), yesterday);
+    }
+
+    @Override
+    public TransferRunLogCleanupResponse cleanupLogs(TransferRunLogCleanupCommand command) {
+        if (command == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请选择需要清理的时间区间");
+        }
+        LocalDateTime startInclusive = command.getStartInclusive();
+        LocalDateTime endExclusive = command.getEndExclusive();
+        if (startInclusive == null || endExclusive == null || !startInclusive.isBefore(endExclusive)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请选择正确的时间区间");
+        }
+        return cleanupLogs(startInclusive, endExclusive, null);
     }
 
     private boolean isFailedDeliverLog(TransferRunLog runLog) {
@@ -175,5 +176,22 @@ public class DefaultTransferRunLogManagementAppService implements TransferRunLog
 
     private String trimToEmpty(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private TransferRunLogCleanupResponse cleanupLogs(LocalDateTime startInclusive,
+                                                      LocalDateTime endExclusive,
+                                                      LocalDate cleanupDate) {
+        long deletedCount = transferRunLogGateway.deleteLogsCreatedBetween(startInclusive, endExclusive);
+        log.info("文件收发运行日志手动清理完成，cleanupDate={}，startInclusive={}，endExclusive={}，deletedCount={}",
+                cleanupDate,
+                startInclusive,
+                endExclusive,
+                deletedCount);
+        return TransferRunLogCleanupResponse.builder()
+                .cleanupDate(cleanupDate)
+                .startInclusive(startInclusive)
+                .endExclusive(endExclusive)
+                .deletedCount(deletedCount)
+                .build();
     }
 }

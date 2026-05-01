@@ -23,6 +23,11 @@ public interface ValsetFileInfoGateway {
     ValsetFileInfo findById(Long fileId);
 
     /**
+     * 通过路径加载文件主数据。
+     */
+    ValsetFileInfo findByPath(String path);
+
+    /**
      * 按文件指纹查找文件主数据。
      */
     ValsetFileInfo findByFingerprint(String fileFingerprint);
@@ -42,4 +47,17 @@ public interface ValsetFileInfoGateway {
                       Long lastTaskId,
                       LocalDateTime lastProcessedAt,
                       String errorMessage);
+
+    /**
+     * 回写来自 TransferObject 的路径信息。
+     */
+    void updatePaths(Long fileId,
+                     String storageUri,
+                     String localTempPath,
+                     String realStoragePath);
+
+    /**
+     * 使用 TransferObject 的回填结果更新文件主数据。
+     */
+    void updateFromTransferObject(ValsetFileInfo fileInfo);
 }

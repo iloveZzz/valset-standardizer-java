@@ -87,7 +87,7 @@ subject:
       # 定时轮询的固定间隔，单位毫秒
       fixed-delay-ms: ${PARSE_QUEUE_OBSERVER_FIXED_DELAY_MS:3000}
       # 订阅待解析事件时写入的观察者名称
-      subscriber-name: ${PARSE_QUEUE_OBSERVER_SUBSCRIBER_NAME:解析观察者}
+      subscriber-name: ${PARSE_QUEUE_OBSERVER_SUBSCRIBER_NAME:估值表文件解析处理器}
       # 启动后首次轮询前的随机抖动上限，单位毫秒
       startup-jitter-ms: ${PARSE_QUEUE_OBSERVER_STARTUP_JITTER_MS:3000}
       # 每处理完一批待解析事件后的暂停时长，单位毫秒
@@ -111,7 +111,7 @@ subject:
       # 是否跳过 Excel 样式解析
       skip-excel-style-parsing: false
       # 是否启用匹配流程
-      enable-match-process: true
+      enable-match-process: false
       # 是否持久化标准化后的 DWD 明细
       persist-standardized-dwd-details: false
     run-log-cleanup:

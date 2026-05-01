@@ -61,6 +61,12 @@ const actionConfig = useTableActionConfig({
       clickFn: ({ row }: any) => page.openDetailDrawer(row),
     },
     {
+      text: "生命周期",
+      key: "lifecycle",
+      type: "link",
+      clickFn: ({ row }: any) => page.openLifecyclePage(row),
+    },
+    {
       text: "补生成",
       key: "generate",
       type: "link",
@@ -117,26 +123,26 @@ const summaryDescription = computed(
       </div>
 
       <div class="parse-queue-stat-grid">
-        <div class="parse-queue-stat-card">
+        <div class="parse-queue-stat-card parse-queue-stat-card--total">
           <div class="parse-queue-stat-label">查询总数</div>
           <div class="parse-queue-stat-value">{{ page.total }}</div>
           <div class="parse-queue-stat-desc">{{ summaryDescription }}</div>
         </div>
-        <div class="parse-queue-stat-card">
+        <div class="parse-queue-stat-card parse-queue-stat-card--pending">
           <div class="parse-queue-stat-label">待订阅</div>
           <div class="parse-queue-stat-value">{{ page.pendingCount }}</div>
           <div class="parse-queue-stat-desc">
             当前页等待消费者订阅的任务数量
           </div>
         </div>
-        <div class="parse-queue-stat-card">
+        <div class="parse-queue-stat-card parse-queue-stat-card--parsing">
           <div class="parse-queue-stat-label">解析中</div>
           <div class="parse-queue-stat-value">{{ page.parsingCount }}</div>
           <div class="parse-queue-stat-desc">
             当前页已经被消费者接管的任务数量
           </div>
         </div>
-        <div class="parse-queue-stat-card">
+        <div class="parse-queue-stat-card parse-queue-stat-card--failed">
           <div class="parse-queue-stat-label">失败任务</div>
           <div class="parse-queue-stat-value">{{ page.failedCount }}</div>
           <div class="parse-queue-stat-desc">
@@ -292,6 +298,12 @@ const summaryDescription = computed(
         </div>
 
         <div class="parse-queue-detail-actions">
+          <YButton
+            type="primary"
+            @click="page.openLifecyclePage(page.selectedRow)"
+          >
+            查看生命周期
+          </YButton>
           <YButton
             :loading="page.loading"
             :disabled="

@@ -11,7 +11,7 @@
 - 未来如果接入邮件、对象存储等渠道，需要重新拼接文件入口逻辑
 - 无法方便地按文件渠道、状态、来源、内容指纹做查询和治理
 
-因此需要新增“文件信息管理”模块，用一张文件主表统一管理文件身份、来源、存储位置、处理状态和任务关联。
+因此需要新增“文件信息管理”模块，用 `t_transfer_object` 统一管理文件身份、来源、存储位置、处理状态和任务关联，估值文件再通过 `t_transfer_object_tag` 的 `VALUATION_TABLE` 标签识别。
 
 ## 设计目标
 
@@ -26,9 +26,9 @@
 
 ## 核心模型
 
-### 1. 文件主表 `t_subject_match_file_info`
+### 1. 文件主对象 `t_transfer_object`
 
-文件主表负责描述一份外部估值文件的“身份”和“状态”。
+文件主对象负责描述一份外部估值文件的“身份”和“状态”。
 
 建议字段：
 
@@ -62,7 +62,7 @@
 - `INDEX(received_at)`
 - `INDEX(last_task_id)`
 
-### 2. 文件接入日志表 `t_subject_match_file_ingest_log`
+### 2. 文件接入日志表 `t_valset_file_ingest_log`
 
 文件主表记录当前态，接入日志表记录每一次接入事件。
 
@@ -122,7 +122,7 @@
 1. 用户上传文件
 2. 系统落盘或存储到指定后端
 3. 计算文件指纹
-4. 查 `t_subject_match_file_info`
+4. 查 `t_transfer_object`
 5. 若 fingerprint 已存在，则复用已有 `file_id`
 6. 若不存在，则创建文件主记录
 7. 写一条接入日志
@@ -131,6 +131,7 @@
 说明：
 
 - 当前已有本地落盘实现，可以保留，但要变成 `FileStorage` 的一种实现。
+- 文件读取和管理的优先入口应是 `local_temp_path` / `real_storage_path`，`file_id` 只作为业务关联键保留。
 - 上传接口返回的不应只是临时路径，而应返回文件主记录信息。
 
 ### 2. 邮件收取文件
@@ -168,7 +169,7 @@
 
 ### 现有任务表继续保留
 
-`t_subject_match_task` 继续负责：
+`t_valset_workflow_task` 继续负责：
 
 - `EXTRACT_DATA`
 - `PARSE_WORKBOOK`
@@ -185,6 +186,7 @@
 - 文件主表先创建
 - `EXTRACT_DATA` 任务关联 `file_id`
 - `PARSE_WORKBOOK` / `MATCH_SUBJECT` 继续使用该 `file_id`
+- 文件内容读取优先走 `workbookPath` / `local_temp_path` / `real_storage_path`，不再用 `file_id` 反查文件路径
 
 ### 去重规则
 
@@ -201,70 +203,23 @@
 
 - `POST /api/files/upload`
 - `GET /api/files/{fileId}`
+- `GET /api/files/by-path?path=`
 - `GET /api/files?sourceChannel=&status=&fingerprint=`
+- `GET /api/files/by-path/ingest-logs?path=`
+- `GET /api/files/by-path/sheet-styles?path=`
 - `GET /api/files/{fileId}/ingest-logs`
 - `POST /api/files/{fileId}/reprocess`
 
 ### 与现有流程接口的关系
 
 - `/api/valuation-workflows/upload` 可改为复用文件管理接口
-- `/api/valuation-workflows/analyze` 继续消费 `fileId`
-- `/api/valuation-workflows/match` 继续消费 `fileId`
+- `/api/valuation-workflows/analyze` 继续消费 `fileId` 作为任务关联键，但真正读取文件时应走路径
+- `/api/valuation-workflows/match` 继续消费 `fileId` 作为任务关联键，但真正读取文件时应走路径
 - `/api/valuation-workflows/full-process` 先创建文件记录，再串联后续流程
 
 ## 建议表结构草案
 
-```sql
-CREATE TABLE t_subject_match_file_info (
-    file_id BIGINT PRIMARY KEY,
-    file_name_original VARCHAR(512) NOT NULL,
-    file_name_normalized VARCHAR(512),
-    file_extension VARCHAR(32),
-    mime_type VARCHAR(128),
-    file_size_bytes BIGINT,
-    file_fingerprint VARCHAR(128) NOT NULL,
-    source_channel VARCHAR(64) NOT NULL,
-    source_uri VARCHAR(1024),
-    storage_type VARCHAR(32) NOT NULL,
-    storage_uri VARCHAR(1024),
-    file_format VARCHAR(32),
-    file_status VARCHAR(32) NOT NULL,
-    created_by VARCHAR(128),
-    received_at DATETIME,
-    stored_at DATETIME,
-    last_processed_at DATETIME,
-    last_task_id BIGINT,
-    error_message VARCHAR(1024),
-    source_meta_json TEXT,
-    storage_meta_json TEXT,
-    remark VARCHAR(1024)
-);
-
-CREATE UNIQUE INDEX uk_subject_match_file_fingerprint
-    ON t_subject_match_file_info(file_fingerprint);
-CREATE INDEX idx_subject_match_file_channel_status
-    ON t_subject_match_file_info(source_channel, file_status);
-CREATE INDEX idx_subject_match_file_received_at
-    ON t_subject_match_file_info(received_at);
-
-CREATE TABLE t_subject_match_file_ingest_log (
-    ingest_id BIGINT PRIMARY KEY,
-    file_id BIGINT NOT NULL,
-    source_channel VARCHAR(64) NOT NULL,
-    source_uri VARCHAR(1024),
-    channel_message_id VARCHAR(256),
-    ingest_status VARCHAR(32) NOT NULL,
-    ingest_time DATETIME NOT NULL,
-    ingest_meta_json TEXT,
-    created_by VARCHAR(128),
-    error_message VARCHAR(1024)
-);
-
-CREATE INDEX idx_subject_match_ingest_file_id
-    ON t_subject_match_file_ingest_log(file_id);
-CREATE INDEX idx_subject_match_ingest_channel_msg
-    ON t_subject_match_file_ingest_log(source_channel, channel_message_id);
-```
+当前实现已经将文件主数据下沉到 `t_transfer_object`，并通过 `t_transfer_object_tag` 标记 `VALUATION_TABLE`。如果需要继续扩展文件管理能力，建议优先围绕这两个表补齐查询、标签和接入日志能力，而不是再引入独立的文件主表。
 
 ## 执行任务计划
 
@@ -278,11 +233,13 @@ CREATE INDEX idx_subject_match_ingest_channel_msg
 
 产出：
 
-- `FileInfo`
+- `TransferObject`
+- `TransferObjectTag`
 - `FileIngestLog`
-- `FileInfoGateway`
-- `t_subject_match_file_info`
-- `t_subject_match_file_ingest_log`
+- `TransferObjectGateway`
+- `t_transfer_object`
+- `t_transfer_object_tag`
+- `t_valset_file_ingest_log`
 
 ### 阶段 2：手动上传改造
 
@@ -354,4 +311,3 @@ CREATE INDEX idx_subject_match_ingest_channel_msg
 - 不让任务表承担文件生命周期管理。
 - 不把对象存储通道一次性实现完，先预留结构。
 - 不破坏现有 ODS / DWD / 匹配链路。
-

@@ -49,6 +49,16 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
 
     @Override
     public void saveDwdExternalValuation(Long taskId, Long fileId, ParsedValuationData parsedValuationData) {
+        if (parsedValuationData == null) {
+            throw new IllegalStateException("解析结果为空，无法落库，taskId=" + taskId + ", fileId=" + fileId);
+        }
+        if (parsedValuationData.getHeaderRowNumber() == null || parsedValuationData.getDataStartRowNumber() == null) {
+            throw new IllegalStateException("解析结果缺少表头行号或数据起始行号，无法落库，taskId="
+                    + taskId
+                    + ", fileId=" + fileId
+                    + ", headerRowNumber=" + parsedValuationData.getHeaderRowNumber()
+                    + ", dataStartRowNumber=" + parsedValuationData.getDataStartRowNumber());
+        }
         DwdExternalValuationPO valuationPO = new DwdExternalValuationPO();
         valuationPO.setTaskId(taskId);
         valuationPO.setFileId(fileId);
@@ -79,6 +89,14 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                         .last("limit 1")
         );
         if (valuationPO == null) {
+            return null;
+        }
+        if (valuationPO.getHeaderRowNumber() == null || valuationPO.getDataStartRowNumber() == null) {
+            log.warn("DWD 外部估值记录缺少表头行号或数据起始行号，视为无效记录，fileId={}, valuationId={}, headerRowNumber={}, dataStartRowNumber={}",
+                    fileId,
+                    valuationPO.getId(),
+                    valuationPO.getHeaderRowNumber(),
+                    valuationPO.getDataStartRowNumber());
             return null;
         }
         Long valuationId = valuationPO.getId();

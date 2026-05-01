@@ -6,32 +6,7 @@ CREATE TABLE IF NOT EXISTS leaf_alloc (
     update_time VARCHAR(64)
 );
 
-CREATE TABLE IF NOT EXISTS t_subject_match_file_info (
-    file_id BIGINT PRIMARY KEY,
-    file_name_original VARCHAR(512) NOT NULL,
-    file_name_normalized VARCHAR(512),
-    file_extension VARCHAR(32),
-    mime_type VARCHAR(128),
-    file_size_bytes BIGINT,
-    file_fingerprint VARCHAR(128) NOT NULL,
-    source_channel VARCHAR(64) NOT NULL,
-    source_uri VARCHAR(1024),
-    storage_type VARCHAR(32) NOT NULL,
-    storage_uri VARCHAR(1024),
-    file_format VARCHAR(32),
-    file_status VARCHAR(32) NOT NULL,
-    created_by VARCHAR(128),
-    received_at TIMESTAMP,
-    stored_at TIMESTAMP,
-    last_processed_at TIMESTAMP,
-    last_task_id BIGINT,
-    error_message VARCHAR(1024),
-    source_meta_json TEXT,
-    storage_meta_json TEXT,
-    remark VARCHAR(1024)
-);
-
-CREATE TABLE IF NOT EXISTS t_subject_match_task (
+CREATE TABLE IF NOT EXISTS t_valset_workflow_task (
     task_id BIGINT PRIMARY KEY,
     task_type VARCHAR(64) NOT NULL,
     task_stage VARCHAR(32),
@@ -44,17 +19,6 @@ CREATE TABLE IF NOT EXISTS t_subject_match_task (
     parse_task_time_ms BIGINT,
     standardize_time_ms BIGINT,
     match_standard_subject_time_ms BIGINT
-);
-
-CREATE TABLE IF NOT EXISTS t_subject_match_schedule (
-    schedule_id BIGINT PRIMARY KEY,
-    schedule_name VARCHAR(256),
-    task_type VARCHAR(64) NOT NULL,
-    cron_expression VARCHAR(128) NOT NULL,
-    enabled BOOLEAN,
-    schedule_payload TEXT,
-    last_trigger_time TIMESTAMP,
-    next_trigger_time TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS t_subject_match_result (
@@ -86,7 +50,7 @@ CREATE TABLE IF NOT EXISTS t_subject_match_result (
     top_candidates_json TEXT
 );
 
-CREATE TABLE IF NOT EXISTS t_subject_match_file_ingest_log (
+CREATE TABLE IF NOT EXISTS t_valset_file_ingest_log (
     ingest_id BIGINT PRIMARY KEY,
     file_id BIGINT NOT NULL,
     source_channel VARCHAR(64) NOT NULL,
@@ -182,8 +146,8 @@ CREATE TABLE IF NOT EXISTS t_stg_external_valuation (
     file_id BIGINT NOT NULL,
     workbook_path VARCHAR(512),
     sheet_name VARCHAR(128),
-    header_row_number INT,
-    data_start_row_number INT,
+    header_row_number INT NOT NULL,
+    data_start_row_number INT NOT NULL,
     title VARCHAR(512)
 );
 
@@ -595,14 +559,8 @@ CREATE TABLE IF NOT EXISTS t_transfer_target (
     target_meta_json TEXT,
     UNIQUE KEY uk_transfer_target_code (target_code)
 );
-
-
-CREATE UNIQUE INDEX IF NOT EXISTS uk_subject_match_file_fingerprint ON t_subject_match_file_info(file_fingerprint);
-CREATE INDEX IF NOT EXISTS idx_subject_match_file_channel_status ON t_subject_match_file_info(source_channel, file_status);
-CREATE INDEX IF NOT EXISTS idx_subject_match_file_received_at ON t_subject_match_file_info(received_at);
-CREATE INDEX IF NOT EXISTS idx_subject_match_file_last_task_id ON t_subject_match_file_info(last_task_id);
-CREATE INDEX IF NOT EXISTS idx_subject_match_ingest_file_id ON t_subject_match_file_ingest_log(file_id);
-CREATE INDEX IF NOT EXISTS idx_subject_match_ingest_channel_msg ON t_subject_match_file_ingest_log(source_channel, channel_message_id);
+CREATE INDEX IF NOT EXISTS idx_valset_ingest_file_id ON t_valset_file_ingest_log(file_id);
+CREATE INDEX IF NOT EXISTS idx_valset_ingest_channel_msg ON t_valset_file_ingest_log(source_channel, channel_message_id);
 
 CREATE INDEX IF NOT EXISTS idx_ods_filedata_task_id ON t_ods_valuation_filedata(task_id);
 CREATE INDEX IF NOT EXISTS idx_ods_filedata_file_id ON t_ods_valuation_filedata(file_id);

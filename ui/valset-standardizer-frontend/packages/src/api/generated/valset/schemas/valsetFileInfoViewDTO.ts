@@ -30,8 +30,12 @@ export interface ValsetFileInfoViewDTO {
   lastProcessedAt?: string;
   /** 最近关联任务主键。 */
   lastTaskId?: string;
+  /** 本地临时路径。 */
+  localTempPath?: string;
   /** MIME 类型。 */
   mimeType?: string;
+  /** 真实存储路径。 */
+  realStoragePath?: string;
   /** 接收时间。 */
   receivedAt?: string;
   /** 备注。 */

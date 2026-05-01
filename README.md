@@ -23,10 +23,10 @@
 ## 当前链路
 
 1. `EXTRACT_DATA` 任务先把 Excel / CSV 按行抽取并落到 ODS 表。
-2. `PARSE_WORKBOOK` 和 `MATCH_SUBJECT` 不再直接读 Excel / CSV，而是通过 `fileId` 读取 ODS 原始行数据。
+2. `PARSE_WORKBOOK` 和 `MATCH_SUBJECT` 的文件输入以 `workbookPath` 为主，内部优先使用 `localTempPath` / `realStoragePath` 定位文件，不再把 `fileId` 作为文件读取前提。
 3. `API` / `DB` 数据源继续走原有分析器。
-4. `t_subject_match_file_info` 负责文件主数据管理，`file_id` 从文件主表统一发放，`t_subject_match_file_ingest_log` 记录每次接入历史。
-5. `t_subject_match_task` 记录流程阶段 `task_stage`，并分别记录 `task_start_time`、`parse_task_time_ms`、`standardize_time_ms`、`match_standard_subject_time_ms`，其中三段耗时分别对应文件解析、标准结构化、标准科目匹配。
+4. 文件主数据现在统一由 `t_transfer_object` 承担，估值文件通过 `VALUATION_TABLE` 标签识别，`t_transfer_object_tag` 记录接入分类，`file_id` 仍作为任务关联键保留。
+5. `t_valset_workflow_task` 记录流程阶段 `task_stage`，并分别记录 `task_start_time`、`parse_task_time_ms`、`standardize_time_ms`、`match_standard_subject_time_ms`，其中三段耗时分别对应文件解析、标准结构化、标准科目匹配。
 6. 同一份文件默认会复用已成功完成的抽取任务、解析任务和匹配任务；如果需要重新执行，可在接口里传入 `forceRebuild=true`。上传返回里会带 `fileFingerprint`，便于排查是否命中同一份文件。
 
 当前版本以“可编译、可运行、可拆分”的多模块实现为目标，便于后续继续扩展估值表标准化、分析和匹配能力。
@@ -37,13 +37,13 @@
 - 数据库初始化说明：`docs/valuation-workflow-db-init.md`
 - 文件管理设计：`docs/file-management-design.md`
 - 本地链路观测（OTEL + Tempo）：`docs/observability/otel-local-collector-tempo.md`
-- 文件管理接口：`/api/files/upload`、`/api/files/{fileId}`、`/api/files`、`/api/files/{fileId}/ingest-logs`、`/api/files/{fileId}/sheet-styles`
+- 文件管理接口：`/api/files/upload`、`/api/files/{fileId}`、`/api/files`、`/api/files/by-path`、`/api/files/by-path/ingest-logs`、`/api/files/by-path/sheet-styles`、`/api/files/{fileId}/ingest-logs`、`/api/files/{fileId}/sheet-styles`
 
 ## Liquibase
 
 项目已补充 Liquibase changelog 入口：
 
-- `subject-match-boot/src/main/resources/db/changelog/db.changelog-master.xml`
+- `valset-standardizer-boot/src/main/resources/db/changelog/db.changelog-master.xml`
 
 启动配置默认关闭 Liquibase，需要显式开启：
 

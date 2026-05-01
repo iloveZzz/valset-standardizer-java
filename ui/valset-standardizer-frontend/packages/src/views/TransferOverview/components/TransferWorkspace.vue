@@ -3,9 +3,7 @@ import { h, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Modal } from "ant-design-vue";
 import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import * as echarts from "echarts";
-import { YButton, YCard, YTable } from "@yss-ui/components";
-import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
-import { useTransferOverviewRecentDeliveryColumns } from "../../TransferShared/hooks/useTransferTableColumns";
+import { YButton, YCard } from "@yss-ui/components";
 
 defineOptions({ name: "TransferWorkspace" });
 
@@ -14,20 +12,6 @@ const props = defineProps<{
 }>();
 
 const page = props.page;
-const recentDeliveryColumns = useTransferOverviewRecentDeliveryColumns();
-
-const recentDeliveryActionConfig = useTableActionConfig({
-  width: 120,
-  displayLimit: 1,
-  buttons: [
-    {
-      text: "查看快照",
-      key: "snapshot",
-      type: "link",
-      clickFn: ({ row }: any) => openLogSnapshot(row),
-    },
-  ],
-});
 
 const trendChartRef = ref<HTMLDivElement | null>(null);
 const statusChartRef = ref<HTMLDivElement | null>(null);
@@ -426,38 +410,6 @@ onBeforeUnmount(() => {
                 </div>
               </div>
               <a-empty v-else description="暂无异常记录" />
-            </YCard>
-
-            <YCard class="overview-table-panel" :bordered="false" :padding="14">
-              <div class="section-title">
-                <div>
-                  <h3>最近投递结果</h3>
-                </div>
-              </div>
-              <YTable
-                class="overview-recent-table"
-                :columns="recentDeliveryColumns"
-                :action-config="recentDeliveryActionConfig"
-                :data="page.recentDeliveryTableData"
-                :loading="page.loading"
-                :row-config="{ keyField: 'id' }"
-                :checkbox-config="{ highlight: true }"
-                :pageable="true"
-                v-model:pagination="page.recentDeliveryPagination"
-                :toolbar-config="{ custom: false }"
-                @page-change="page.handleRecentDeliveryPageChange"
-              >
-                <template #executeStatusLabel="{ row }">
-                  <a-tag
-                    :color="page.formatDeliveryStatus(row.executeStatus).color"
-                  >
-                    {{
-                      row.executeStatusLabel ||
-                      page.formatDeliveryStatus(row.executeStatus).text
-                    }}
-                  </a-tag>
-                </template>
-              </YTable>
             </YCard>
           </div>
         </section>

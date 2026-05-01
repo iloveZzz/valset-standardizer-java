@@ -36,8 +36,8 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 
 返回重点字段：
 
-- `fileId`: 后续分析、匹配、查询都使用这个标识，来源于 `t_subject_match_file_info`
-- `workbookPath`: 仅用于本次抽取的临时落盘路径，抽取完成后会清理
+- `fileId`: 后续分析、匹配、查询都使用这个标识，来源于 `t_transfer_object`
+- `workbookPath`: 本次抽取实际读取的文件路径，系统会优先解析 `localTempPath` / `realStoragePath` 并把可读路径写入这里
 - `fileFingerprint`: 文件内容指纹，同一份文件再次上传会复用该指纹对应的成功任务
 - `filesysTaskId`: `yss-filesys-feignsdk` 创建的上传任务标识
 - `filesysFileId`: `yss-filesys-feignsdk` 返回的文件标识
@@ -71,8 +71,8 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 
 说明：
 
-- `fileId` 必填
-- `workbookPath` 仍然保留在任务入参里，便于任务追踪和结果输出
+- `fileId` 仍然作为任务关联键保留，文件主数据来自 `t_transfer_object`
+- `workbookPath` 是解析实际读取的文件路径，优先来自文件主数据里的 `localTempPath` / `realStoragePath`
 - `forceRebuild` 可选，默认 `false`。开启后会强制重新生成解析任务
 - 该接口会先写入 STG 解析表，再写入 DWD 标准表
 - 返回的任务结果会包含：
@@ -100,7 +100,7 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 
 说明：
 
-- `fileId` 必填
+- `fileId` 仍然作为任务关联键保留
 - 匹配时优先读取 DWD 标准表
 - 如果 DWD 未生成，系统会回退到当前解析器逻辑
 - `forceRebuild` 可选，默认 `false`。开启后会强制重新生成匹配任务

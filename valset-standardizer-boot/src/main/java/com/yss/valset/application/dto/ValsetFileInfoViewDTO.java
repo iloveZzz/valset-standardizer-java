@@ -57,6 +57,14 @@ public class ValsetFileInfoViewDTO {
      */
     private String storageUri;
     /**
+     * 本地临时路径。
+     */
+    private String localTempPath;
+    /**
+     * 真实存储路径。
+     */
+    private String realStoragePath;
+    /**
      * 文件格式。
      */
     private String fileFormat;

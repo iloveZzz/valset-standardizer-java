@@ -14,6 +14,7 @@ import { customInstance } from "@/api/mutator";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
   RunLogAnalysis,
+  RunLogCleanupCommand,
   RunLogConsoleSeedItem,
   RunLogPage,
   RunLogQueryState,
@@ -349,7 +350,7 @@ export const useTransferPage = (): { page: RunLogPage } => {
     await Promise.all([loadAnalysis(), loadList(pageNo, pageSize)]);
   };
 
-  const cleanupLogs = async () => {
+  const cleanupLogs = async (command: RunLogCleanupCommand) => {
     if (cleanupLoading.value) {
       return;
     }
@@ -357,13 +358,19 @@ export const useTransferPage = (): { page: RunLogPage } => {
     cleanupLoading.value = true;
     try {
       const res = await customInstance<any>({
-        url: "/transfer-run-logs/cleanup-yesterday",
+        url: "/transfer-run-logs/cleanup",
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        data: {
+          startInclusive: command.startInclusive,
+          endExclusive: command.endExclusive,
+        },
       });
       const result = unwrapSingleResult(res);
       const deletedCount = Number(result?.deletedCount ?? 0);
-      const cleanupDate = String(result?.cleanupDate ?? "").trim() || "前一天";
-      message.success(`已清理 ${cleanupDate} 的运行日志，共 ${deletedCount} 条`);
+      message.success(
+        `已清理 ${command.cleanupLabel} 的运行日志，共 ${deletedCount} 条`,
+      );
       await reloadAnalysisAndList(
         pagination.value.current || 1,
         pagination.value.pageSize || 10,

@@ -15,12 +15,12 @@ export interface TransferTargetViewDTO {
   enabled?: boolean;
   /** 当前使用的目标表单模板名。 */
   formTemplateName?: string;
+  /** 已关联的分拣路由数量。 */
+  referencedRouteCount?: number;
   /** 投递目标编码。 */
   targetCode?: string;
   /** 投递目标主键。 */
   targetId?: string;
-  /** 已关联的分拣路由数量。 */
-  referencedRouteCount?: number;
   /** 目标扩展信息。(object) */
   targetMeta?: Object;
   /** 投递目标名称。 */

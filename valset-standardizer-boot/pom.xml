@@ -59,6 +59,11 @@
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-task</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
             <artifactId>valset-standardizer-batch</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -179,6 +184,7 @@
                         <include>com.yss.datamiddle:valset-standardizer-analysis</include>
                         <include>com.yss.datamiddle:valset-standardizer-knowledge</include>
                         <include>com.yss.datamiddle:valset-standardizer-transfer</include>
+                        <include>com.yss.datamiddle:valset-standardizer-task</include>
                         <include>com.yss.datamiddle:valset-standardizer-batch</include>
                     </includes>
                     <projectName>${project.description}</projectName>
