@@ -66,14 +66,14 @@ public class WorkflowTaskController {
     }
 
     /**
-     * 创建原始数据提取任务。
+     * 创建文件解析任务。
      *
-     * @param command 原始数据提取任务请求
+     * @param command 文件解析任务请求
      * @return 任务创建结果
      */
     @PostMapping("/extract")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "创建原始数据提取任务", description = "提取任务负责将 Excel/CSV 原始行数据落到 ODS 表，后续解析和匹配会通过 fileId 使用这些数据。")
+    @Operation(summary = "创建文件解析任务", description = "解析任务负责将 Excel/CSV 原始行数据落到 ODS 表，后续解析和匹配会通过 fileId 使用这些数据。")
     public SingleResult<TaskCreateResponse> createExtractTask(@Valid @RequestBody ExtractDataTaskCommand command) {
         return SingleResult.of(taskAppService.createExtractTask(command));
     }

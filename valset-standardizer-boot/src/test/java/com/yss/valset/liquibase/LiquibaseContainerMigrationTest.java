@@ -46,8 +46,10 @@ class LiquibaseContainerMigrationTest {
                 "select count(*) from information_schema.statistics where table_schema = database() and table_name = 't_transfer_object' and index_name = 'uk_transfer_object_fingerprint'",
                 "select count(*) from information_schema.columns where table_schema = database() and table_name = 't_transfer_object' and column_name = 'real_storage_path'",
                 "select count(*) from information_schema.columns where table_schema = database() and table_name = 't_transfer_mail_info' and column_name = 'mail_subject'",
+                "select count(*) from t_transfer_source",
                 "select count(*) from t_transfer_target",
-                "select count(*) from t_transfer_rule"
+                "select count(*) from t_transfer_rule",
+                "select count(*) from t_transfer_route"
         );
     }
 
@@ -61,12 +63,14 @@ class LiquibaseContainerMigrationTest {
                 "select count(*) from pg_indexes where schemaname = 'public' and tablename = 't_transfer_object' and indexname = 'uk_transfer_object_fingerprint'",
                 "select count(*) from information_schema.columns where table_schema = 'public' and table_name = 't_transfer_object' and column_name = 'real_storage_path'",
                 "select count(*) from information_schema.columns where table_schema = 'public' and table_name = 't_transfer_mail_info' and column_name = 'mail_subject'",
+                "select count(*) from t_transfer_source",
                 "select count(*) from t_transfer_target",
-                "select count(*) from t_transfer_rule"
+                "select count(*) from t_transfer_rule",
+                "select count(*) from t_transfer_route"
         );
     }
 
-    private void verifyMigration(String jdbcUrl, String username, String password, String tableCountSql, String indexCountSql, String realStorageColumnSql, String mailInfoColumnSql, String targetCountSql, String ruleCountSql) throws Exception {
+    private void verifyMigration(String jdbcUrl, String username, String password, String tableCountSql, String indexCountSql, String realStorageColumnSql, String mailInfoColumnSql, String sourceCountSql, String targetCountSql, String ruleCountSql, String routeCountSql) throws Exception {
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password)) {
             Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
             try (Liquibase liquibase = new Liquibase(CHANGELOG, new liquibase.resource.ClassLoaderResourceAccessor(), database)) {
@@ -79,8 +83,10 @@ class LiquibaseContainerMigrationTest {
             assertThat(scalarCount(verifyConnection, indexCountSql)).isEqualTo(1);
             assertThat(scalarCount(verifyConnection, realStorageColumnSql)).isGreaterThanOrEqualTo(1);
             assertThat(scalarCount(verifyConnection, mailInfoColumnSql)).isGreaterThanOrEqualTo(1);
-            assertThat(scalarCount(verifyConnection, targetCountSql)).isEqualTo(1);
-            assertThat(scalarCount(verifyConnection, ruleCountSql)).isEqualTo(1);
+            assertThat(scalarCount(verifyConnection, sourceCountSql)).isEqualTo(3);
+            assertThat(scalarCount(verifyConnection, targetCountSql)).isEqualTo(2);
+            assertThat(scalarCount(verifyConnection, ruleCountSql)).isEqualTo(2);
+            assertThat(scalarCount(verifyConnection, routeCountSql)).isEqualTo(2);
         }
     }
 

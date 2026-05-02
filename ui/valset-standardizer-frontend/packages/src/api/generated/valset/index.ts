@@ -185,7 +185,7 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
-   * @summary 创建原始数据提取任务。
+   * @summary 创建文件解析任务。
    */
   const createExtractTask = (
     extractDataTaskCommand: ExtractDataTaskCommand,

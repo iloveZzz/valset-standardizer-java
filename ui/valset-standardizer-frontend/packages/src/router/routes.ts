@@ -52,7 +52,7 @@ export const workspaceNav: Array<{
     })),
   },
   {
-    title: "委外数据任务",
+    title: "估值表解析任务",
     path: "/outsourced-data-tasks",
     icon: ProjectOutlined,
   },
@@ -99,7 +99,7 @@ export const routes: RouteRecordRaw[] = [
     name: "outsourced-data-tasks",
     component: () => import("@/views/OutsourcedDataTask/index.vue"),
     meta: {
-      title: "委外数据任务",
+      title: "估值表解析任务",
       keepAlive: false,
     },
   },

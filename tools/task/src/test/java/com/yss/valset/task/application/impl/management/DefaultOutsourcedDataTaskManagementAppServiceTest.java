@@ -13,7 +13,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 默认委外数据任务管理应用服务测试。
+ * 默认估值表解析任务管理应用服务测试。
  */
 class DefaultOutsourcedDataTaskManagementAppServiceTest {
 
@@ -24,7 +24,7 @@ class DefaultOutsourcedDataTaskManagementAppServiceTest {
         OutsourcedDataTaskSummaryDTO summary = service.summary(new OutsourcedDataTaskQueryCommand());
 
         assertThat(summary.getTotalCount()).isGreaterThan(0);
-        assertThat(summary.getStageSummaries()).hasSize(OutsourcedDataTaskStage.values().length);
+        assertThat(summary.getStepSummaries()).hasSize(OutsourcedDataTaskStage.values().length - 1);
     }
 
     @Test
@@ -44,7 +44,7 @@ class DefaultOutsourcedDataTaskManagementAppServiceTest {
     void shouldListStepsByBusinessOrder() {
         List<OutsourcedDataTaskStepDTO> steps = service.listSteps("BATCH-20250227-001");
 
-        assertThat(steps).hasSize(OutsourcedDataTaskStage.values().length);
+        assertThat(steps).hasSize(OutsourcedDataTaskStage.values().length - 1);
         assertThat(steps.get(0).getStage()).isEqualTo(OutsourcedDataTaskStage.FILE_PARSE.name());
         assertThat(steps.get(steps.size() - 1).getStage()).isEqualTo(OutsourcedDataTaskStage.VERIFY_ARCHIVE.name());
     }

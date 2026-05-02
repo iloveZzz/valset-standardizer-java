@@ -223,7 +223,7 @@ curl "http://localhost:8080/api/valuation-workflows/10001/match-results"
 说明：
 
 - 可用于查看 `taskStage`、`taskStartTime`、`parseTaskTimeMs`、`standardizeTimeMs`、`matchStandardSubjectTimeMs`
-- 对 `EXTRACT_DATA` 任务还会返回 `rowCount`、`fileSizeBytes`，并将文件解析耗时写入 `parseTaskTimeMs`
+- 对文件解析任务还会返回 `rowCount`、`fileSizeBytes`，并将文件解析耗时写入 `parseTaskTimeMs`
 - 对 `PARSE_WORKBOOK` 任务会将结构标准化耗时写入 `standardizeTimeMs`
 - 对 `MATCH_SUBJECT` 任务会将匹配标准科目耗时写入 `matchStandardSubjectTimeMs`
 - 任务是否复用由 `extractTask.reusedExistingTask` 或 `upload` / `full-process` 返回值体现

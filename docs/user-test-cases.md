@@ -2,7 +2,7 @@
 
 本文档基于当前 `valset-standardizer` 已落地能力整理，覆盖 4 个主流程：
 
-- 原始数据提取
+- 文件解析
 - 估值表解析
 - 科目匹配
 - 历史映射评估
@@ -23,10 +23,10 @@
 2. 确认端口 `30066` 可访问。
 3. 确认上述 3 个样例文件路径在当前机器存在。
 
-## 2. 用例 1：原始数据提取成功
+## 2. 用例 1：文件解析成功
 
 目的：
-验证 `/api/tasks/extract` 能正确创建提取任务，并把 Excel / CSV 行数据落到 ODS 表。
+验证 `/api/tasks/extract` 能正确创建文件解析任务，并把 Excel / CSV 行数据落到 ODS 表。
 
 请求：
 
@@ -42,7 +42,7 @@ curl -X POST http://localhost:30066/api/tasks/extract \
 预期：
 
 - 返回 `taskId`
-- `taskType` 为 `EXTRACT_DATA`
+- `taskType` 为内部文件解析任务类型
 - `taskStatus` 初始为 `PENDING` 或 `RUNNING`
 
 轮询任务：

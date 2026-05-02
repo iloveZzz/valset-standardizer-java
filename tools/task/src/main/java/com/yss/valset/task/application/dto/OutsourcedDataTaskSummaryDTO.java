@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 委外数据任务总览。
+ * 估值表解析任务总览。
  */
 @Data
 public class OutsourcedDataTaskSummaryDTO {
@@ -18,5 +18,5 @@ public class OutsourcedDataTaskSummaryDTO {
 
     private long failedCount;
 
-    private List<OutsourcedDataTaskStageSummaryDTO> stageSummaries;
+    private List<OutsourcedDataTaskStageSummaryDTO> stepSummaries;
 }

@@ -114,6 +114,128 @@ subject:
       enable-match-process: false
       # 是否持久化标准化后的 DWD 明细
       persist-standardized-dwd-details: false
+    outsourced-task:
+      # 估值表解析任务阶段配置
+      # 未命中的解析生命周期阶段默认归入哪个阶段
+      parse-fallback-stage: FILE_PARSE
+      # 未命中的工作流任务类型默认归入哪个阶段
+      workflow-fallback-stage: DATA_PROCESSING
+      # 不参与阶段归档展示的解析生命周期阶段
+      ignored-parse-lifecycle-stages:
+        - CYCLE_STARTED
+        - CYCLE_FINISHED
+        - BATCH_STARTED
+        - BATCH_EMPTY
+        - BATCH_FINISHED
+      # 不参与阶段归档展示的工作流任务类型
+      ignored-workflow-task-types:
+        - PARSE_WORKBOOK
+      # 工作流任务状态归入已完成的状态
+      success-task-statuses:
+        - SUCCESS
+      # 工作流任务状态归入失败的状态
+      failed-task-statuses:
+        - FAILED
+      # 工作流任务状态归入停止的状态
+      stopped-task-statuses:
+        - CANCELED
+      # 工作流任务状态归入进行中的状态
+      running-task-statuses:
+        - RUNNING
+        - RETRYING
+      # 解析生命周期阶段归入进行中的状态
+      parse-running-lifecycle-stages:
+        - TASK_EXECUTION_STARTED
+        - TASK_CREATED
+        - TASK_DISPATCHED
+        - QUEUE_SUBSCRIBED
+      # 解析生命周期阶段归入已完成的状态
+      parse-success-lifecycle-stages:
+        - TASK_RAW_PARSED
+        - TASK_STANDARDIZED
+        - TASK_PERSISTED
+        - TASK_SUCCEEDED
+        - QUEUE_COMPLETED
+        - TASK_REUSED
+      # 解析生命周期阶段归入停止的状态
+      parse-stopped-lifecycle-stages:
+        - QUEUE_SKIPPED
+        - QUEUE_SUBSCRIBE_CONFLICT
+        - QUEUE_SUBSCRIBE_SKIPPED
+      # 页面状态标签配置
+      statuses:
+        - status: PENDING
+          label: 待处理
+        - status: RUNNING
+          label: 处理中
+        - status: SUCCESS
+          label: 已完成
+        - status: FAILED
+          label: 失败
+        - status: STOPPED
+          label: 已停止
+        - status: BLOCKED
+          label: 阻塞
+      stages:
+        - stage: FILE_PARSE
+          step: FILE_PARSE
+          stage-name: 文件解析
+          step-name: 文件解析
+          stage-description: 文件识别、Sheet 解析、结构化解析
+          step-description: 文件识别、Sheet 解析、结构化解析
+          task-types:
+            - EXTRACT_DATA
+          task-stages:
+            - EXTRACT
+        - stage: STRUCTURE_STANDARDIZE
+          step: STRUCTURE_STANDARDIZE
+          stage-name: 结构标准化
+          step-name: 结构标准化
+          stage-description: 字段映射、数据清洗、STG 结构转换
+          step-description: 字段映射、数据清洗、STG 结构转换
+          task-stages:
+            - STANDARDIZE
+          parse-lifecycle-stages:
+            - TASK_STANDARDIZED
+        - stage: SUBJECT_RECOGNIZE
+          step: SUBJECT_RECOGNIZE
+          stage-name: 科目识别
+          step-name: 科目识别
+          stage-description: 科目匹配、属性识别、标签补全
+          step-description: 科目匹配、属性识别、标签补全
+          task-types:
+            - MATCH_SUBJECT
+          task-stages:
+            - MATCH
+        - stage: STANDARD_LANDING
+          step: STANDARD_LANDING
+          stage-name: 标准表落地
+          step-name: 标准表落地
+          stage-description: STG/DWD/标准持仓/估值数据写入
+          step-description: STG/DWD/标准持仓/估值数据写入
+          parse-lifecycle-stages:
+            - TASK_PERSISTED
+        - stage: DATA_PROCESSING
+          step: DATA_PROCESSING
+          stage-name: 加工任务
+          step-name: 加工任务
+          stage-description: 后续数据加工、补充计算、派生数据生成
+          step-description: 后续数据加工、补充计算、派生数据生成
+          task-types:
+            - EVALUATE_MAPPING
+            - REFRESH_STANDARD_SUBJECT
+            - REFRESH_MAPPING_HINT
+        - stage: VERIFY_ARCHIVE
+          step: VERIFY_ARCHIVE
+          stage-name: 校验归档
+          step-name: 校验归档
+          stage-description: 一致性校验、结果确认、归档完成
+          step-description: 一致性校验、结果确认、归档完成
+          task-types:
+            - EXPORT_RESULT
+          parse-lifecycle-stages:
+            - TASK_SUCCEEDED
+            - QUEUE_COMPLETED
     run-log-cleanup:
       # 运行日志清理定时表达式
       cron: ${TRANSFER_RUN_LOG_CLEANUP_CRON:0 0 23 * * ?}

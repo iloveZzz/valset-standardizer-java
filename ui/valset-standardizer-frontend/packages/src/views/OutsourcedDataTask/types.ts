@@ -20,16 +20,21 @@ export type OutsourcedDataTaskQueryState = {
   businessDate: string;
   managerName: string;
   productKeyword: string;
-  stage: string;
+  step: string;
+  stage?: string;
   status: string;
   sourceType: string;
   errorType: string;
+  includeHistory: boolean;
 };
 
-export type OutsourcedDataTaskStageSummary = {
-  stage: OutsourcedDataTaskStage;
-  stageName: string;
-  stageDescription: string;
+export type OutsourcedDataTaskStepSummary = {
+  step: OutsourcedDataTaskStage;
+  stepName: string;
+  stepDescription: string;
+  stage?: OutsourcedDataTaskStage;
+  stageName?: string;
+  stageDescription?: string;
   totalCount: number;
   runningCount: number;
   failedCount: number;
@@ -48,8 +53,10 @@ export type OutsourcedDataTaskBatchRow = {
   filesysFileId: string;
   originalFileName: string;
   sourceType: string;
-  currentStage: OutsourcedDataTaskStage;
-  currentStageName: string;
+  currentStep: OutsourcedDataTaskStage;
+  currentStepName: string;
+  currentStage?: OutsourcedDataTaskStage;
+  currentStageName?: string;
   status: OutsourcedDataTaskStatus;
   statusName: string;
   progress: number;
@@ -65,8 +72,10 @@ export type OutsourcedDataTaskBatchRow = {
 export type OutsourcedDataTaskStepRow = {
   stepId: string;
   batchId: string;
-  stage: OutsourcedDataTaskStage;
-  stageName: string;
+  step: OutsourcedDataTaskStage;
+  stepName: string;
+  stage?: OutsourcedDataTaskStage;
+  stageName?: string;
   taskId: string;
   taskType: string;
   runNo: number;
@@ -97,7 +106,8 @@ export type OutsourcedDataTaskDataEntry = {
 
 export type OutsourcedDataTaskLogRow = {
   key: string;
-  stageName: string;
+  stepName: string;
+  stageName?: string;
   status: OutsourcedDataTaskStatus;
   statusName: string;
   startedAt: string;
@@ -118,12 +128,15 @@ export type OutsourcedDataTaskPage = {
   loading: boolean;
   rows: OutsourcedDataTaskBatchRow[];
   tableData: OutsourcedDataTaskBatchRow[];
-  stageSummaries: OutsourcedDataTaskStageSummary[];
+  historyLoading: boolean;
+  historyRows: OutsourcedDataTaskBatchRow[];
+  stepSummaries: OutsourcedDataTaskStepSummary[];
   totalCount: number;
   runningCount: number;
   successCount: number;
   failedCount: number;
   pagination: YTablePagination;
+  historyPagination: YTablePagination;
   query: OutsourcedDataTaskQueryState;
   selectedRowKeys: string[];
   selectedRow: OutsourcedDataTaskBatchRow | null;
@@ -131,6 +144,7 @@ export type OutsourcedDataTaskPage = {
   detailLogRows: OutsourcedDataTaskLogRow[];
   manualState: OutsourcedDataTaskManualState;
   detailVisible: boolean;
+  historyVisible: boolean;
   stepLogVisible: boolean;
   stepLogLoading: boolean;
   stepLogRows: OutsourcedDataTaskLogRow[];
@@ -139,7 +153,7 @@ export type OutsourcedDataTaskPage = {
   runQuery: () => void;
   resetQuery: () => void;
   handlePageChange: (params: { current: number; pageSize: number }) => void;
-  selectStage: (stage: string) => void;
+  selectStep: (stage: string) => void;
   selectStatus: (status: string) => void;
   handleExpandChange: (params: { row?: OutsourcedDataTaskBatchRow; expanded?: boolean }) => void;
   getOrderedSteps: (row: OutsourcedDataTaskBatchRow) => OutsourcedDataTaskStepRow[];
@@ -150,6 +164,9 @@ export type OutsourcedDataTaskPage = {
   closeStepLogs: () => void;
   openStepData: (row: OutsourcedDataTaskStepRow) => void;
   closeStepData: () => void;
+  openHistoryDrawer: () => void;
+  closeHistoryDrawer: () => void;
+  handleHistoryPageChange: (params: { current: number; pageSize: number }) => void;
   executeBatch: (row: OutsourcedDataTaskBatchRow) => void;
   retryBatch: (row: OutsourcedDataTaskBatchRow) => void;
   stopBatch: (row: OutsourcedDataTaskBatchRow) => void;

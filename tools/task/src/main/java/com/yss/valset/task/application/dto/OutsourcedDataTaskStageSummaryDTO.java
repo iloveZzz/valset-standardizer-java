@@ -3,16 +3,22 @@ package com.yss.valset.task.application.dto;
 import lombok.Data;
 
 /**
- * 委外数据任务阶段总览。
+ * 估值表解析任务步骤总览。
  */
 @Data
 public class OutsourcedDataTaskStageSummaryDTO {
 
     private String stage;
 
+    private String step;
+
     private String stageName;
 
+    private String stepName;
+
     private String stageDescription;
+
+    private String stepDescription;
 
     private long totalCount;
 

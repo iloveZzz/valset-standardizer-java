@@ -14,7 +14,7 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import java.util.List;
 
 /**
- * 委外数据任务管理应用服务。
+ * 估值表解析任务管理应用服务。
  */
 public interface OutsourcedDataTaskManagementAppService {
 

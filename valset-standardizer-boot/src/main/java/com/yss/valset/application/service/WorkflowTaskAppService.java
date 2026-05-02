@@ -26,7 +26,7 @@ public interface WorkflowTaskAppService {
     TaskCreateResponse createEvaluateTask(EvaluateMappingTaskCommand command);
 
     /**
-     * 创建原始数据提取任务。
+     * 创建文件解析任务。
      */
     TaskCreateResponse createExtractTask(ExtractDataTaskCommand command);
 }

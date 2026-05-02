@@ -3,7 +3,7 @@ package com.yss.valset.task.application.dto;
 import lombok.Data;
 
 /**
- * 委外数据任务操作结果。
+ * 估值表解析任务操作结果。
  */
 @Data
 public class OutsourcedDataTaskActionResultDTO {

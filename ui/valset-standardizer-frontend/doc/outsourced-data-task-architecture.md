@@ -1,8 +1,8 @@
-# 委外数据任务管理技术架构设计
+# 估值表解析任务管理技术架构设计
 
 ## 1. 模块定位
 
-委外数据任务管理单独落在后端 `tools/task` 模块，Maven artifact 为 `valset-standardizer-task`，Java 包名为 `com.yss.valset.task`。
+估值表解析任务管理单独落在后端 `tools/task` 模块，Maven artifact 为 `valset-standardizer-task`，Java 包名为 `com.yss.valset.task`。
 
 该模块只负责“数据处理批次”和“阶段执行明细”的聚合管理，不承接具体解析、分拣、投递或标准化算法。
 

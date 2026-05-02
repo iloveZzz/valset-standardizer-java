@@ -1,6 +1,6 @@
 # ODS 原始数据分析链路设计
 
-本文档说明估值表处理链路从“直接解析 Excel/CSV”调整为“先抽取原始行数据，再基于 ODS 行表分析”的新架构。
+本文档说明估值表处理链路从“直接解析 Excel/CSV”调整为“先文件解析，再基于 ODS 行表分析”的架构。
 
 ## 目标
 
@@ -13,7 +13,7 @@
 
 ### `valset-standardizer-extract`
 
-- 负责 Excel / CSV 原始数据抽取。
+- 负责 Excel / CSV 文件解析与原始行落地。
 - 负责将每一行原始数据落到 `t_ods_valuation_filedata`。
 - 提供 `ValuationFileDataMapper` 和原始数据查询能力。
 
@@ -49,7 +49,7 @@
 
 ```mermaid
 flowchart LR
-    A["外部 Excel / CSV 文件"] --> B["原始数据提取任务"]
+    A["外部 Excel / CSV 文件"] --> B["文件解析任务"]
     B --> C["valset-standardizer-extract"]
     C --> D["t_ods_valuation_filedata"]
     D --> E["valset-standardizer-analysis"]
@@ -70,8 +70,8 @@ sequenceDiagram
     participant A as valset-standardizer-analysis
     participant K as valset-standardizer-knowledge
 
-    U->>B: 创建 EXTRACT_DATA 任务
-    B->>X: 调度原始数据提取
+    U->>B: 创建文件解析任务
+    B->>X: 调度文件解析
     X->>O: 按行写入原始数据
     X-->>B: 返回 rowCount / durationMs
     U->>B: 创建 PARSE_WORKBOOK 或 MATCH_SUBJECT 任务
@@ -86,7 +86,7 @@ sequenceDiagram
 
 ## 数据流说明
 
-1. 提取阶段只关心“文件 -> 原始行数据”。
+1. 文件解析阶段只关心“文件 -> 原始行数据”。
 2. 分析阶段只关心“原始行数据 -> 结构化估值结果”。
 3. 匹配阶段消费 `ParsedValuationData`，并通过 `valset-standardizer-knowledge` 加载标准科目和映射提示。
 4. `fileId` 是连接提取与分析的关键上下文。

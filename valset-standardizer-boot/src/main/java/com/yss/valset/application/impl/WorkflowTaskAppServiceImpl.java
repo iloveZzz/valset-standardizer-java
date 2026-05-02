@@ -70,7 +70,7 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     }
 
     /**
-     * 创建并分派原始数据提取任务。
+     * 创建并分派文件解析任务。
      */
     @Override
     public TaskCreateResponse createExtractTask(ExtractDataTaskCommand command) {
@@ -153,7 +153,7 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     }
 
     /**
-     * 为原始数据提取任务构建可追踪的业务密钥。
+     * 为文件解析任务构建可追踪的业务密钥。
      */
     private String buildExtractBusinessKey(ExtractDataTaskCommand command) {
         String fileFingerprint = resolveExtractFileFingerprint(command);

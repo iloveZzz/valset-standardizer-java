@@ -10,6 +10,14 @@ import {
   StopOutlined,
 } from "@ant-design/icons-vue";
 import { YButton, YCard, YTable, type YTableColumn } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
+import {
+  outsourcedDataTaskActionTexts,
+  outsourcedDataTaskMetricCardText,
+  outsourcedDataTaskPreviewText,
+  outsourcedDataTaskTableTexts,
+  outsourcedDataTaskStatusCatalog,
+} from "../constants";
 import type {
   OutsourcedDataTaskBatchRow,
   OutsourcedDataTaskPage,
@@ -20,67 +28,84 @@ const { page } = defineProps<{
   page: OutsourcedDataTaskPage;
 }>();
 
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  extraOffset: 24,
+  defaultHeight: 480,
+  minHeight: 260,
+});
+
 const columns = computed<YTableColumn[]>(() => [
   { type: "checkbox", width: 48, align: "center", fixed: "left" as const },
   { type: "expand", width: 46, fixed: "left" as const },
   {
     field: "batchName",
-    title: "数据批次名称",
+    title: outsourcedDataTaskTableTexts.batchColumns.batchName,
     minWidth: 260,
     fixed: "left" as const,
     ellipsis: true,
   },
-  { field: "productCode", title: "产品代码", width: 120 },
-  { field: "productName", title: "产品名称", width: 140 },
-  { field: "managerName", title: "管理人", width: 130 },
-  { field: "valuationDate", title: "估值日期", width: 120 },
+  { field: "productCode", title: outsourcedDataTaskTableTexts.batchColumns.productCode, width: 120 },
+  { field: "productName", title: outsourcedDataTaskTableTexts.batchColumns.productName, width: 140 },
+  { field: "managerName", title: outsourcedDataTaskTableTexts.batchColumns.managerName, width: 130 },
+  { field: "valuationDate", title: outsourcedDataTaskTableTexts.batchColumns.valuationDate, width: 120 },
   {
     field: "originalFileName",
-    title: "文件名称",
+    title: outsourcedDataTaskTableTexts.batchColumns.originalFileName,
     minWidth: 220,
     ellipsis: true,
   },
-  { field: "currentStageName", title: "当前阶段", width: 140 },
-  { field: "status", title: "状态", width: 110 },
-  { field: "progress", title: "进度", width: 180 },
-  { field: "startedAt", title: "开始时间", width: 180 },
-  { field: "durationText", title: "耗时", width: 90 },
+  { field: "currentStepName", title: outsourcedDataTaskTableTexts.batchColumns.currentStepName, width: 140 },
+  { field: "status", title: outsourcedDataTaskTableTexts.batchColumns.status, width: 110 },
+  { field: "progress", title: outsourcedDataTaskTableTexts.batchColumns.progress, width: 180 },
+  { field: "startedAt", title: outsourcedDataTaskTableTexts.batchColumns.startedAt, width: 180 },
+  { field: "durationText", title: outsourcedDataTaskTableTexts.batchColumns.durationText, width: 90 },
   {
     field: "lastErrorMessage",
-    title: "异常原因",
+    title: outsourcedDataTaskTableTexts.batchColumns.lastErrorMessage,
     minWidth: 240,
     ellipsis: true,
   },
-  { field: "action", title: "操作", width: 220, fixed: "right" as const },
+  { field: "action", title: outsourcedDataTaskTableTexts.batchColumns.action, width: 220, fixed: "right" as const },
 ]);
 
+const historyColumns = computed<YTableColumn[]>(() =>
+  columns.value.filter((column) => Boolean(column.field) && column.field !== "action"),
+);
+
 const stepColumns = computed<YTableColumn[]>(() => [
-  { field: "stageName", title: "阶段名称", width: 150 },
-  { field: "startedAt", title: "任务开始时间", width: 180 },
-  { field: "durationText", title: "执行耗时", width: 100 },
-  { field: "runNo", title: "执行次数", width: 100 },
-  { field: "triggerModeName", title: "触发方式", width: 120 },
-  { field: "status", title: "状态", width: 110 },
-  { field: "errorMessage", title: "错误摘要", minWidth: 240, ellipsis: true },
-  { field: "action", title: "操作", width: 190, fixed: "right" as const },
+  { field: "stepName", title: outsourcedDataTaskTableTexts.stepColumns.stepName, width: 150 },
+  { field: "startedAt", title: outsourcedDataTaskTableTexts.stepColumns.startedAt, width: 180 },
+  { field: "durationText", title: outsourcedDataTaskTableTexts.stepColumns.durationText, width: 100 },
+  { field: "runNo", title: outsourcedDataTaskTableTexts.stepColumns.runNo, width: 100 },
+  { field: "triggerModeName", title: outsourcedDataTaskTableTexts.stepColumns.triggerModeName, width: 120 },
+  { field: "status", title: outsourcedDataTaskTableTexts.stepColumns.status, width: 110 },
+  { field: "errorMessage", title: outsourcedDataTaskTableTexts.stepColumns.errorMessage, minWidth: 240, ellipsis: true },
+  { field: "action", title: outsourcedDataTaskTableTexts.stepColumns.action, width: 190, fixed: "right" as const },
 ]);
 
 const dataEntryColumns = computed<YTableColumn[]>(() => [
-  { field: "name", title: "入口名称", width: 130 },
-  { field: "description", title: "说明", minWidth: 280, ellipsis: true },
-  { field: "status", title: "状态", width: 110 },
-  { field: "action", title: "操作", width: 120, fixed: "right" as const },
+  { field: "name", title: outsourcedDataTaskTableTexts.dataEntryColumns.name, width: 130 },
+  {
+    field: "description",
+    title: outsourcedDataTaskTableTexts.dataEntryColumns.description,
+    minWidth: 280,
+    ellipsis: true,
+  },
+  { field: "status", title: outsourcedDataTaskTableTexts.dataEntryColumns.status, width: 110 },
+  { field: "action", title: outsourcedDataTaskTableTexts.dataEntryColumns.action, width: 120, fixed: "right" as const },
 ]);
 
 const logColumns = computed<YTableColumn[]>(() => [
-  { field: "stageName", title: "阶段", width: 140 },
-  { field: "logLevel", title: "级别", width: 90 },
-  { field: "occurredAt", title: "日志时间", width: 180 },
-  { field: "startedAt", title: "开始时间", width: 180 },
-  { field: "durationText", title: "耗时", width: 90 },
-  { field: "status", title: "状态", width: 100 },
-  { field: "message", title: "阶段日志", minWidth: 260, ellipsis: true },
-  { field: "errorStack", title: "错误堆栈", minWidth: 320 },
+  { field: "stepName", title: outsourcedDataTaskTableTexts.logColumns.stepName, width: 140 },
+  { field: "logLevel", title: outsourcedDataTaskTableTexts.logColumns.logLevel, width: 90 },
+  { field: "occurredAt", title: outsourcedDataTaskTableTexts.logColumns.occurredAt, width: 180 },
+  { field: "startedAt", title: outsourcedDataTaskTableTexts.logColumns.startedAt, width: 180 },
+  { field: "durationText", title: outsourcedDataTaskTableTexts.logColumns.durationText, width: 90 },
+  { field: "status", title: outsourcedDataTaskTableTexts.logColumns.status, width: 100 },
+  { field: "message", title: outsourcedDataTaskTableTexts.logColumns.message, minWidth: 260, ellipsis: true },
+  { field: "errorStack", title: outsourcedDataTaskTableTexts.logColumns.errorStack, minWidth: 320 },
 ]);
 
 const detailActiveKey = ref("overview");
@@ -93,17 +118,13 @@ const dataStatusColor = (status: string) => {
   return "default";
 };
 
-const statusLabelMap: Record<string, string> = {
-  PENDING: "待处理",
-  RUNNING: "处理中",
-  SUCCESS: "已完成",
-  FAILED: "失败",
-  STOPPED: "已停止",
-  BLOCKED: "阻塞",
-};
+const statusLabelMap = Object.fromEntries(
+  outsourcedDataTaskStatusCatalog.map((item) => [item.status, item.label]),
+);
+const statusOptions = outsourcedDataTaskStatusCatalog;
 
-const formatStageLabel = (stage: string) =>
-  page.stageSummaries.find((item) => item.stage === stage)?.stageName || stage;
+const formatStepLabel = (stage: string) =>
+  page.stepSummaries.find((item) => item.stage === stage)?.stepName || stage;
 
 const formatStatusLabel = (status: string) => statusLabelMap[status] || status;
 
@@ -126,42 +147,43 @@ const openActionConfirm = (
 
 const confirmExecute = (row: OutsourcedDataTaskBatchRow) => {
   openActionConfirm(
-    "执行委外数据任务",
-    "将提交该批次的数据处理任务，是否继续？",
+    outsourcedDataTaskActionTexts.executeBatchConfirmTitle,
+    outsourcedDataTaskActionTexts.executeBatchConfirmContent,
     () => page.executeBatch(row),
   );
 };
 
 const confirmRetry = (row: OutsourcedDataTaskBatchRow) => {
   openActionConfirm(
-    "重跑委外数据任务",
-    "将从失败或当前阶段重新执行该批次，是否继续？",
+    outsourcedDataTaskActionTexts.retryBatchConfirmTitle,
+    outsourcedDataTaskActionTexts.retryBatchConfirmContent,
     () => page.retryBatch(row),
   );
 };
 
 const confirmStop = (row: OutsourcedDataTaskBatchRow) => {
   openActionConfirm(
-    "停止委外数据任务",
-    "将停止该批次当前运行阶段，是否继续？",
+    outsourcedDataTaskActionTexts.stopBatchConfirmTitle,
+    outsourcedDataTaskActionTexts.stopBatchConfirmContent,
     () => page.stopBatch(row),
   );
 };
 
 const confirmRetryStep = (row: OutsourcedDataTaskStepRow) => {
   openActionConfirm(
-    "重跑任务阶段",
-    `将重新执行 ${row.stageName} 阶段，是否继续？`,
+    outsourcedDataTaskActionTexts.retryStepConfirmTitle,
+    `${outsourcedDataTaskActionTexts.retryStepConfirmContentPrefix}${row.stepName}${outsourcedDataTaskActionTexts.retryStepConfirmContentSuffix}`,
     () => page.retryStep(row),
   );
 };
 
 const activeFilterText = computed(() => {
   const filters = [
+    "当前任务",
     page.query.businessDate && `任务日期：${page.query.businessDate}`,
     page.query.managerName && `管理人：${page.query.managerName}`,
     page.query.productKeyword && `产品：${page.query.productKeyword}`,
-    page.query.stage && `阶段：${formatStageLabel(page.query.stage)}`,
+    page.query.step && `步骤：${formatStepLabel(page.query.step)}`,
     page.query.status && `状态：${formatStatusLabel(page.query.status)}`,
     page.query.sourceType && `来源：${page.query.sourceType}`,
     page.query.errorType && `异常：${page.query.errorType}`,
@@ -172,36 +194,36 @@ const activeFilterText = computed(() => {
 const taskMetricCards = computed(() => [
   {
     key: "total",
-    label: "今日数据批次",
+    label: outsourcedDataTaskMetricCardText.total.label,
     value: page.totalCount,
-    description: "当前任务日期内累计进入处理链路的数据批次",
+    description: outsourcedDataTaskMetricCardText.total.description,
     tone: "primary",
     active: !page.query.status,
     onClick: () => page.selectStatus(""),
   },
   {
     key: "running",
-    label: "处理中",
+    label: outsourcedDataTaskMetricCardText.running.label,
     value: page.runningCount,
-    description: "正在解析、标准化、落地或加工的任务批次",
+    description: outsourcedDataTaskMetricCardText.running.description,
     tone: "warning",
     active: page.query.status === "RUNNING",
     onClick: () => page.selectStatus("RUNNING"),
   },
   {
     key: "success",
-    label: "处理完成",
+    label: outsourcedDataTaskMetricCardText.success.label,
     value: page.successCount,
-    description: "已完成校验归档并进入可用状态的批次",
+    description: outsourcedDataTaskMetricCardText.success.description,
     tone: "success",
     active: page.query.status === "SUCCESS",
     onClick: () => page.selectStatus("SUCCESS"),
   },
   {
     key: "failed",
-    label: "异常待处理",
+    label: outsourcedDataTaskMetricCardText.failed.label,
     value: page.failedCount,
-    description: "失败或阻塞后等待定位、修复和重跑的批次",
+    description: outsourcedDataTaskMetricCardText.failed.description,
     tone: "danger",
     active: page.query.status === "FAILED",
     onClick: () => page.selectStatus("FAILED"),
@@ -214,23 +236,24 @@ const taskMetricCards = computed(() => [
     <YCard class="outsourced-task-header" :bordered="false" :padding="12">
       <div class="outsourced-task-header__top">
         <div>
-          <h2>委外数据任务管理</h2>
-          <p>
-            覆盖估值文件解析、结构标准化、标准表落地和后续数据加工的任务链路。
-          </p>
+          <h2>{{ outsourcedDataTaskActionTexts.pageHeaderTitle }}</h2>
+          <p>{{ outsourcedDataTaskActionTexts.pageHeaderDescription }}</p>
         </div>
         <div class="outsourced-task-actions">
           <YButton type="primary" @click="page.batchExecute">
             <template #icon><PlayCircleOutlined /></template>
-            批量执行
+            {{ outsourcedDataTaskActionTexts.batchExecuteButtonText }}
           </YButton>
           <YButton @click="page.batchRetry">
             <template #icon><ReloadOutlined /></template>
-            批量重跑
+            {{ outsourcedDataTaskActionTexts.batchRetryButtonText }}
           </YButton>
           <YButton danger @click="page.batchStop">
             <template #icon><StopOutlined /></template>
-            批量停止
+            {{ outsourcedDataTaskActionTexts.batchStopButtonText }}
+          </YButton>
+          <YButton @click="page.openHistoryDrawer">
+            {{ outsourcedDataTaskActionTexts.historyButtonText }}
           </YButton>
         </div>
       </div>
@@ -254,20 +277,17 @@ const taskMetricCards = computed(() => [
 
       <div class="outsourced-task-stage-chain">
         <button
-          v-for="(item, index) in page.stageSummaries"
+          v-for="(item, index) in page.stepSummaries"
           :key="item.stage"
           class="outsourced-task-stage"
-          :class="{ 'is-active': page.query.stage === item.stage }"
-          @click="page.selectStage(item.stage)"
+          :class="{ 'is-active': page.query.step === item.stage }"
+          @click="page.selectStep(item.step)"
         >
           <span class="outsourced-task-stage__title"
-            >{{ index + 1 }}.{{ item.stageName }}</span
+            >{{ index + 1 }}.{{ item.stepName }}</span
           >
           <span class="outsourced-task-stage__desc">{{
-            item.stageDescription
-          }}</span>
-          <span v-if="item.failedCount" class="outsourced-task-stage__badge">{{
-            item.failedCount
+            item.stepDescription
           }}</span>
         </button>
       </div>
@@ -307,12 +327,13 @@ const taskMetricCards = computed(() => [
             size="small"
             allow-clear
           >
-            <a-select-option value="PENDING">待处理</a-select-option>
-            <a-select-option value="RUNNING">处理中</a-select-option>
-            <a-select-option value="SUCCESS">已完成</a-select-option>
-            <a-select-option value="FAILED">失败</a-select-option>
-            <a-select-option value="STOPPED">已停止</a-select-option>
-            <a-select-option value="BLOCKED">阻塞</a-select-option>
+            <a-select-option
+              v-for="item in statusOptions"
+              :key="item.status"
+              :value="item.status"
+            >
+              {{ item.label }}
+            </a-select-option>
           </a-select>
         </a-form-item>
         <a-form-item label="来源">
@@ -345,11 +366,12 @@ const taskMetricCards = computed(() => [
       </div>
     </YCard>
 
-    <div class="outsourced-task-table">
+    <div ref="tableAreaRef" class="outsourced-task-table">
       <YTable
         :columns="columns"
         :data="page.tableData"
         :loading="page.loading"
+        :height="tableHeight"
         :row-config="{ keyField: 'batchId' }"
         :checkbox-config="{ highlight: true }"
         :pageable="true"
@@ -376,11 +398,9 @@ const taskMetricCards = computed(() => [
         </template>
         <template #expand-row="{ row }">
           <div class="outsourced-task-expand">
-            <div class="outsourced-task-expand__header">
-              <strong>阶段执行明细</strong>
-              <span
-                >按文件解析、结构标准化、科目识别、标准表落地、加工任务、校验归档的业务阶段顺序展示。</span
-              >
+          <div class="outsourced-task-expand__header">
+              <strong>{{ outsourcedDataTaskActionTexts.detailStepSectionTitle }}</strong>
+              <span>{{ outsourcedDataTaskActionTexts.detailStepSectionDescription }}</span>
             </div>
             <YTable
               :columns="stepColumns"
@@ -409,13 +429,17 @@ const taskMetricCards = computed(() => [
               </template>
               <template #action="{ row: stepRow }">
                 <a-space>
-                  <a @click="page.openStepLogs(stepRow)">日志</a>
-                  <a @click="page.openStepData(stepRow)">数据</a>
+                  <a @click="page.openStepLogs(stepRow)">
+                    {{ outsourcedDataTaskActionTexts.stepLogButtonText }}
+                  </a>
+                  <a @click="page.openStepData(stepRow)">
+                    {{ outsourcedDataTaskActionTexts.stepDataButtonText }}
+                  </a>
                   <a
                     :class="{ 'is-disabled': stepRow.status === 'PENDING' }"
                     @click="confirmRetryStep(stepRow)"
                   >
-                    重跑
+                    {{ outsourcedDataTaskActionTexts.stepRetryButtonText }}
                   </a>
                 </a-space>
               </template>
@@ -424,12 +448,18 @@ const taskMetricCards = computed(() => [
         </template>
         <template #action="{ row }">
           <a-space>
-            <a @click="page.openDetailDrawer(row)">查看</a>
-            <a @click="confirmExecute(row)">执行</a>
-            <a @click="confirmRetry(row)">重跑</a>
-            <a v-if="row.status === 'RUNNING'" @click="confirmStop(row)"
-              >停止</a
-            >
+            <a @click="page.openDetailDrawer(row)">
+              {{ outsourcedDataTaskActionTexts.viewButtonText }}
+            </a>
+            <a @click="confirmExecute(row)">
+              {{ outsourcedDataTaskActionTexts.executeButtonText }}
+            </a>
+            <a @click="confirmRetry(row)">
+              {{ outsourcedDataTaskActionTexts.retryButtonText }}
+            </a>
+            <a v-if="row.status === 'RUNNING'" @click="confirmStop(row)">
+              {{ outsourcedDataTaskActionTexts.stopButtonText }}
+            </a>
           </a-space>
         </template>
       </YTable>
@@ -438,7 +468,7 @@ const taskMetricCards = computed(() => [
     <a-drawer
       class="outsourced-task-drawer"
       :open="page.detailVisible"
-      title="委外数据任务详情"
+      :title="outsourcedDataTaskActionTexts.detailHeaderTitle"
       :width="960"
       @close="page.closeDetailDrawer"
     >
@@ -461,35 +491,38 @@ const taskMetricCards = computed(() => [
           v-model:active-key="detailActiveKey"
           class="outsourced-task-detail-tabs"
         >
-          <a-tab-pane key="overview" tab="链路概览">
+          <a-tab-pane
+            key="overview"
+            :tab="outsourcedDataTaskActionTexts.detailOverviewTabTitle"
+          >
             <a-alert
               v-if="page.manualState.currentBlockPoint"
               class="outsourced-task-detail-alert"
               type="info"
               show-icon
-              :message="`当前阻塞点：${page.manualState.currentBlockPoint}`"
+              :message="`${outsourcedDataTaskPreviewText.currentBlockPointPrefix}${page.manualState.currentBlockPoint}`"
             />
 
             <a-descriptions bordered size="small" :column="2">
-              <a-descriptions-item label="批次ID">{{
+            <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.batchId">{{
                 page.selectedRow.batchId
               }}</a-descriptions-item>
-              <a-descriptions-item label="当前阶段">{{
-                page.selectedRow.currentStageName
+              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.currentStepName">{{
+                page.selectedRow.currentStepName
               }}</a-descriptions-item>
-              <a-descriptions-item label="原始文件">{{
+              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.originalFileName">{{
                 page.selectedRow.originalFileName
               }}</a-descriptions-item>
-              <a-descriptions-item label="文件服务ID">{{
+              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.filesysFileId">{{
                 page.selectedRow.filesysFileId
               }}</a-descriptions-item>
-              <a-descriptions-item label="开始时间">{{
+              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.startedAt">{{
                 page.selectedRow.startedAt
               }}</a-descriptions-item>
-              <a-descriptions-item label="执行耗时">{{
+              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.durationText">{{
                 page.selectedRow.durationText
               }}</a-descriptions-item>
-              <a-descriptions-item label="异常原因" :span="2">
+              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.lastErrorMessage" :span="2">
                 {{ page.selectedRow.lastErrorMessage || "-" }}
               </a-descriptions-item>
             </a-descriptions>
@@ -521,27 +554,35 @@ const taskMetricCards = computed(() => [
                 </template>
                 <template #action="{ row }">
                   <a-space>
-                    <a @click="page.openStepLogs(row)">日志</a>
-                    <a @click="page.openStepData(row)">数据</a>
+                    <a @click="page.openStepLogs(row)">
+                      {{ outsourcedDataTaskActionTexts.stepLogButtonText }}
+                    </a>
+                    <a @click="page.openStepData(row)">
+                      {{ outsourcedDataTaskActionTexts.stepDataButtonText }}
+                    </a>
                     <a
                       :class="{ 'is-disabled': row.status === 'PENDING' }"
                       @click="confirmRetryStep(row)"
-                      >重跑</a
                     >
+                      {{ outsourcedDataTaskActionTexts.stepRetryButtonText }}
+                    </a>
                   </a-space>
                 </template>
               </YTable>
             </div>
           </a-tab-pane>
 
-          <a-tab-pane key="data" tab="文件与数据">
+          <a-tab-pane
+            key="data"
+            :tab="outsourcedDataTaskActionTexts.detailDataTabTitle"
+          >
             <div class="outsourced-task-data-summary">
               <div>
-                <span>原始文件</span>
+                <span>{{ outsourcedDataTaskTableTexts.detailFields.originalFileName }}</span>
                 <strong>{{ page.selectedRow.originalFileName || "-" }}</strong>
               </div>
               <div>
-                <span>文件服务ID</span>
+                <span>{{ outsourcedDataTaskTableTexts.detailFields.filesysFileId }}</span>
                 <strong>{{
                   page.selectedRow.filesysFileId ||
                   page.selectedRow.fileId ||
@@ -549,7 +590,7 @@ const taskMetricCards = computed(() => [
                 }}</strong>
               </div>
               <div>
-                <span>估值日期</span>
+                <span>{{ outsourcedDataTaskTableTexts.batchColumns.valuationDate }}</span>
                 <strong>{{ page.selectedRow.valuationDate || "-" }}</strong>
               </div>
             </div>
@@ -583,14 +624,20 @@ const taskMetricCards = computed(() => [
                   size="small"
                   :href="row.href"
                   target="_blank"
-                  >打开</a-button
                 >
-                <span v-else class="outsourced-task-muted">待接入</span>
+                  {{ outsourcedDataTaskActionTexts.openEntryButtonText }}
+                </a-button>
+                <span v-else class="outsourced-task-muted">
+                  {{ outsourcedDataTaskActionTexts.pendingEntryText }}
+                </span>
               </template>
             </YTable>
           </a-tab-pane>
 
-          <a-tab-pane key="logs" tab="执行日志">
+          <a-tab-pane
+            key="logs"
+            :tab="outsourcedDataTaskActionTexts.detailLogsTabTitle"
+          >
             <YTable
               :columns="logColumns"
               :data="page.detailLogRows"
@@ -607,12 +654,17 @@ const taskMetricCards = computed(() => [
                 <pre v-if="row.errorStack" class="outsourced-task-stack">{{
                   row.errorStack
                 }}</pre>
-                <span v-else class="outsourced-task-muted">暂无错误堆栈</span>
+                <span v-else class="outsourced-task-muted">
+                  {{ outsourcedDataTaskActionTexts.noErrorStackText }}
+                </span>
               </template>
             </YTable>
           </a-tab-pane>
 
-          <a-tab-pane key="manual" tab="人工处理">
+          <a-tab-pane
+            key="manual"
+            :tab="outsourcedDataTaskActionTexts.detailManualTabTitle"
+          >
             <div class="outsourced-task-manual">
               <a-alert
                 type="warning"
@@ -620,16 +672,20 @@ const taskMetricCards = computed(() => [
                 :message="page.manualState.currentBlockPoint"
                 :description="page.manualState.exceptionConfirmText"
               />
-              <a-checkbox v-model:checked="manualExceptionConfirmed"
-                >异常已确认，允许记录人工处理结论</a-checkbox
-              >
+              <a-checkbox v-model:checked="manualExceptionConfirmed">
+                {{ outsourcedDataTaskActionTexts.manualExceptionCheckboxText }}
+              </a-checkbox>
               <a-textarea
                 v-model:value="manualRemark"
                 :rows="5"
-                placeholder="填写处理备注、数据修正说明、重跑范围或外部确认结果"
+                :placeholder="
+                  outsourcedDataTaskActionTexts.manualRemarkPlaceholder
+                "
               />
               <div class="outsourced-task-prerequisites">
-                <h4>重跑前置提示</h4>
+                <h4>
+                  {{ outsourcedDataTaskActionTexts.manualPrerequisitesTitle }}
+                </h4>
                 <ul>
                   <li
                     v-for="item in page.manualState.rerunPrerequisites"
@@ -640,14 +696,15 @@ const taskMetricCards = computed(() => [
                 </ul>
               </div>
               <a-space>
-                <YButton type="primary" :disabled="!manualExceptionConfirmed"
-                  >确认异常</YButton
-                >
+                <YButton type="primary" :disabled="!manualExceptionConfirmed">
+                  {{ outsourcedDataTaskActionTexts.manualConfirmButtonText }}
+                </YButton>
                 <YButton
                   :disabled="!manualExceptionConfirmed"
                   @click="confirmRetry(page.selectedRow)"
-                  >按前置检查重跑</YButton
                 >
+                  {{ outsourcedDataTaskActionTexts.manualRerunButtonText }}
+                </YButton>
               </a-space>
             </div>
           </a-tab-pane>
@@ -660,8 +717,8 @@ const taskMetricCards = computed(() => [
       :open="page.stepLogVisible"
       :title="
         page.activeStep
-          ? `${page.activeStep.stageName}执行日志`
-          : '阶段执行日志'
+          ? `${page.activeStep.stepName}${outsourcedDataTaskActionTexts.detailStepLogSuffix}`
+          : outsourcedDataTaskActionTexts.detailStepLogFallbackTitle
       "
       :width="880"
       @close="page.closeStepLogs"
@@ -696,7 +753,9 @@ const taskMetricCards = computed(() => [
           <pre v-if="row.errorStack" class="outsourced-task-stack">{{
             row.errorStack
           }}</pre>
-          <span v-else class="outsourced-task-muted">暂无错误堆栈</span>
+          <span v-else class="outsourced-task-muted">
+            {{ outsourcedDataTaskActionTexts.noErrorStackText }}
+          </span>
         </template>
       </YTable>
     </a-drawer>
@@ -705,29 +764,31 @@ const taskMetricCards = computed(() => [
       class="outsourced-task-drawer"
       :open="page.stepDataVisible"
       :title="
-        page.activeStep ? `${page.activeStep.stageName}阶段数据` : '阶段数据'
+        page.activeStep
+          ? `${page.activeStep.stepName}${outsourcedDataTaskActionTexts.detailStepDataSuffix}`
+          : outsourcedDataTaskActionTexts.detailStepDataFallbackTitle
       "
       :width="720"
       @close="page.closeStepData"
     >
       <template v-if="page.activeStep">
         <a-descriptions bordered size="small" :column="1">
-          <a-descriptions-item label="阶段">{{
-            page.activeStep.stageName
+          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.step">{{
+            page.activeStep.stepName
           }}</a-descriptions-item>
-          <a-descriptions-item label="任务ID">{{
+          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.taskId">{{
             page.activeStep.taskId || "-"
           }}</a-descriptions-item>
-          <a-descriptions-item label="任务类型">{{
+          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.taskType">{{
             page.activeStep.taskType || "-"
           }}</a-descriptions-item>
-          <a-descriptions-item label="输入摘要">{{
+          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.inputSummary">{{
             page.activeStep.inputSummary || "-"
           }}</a-descriptions-item>
-          <a-descriptions-item label="输出摘要">{{
+          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.outputSummary">{{
             page.activeStep.outputSummary || "-"
           }}</a-descriptions-item>
-          <a-descriptions-item label="错误摘要">
+          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.errorMessage">
             <span
               class="outsourced-task-step-error"
               :class="{
@@ -739,11 +800,58 @@ const taskMetricCards = computed(() => [
               {{ page.activeStep.errorMessage || "-" }}
             </span>
           </a-descriptions-item>
-          <a-descriptions-item label="日志定位">{{
+          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.logRef">{{
             page.activeStep.logRef || "-"
           }}</a-descriptions-item>
         </a-descriptions>
       </template>
+    </a-drawer>
+
+    <a-drawer
+      class="outsourced-task-drawer"
+      :open="page.historyVisible"
+      :title="outsourcedDataTaskActionTexts.historyDrawerTitle"
+      :width="1200"
+      @close="page.closeHistoryDrawer"
+    >
+      <div class="outsourced-task-history">
+        <div class="outsourced-task-history__summary">
+          <span>{{ outsourcedDataTaskActionTexts.historyDrawerDescription }}</span>
+          <a-tag color="blue"
+            >{{ outsourcedDataTaskActionTexts.historyTotalPrefix
+            }}{{ page.historyPagination.total }}</a-tag
+          >
+        </div>
+        <YTable
+          :columns="historyColumns"
+          :data="page.historyRows"
+          :loading="page.historyLoading"
+          :height="720"
+          :row-config="{ keyField: 'batchId' }"
+          :checkbox-config="{ highlight: true }"
+          :pageable="true"
+          :autoFlexColumn="false"
+          v-model:pagination="page.historyPagination"
+          :toolbar-config="{ custom: false }"
+          @page-change="page.handleHistoryPageChange"
+        >
+          <template #batchName="{ row }">
+            <a @click="page.openDetailDrawer(row)">{{ row.batchName }}</a>
+          </template>
+          <template #status="{ row }">
+            <a-tag :color="page.formatStatusColor(row.status)">{{
+              row.statusName
+            }}</a-tag>
+          </template>
+          <template #progress="{ row }">
+            <a-progress
+              :percent="row.progress"
+              size="small"
+              :status="row.status === 'FAILED' ? 'exception' : undefined"
+            />
+          </template>
+        </YTable>
+      </div>
     </a-drawer>
   </div>
 </template>

@@ -5,9 +5,11 @@ export type OutsourcedDataTaskQueryParams = {
   managerName?: string;
   productKeyword?: string;
   stage?: string;
+  step?: string;
   status?: string;
   sourceType?: string;
   errorType?: string;
+  includeHistory?: boolean;
   pageIndex?: number;
   pageSize?: number;
 };
@@ -25,7 +27,9 @@ export type OutsourcedDataTaskBatchDTO = {
   originalFileName?: string;
   sourceType?: string;
   currentStage?: string;
+  currentStep?: string;
   currentStageName?: string;
+  currentStepName?: string;
   status?: string;
   statusName?: string;
   progress?: number;
@@ -41,7 +45,9 @@ export type OutsourcedDataTaskStepDTO = {
   stepId?: string;
   batchId?: string;
   stage?: string;
+  step?: string;
   stageName?: string;
+  stepName?: string;
   taskId?: string;
   taskType?: string;
   runNo?: number;
@@ -74,8 +80,11 @@ export type OutsourcedDataTaskLogDTO = {
 
 export type OutsourcedDataTaskStageSummaryDTO = {
   stage?: string;
+  step?: string;
   stageName?: string;
+  stepName?: string;
   stageDescription?: string;
+  stepDescription?: string;
   totalCount?: number;
   runningCount?: number;
   failedCount?: number;
@@ -87,7 +96,7 @@ export type OutsourcedDataTaskSummaryDTO = {
   runningCount?: number;
   successCount?: number;
   failedCount?: number;
-  stageSummaries?: OutsourcedDataTaskStageSummaryDTO[];
+  stepSummaries?: OutsourcedDataTaskStageSummaryDTO[];
 };
 
 export type OutsourcedDataTaskBatchDetailDTO = {
@@ -187,6 +196,7 @@ export const pageOutsourcedDataTaskLogs = (
   batchId: string,
   params?: {
     stage?: string;
+    step?: string;
     pageIndex?: number;
     pageSize?: number;
   },

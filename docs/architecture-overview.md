@@ -92,7 +92,7 @@ flowchart LR
 
 ### 4.2 原始抽取
 
-1. 为文件创建 `EXTRACT_DATA` 任务。
+1. 为文件创建文件解析任务，底层保留兼容实现。
 2. 调度器触发任务分发。
 3. `DefaultTaskDispatcher` 找到 `ExtractDataTaskExecutor`。
 4. `ExtractDataExecutionAppServiceImpl` 按行写入 `t_ods_valuation_filedata`。
@@ -141,7 +141,7 @@ flowchart LR
 
 `TaskType` 当前包含：
 
-- `EXTRACT_DATA`
+- 文件解析任务的内部实现名
 - `PARSE_WORKBOOK`
 - `MATCH_SUBJECT`
 - `EVALUATE_MAPPING`

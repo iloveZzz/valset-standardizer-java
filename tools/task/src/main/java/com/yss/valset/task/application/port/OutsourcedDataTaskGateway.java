@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 委外数据任务持久化网关。
+ * 估值表解析任务持久化网关。
  */
 public interface OutsourcedDataTaskGateway {
 

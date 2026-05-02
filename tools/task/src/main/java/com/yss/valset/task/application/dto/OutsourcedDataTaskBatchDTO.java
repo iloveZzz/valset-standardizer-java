@@ -3,7 +3,7 @@ package com.yss.valset.task.application.dto;
 import lombok.Data;
 
 /**
- * 委外数据任务批次视图。
+ * 估值表解析任务批次视图。
  */
 @Data
 public class OutsourcedDataTaskBatchDTO {
@@ -32,7 +32,11 @@ public class OutsourcedDataTaskBatchDTO {
 
     private String currentStage;
 
+    private String currentStep;
+
     private String currentStageName;
+
+    private String currentStepName;
 
     private String status;
 

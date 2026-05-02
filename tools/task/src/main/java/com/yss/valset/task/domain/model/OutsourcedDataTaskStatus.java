@@ -3,7 +3,7 @@ package com.yss.valset.task.domain.model;
 import lombok.Getter;
 
 /**
- * 委外数据任务状态。
+ * 估值表解析任务状态。
  */
 @Getter
 public enum OutsourcedDataTaskStatus {

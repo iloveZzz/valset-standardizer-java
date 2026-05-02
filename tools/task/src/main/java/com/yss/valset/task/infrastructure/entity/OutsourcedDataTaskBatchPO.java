@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 委外数据任务批次持久化实体。
+ * 估值表解析任务批次持久化实体。
  */
 @Data
 @TableName("t_outsourced_data_task_batch")

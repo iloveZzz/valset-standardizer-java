@@ -112,7 +112,7 @@ SQL 文件：
 - 记录任务阶段 `task_stage`
 - 记录任务开始时间 `task_start_time`
 - 记录阶段耗时：
-  - `parse_task_time_ms`：文件解析耗时，主要由 `EXTRACT_DATA` 任务写入
+  - `parse_task_time_ms`：文件解析耗时，主要由文件解析任务写入
   - `standardize_time_ms`：元数据到标准结构化耗时，主要由 `PARSE_WORKBOOK` 任务写入
   - `match_standard_subject_time_ms`：匹配标准科目耗时，主要由 `MATCH_SUBJECT` 任务写入
 - 任务复用逻辑默认开启：同一份文件的同一阶段任务在成功后会被复用，除非请求显式传入 `forceRebuild=true`

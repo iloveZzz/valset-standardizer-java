@@ -126,7 +126,7 @@
 5. 若 fingerprint 已存在，则复用已有 `file_id`
 6. 若不存在，则创建文件主记录
 7. 写一条接入日志
-8. 触发后续 `EXTRACT_DATA`
+8. 触发后续文件解析任务
 
 说明：
 
@@ -144,7 +144,7 @@
 4. 计算 fingerprint
 5. 写文件主表或复用已有 `file_id`
 6. 写接入日志
-7. 触发后续 `EXTRACT_DATA`
+7. 触发后续文件解析任务
 
 建议先做最小可行版本：
 
@@ -171,7 +171,7 @@
 
 `t_valset_workflow_task` 继续负责：
 
-- `EXTRACT_DATA`
+- 文件解析任务
 - `PARSE_WORKBOOK`
 - `MATCH_SUBJECT`
 
@@ -184,7 +184,7 @@
 也就是说：
 
 - 文件主表先创建
-- `EXTRACT_DATA` 任务关联 `file_id`
+- 文件解析任务关联 `file_id`
 - `PARSE_WORKBOOK` / `MATCH_SUBJECT` 继续使用该 `file_id`
 - 文件内容读取优先走 `workbookPath` / `local_temp_path` / `real_storage_path`，不再用 `file_id` 反查文件路径
 

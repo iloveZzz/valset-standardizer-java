@@ -1,6 +1,6 @@
 # valset-standardizer
 
-面向外部估值表标准化的新 Java 多模块工程，当前已经拆分为“原始数据提取”和“ODS 原始行分析”两段链路。目标技术栈：
+面向外部估值表标准化的新 Java 多模块工程，当前已经拆分为“文件解析”和“ODS 原始行分析”两段链路。目标技术栈：
 
 - Spring Boot 3
 - db-scheduler
@@ -12,7 +12,7 @@
 
 - `valset-standardizer-core`：领域模型、解析/标准化抽象、任务模型
 - `valset-standardizer-tools`：非 DDD 的通用工具库聚合模块
-  - `valset-standardizer-extract`：Excel / CSV 原始数据抽取与 `t_ods_valuation_filedata` 持久化
+  - `valset-standardizer-extract`：Excel / CSV 文件解析与 `t_ods_valuation_filedata` 持久化
   - `valset-standardizer-analysis`：基于 ODS 原始行数据的估值分析
   - `valset-standardizer-knowledge`：标准科目、历史映射提示和评估样本加载
   - `valset-standardizer-batch`：基于 db-scheduler 的任务调度与分发
@@ -22,7 +22,7 @@
 
 ## 当前链路
 
-1. `EXTRACT_DATA` 任务先把 Excel / CSV 按行抽取并落到 ODS 表。
+1. 文件解析任务先把 Excel / CSV 按行解析并落到 ODS 表，底层保留内部实现以兼容历史任务。
 2. `PARSE_WORKBOOK` 和 `MATCH_SUBJECT` 的文件输入以 `workbookPath` 为主，内部优先使用 `localTempPath` / `realStoragePath` 定位文件，不再把 `fileId` 作为文件读取前提。
 3. `API` / `DB` 数据源继续走原有分析器。
 4. 文件主数据现在统一由 `t_transfer_object` 承担，估值文件通过 `VALUATION_TABLE` 标签识别，`t_transfer_object_tag` 记录接入分类，`file_id` 仍作为任务关联键保留。

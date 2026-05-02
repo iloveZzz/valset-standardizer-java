@@ -3,7 +3,7 @@ package com.yss.valset.task.application.command;
 import lombok.Data;
 
 /**
- * 委外数据任务分页查询条件。
+ * 估值表解析任务分页查询条件。
  */
 @Data
 public class OutsourcedDataTaskQueryCommand {
@@ -21,6 +21,8 @@ public class OutsourcedDataTaskQueryCommand {
     private String sourceType;
 
     private String errorType;
+
+    private Boolean includeHistory;
 
     private Integer pageIndex;
 

@@ -8,7 +8,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * 委外数据任务生命周期监听器。
+ * 估值表解析任务生命周期监听器。
  */
 @Component
 @RequiredArgsConstructor
