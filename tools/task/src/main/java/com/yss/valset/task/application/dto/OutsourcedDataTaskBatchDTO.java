@@ -14,8 +14,6 @@ public class OutsourcedDataTaskBatchDTO {
 
     private String businessDate;
 
-    private String valuationDate;
-
     private String productCode;
 
     private String productName;

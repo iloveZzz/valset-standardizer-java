@@ -1,4 +1,7 @@
-import type { OutsourcedDataTaskStage, OutsourcedDataTaskStatus } from "./types";
+import type {
+  OutsourcedDataTaskStage,
+  OutsourcedDataTaskStatus,
+} from "./types";
 
 export const outsourcedDataTaskStageCatalog: Array<{
   stage: OutsourcedDataTaskStage;
@@ -41,14 +44,6 @@ export const outsourcedDataTaskStageCatalog: Array<{
     stepDescription: "STG/DWD/标准持仓/估值数据写入",
   },
   {
-    stage: "DATA_PROCESSING",
-    step: "DATA_PROCESSING",
-    stageName: "加工任务",
-    stepName: "加工任务",
-    stageDescription: "后续数据加工、补充计算、派生数据生成",
-    stepDescription: "后续数据加工、补充计算、派生数据生成",
-  },
-  {
     stage: "VERIFY_ARCHIVE",
     step: "VERIFY_ARCHIVE",
     stageName: "校验归档",
@@ -89,7 +84,7 @@ export const outsourcedDataTaskMetricCardText = {
   },
   running: {
     label: "处理中",
-    description: "正在解析、标准化、落地或加工的任务批次",
+    description: "正在解析、标准化或落地的任务批次",
   },
   success: {
     label: "处理完成",
@@ -106,8 +101,7 @@ export const outsourcedDataTaskPreviewText = {
   landingFailureMessage: "标准表落地失败：DWD 持仓写入冲突",
   currentBatchCompleted: "当前批次已完成，无需人工处理",
   noClearBlockPoint: "暂无明确阻塞点",
-  exceptionConfirmText:
-    "确认异常已定位，处理备注将作为重跑前置说明。",
+  exceptionConfirmText: "确认异常已定位，处理备注将作为重跑前置说明。",
   notExceptionalText: "当前批次未处于异常状态，可补充备注后按需重跑。",
   rerunPrerequisites: [
     "确认原始文件、解析结果、STG/DWD 数据入口均可访问。",
@@ -122,18 +116,22 @@ export const outsourcedDataTaskPreviewText = {
 
 export const outsourcedDataTaskActionTexts = {
   pageHeaderTitle: "估值表解析任务管理",
-  pageHeaderDescription: "覆盖文件解析、结构标准化、标准表落地和后续数据加工的任务链路。",
+  pageHeaderDescription:
+    "覆盖文件解析、结构标准化、标准表落地和校验归档，支持手动执行、失败续跑与重跑。",
   retryBatchConfirmTitle: "重跑估值表解析任务",
-  retryBatchConfirmContent: "将从失败或当前步骤重新执行该批次，是否继续？",
-  executeBatchConfirmTitle: "执行估值表解析任务",
-  executeBatchConfirmContent: "将提交该批次的数据处理任务，是否继续？",
+  retryBatchConfirmContent: "将从流程起点重新执行该批次，是否继续？",
+  executeBatchConfirmTitle: "手动执行估值表解析任务",
+  executeBatchConfirmContent: "将提交该批次的手动执行请求，是否继续？",
+  continueExecuteBatchConfirmTitle: "继续执行估值表解析任务",
+  executeBatchContinueContent: "将从失败处继续执行该批次，是否继续？",
   stopBatchConfirmTitle: "停止估值表解析任务",
   stopBatchConfirmContent: "将停止该批次当前运行步骤，是否继续？",
-  batchExecuteButtonText: "批量执行",
+  batchExecuteButtonText: "批量手动执行",
   batchRetryButtonText: "批量重跑",
   batchStopButtonText: "批量停止",
   viewButtonText: "查看",
-  executeButtonText: "执行",
+  executeButtonText: "手动执行",
+  executeContinueButtonText: "继续执行",
   retryButtonText: "重跑",
   stopButtonText: "停止",
   retryStepConfirmTitle: "重跑任务步骤",
@@ -152,17 +150,16 @@ export const outsourcedDataTaskActionTexts = {
   detailStepSectionDescription: "按配置的业务步骤顺序展示。",
   stepLogButtonText: "日志",
   stepDataButtonText: "数据",
-  stepRetryButtonText: "重跑",
+  stepRetryButtonText: "步骤重跑",
   openEntryButtonText: "打开",
   pendingEntryText: "待接入",
   noErrorStackText: "暂无错误堆栈",
-  retryStepConfirmContentPrefix: "将重新执行 ",
+  retryStepConfirmContentPrefix: "将从当前步骤重新执行 ",
   retryStepConfirmContentSuffix: " 步骤，是否继续？",
   historyDrawerDescription: "按当前筛选条件查看历史批次",
   historyTotalPrefix: "历史总数：",
   manualExceptionCheckboxText: "异常已确认，允许记录人工处理结论",
-  manualRemarkPlaceholder:
-    "填写处理备注、数据修正说明、重跑范围或外部确认结果",
+  manualRemarkPlaceholder: "填写处理备注、数据修正说明、重跑范围或外部确认结果",
   manualPrerequisitesTitle: "重跑前置提示",
   manualConfirmButtonText: "确认异常",
   manualRerunButtonText: "按前置检查重跑",
@@ -174,13 +171,13 @@ export const outsourcedDataTaskTableTexts = {
     productCode: "产品代码",
     productName: "产品名称",
     managerName: "管理人",
-    valuationDate: "估值日期",
+    businessDate: "业务日期",
     originalFileName: "文件名称",
     currentStepName: "当前步骤",
     status: "状态",
     progress: "进度",
-    startedAt: "开始时间",
-    durationText: "耗时",
+    startedAt: "任务开始时间",
+    endedAt: "任务结束时间",
     lastErrorMessage: "异常原因",
     action: "操作",
   },
@@ -215,8 +212,8 @@ export const outsourcedDataTaskTableTexts = {
     currentStepName: "当前步骤",
     originalFileName: "原始文件",
     filesysFileId: "文件服务ID",
-    startedAt: "开始时间",
-    durationText: "执行耗时",
+    startedAt: "文件解析开始时间",
+    durationText: "文件解析-校验归档耗时",
     lastErrorMessage: "异常原因",
     step: "步骤",
     taskId: "任务ID",
@@ -242,6 +239,38 @@ export const outsourcedDataTaskTableTexts = {
     parseResult: "查看估值文件解析后的结构化明细和识别摘要",
     stg: "字段映射、数据清洗后的 STG 暂存层入口",
     dwd: "标准化后的 DWD 外部估值数据入口",
-    standard: "标准持仓、标准估值和后续加工表入口",
+    standard: "标准持仓、标准估值入口",
   },
+} as const;
+
+export const outsourcedDataTaskQueryTexts = {
+  taskDate: "任务日期",
+  managerName: "管理人",
+  productKeyword: "产品",
+  status: "状态",
+  sourceType: "来源",
+  errorType: "异常",
+  queryButtonText: "查询",
+  resetButtonText: "重置",
+  currentTaskText: "当前任务",
+  allTasksText: "全部任务",
+  taskDatePrefix: "任务日期：",
+  managerNamePrefix: "管理人：",
+  productKeywordPrefix: "产品：",
+  stepPrefix: "步骤：",
+  statusPrefix: "状态：",
+  sourceTypePrefix: "来源：",
+  errorTypePrefix: "异常：",
+} as const;
+
+export const outsourcedDataTaskFeedbackTexts = {
+  backendUnavailableWarning: "当前后端接口不可用，页面保留空态",
+  submitExecuteSuccessPrefix: "已提交手动执行：",
+  submitExecuteContinueSuccessPrefix: "已提交继续执行：",
+  submitRetrySuccessPrefix: "已提交重跑：",
+  submitStopSuccessPrefix: "已提交停止：",
+  submitStepRetrySuccessPrefix: "已提交步骤重跑：",
+  submitBatchExecuteSuccess: "已提交批量手动执行",
+  submitBatchRetrySuccess: "已提交批量重跑",
+  submitBatchStopSuccess: "已提交批量停止",
 } as const;

@@ -4,9 +4,14 @@ import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
+import com.yss.valset.task.application.dto.workflow.WorkflowDefinitionDTO;
+import com.yss.valset.task.application.dto.workflow.WorkflowStageDTO;
+import com.yss.valset.task.application.dto.workflow.WorkflowStatusMappingDTO;
+import com.yss.valset.task.application.port.workflow.WorkflowConfigGateway;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStage;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -14,6 +19,7 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 估值表解析任务阶段配置目录。
@@ -22,6 +28,12 @@ import java.util.Objects;
 @Component
 @ConfigurationProperties(prefix = "subject.match.outsourced-task")
 public class OutsourcedDataTaskStageCatalog {
+
+    private static final String DEFAULT_WORKFLOW_CODE = "VALUATION_PARSE";
+    private static final String SOURCE_WORKFLOW_TASK = "WORKFLOW_TASK";
+    private static final String SOURCE_PARSE_LIFECYCLE = "PARSE_LIFECYCLE";
+
+    private WorkflowConfigGateway workflowConfigGateway;
 
     private List<StageDefinition> stages = defaultStages();
 
@@ -49,12 +61,43 @@ public class OutsourcedDataTaskStageCatalog {
 
     private List<StatusDefinition> statuses = defaultStatuses();
 
+    @Autowired(required = false)
+    public void setWorkflowConfigGateway(WorkflowConfigGateway workflowConfigGateway) {
+        this.workflowConfigGateway = workflowConfigGateway;
+    }
+
     public List<StageDefinition> getStages() {
+        List<StageDefinition> dbStages = activeDefinition()
+                .map(this::toStageDefinitions)
+                .orElse(List.of());
+        if (!dbStages.isEmpty()) {
+            return dbStages;
+        }
         return stages == null || stages.isEmpty() ? defaultStages() : stages;
     }
 
     public List<StatusDefinition> getStatuses() {
+        List<StatusDefinition> dbStatuses = activeDefinition()
+                .map(this::toStatusDefinitions)
+                .orElse(List.of());
+        if (!dbStatuses.isEmpty()) {
+            return dbStatuses;
+        }
         return statuses == null || statuses.isEmpty() ? defaultStatuses() : statuses;
+    }
+
+    public List<String> getIgnoredParseLifecycleStages() {
+        List<String> dbValues = activeDefinition()
+                .map(WorkflowDefinitionDTO::getIgnoredParseLifecycleStages)
+                .orElse(List.of());
+        return dbValues == null || dbValues.isEmpty() ? ignoredParseLifecycleStages : dbValues;
+    }
+
+    public List<String> getIgnoredWorkflowTaskTypes() {
+        List<String> dbValues = activeDefinition()
+                .map(WorkflowDefinitionDTO::getIgnoredWorkflowTaskTypes)
+                .orElse(List.of());
+        return dbValues == null || dbValues.isEmpty() ? ignoredWorkflowTaskTypes : dbValues;
     }
 
     public List<OutsourcedDataTaskStage> stageSequence() {
@@ -129,11 +172,15 @@ public class OutsourcedDataTaskStageCatalog {
     }
 
     public boolean ignoreWorkflowTaskType(TaskType taskType) {
-        return taskType != null && contains(ignoredWorkflowTaskTypes, taskType.name());
+        return taskType != null && contains(getIgnoredWorkflowTaskTypes(), taskType.name());
     }
 
     public OutsourcedDataTaskStatus resolveWorkflowStatus(TaskStatus status) {
         String value = status == null ? null : status.name();
+        OutsourcedDataTaskStatus dbStatus = resolveMappedStatus(SOURCE_WORKFLOW_TASK, value);
+        if (dbStatus != null) {
+            return dbStatus;
+        }
         if (contains(failedTaskStatuses, value)) {
             return OutsourcedDataTaskStatus.FAILED;
         }
@@ -154,6 +201,10 @@ public class OutsourcedDataTaskStageCatalog {
             return OutsourcedDataTaskStatus.PENDING;
         }
         String value = stage.name();
+        OutsourcedDataTaskStatus dbStatus = resolveMappedStatus(SOURCE_PARSE_LIFECYCLE, value);
+        if (dbStatus != null) {
+            return dbStatus;
+        }
         if (contains(defaultFailedParseLifecycleStages(), value)) {
             return OutsourcedDataTaskStatus.FAILED;
         }
@@ -174,6 +225,10 @@ public class OutsourcedDataTaskStageCatalog {
             return OutsourcedDataTaskStatus.PENDING;
         }
         String value = stage.name();
+        OutsourcedDataTaskStatus dbStatus = resolveMappedStatus(SOURCE_PARSE_LIFECYCLE, value);
+        if (dbStatus != null) {
+            return dbStatus == OutsourcedDataTaskStatus.PENDING ? OutsourcedDataTaskStatus.RUNNING : dbStatus;
+        }
         if (contains(defaultFailedParseLifecycleStages(), value)) {
             return OutsourcedDataTaskStatus.FAILED;
         }
@@ -224,11 +279,96 @@ public class OutsourcedDataTaskStageCatalog {
     }
 
     public OutsourcedDataTaskStage parseFallbackStage() {
-        return resolveConfiguredStage(parseFallbackStage, OutsourcedDataTaskStage.FILE_PARSE);
+        String dbFallback = activeDefinition()
+                .map(WorkflowDefinitionDTO::getParseFallbackStage)
+                .orElse(null);
+        return resolveConfiguredStage(StringUtils.hasText(dbFallback) ? dbFallback : parseFallbackStage, OutsourcedDataTaskStage.FILE_PARSE);
     }
 
     public OutsourcedDataTaskStage workflowFallbackStage() {
-        return resolveConfiguredStage(workflowFallbackStage, OutsourcedDataTaskStage.DATA_PROCESSING);
+        String dbFallback = activeDefinition()
+                .map(WorkflowDefinitionDTO::getWorkflowFallbackStage)
+                .orElse(null);
+        return resolveConfiguredStage(StringUtils.hasText(dbFallback) ? dbFallback : workflowFallbackStage, OutsourcedDataTaskStage.DATA_PROCESSING);
+    }
+
+    private Optional<WorkflowDefinitionDTO> activeDefinition() {
+        if (workflowConfigGateway == null) {
+            return Optional.empty();
+        }
+        try {
+            return workflowConfigGateway.findActiveByCode(DEFAULT_WORKFLOW_CODE);
+        } catch (Exception ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private List<StageDefinition> toStageDefinitions(WorkflowDefinitionDTO definition) {
+        if (definition == null || definition.getStages() == null) {
+            return List.of();
+        }
+        return definition.getStages().stream()
+                .filter(stage -> stage != null && Boolean.TRUE.equals(stage.getEnabled()))
+                .map(this::toStageDefinition)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private StageDefinition toStageDefinition(WorkflowStageDTO dto) {
+        if (!StringUtils.hasText(dto.getStageCode())) {
+            return null;
+        }
+        StageDefinition definition = new StageDefinition();
+        definition.setStage(dto.getStageCode());
+        definition.setStep(StringUtils.hasText(dto.getStepCode()) ? dto.getStepCode() : dto.getStageCode());
+        definition.setStageName(dto.getStageName());
+        definition.setStepName(StringUtils.hasText(dto.getStepName()) ? dto.getStepName() : dto.getStageName());
+        definition.setStageDescription(dto.getStageDescription());
+        definition.setStepDescription(StringUtils.hasText(dto.getStepDescription()) ? dto.getStepDescription() : dto.getStageDescription());
+        definition.setTaskTypes(new ArrayList<>(dto.getTaskTypes() == null ? List.of() : dto.getTaskTypes()));
+        definition.setTaskStages(new ArrayList<>(dto.getTaskStages() == null ? List.of() : dto.getTaskStages()));
+        definition.setParseLifecycleStages(new ArrayList<>(dto.getParseLifecycleStages() == null ? List.of() : dto.getParseLifecycleStages()));
+        return definition;
+    }
+
+    private List<StatusDefinition> toStatusDefinitions(WorkflowDefinitionDTO definition) {
+        if (definition == null || definition.getStatusMappings() == null) {
+            return List.of();
+        }
+        return definition.getStatusMappings().stream()
+                .filter(mapping -> StringUtils.hasText(mapping.getTargetStatus()))
+                .map(mapping -> status(mapping.getTargetStatus(), mapping.getStatusLabel()))
+                .filter(item -> StringUtils.hasText(item.getLabel()))
+                .distinct()
+                .toList();
+    }
+
+    private OutsourcedDataTaskStatus resolveMappedStatus(String sourceType, String sourceStatus) {
+        if (!StringUtils.hasText(sourceStatus)) {
+            return null;
+        }
+        return activeDefinition()
+                .map(WorkflowDefinitionDTO::getStatusMappings)
+                .orElse(List.of())
+                .stream()
+                .filter(mapping -> matches(mapping.getSourceType(), sourceType))
+                .filter(mapping -> matches(mapping.getSourceStatus(), sourceStatus))
+                .map(WorkflowStatusMappingDTO::getTargetStatus)
+                .map(this::toStatus)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private OutsourcedDataTaskStatus toStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return null;
+        }
+        try {
+            return OutsourcedDataTaskStatus.valueOf(status.trim());
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static List<String> defaultIgnoredParseLifecycleStages() {
@@ -346,10 +486,6 @@ public class OutsourcedDataTaskStageCatalog {
                 List.of(),
                 List.of(),
                 List.of(ParseLifecycleStage.TASK_PERSISTED.name())));
-        stages.add(stage("DATA_PROCESSING", "DATA_PROCESSING", "加工任务", "加工任务", "后续数据加工、补充计算、派生数据生成", "后续数据加工、补充计算、派生数据生成",
-                List.of(TaskType.EVALUATE_MAPPING.name(), TaskType.REFRESH_STANDARD_SUBJECT.name(), TaskType.REFRESH_MAPPING_HINT.name()),
-                List.of(),
-                List.of()));
         stages.add(stage("VERIFY_ARCHIVE", "VERIFY_ARCHIVE", "校验归档", "校验归档", "一致性校验、结果确认、归档完成", "一致性校验、结果确认、归档完成",
                 List.of(TaskType.EXPORT_RESULT.name()),
                 List.of(),

@@ -12,7 +12,7 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskLogDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
-import com.yss.valset.task.application.service.OutsourcedDataTaskManagementAppService;
+import com.yss.valset.task.application.service.OutsourcedDataTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.util.StringUtils;
@@ -31,15 +31,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/outsourced-data-tasks")
 public class OutsourcedDataTaskController {
 
-    private final OutsourcedDataTaskManagementAppService outsourcedDataTaskManagementAppService;
+    private final OutsourcedDataTaskService outsourcedDataTaskService;
 
-    public OutsourcedDataTaskController(OutsourcedDataTaskManagementAppService outsourcedDataTaskManagementAppService) {
-        this.outsourcedDataTaskManagementAppService = outsourcedDataTaskManagementAppService;
+    public OutsourcedDataTaskController(OutsourcedDataTaskService outsourcedDataTaskService) {
+        this.outsourcedDataTaskService = outsourcedDataTaskService;
     }
 
     @GetMapping("/summary")
     @Operation(summary = "查询估值表解析任务总览")
-    public SingleResult<OutsourcedDataTaskSummaryDTO> summary(@RequestParam(value = "businessDate", required = false) String businessDate,
+    public SingleResult<OutsourcedDataTaskSummaryDTO> summary(@RequestParam(value = "batchId", required = false) String batchId,
+                                                              @RequestParam(value = "taskDate", required = false) String taskDate,
+                                                              @RequestParam(value = "businessDate", required = false) String businessDate,
                                                               @RequestParam(value = "managerName", required = false) String managerName,
                                                               @RequestParam(value = "productKeyword", required = false) String productKeyword,
                                                               @RequestParam(value = "stage", required = false) String stage,
@@ -48,12 +50,14 @@ public class OutsourcedDataTaskController {
                                                               @RequestParam(value = "sourceType", required = false) String sourceType,
                                                               @RequestParam(value = "errorType", required = false) String errorType,
                                                               @RequestParam(value = "includeHistory", required = false) Boolean includeHistory) {
-        return SingleResult.of(outsourcedDataTaskManagementAppService.summary(buildQuery(businessDate, managerName, productKeyword, stage, step, status, sourceType, errorType, includeHistory, null, null)));
+        return SingleResult.of(outsourcedDataTaskService.summary(buildQuery(batchId, taskDate, businessDate, managerName, productKeyword, stage, step, status, sourceType, errorType, includeHistory, null, null)));
     }
 
     @GetMapping
     @Operation(summary = "分页查询估值表解析任务")
-    public PageResult<OutsourcedDataTaskBatchDTO> pageTasks(@RequestParam(value = "businessDate", required = false) String businessDate,
+    public PageResult<OutsourcedDataTaskBatchDTO> pageTasks(@RequestParam(value = "batchId", required = false) String batchId,
+                                                            @RequestParam(value = "taskDate", required = false) String taskDate,
+                                                            @RequestParam(value = "businessDate", required = false) String businessDate,
                                                             @RequestParam(value = "managerName", required = false) String managerName,
                                                             @RequestParam(value = "productKeyword", required = false) String productKeyword,
                                                             @RequestParam(value = "stage", required = false) String stage,
@@ -64,19 +68,19 @@ public class OutsourcedDataTaskController {
                                                             @RequestParam(value = "includeHistory", required = false) Boolean includeHistory,
                                                             @RequestParam(value = "pageIndex", required = false) Integer pageIndex,
                                                             @RequestParam(value = "pageSize", required = false) Integer pageSize) {
-        return outsourcedDataTaskManagementAppService.pageTasks(buildQuery(businessDate, managerName, productKeyword, stage, step, status, sourceType, errorType, includeHistory, pageIndex, pageSize));
+        return outsourcedDataTaskService.pageTasks(buildQuery(batchId, taskDate, businessDate, managerName, productKeyword, stage, step, status, sourceType, errorType, includeHistory, pageIndex, pageSize));
     }
 
     @GetMapping("/{batchId}")
     @Operation(summary = "查询估值表解析任务详情")
     public SingleResult<OutsourcedDataTaskBatchDetailDTO> getTask(@PathVariable String batchId) {
-        return SingleResult.of(outsourcedDataTaskManagementAppService.getTask(batchId));
+        return SingleResult.of(outsourcedDataTaskService.getTask(batchId));
     }
 
     @GetMapping("/{batchId}/steps")
     @Operation(summary = "查询估值表解析任务步骤明细")
     public MultiResult<OutsourcedDataTaskStepDTO> listSteps(@PathVariable String batchId) {
-        return MultiResult.of(outsourcedDataTaskManagementAppService.listSteps(batchId));
+        return MultiResult.of(outsourcedDataTaskService.listSteps(batchId));
     }
 
     @GetMapping("/{batchId}/logs")
@@ -86,28 +90,28 @@ public class OutsourcedDataTaskController {
                                                          @RequestParam(value = "step", required = false) String step,
                                                          @RequestParam(value = "pageIndex", required = false) Integer pageIndex,
                                                          @RequestParam(value = "pageSize", required = false) Integer pageSize) {
-        return outsourcedDataTaskManagementAppService.pageLogs(batchId, StringUtils.hasText(step) ? step : stage, pageIndex, pageSize);
+        return outsourcedDataTaskService.pageLogs(batchId, StringUtils.hasText(step) ? step : stage, pageIndex, pageSize);
     }
 
     @PostMapping("/{batchId}/execute")
-    @Operation(summary = "执行估值表解析任务")
+    @Operation(summary = "手动执行估值表解析任务")
     public SingleResult<OutsourcedDataTaskActionResultDTO> execute(@PathVariable String batchId,
                                                                    @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
-        return SingleResult.of(outsourcedDataTaskManagementAppService.execute(batchId, command));
+        return SingleResult.of(outsourcedDataTaskService.execute(batchId, command));
     }
 
     @PostMapping("/{batchId}/retry")
-    @Operation(summary = "重跑估值表解析任务")
+    @Operation(summary = "全流程重跑估值表解析任务")
     public SingleResult<OutsourcedDataTaskActionResultDTO> retry(@PathVariable String batchId,
                                                                  @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
-        return SingleResult.of(outsourcedDataTaskManagementAppService.retry(batchId, command));
+        return SingleResult.of(outsourcedDataTaskService.retry(batchId, command));
     }
 
     @PostMapping("/{batchId}/stop")
     @Operation(summary = "停止估值表解析任务")
     public SingleResult<OutsourcedDataTaskActionResultDTO> stop(@PathVariable String batchId,
                                                                 @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
-        return SingleResult.of(outsourcedDataTaskManagementAppService.stop(batchId, command));
+        return SingleResult.of(outsourcedDataTaskService.stop(batchId, command));
     }
 
     @PostMapping("/{batchId}/steps/{stepId}/retry")
@@ -115,28 +119,30 @@ public class OutsourcedDataTaskController {
     public SingleResult<OutsourcedDataTaskActionResultDTO> retryStep(@PathVariable String batchId,
                                                                      @PathVariable String stepId,
                                                                      @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
-        return SingleResult.of(outsourcedDataTaskManagementAppService.retryStep(batchId, stepId, command));
+        return SingleResult.of(outsourcedDataTaskService.retryStep(batchId, stepId, command));
     }
 
     @PostMapping("/batch-execute")
-    @Operation(summary = "批量执行估值表解析任务")
+    @Operation(summary = "批量手动执行估值表解析任务")
     public MultiResult<OutsourcedDataTaskActionResultDTO> batchExecute(@Valid @RequestBody OutsourcedDataTaskBatchCommand command) {
-        return MultiResult.of(outsourcedDataTaskManagementAppService.batchExecute(command));
+        return MultiResult.of(outsourcedDataTaskService.batchExecute(command));
     }
 
     @PostMapping("/batch-retry")
-    @Operation(summary = "批量重跑估值表解析任务")
+    @Operation(summary = "批量全流程重跑估值表解析任务")
     public MultiResult<OutsourcedDataTaskActionResultDTO> batchRetry(@Valid @RequestBody OutsourcedDataTaskBatchCommand command) {
-        return MultiResult.of(outsourcedDataTaskManagementAppService.batchRetry(command));
+        return MultiResult.of(outsourcedDataTaskService.batchRetry(command));
     }
 
     @PostMapping("/batch-stop")
     @Operation(summary = "批量停止估值表解析任务")
     public MultiResult<OutsourcedDataTaskActionResultDTO> batchStop(@Valid @RequestBody OutsourcedDataTaskBatchCommand command) {
-        return MultiResult.of(outsourcedDataTaskManagementAppService.batchStop(command));
+        return MultiResult.of(outsourcedDataTaskService.batchStop(command));
     }
 
-    private OutsourcedDataTaskQueryCommand buildQuery(String businessDate,
+    private OutsourcedDataTaskQueryCommand buildQuery(String batchId,
+                                                      String taskDate,
+                                                      String businessDate,
                                                       String managerName,
                                                       String productKeyword,
                                                       String stage,
@@ -148,6 +154,8 @@ public class OutsourcedDataTaskController {
                                                       Integer pageIndex,
                                                       Integer pageSize) {
         OutsourcedDataTaskQueryCommand query = new OutsourcedDataTaskQueryCommand();
+        query.setBatchId(batchId);
+        query.setTaskDate(taskDate);
         query.setBusinessDate(businessDate);
         query.setManagerName(managerName);
         query.setProductKeyword(productKeyword);

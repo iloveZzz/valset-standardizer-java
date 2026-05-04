@@ -17,7 +17,8 @@ export type OutsourcedDataTaskStage =
   | "VERIFY_ARCHIVE";
 
 export type OutsourcedDataTaskQueryState = {
-  businessDate: string;
+  batchId: string;
+  taskDate: string;
   managerName: string;
   productKeyword: string;
   step: string;
@@ -45,7 +46,6 @@ export type OutsourcedDataTaskBatchRow = {
   batchId: string;
   batchName: string;
   businessDate: string;
-  valuationDate: string;
   productCode: string;
   productName: string;
   managerName: string;
@@ -145,6 +145,9 @@ export type OutsourcedDataTaskPage = {
   manualState: OutsourcedDataTaskManualState;
   detailVisible: boolean;
   historyVisible: boolean;
+  historyDrawerTitle: string;
+  historyDrawerDescription: string;
+  historyDrawerFilterSummary: string;
   stepLogVisible: boolean;
   stepLogLoading: boolean;
   stepLogRows: OutsourcedDataTaskLogRow[];
@@ -164,7 +167,7 @@ export type OutsourcedDataTaskPage = {
   closeStepLogs: () => void;
   openStepData: (row: OutsourcedDataTaskStepRow) => void;
   closeStepData: () => void;
-  openHistoryDrawer: () => void;
+  openHistoryDrawer: (row?: OutsourcedDataTaskBatchRow) => void;
   closeHistoryDrawer: () => void;
   handleHistoryPageChange: (params: { current: number; pageSize: number }) => void;
   executeBatch: (row: OutsourcedDataTaskBatchRow) => void;
@@ -175,4 +178,6 @@ export type OutsourcedDataTaskPage = {
   batchRetry: () => void;
   batchStop: () => void;
   formatStatusColor: (status: string) => string;
+  canManualExecute: (status?: string) => boolean;
+  isContinueExecuteStatus: (status?: string) => boolean;
 };

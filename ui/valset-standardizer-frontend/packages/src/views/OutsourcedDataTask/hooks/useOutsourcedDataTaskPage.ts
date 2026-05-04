@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import { computed, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
 import type { YTablePagination } from "@yss-ui/components";
@@ -39,15 +38,27 @@ import {
   outsourcedDataTaskStatusCatalog,
   outsourcedDataTaskTriggerModeLabels,
   outsourcedDataTaskDataEntryStatusLabels,
-  outsourcedDataTaskMetricCardText,
   outsourcedDataTaskPreviewText,
+  outsourcedDataTaskFeedbackTexts,
+  outsourcedDataTaskActionTexts,
+  outsourcedDataTaskQueryTexts,
   outsourcedDataTaskTableTexts,
 } from "../constants";
 
 const defaultStageCatalog = outsourcedDataTaskStageCatalog;
 const activeStageCatalog = ref(defaultStageCatalog);
-const defaultStageName = (stage: OutsourcedDataTaskStage) =>
-  defaultStageCatalog.find((item) => item.stage === stage)?.stageName ?? stage;
+const hiddenStageDisplayMap: Partial<Record<OutsourcedDataTaskStage, OutsourcedDataTaskStage>> = {
+  DATA_PROCESSING: "STANDARD_LANDING",
+};
+
+const isHiddenStage = (stage?: string) => String(stage ?? "").trim() === "DATA_PROCESSING";
+
+const normalizeVisibleStage = (
+  value?: string,
+): OutsourcedDataTaskStage => {
+  const stage = String(value ?? "").trim() as OutsourcedDataTaskStage;
+  return hiddenStageDisplayMap[stage] ?? normalizeStage(stage);
+};
 
 const normalizeStageCatalog = (
   summaries?: OutsourcedDataTaskStepSummary[],
@@ -60,23 +71,24 @@ const normalizeStageCatalog = (
   stepDescription: string;
 }> =>
   summaries?.length
-    ? summaries.map((item) => {
-        const stage = String(item.stage ?? item.step ?? "").trim() as OutsourcedDataTaskStage;
-        return {
-          stage,
-          step: stage,
-          stageName: item.stageName ?? item.stepName ?? stage,
-          stepName: item.stepName ?? item.stageName ?? stage,
-          stageDescription: item.stageDescription ?? item.stepDescription ?? "",
-          stepDescription: item.stepDescription ?? item.stageDescription ?? "",
-        };
-      })
+    ? summaries
+        .filter((item) => !isHiddenStage(item.stage ?? item.step))
+        .map((item) => {
+          const stage = String(item.stage ?? item.step ?? "").trim() as OutsourcedDataTaskStage;
+          return {
+            stage,
+            step: stage,
+            stageName: item.stageName ?? item.stepName ?? stage,
+            stepName: item.stepName ?? item.stageName ?? stage,
+            stageDescription: item.stageDescription ?? item.stepDescription ?? "",
+            stepDescription: item.stepDescription ?? item.stageDescription ?? "",
+          };
+        })
     : defaultStageCatalog;
 
-const todayBusinessDate = dayjs().format("YYYY-MM-DD");
-
 const defaultQuery = (): OutsourcedDataTaskQueryState => ({
-  businessDate: todayBusinessDate,
+  batchId: "",
+  taskDate: "",
   managerName: "",
   productKeyword: "",
   step: "",
@@ -89,6 +101,11 @@ const defaultQuery = (): OutsourcedDataTaskQueryState => ({
 const LIVE_STATUS_SET = new Set<OutsourcedDataTaskStatus>([
   "PENDING",
   "RUNNING",
+]);
+
+const RECOVERABLE_EXECUTE_STATUS_SET = new Set<OutsourcedDataTaskStatus>([
+  "FAILED",
+  "BLOCKED",
 ]);
 
 const normalizeStage = (value?: string): OutsourcedDataTaskStage => {
@@ -113,6 +130,14 @@ const statusLabel = (value?: string) => {
   );
 };
 
+const canManualExecute = (status?: string) => {
+  const normalized = normalizeStatus(status);
+  return normalized !== "RUNNING" && normalized !== "SUCCESS";
+};
+
+const isContinueExecuteStatus = (status?: string) =>
+  RECOVERABLE_EXECUTE_STATUS_SET.has(normalizeStatus(status));
+
 const triggerModeLabel = (value: string) =>
   outsourcedDataTaskTriggerModeLabels[value] ?? value;
 
@@ -134,6 +159,92 @@ const hasStage = (row: OutsourcedDataTaskBatchRow, stage: string) =>
   row.currentStep === stage ||
   row.currentStage === stage ||
   row.steps.some((step) => step.step === stage || step.stage === stage);
+
+const parseTimelineDate = (value?: string) => {
+  const text = String(value ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  const normalized = text.includes("T") ? text : text.replace(" ", "T");
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatTimelineDate = (date?: Date | null) => {
+  if (!date) {
+    return "-";
+  }
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+const formatTimelineDuration = (durationMs?: number) => {
+  if (durationMs === undefined || durationMs === null || durationMs < 0) {
+    return "-";
+  }
+  if (durationMs === 0) {
+    return "1s";
+  }
+  const seconds = Math.max(1, Math.ceil(durationMs / 1000));
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainSeconds = seconds % 60;
+  return remainSeconds ? `${minutes}m${remainSeconds}s` : `${minutes}m`;
+};
+
+const alignStepTimeline = <T extends { startedAt?: string; endedAt?: string; durationText?: string }>(
+  steps: T[],
+  batchStartedAt?: string,
+  batchEndedAt?: string,
+): T[] => {
+  const stepStartedAtList = steps
+    .map((step) => parseTimelineDate(step.startedAt))
+    .filter((date): date is Date => Boolean(date));
+  const stepEndedAtList = steps
+    .map((step) => parseTimelineDate(step.endedAt))
+    .filter((date): date is Date => Boolean(date));
+  const startedAt =
+    parseTimelineDate(batchStartedAt) ??
+    stepStartedAtList[0] ??
+    stepEndedAtList[0] ??
+    null;
+  const endedAt =
+    parseTimelineDate(batchEndedAt) ??
+    stepEndedAtList[stepEndedAtList.length - 1] ??
+    stepStartedAtList[stepStartedAtList.length - 1] ??
+    null;
+  if (!startedAt || !endedAt) {
+    return steps;
+  }
+  const timeWindowEndedAt =
+    endedAt.getTime() > startedAt.getTime()
+      ? endedAt
+      : new Date(startedAt.getTime() + Math.max(steps.length - 1, 1) * 1000);
+  if (!steps.length) {
+    return steps;
+  }
+  const totalMs = timeWindowEndedAt.getTime() - startedAt.getTime();
+  const count = steps.length;
+  return steps.map((step, index) => {
+    const nextStartMs = index === 0
+      ? startedAt.getTime()
+      : startedAt.getTime() + Math.floor((totalMs * index) / count);
+    const nextEndMs = index === count - 1
+      ? timeWindowEndedAt.getTime()
+      : startedAt.getTime() + Math.floor((totalMs * (index + 1)) / count);
+    const nextStartedAt = new Date(nextStartMs);
+    const nextEndedAt = new Date(Math.max(nextEndMs, nextStartMs));
+    const durationMs = nextEndedAt.getTime() - nextStartedAt.getTime();
+    return {
+      ...step,
+      startedAt: formatTimelineDate(nextStartedAt),
+      endedAt: formatTimelineDate(nextEndedAt),
+      durationText: formatTimelineDuration(durationMs),
+    };
+  });
+};
 
 const resolveBatchStatusFromSteps = (steps: OutsourcedDataTaskStepRow[]) => {
   if (steps.some((step) => step.status === "FAILED")) {
@@ -175,11 +286,11 @@ const resolveBatchStageFromSteps = (steps: OutsourcedDataTaskStepRow[]) => {
       );
     })[0];
   if (currentStep) {
-    return normalizeStage(currentStep.stage ?? currentStep.step);
+    return normalizeVisibleStage(currentStep.stage ?? currentStep.step);
   }
   const lastStep = steps[steps.length - 1];
   return lastStep
-    ? normalizeStage(lastStep.stage ?? lastStep.step)
+    ? normalizeVisibleStage(lastStep.stage ?? lastStep.step)
     : "FILE_PARSE";
 };
 
@@ -187,7 +298,7 @@ const normalizeBatchRowFromSteps = (
   row: OutsourcedDataTaskBatchRow,
   steps: OutsourcedDataTaskStepRow[],
 ): OutsourcedDataTaskBatchRow => {
-  const orderedSteps = sortSteps(steps);
+  const orderedSteps = alignStepTimeline(sortSteps(steps), row.startedAt, row.endedAt);
   if (!orderedSteps.length) {
     return { ...row, steps: orderedSteps };
   }
@@ -214,41 +325,41 @@ const normalizeBatchRowFromSteps = (
           : currentStatus === "RUNNING"
             ? Number(currentStep?.progress ?? row.progress ?? 0)
             : Number(row.progress ?? 0),
-    startedAt: row.startedAt || String(currentStep?.startedAt ?? ""),
+    startedAt: String(orderedSteps[0]?.startedAt ?? row.startedAt ?? currentStep?.startedAt ?? ""),
     endedAt:
-      currentStatus === "SUCCESS" ||
-      currentStatus === "FAILED" ||
-      currentStatus === "BLOCKED" ||
-      currentStatus === "STOPPED"
-        ? (currentStep?.endedAt ?? row.endedAt)
-        : row.endedAt,
+      String(orderedSteps[orderedSteps.length - 1]?.endedAt ?? row.endedAt ?? currentStep?.endedAt ?? ""),
     durationText: String(currentStep?.durationText ?? row.durationText ?? "-"),
     steps: orderedSteps,
   };
 };
 
 const sortSteps = (steps: OutsourcedDataTaskStepRow[]) =>
-  [...steps].sort((left, right) => {
-    const stageDiff =
-      getStageOrder(normalizeStage(left.stage ?? left.step)) -
-      getStageOrder(normalizeStage(right.stage ?? right.step));
-    if (stageDiff !== 0) {
-      return stageDiff;
-    }
-    return Number(left.runNo ?? 0) - Number(right.runNo ?? 0);
-  });
+  [...steps]
+    .filter((step) => !isHiddenStage(step.stage ?? step.step))
+    .sort((left, right) => {
+      const stageDiff =
+        getStageOrder(normalizeStage(left.stage ?? left.step)) -
+        getStageOrder(normalizeStage(right.stage ?? right.step));
+      if (stageDiff !== 0) {
+        return stageDiff;
+      }
+      return Number(left.runNo ?? 0) - Number(right.runNo ?? 0);
+    });
 
 const buildSteps = (
   batchId: string,
   currentStage: OutsourcedDataTaskStage,
   status: OutsourcedDataTaskStatus,
+  batchStartedAt?: string,
+  batchEndedAt?: string,
 ): OutsourcedDataTaskStepRow[] => {
   const stageCatalog = activeStageCatalog.value;
   const currentIndex = stageCatalog.findIndex(
     (item) => item.stage === currentStage,
   );
-  return sortSteps(
-    stageCatalog.map((item, index) => {
+  return alignStepTimeline(
+    sortSteps(
+      stageCatalog.map((item, index) => {
       const isBefore = index < currentIndex;
       const isCurrent = index === currentIndex;
       const stepStatus: OutsourcedDataTaskStatus = isBefore
@@ -296,13 +407,16 @@ const buildSteps = (
         logRef: `task:${batchId}:${item.stage}`,
       };
     }),
+    ),
+    batchStartedAt,
+    batchEndedAt,
   );
 };
 
 const mapStep = (
   step: OutsourcedDataTaskStepDTO,
 ): OutsourcedDataTaskStepRow => {
-  const stage = normalizeStage(step.step ?? step.stage);
+  const stage = normalizeVisibleStage(step.step ?? step.stage);
   const status = normalizeStatus(step.status);
   const stageMeta = activeStageCatalog.value.find((item) => item.stage === stage);
   return {
@@ -490,7 +604,7 @@ const buildManualState = (
       row?.status === "FAILED" || row?.status === "BLOCKED"
         ? outsourcedDataTaskPreviewText.exceptionConfirmText
         : outsourcedDataTaskPreviewText.notExceptionalText,
-    rerunPrerequisites: outsourcedDataTaskPreviewText.rerunPrerequisites,
+    rerunPrerequisites: [...outsourcedDataTaskPreviewText.rerunPrerequisites],
   };
 };
 
@@ -499,14 +613,13 @@ const mapBatch = (
   steps?: OutsourcedDataTaskStepDTO[],
 ): OutsourcedDataTaskBatchRow => {
   const batchId = String(batch.batchId ?? "");
-  const stage = normalizeStage(batch.currentStep ?? batch.currentStage);
+  const stage = normalizeVisibleStage(batch.currentStep ?? batch.currentStage);
   const status = normalizeStatus(batch.status);
   const stageMeta = activeStageCatalog.value.find((item) => item.stage === stage);
   return {
     batchId,
     batchName: String(batch.batchName ?? batchId),
     businessDate: String(batch.businessDate ?? ""),
-    valuationDate: String(batch.valuationDate ?? ""),
     productCode: String(batch.productCode ?? ""),
     productName: String(batch.productName ?? ""),
     managerName: String(batch.managerName ?? ""),
@@ -536,98 +649,29 @@ const mapBatch = (
     lastErrorCode: batch.lastErrorCode,
     lastErrorMessage: batch.lastErrorMessage,
     steps: steps?.length
-      ? sortSteps(steps.map(mapStep))
-      : buildSteps(batchId, stage, status),
+      ? alignStepTimeline(
+          sortSteps(steps.map(mapStep)),
+          batch.startedAt,
+          batch.endedAt,
+        )
+      : buildSteps(batchId, stage, status, batch.startedAt, batch.endedAt),
   };
 };
-
-const sampleRows: OutsourcedDataTaskBatchRow[] = [
-  mapBatch({
-    batchId: `BATCH-${todayBusinessDate.replace(/-/g, "")}-001`,
-    batchName: `估值产品5 ${todayBusinessDate} 估值数据处理`,
-    businessDate: todayBusinessDate,
-    valuationDate: todayBusinessDate,
-    productCode: "W213412",
-    productName: "估值产品5",
-    managerName: "临时机构",
-    fileId: "FILE-001",
-    filesysFileId: "FS-001",
-    originalFileName: "估值产品5估值表.xlsx",
-    sourceType: "MANUAL_UPLOAD",
-    currentStage: "SUBJECT_RECOGNIZE",
-    currentStageName: defaultStageName("SUBJECT_RECOGNIZE"),
-    currentStep: "SUBJECT_RECOGNIZE",
-    currentStepName: defaultStageName("SUBJECT_RECOGNIZE"),
-    status: "RUNNING",
-    statusName: statusLabel("RUNNING"),
-    progress: 66,
-    startedAt: `${todayBusinessDate} 09:30:00`,
-    durationText: "运行中",
-  }),
-  mapBatch({
-    batchId: `BATCH-${todayBusinessDate.replace(/-/g, "")}-002`,
-    batchName: `估值产品6 ${todayBusinessDate} 估值数据处理`,
-    businessDate: todayBusinessDate,
-    valuationDate: todayBusinessDate,
-    productCode: "W213413",
-    productName: "估值产品6",
-    managerName: "临时机构",
-    fileId: "FILE-002",
-    filesysFileId: "FS-002",
-    originalFileName: "估值产品6估值表.xlsx",
-    sourceType: "FILESYS",
-    currentStage: "STANDARD_LANDING",
-    currentStageName: defaultStageName("STANDARD_LANDING"),
-    currentStep: "STANDARD_LANDING",
-    currentStepName: defaultStageName("STANDARD_LANDING"),
-    status: "FAILED",
-    statusName: statusLabel("FAILED"),
-    progress: 70,
-    startedAt: `${todayBusinessDate} 09:30:00`,
-    endedAt: `${todayBusinessDate} 09:42:00`,
-    durationMs: 720000,
-    durationText: "12m",
-    lastErrorCode: "LANDING_FAILED",
-    lastErrorMessage: outsourcedDataTaskPreviewText.landingFailureMessage,
-  }),
-  mapBatch({
-    batchId: `BATCH-${todayBusinessDate.replace(/-/g, "")}-003`,
-    batchName: `估值产品7 ${todayBusinessDate} 估值数据处理`,
-    businessDate: todayBusinessDate,
-    valuationDate: todayBusinessDate,
-    productCode: "W213414",
-    productName: "估值产品7",
-    managerName: "临时机构",
-    fileId: "FILE-003",
-    filesysFileId: "FS-003",
-    originalFileName: "估值产品7估值表.xlsx",
-    sourceType: "EMAIL",
-    currentStage: "VERIFY_ARCHIVE",
-    currentStageName: defaultStageName("VERIFY_ARCHIVE"),
-    currentStep: "VERIFY_ARCHIVE",
-    currentStepName: defaultStageName("VERIFY_ARCHIVE"),
-    status: "SUCCESS",
-    statusName: statusLabel("SUCCESS"),
-    progress: 100,
-    startedAt: `${todayBusinessDate} 09:30:00`,
-    endedAt: `${todayBusinessDate} 09:42:00`,
-    durationMs: 720000,
-    durationText: "12m",
-  }),
-];
 
 export const useOutsourcedDataTaskPage = (): {
   page: OutsourcedDataTaskPage;
 } => {
   const query = reactive<OutsourcedDataTaskQueryState>(defaultQuery());
   const historyQuery = reactive<OutsourcedDataTaskQueryState>(defaultQuery());
-  const rows = ref<OutsourcedDataTaskBatchRow[]>(sampleRows);
+  const rows = ref<OutsourcedDataTaskBatchRow[]>([]);
   const historyRows = ref<OutsourcedDataTaskBatchRow[]>([]);
   const summary = ref<OutsourcedDataTaskSummaryDTO | null>(null);
   watch(
     () => summary.value?.stepSummaries,
     (value) => {
-      activeStageCatalog.value = normalizeStageCatalog(value);
+      activeStageCatalog.value = normalizeStageCatalog(
+        value as OutsourcedDataTaskStepSummary[] | undefined,
+      ) as typeof defaultStageCatalog;
     },
     { immediate: true },
   );
@@ -643,11 +687,12 @@ export const useOutsourcedDataTaskPage = (): {
   const loading = ref(false);
   const historyLoading = ref(false);
   const historyVisible = ref(false);
+  const historyAnchorRow = ref<OutsourcedDataTaskBatchRow | null>(null);
   const expandedBatchIds = ref<string[]>([]);
   const pagination = ref<YTablePagination>({
     current: 1,
     pageSize: 10,
-    total: sampleRows.length,
+    total: 0,
     showSizeChanger: true,
     pageSizeOptions: ["10", "20", "50"],
   });
@@ -658,11 +703,45 @@ export const useOutsourcedDataTaskPage = (): {
     showSizeChanger: true,
     pageSizeOptions: ["10", "20", "50"],
   });
+  const historyDrawerTitle = computed(() =>
+    historyAnchorRow.value
+      ? `${outsourcedDataTaskActionTexts.historyDrawerTitle} · ${historyAnchorRow.value.batchName || historyAnchorRow.value.batchId}`
+      : outsourcedDataTaskActionTexts.historyDrawerTitle,
+  );
+  const historyDrawerDescription = computed(() =>
+    historyAnchorRow.value
+      ? `当前批次：${historyAnchorRow.value.batchId} · ${historyAnchorRow.value.batchName}`
+      : outsourcedDataTaskActionTexts.historyDrawerDescription,
+  );
+  const historyDrawerFilterSummary = computed(() => {
+    const historyStepName =
+      activeStageCatalog.value.find((item) => item.stage === historyQuery.step)
+        ?.stepName ?? historyQuery.step;
+    const filters = [
+      historyQuery.taskDate &&
+        `${outsourcedDataTaskQueryTexts.taskDatePrefix}${historyQuery.taskDate}`,
+      historyQuery.managerName &&
+        `${outsourcedDataTaskQueryTexts.managerNamePrefix}${historyQuery.managerName}`,
+      historyQuery.productKeyword &&
+        `${outsourcedDataTaskQueryTexts.productKeywordPrefix}${historyQuery.productKeyword}`,
+      historyQuery.step &&
+        `${outsourcedDataTaskQueryTexts.stepPrefix}${historyStepName}`,
+      historyQuery.status &&
+        `${outsourcedDataTaskQueryTexts.statusPrefix}${statusLabel(historyQuery.status)}`,
+      historyQuery.sourceType &&
+        `${outsourcedDataTaskQueryTexts.sourceTypePrefix}${historyQuery.sourceType}`,
+      historyQuery.errorType &&
+        `${outsourcedDataTaskQueryTexts.errorTypePrefix}${historyQuery.errorType}`,
+    ].filter(Boolean);
+    return filters.length
+      ? `当前筛选：${filters.join(" / ")}`
+      : "当前筛选：全部";
+  });
 
   const filteredRows = computed(() =>
     rows.value.filter(
       (row) =>
-        matches(row.businessDate, query.businessDate) &&
+        matches(row.startedAt, query.taskDate) &&
         matches(row.managerName, query.managerName) &&
         (matches(row.productName, query.productKeyword) ||
           matches(row.productCode, query.productKeyword)) &&
@@ -739,22 +818,23 @@ export const useOutsourcedDataTaskPage = (): {
     });
   });
 
-  const buildQueryParams = (
-    sourceQuery: OutsourcedDataTaskQueryState,
-    sourcePagination: YTablePagination,
-    includeHistory = false,
-  ) => ({
-    businessDate: sourceQuery.businessDate || undefined,
-    managerName: sourceQuery.managerName || undefined,
-    productKeyword: sourceQuery.productKeyword || undefined,
-    step: sourceQuery.step || undefined,
-    status: sourceQuery.status || undefined,
-    sourceType: sourceQuery.sourceType || undefined,
-    errorType: sourceQuery.errorType || undefined,
-    includeHistory,
-    pageIndex: Number(sourcePagination.current ?? 1),
-    pageSize: Number(sourcePagination.pageSize ?? 10),
-  });
+const buildQueryParams = (
+  sourceQuery: OutsourcedDataTaskQueryState,
+  sourcePagination: YTablePagination,
+  includeHistory = false,
+) => ({
+  batchId: sourceQuery.batchId || undefined,
+  taskDate: sourceQuery.taskDate || undefined,
+  managerName: sourceQuery.managerName || undefined,
+  productKeyword: sourceQuery.productKeyword || undefined,
+  step: sourceQuery.step || undefined,
+  status: sourceQuery.status || undefined,
+  sourceType: sourceQuery.sourceType || undefined,
+  errorType: sourceQuery.errorType || undefined,
+  includeHistory,
+  pageIndex: Number(sourcePagination.current ?? 1),
+  pageSize: Number(sourcePagination.pageSize ?? 10),
+});
 
   const loadList = async () => {
     loading.value = true;
@@ -785,8 +865,8 @@ export const useOutsourcedDataTaskPage = (): {
       await refreshVisibleTaskStates();
     } catch {
       summary.value = null;
-      rows.value = sampleRows;
-      pagination.value.total = filteredRows.value.length;
+      rows.value = [];
+      pagination.value.total = 0;
     } finally {
       loading.value = false;
     }
@@ -846,15 +926,29 @@ export const useOutsourcedDataTaskPage = (): {
     runQuery();
   };
 
-  const openHistoryDrawer = () => {
+  const openHistoryDrawer = (row?: OutsourcedDataTaskBatchRow) => {
+    historyAnchorRow.value = row ?? null;
+    const source = row
+      ? {
+          batchId: row.batchId,
+          taskDate: query.taskDate,
+          managerName: row.managerName || query.managerName,
+          productKeyword: row.productName || query.productKeyword,
+          step: row.currentStep || query.step,
+          status: row.status || query.status,
+          sourceType: row.sourceType || query.sourceType,
+          errorType: query.errorType,
+        }
+      : query;
     Object.assign(historyQuery, {
-      businessDate: query.businessDate,
-      managerName: query.managerName,
-      productKeyword: query.productKeyword,
-      step: query.step,
-      status: query.status,
-      sourceType: query.sourceType,
-      errorType: query.errorType,
+      batchId: source.batchId,
+      taskDate: source.taskDate,
+      managerName: source.managerName,
+      productKeyword: source.productKeyword,
+      step: source.step,
+      status: source.status,
+      sourceType: source.sourceType,
+      errorType: source.errorType,
       includeHistory: true,
     });
     historyPagination.value.current = 1;
@@ -864,6 +958,7 @@ export const useOutsourcedDataTaskPage = (): {
 
   const closeHistoryDrawer = () => {
     historyVisible.value = false;
+    historyAnchorRow.value = null;
   };
 
   const handleHistoryPageChange = (params: {
@@ -1116,7 +1211,7 @@ export const useOutsourcedDataTaskPage = (): {
       await request;
       await refreshAfterAction(successMessage);
     } catch {
-      message.warning("当前后端接口不可用，页面保留预览数据");
+      message.warning(outsourcedDataTaskFeedbackTexts.backendUnavailableWarning);
     }
   };
 
@@ -1188,6 +1283,15 @@ export const useOutsourcedDataTaskPage = (): {
     get historyVisible() {
       return historyVisible.value;
     },
+    get historyDrawerTitle() {
+      return historyDrawerTitle.value;
+    },
+    get historyDrawerDescription() {
+      return historyDrawerDescription.value;
+    },
+    get historyDrawerFilterSummary() {
+      return historyDrawerFilterSummary.value;
+    },
     get stepLogVisible() {
       return stepLogVisible.value;
     },
@@ -1222,45 +1326,48 @@ export const useOutsourcedDataTaskPage = (): {
     closeHistoryDrawer,
     handleHistoryPageChange,
     executeBatch: (row) => {
+      const successPrefix = isContinueExecuteStatus(row.status)
+        ? outsourcedDataTaskFeedbackTexts.submitExecuteContinueSuccessPrefix
+        : outsourcedDataTaskFeedbackTexts.submitExecuteSuccessPrefix;
       void runAction(
         executeOutsourcedDataTask(row.batchId),
-        `已提交执行：${row.batchName}`,
+        `${successPrefix}${row.batchName}`,
       );
     },
     retryBatch: (row) => {
       void runAction(
         retryOutsourcedDataTask(row.batchId),
-        `已提交重跑：${row.batchName}`,
+        `${outsourcedDataTaskFeedbackTexts.submitRetrySuccessPrefix}${row.batchName}`,
       );
     },
     stopBatch: (row) => {
       void runAction(
         stopOutsourcedDataTask(row.batchId),
-        `已提交停止：${row.batchName}`,
+        `${outsourcedDataTaskFeedbackTexts.submitStopSuccessPrefix}${row.batchName}`,
       );
     },
     retryStep: (row) => {
       void runAction(
         retryOutsourcedDataTaskStep(row.batchId, row.stepId),
-        `已提交步骤重跑：${row.stepName}`,
+        `${outsourcedDataTaskFeedbackTexts.submitStepRetrySuccessPrefix}${row.stepName}`,
       );
     },
     batchExecute: () => {
       void runAction(
         batchExecuteOutsourcedDataTasks({ batchIds: selectedBatchIds() }),
-        "已提交批量执行",
+        outsourcedDataTaskFeedbackTexts.submitBatchExecuteSuccess,
       );
     },
     batchRetry: () => {
       void runAction(
         batchRetryOutsourcedDataTasks({ batchIds: selectedBatchIds() }),
-        "已提交批量重跑",
+        outsourcedDataTaskFeedbackTexts.submitBatchRetrySuccess,
       );
     },
     batchStop: () => {
       void runAction(
         batchStopOutsourcedDataTasks({ batchIds: selectedBatchIds() }),
-        "已提交批量停止",
+        outsourcedDataTaskFeedbackTexts.submitBatchStopSuccess,
       );
     },
     formatStatusColor: (status) => {
@@ -1270,6 +1377,8 @@ export const useOutsourcedDataTaskPage = (): {
       if (status === "STOPPED") return "orange";
       return "default";
     },
+    canManualExecute,
+    isContinueExecuteStatus,
   } as OutsourcedDataTaskPage);
 
   void loadList();

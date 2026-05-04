@@ -1,6 +1,8 @@
 import { customInstance } from "./mutator";
 
 export type OutsourcedDataTaskQueryParams = {
+  batchId?: string;
+  taskDate?: string;
   businessDate?: string;
   managerName?: string;
   productKeyword?: string;
@@ -18,7 +20,6 @@ export type OutsourcedDataTaskBatchDTO = {
   batchId?: string;
   batchName?: string;
   businessDate?: string;
-  valuationDate?: string;
   productCode?: string;
   productName?: string;
   managerName?: string;

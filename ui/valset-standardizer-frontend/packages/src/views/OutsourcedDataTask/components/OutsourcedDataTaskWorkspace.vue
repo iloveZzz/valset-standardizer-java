@@ -1,18 +1,11 @@
 <script setup lang="ts">
 import { computed, h, ref } from "vue";
 import { Modal } from "ant-design-vue";
-import {
-  DatabaseOutlined,
-  ExclamationCircleOutlined,
-  FileSearchOutlined,
-  PlayCircleOutlined,
-  ReloadOutlined,
-  StopOutlined,
-} from "@ant-design/icons-vue";
+import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
 import { YButton, YCard, YTable, type YTableColumn } from "@yss-ui/components";
-import { useTableHeight } from "@yss-ui/hooks";
 import {
   outsourcedDataTaskActionTexts,
+  outsourcedDataTaskQueryTexts,
   outsourcedDataTaskMetricCardText,
   outsourcedDataTaskPreviewText,
   outsourcedDataTaskTableTexts,
@@ -24,17 +17,15 @@ import type {
   OutsourcedDataTaskStepRow,
 } from "../types";
 
-const { page } = defineProps<{
-  page: OutsourcedDataTaskPage;
-}>();
-
-const tableAreaRef = ref<HTMLDivElement>();
-const { tableHeight } = useTableHeight(tableAreaRef, {
-  withPagination: true,
-  extraOffset: 24,
-  defaultHeight: 480,
-  minHeight: 260,
-});
+const { page, showSceneHeader } = withDefaults(
+  defineProps<{
+    page: OutsourcedDataTaskPage;
+    showSceneHeader?: boolean;
+  }>(),
+  {
+    showSceneHeader: true,
+  },
+);
 
 const columns = computed<YTableColumn[]>(() => [
   { type: "checkbox", width: 48, align: "center", fixed: "left" as const },
@@ -46,77 +37,159 @@ const columns = computed<YTableColumn[]>(() => [
     fixed: "left" as const,
     ellipsis: true,
   },
-  { field: "productCode", title: outsourcedDataTaskTableTexts.batchColumns.productCode, width: 120 },
-  { field: "productName", title: outsourcedDataTaskTableTexts.batchColumns.productName, width: 140 },
-  { field: "managerName", title: outsourcedDataTaskTableTexts.batchColumns.managerName, width: 130 },
-  { field: "valuationDate", title: outsourcedDataTaskTableTexts.batchColumns.valuationDate, width: 120 },
+  {
+    field: "productCode",
+    title: outsourcedDataTaskTableTexts.batchColumns.productCode,
+    width: 120,
+  },
+  {
+    field: "productName",
+    title: outsourcedDataTaskTableTexts.batchColumns.productName,
+    width: 140,
+  },
+  {
+    field: "managerName",
+    title: outsourcedDataTaskTableTexts.batchColumns.managerName,
+    width: 130,
+  },
+  {
+    field: "businessDate",
+    title: outsourcedDataTaskTableTexts.batchColumns.businessDate,
+    width: 120,
+  },
   {
     field: "originalFileName",
     title: outsourcedDataTaskTableTexts.batchColumns.originalFileName,
     minWidth: 220,
     ellipsis: true,
   },
-  { field: "currentStepName", title: outsourcedDataTaskTableTexts.batchColumns.currentStepName, width: 140 },
-  { field: "status", title: outsourcedDataTaskTableTexts.batchColumns.status, width: 110 },
-  { field: "progress", title: outsourcedDataTaskTableTexts.batchColumns.progress, width: 180 },
-  { field: "startedAt", title: outsourcedDataTaskTableTexts.batchColumns.startedAt, width: 180 },
-  { field: "durationText", title: outsourcedDataTaskTableTexts.batchColumns.durationText, width: 90 },
+  {
+    field: "currentStepName",
+    title: outsourcedDataTaskTableTexts.batchColumns.currentStepName,
+    width: 140,
+  },
+  {
+    field: "status",
+    title: outsourcedDataTaskTableTexts.batchColumns.status,
+    width: 110,
+  },
+  {
+    field: "progress",
+    title: outsourcedDataTaskTableTexts.batchColumns.progress,
+    width: 180,
+  },
+  {
+    field: "startedAt",
+    title: outsourcedDataTaskTableTexts.batchColumns.startedAt,
+    width: 180,
+  },
+  {
+    field: "endedAt",
+    title: outsourcedDataTaskTableTexts.batchColumns.endedAt,
+    width: 180,
+  },
   {
     field: "lastErrorMessage",
     title: outsourcedDataTaskTableTexts.batchColumns.lastErrorMessage,
     minWidth: 240,
     ellipsis: true,
   },
-  { field: "action", title: outsourcedDataTaskTableTexts.batchColumns.action, width: 220, fixed: "right" as const },
+  {
+    field: "action",
+    title: outsourcedDataTaskTableTexts.batchColumns.action,
+    width: 320,
+    fixed: "right" as const,
+  },
 ]);
 
 const historyColumns = computed<YTableColumn[]>(() =>
-  columns.value.filter((column) => Boolean(column.field) && column.field !== "action"),
+  columns.value.filter(
+    (column) => Boolean(column.field) && column.field !== "action",
+  ),
 );
 
 const stepColumns = computed<YTableColumn[]>(() => [
-  { field: "stepName", title: outsourcedDataTaskTableTexts.stepColumns.stepName, width: 150 },
-  { field: "startedAt", title: outsourcedDataTaskTableTexts.stepColumns.startedAt, width: 180 },
-  { field: "durationText", title: outsourcedDataTaskTableTexts.stepColumns.durationText, width: 100 },
-  { field: "runNo", title: outsourcedDataTaskTableTexts.stepColumns.runNo, width: 100 },
-  { field: "triggerModeName", title: outsourcedDataTaskTableTexts.stepColumns.triggerModeName, width: 120 },
-  { field: "status", title: outsourcedDataTaskTableTexts.stepColumns.status, width: 110 },
-  { field: "errorMessage", title: outsourcedDataTaskTableTexts.stepColumns.errorMessage, minWidth: 240, ellipsis: true },
-  { field: "action", title: outsourcedDataTaskTableTexts.stepColumns.action, width: 190, fixed: "right" as const },
-]);
-
-const dataEntryColumns = computed<YTableColumn[]>(() => [
-  { field: "name", title: outsourcedDataTaskTableTexts.dataEntryColumns.name, width: 130 },
   {
-    field: "description",
-    title: outsourcedDataTaskTableTexts.dataEntryColumns.description,
-    minWidth: 280,
+    field: "stepName",
+    title: outsourcedDataTaskTableTexts.stepColumns.stepName,
+    width: 150,
+  },
+  {
+    field: "startedAt",
+    title: outsourcedDataTaskTableTexts.stepColumns.startedAt,
+    width: 180,
+  },
+  {
+    field: "durationText",
+    title: outsourcedDataTaskTableTexts.stepColumns.durationText,
+    width: 100,
+  },
+  {
+    field: "status",
+    title: outsourcedDataTaskTableTexts.stepColumns.status,
+    width: 110,
+  },
+  {
+    field: "errorMessage",
+    title: outsourcedDataTaskTableTexts.stepColumns.errorMessage,
+    minWidth: 240,
     ellipsis: true,
   },
-  { field: "status", title: outsourcedDataTaskTableTexts.dataEntryColumns.status, width: 110 },
-  { field: "action", title: outsourcedDataTaskTableTexts.dataEntryColumns.action, width: 120, fixed: "right" as const },
+  {
+    field: "action",
+    title: outsourcedDataTaskTableTexts.stepColumns.action,
+    width: 190,
+    fixed: "right" as const,
+  },
 ]);
 
 const logColumns = computed<YTableColumn[]>(() => [
-  { field: "stepName", title: outsourcedDataTaskTableTexts.logColumns.stepName, width: 140 },
-  { field: "logLevel", title: outsourcedDataTaskTableTexts.logColumns.logLevel, width: 90 },
-  { field: "occurredAt", title: outsourcedDataTaskTableTexts.logColumns.occurredAt, width: 180 },
-  { field: "startedAt", title: outsourcedDataTaskTableTexts.logColumns.startedAt, width: 180 },
-  { field: "durationText", title: outsourcedDataTaskTableTexts.logColumns.durationText, width: 90 },
-  { field: "status", title: outsourcedDataTaskTableTexts.logColumns.status, width: 100 },
-  { field: "message", title: outsourcedDataTaskTableTexts.logColumns.message, minWidth: 260, ellipsis: true },
-  { field: "errorStack", title: outsourcedDataTaskTableTexts.logColumns.errorStack, minWidth: 320 },
+  {
+    field: "stepName",
+    title: outsourcedDataTaskTableTexts.logColumns.stepName,
+    width: 140,
+  },
+  {
+    field: "logLevel",
+    title: outsourcedDataTaskTableTexts.logColumns.logLevel,
+    width: 90,
+  },
+  {
+    field: "occurredAt",
+    title: outsourcedDataTaskTableTexts.logColumns.occurredAt,
+    width: 180,
+  },
+  {
+    field: "startedAt",
+    title: outsourcedDataTaskTableTexts.logColumns.startedAt,
+    width: 180,
+  },
+  {
+    field: "durationText",
+    title: outsourcedDataTaskTableTexts.logColumns.durationText,
+    width: 90,
+  },
+  {
+    field: "status",
+    title: outsourcedDataTaskTableTexts.logColumns.status,
+    width: 100,
+  },
+  {
+    field: "message",
+    title: outsourcedDataTaskTableTexts.logColumns.message,
+    minWidth: 260,
+    ellipsis: true,
+  },
+  {
+    field: "errorStack",
+    title: outsourcedDataTaskTableTexts.logColumns.errorStack,
+    minWidth: 320,
+  },
 ]);
 
 const detailActiveKey = ref("overview");
 const manualExceptionConfirmed = ref(false);
 const manualRemark = ref("");
-
-const dataStatusColor = (status: string) => {
-  if (status === "READY") return "green";
-  if (status === "ERROR") return "red";
-  return "default";
-};
 
 const statusLabelMap = Object.fromEntries(
   outsourcedDataTaskStatusCatalog.map((item) => [item.status, item.label]),
@@ -127,6 +200,24 @@ const formatStepLabel = (stage: string) =>
   page.stepSummaries.find((item) => item.stage === stage)?.stepName || stage;
 
 const formatStatusLabel = (status: string) => statusLabelMap[status] || status;
+
+const isCompletedStage = (item: {
+  totalCount?: number;
+  runningCount?: number;
+  failedCount?: number;
+  pendingCount?: number;
+}) =>
+  Number(item.totalCount ?? 0) > 0 &&
+  Number(item.runningCount ?? 0) === 0 &&
+  Number(item.failedCount ?? 0) === 0 &&
+  Number(item.pendingCount ?? 0) === 0;
+
+const isAbnormalStage = (item: { failedCount?: number }) =>
+  Number(item.failedCount ?? 0) > 0;
+
+const showOverviewSkeleton = computed(
+  () => page.loading && page.rows.length === 0,
+);
 
 const openActionConfirm = (
   title: string,
@@ -147,8 +238,12 @@ const openActionConfirm = (
 
 const confirmExecute = (row: OutsourcedDataTaskBatchRow) => {
   openActionConfirm(
-    outsourcedDataTaskActionTexts.executeBatchConfirmTitle,
-    outsourcedDataTaskActionTexts.executeBatchConfirmContent,
+    page.isContinueExecuteStatus(row.status)
+      ? outsourcedDataTaskActionTexts.continueExecuteBatchConfirmTitle
+      : outsourcedDataTaskActionTexts.executeBatchConfirmTitle,
+    page.isContinueExecuteStatus(row.status)
+      ? outsourcedDataTaskActionTexts.executeBatchContinueContent
+      : outsourcedDataTaskActionTexts.executeBatchConfirmContent,
     () => page.executeBatch(row),
   );
 };
@@ -169,6 +264,10 @@ const confirmStop = (row: OutsourcedDataTaskBatchRow) => {
   );
 };
 
+const openHistory = (row: OutsourcedDataTaskBatchRow) => {
+  page.openHistoryDrawer(row);
+};
+
 const confirmRetryStep = (row: OutsourcedDataTaskStepRow) => {
   openActionConfirm(
     outsourcedDataTaskActionTexts.retryStepConfirmTitle,
@@ -179,16 +278,25 @@ const confirmRetryStep = (row: OutsourcedDataTaskStepRow) => {
 
 const activeFilterText = computed(() => {
   const filters = [
-    "当前任务",
-    page.query.businessDate && `任务日期：${page.query.businessDate}`,
-    page.query.managerName && `管理人：${page.query.managerName}`,
-    page.query.productKeyword && `产品：${page.query.productKeyword}`,
-    page.query.step && `步骤：${formatStepLabel(page.query.step)}`,
-    page.query.status && `状态：${formatStatusLabel(page.query.status)}`,
-    page.query.sourceType && `来源：${page.query.sourceType}`,
-    page.query.errorType && `异常：${page.query.errorType}`,
+    outsourcedDataTaskQueryTexts.currentTaskText,
+    page.query.taskDate &&
+      `${outsourcedDataTaskQueryTexts.taskDatePrefix}${page.query.taskDate}`,
+    page.query.managerName &&
+      `${outsourcedDataTaskQueryTexts.managerNamePrefix}${page.query.managerName}`,
+    page.query.productKeyword &&
+      `${outsourcedDataTaskQueryTexts.productKeywordPrefix}${page.query.productKeyword}`,
+    page.query.step &&
+      `${outsourcedDataTaskQueryTexts.stepPrefix}${formatStepLabel(page.query.step)}`,
+    page.query.status &&
+      `${outsourcedDataTaskQueryTexts.statusPrefix}${formatStatusLabel(page.query.status)}`,
+    page.query.sourceType &&
+      `${outsourcedDataTaskQueryTexts.sourceTypePrefix}${page.query.sourceType}`,
+    page.query.errorType &&
+      `${outsourcedDataTaskQueryTexts.errorTypePrefix}${page.query.errorType}`,
   ].filter(Boolean);
-  return filters.length ? filters.join(" / ") : "全部任务";
+  return filters.length
+    ? filters.join(" / ")
+    : outsourcedDataTaskQueryTexts.allTasksText;
 });
 
 const taskMetricCards = computed(() => [
@@ -234,77 +342,128 @@ const taskMetricCards = computed(() => [
 <template>
   <div class="outsourced-task-page">
     <YCard class="outsourced-task-header" :bordered="false" :padding="12">
-      <div class="outsourced-task-header__top">
+      <div v-if="showSceneHeader" class="outsourced-task-header__top">
         <div>
           <h2>{{ outsourcedDataTaskActionTexts.pageHeaderTitle }}</h2>
           <p>{{ outsourcedDataTaskActionTexts.pageHeaderDescription }}</p>
         </div>
-        <div class="outsourced-task-actions">
-          <YButton type="primary" @click="page.batchExecute">
-            <template #icon><PlayCircleOutlined /></template>
-            {{ outsourcedDataTaskActionTexts.batchExecuteButtonText }}
-          </YButton>
-          <YButton @click="page.batchRetry">
-            <template #icon><ReloadOutlined /></template>
-            {{ outsourcedDataTaskActionTexts.batchRetryButtonText }}
-          </YButton>
-          <YButton danger @click="page.batchStop">
-            <template #icon><StopOutlined /></template>
-            {{ outsourcedDataTaskActionTexts.batchStopButtonText }}
-          </YButton>
-          <YButton @click="page.openHistoryDrawer">
-            {{ outsourcedDataTaskActionTexts.historyButtonText }}
-          </YButton>
-        </div>
       </div>
 
-      <div class="outsourced-task-metrics">
-        <button
-          v-for="item in taskMetricCards"
-          :key="item.key"
-          class="outsourced-task-metric"
-          :class="[
-            `outsourced-task-metric--${item.tone}`,
-            { 'is-active': item.active },
-          ]"
-          @click="item.onClick"
+      <template v-if="showOverviewSkeleton">
+        <div
+          class="outsourced-task-metrics outsourced-task-metrics--skeleton"
+          aria-busy="true"
         >
-          <span>{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <em>{{ item.description }}</em>
-        </button>
-      </div>
-
-      <div class="outsourced-task-stage-chain">
-        <button
-          v-for="(item, index) in page.stepSummaries"
-          :key="item.stage"
-          class="outsourced-task-stage"
-          :class="{ 'is-active': page.query.step === item.stage }"
-          @click="page.selectStep(item.step)"
-        >
-          <span class="outsourced-task-stage__title"
-            >{{ index + 1 }}.{{ item.stepName }}</span
+          <div
+            v-for="item in 4"
+            :key="item"
+            class="outsourced-task-metric outsourced-task-metric--skeleton"
           >
-          <span class="outsourced-task-stage__desc">{{
-            item.stepDescription
-          }}</span>
-        </button>
-      </div>
+            <span
+              class="outsourced-task-skeleton outsourced-task-skeleton--label"
+            ></span>
+            <strong
+              class="outsourced-task-skeleton outsourced-task-skeleton--value"
+            ></strong>
+            <em
+              class="outsourced-task-skeleton outsourced-task-skeleton--desc"
+            ></em>
+          </div>
+        </div>
+
+        <div
+          class="outsourced-task-stage-chain outsourced-task-stage-chain--skeleton"
+          aria-busy="true"
+        >
+          <div
+            v-for="item in 5"
+            :key="item"
+            class="outsourced-task-stage outsourced-task-stage--skeleton"
+          >
+            <div class="outsourced-task-stage__main">
+              <span
+                class="outsourced-task-skeleton outsourced-task-skeleton--pill"
+              ></span>
+              <span
+                class="outsourced-task-skeleton outsourced-task-skeleton--title"
+              ></span>
+            </div>
+            <span
+              class="outsourced-task-skeleton outsourced-task-skeleton--desc"
+            ></span>
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
+        <div class="outsourced-task-metrics">
+          <button
+            v-for="item in taskMetricCards"
+            :key="item.key"
+            size="small"
+            class="outsourced-task-metric"
+            :class="[
+              `outsourced-task-metric--${item.tone}`,
+              { 'is-active': item.active },
+            ]"
+            @click="item.onClick"
+          >
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <em>{{ item.description }}</em>
+          </button>
+        </div>
+
+        <div class="outsourced-task-stage-chain">
+          <button
+            v-for="(item, index) in page.stepSummaries"
+            :key="item.stage"
+            size="small"
+            class="outsourced-task-stage"
+            :class="{
+              'is-active': page.query.step === item.stage,
+              'is-complete': isCompletedStage(item),
+              'is-abnormal': isAbnormalStage(item),
+            }"
+            @click="page.selectStep(item.step)"
+          >
+            <div class="outsourced-task-stage__main">
+              <span
+                v-if="isCompletedStage(item)"
+                class="outsourced-task-stage__status outsourced-task-stage__status--success"
+              >
+                ✓
+              </span>
+              <span
+                v-else-if="isAbnormalStage(item)"
+                class="outsourced-task-stage__status outsourced-task-stage__status--danger"
+              >
+                异常 {{ item.failedCount }}
+              </span>
+              <span class="outsourced-task-stage__title"
+                >{{ index + 1 }}.{{ item.stepName }}</span
+              >
+            </div>
+            <span class="outsourced-task-stage__desc">{{
+              item.stepDescription
+            }}</span>
+          </button>
+        </div>
+      </template>
     </YCard>
 
     <YCard class="outsourced-task-filter" :bordered="false" :padding="12">
       <a-form layout="inline" size="small" class="outsourced-task-filter__form">
-        <a-form-item label="任务日期">
+        <a-form-item :label="outsourcedDataTaskQueryTexts.taskDate">
           <a-date-picker
-            v-model:value="page.query.businessDate"
+            v-model:value="page.query.taskDate"
             size="small"
             value-format="YYYY-MM-DD"
             style="width: 140px"
             allow-clear
           />
         </a-form-item>
-        <a-form-item label="管理人">
+        <a-form-item :label="outsourcedDataTaskQueryTexts.managerName">
           <a-input
             v-model:value="page.query.managerName"
             size="small"
@@ -312,7 +471,7 @@ const taskMetricCards = computed(() => [
             allow-clear
           />
         </a-form-item>
-        <a-form-item label="产品">
+        <a-form-item :label="outsourcedDataTaskQueryTexts.productKeyword">
           <a-input
             v-model:value="page.query.productKeyword"
             size="small"
@@ -320,7 +479,7 @@ const taskMetricCards = computed(() => [
             allow-clear
           />
         </a-form-item>
-        <a-form-item label="状态">
+        <a-form-item :label="outsourcedDataTaskQueryTexts.status">
           <a-select
             v-model:value="page.query.status"
             style="width: 130px"
@@ -336,7 +495,7 @@ const taskMetricCards = computed(() => [
             </a-select-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="来源">
+        <a-form-item :label="outsourcedDataTaskQueryTexts.sourceType">
           <a-input
             v-model:value="page.query.sourceType"
             size="small"
@@ -344,7 +503,7 @@ const taskMetricCards = computed(() => [
             allow-clear
           />
         </a-form-item>
-        <a-form-item label="异常">
+        <a-form-item :label="outsourcedDataTaskQueryTexts.errorType">
           <a-input
             v-model:value="page.query.errorType"
             size="small"
@@ -354,10 +513,12 @@ const taskMetricCards = computed(() => [
         </a-form-item>
         <a-form-item>
           <div class="outsourced-task-filter__actions">
-            <YButton type="primary" size="small" @click="page.runQuery"
-              >查询</YButton
-            >
-            <YButton size="small" @click="page.resetQuery">重置</YButton>
+            <YButton type="primary" size="small" @click="page.runQuery">
+              {{ outsourcedDataTaskQueryTexts.queryButtonText }}
+            </YButton>
+            <YButton size="small" @click="page.resetQuery">
+              {{ outsourcedDataTaskQueryTexts.resetButtonText }}
+            </YButton>
           </div>
         </a-form-item>
       </a-form>
@@ -371,7 +532,6 @@ const taskMetricCards = computed(() => [
         :columns="columns"
         :data="page.tableData"
         :loading="page.loading"
-        :height="tableHeight"
         :row-config="{ keyField: 'batchId' }"
         :checkbox-config="{ highlight: true }"
         :pageable="true"
@@ -383,6 +543,9 @@ const taskMetricCards = computed(() => [
       >
         <template #batchName="{ row }">
           <a @click="page.openDetailDrawer(row)">{{ row.batchName }}</a>
+        </template>
+        <template #currentStepName="{ row }">
+          <a-tag color="blue">{{ row.currentStepName }}</a-tag>
         </template>
         <template #status="{ row }">
           <a-tag :color="page.formatStatusColor(row.status)">{{
@@ -398,9 +561,13 @@ const taskMetricCards = computed(() => [
         </template>
         <template #expand-row="{ row }">
           <div class="outsourced-task-expand">
-          <div class="outsourced-task-expand__header">
-              <strong>{{ outsourcedDataTaskActionTexts.detailStepSectionTitle }}</strong>
-              <span>{{ outsourcedDataTaskActionTexts.detailStepSectionDescription }}</span>
+            <div class="outsourced-task-expand__header">
+              <strong>{{
+                outsourcedDataTaskActionTexts.detailStepSectionTitle
+              }}</strong>
+              <span>{{
+                outsourcedDataTaskActionTexts.detailStepSectionDescription
+              }}</span>
             </div>
             <YTable
               :columns="stepColumns"
@@ -451,14 +618,24 @@ const taskMetricCards = computed(() => [
             <a @click="page.openDetailDrawer(row)">
               {{ outsourcedDataTaskActionTexts.viewButtonText }}
             </a>
-            <a @click="confirmExecute(row)">
-              {{ outsourcedDataTaskActionTexts.executeButtonText }}
+            <a
+              v-if="page.canManualExecute(row.status)"
+              @click="confirmExecute(row)"
+            >
+              {{
+                page.isContinueExecuteStatus(row.status)
+                  ? outsourcedDataTaskActionTexts.executeContinueButtonText
+                  : outsourcedDataTaskActionTexts.executeButtonText
+              }}
             </a>
             <a @click="confirmRetry(row)">
               {{ outsourcedDataTaskActionTexts.retryButtonText }}
             </a>
             <a v-if="row.status === 'RUNNING'" @click="confirmStop(row)">
               {{ outsourcedDataTaskActionTexts.stopButtonText }}
+            </a>
+            <a @click="openHistory(row)">
+              {{ outsourcedDataTaskActionTexts.historyButtonText }}
             </a>
           </a-space>
         </template>
@@ -479,7 +656,7 @@ const taskMetricCards = computed(() => [
             <p>
               {{ page.selectedRow.productCode }} ·
               {{ page.selectedRow.productName }} ·
-              {{ page.selectedRow.valuationDate }}
+              {{ page.selectedRow.businessDate }}
             </p>
           </div>
           <a-tag :color="page.formatStatusColor(page.selectedRow.status)">
@@ -504,25 +681,40 @@ const taskMetricCards = computed(() => [
             />
 
             <a-descriptions bordered size="small" :column="2">
-            <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.batchId">{{
-                page.selectedRow.batchId
-              }}</a-descriptions-item>
-              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.currentStepName">{{
-                page.selectedRow.currentStepName
-              }}</a-descriptions-item>
-              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.originalFileName">{{
-                page.selectedRow.originalFileName
-              }}</a-descriptions-item>
-              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.filesysFileId">{{
-                page.selectedRow.filesysFileId
-              }}</a-descriptions-item>
-              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.startedAt">{{
-                page.selectedRow.startedAt
-              }}</a-descriptions-item>
-              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.durationText">{{
-                page.selectedRow.durationText
-              }}</a-descriptions-item>
-              <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.lastErrorMessage" :span="2">
+              <a-descriptions-item
+                :label="outsourcedDataTaskTableTexts.detailFields.batchId"
+                >{{ page.selectedRow.batchId }}</a-descriptions-item
+              >
+              <a-descriptions-item
+                :label="
+                  outsourcedDataTaskTableTexts.detailFields.currentStepName
+                "
+                >{{ page.selectedRow.currentStepName }}</a-descriptions-item
+              >
+              <a-descriptions-item
+                :label="
+                  outsourcedDataTaskTableTexts.detailFields.originalFileName
+                "
+                >{{ page.selectedRow.originalFileName }}</a-descriptions-item
+              >
+              <a-descriptions-item
+                :label="outsourcedDataTaskTableTexts.detailFields.filesysFileId"
+                >{{ page.selectedRow.filesysFileId }}</a-descriptions-item
+              >
+              <a-descriptions-item
+                :label="outsourcedDataTaskTableTexts.detailFields.startedAt"
+                >{{ page.selectedRow.startedAt }}</a-descriptions-item
+              >
+              <a-descriptions-item
+                :label="outsourcedDataTaskTableTexts.detailFields.durationText"
+                >{{ page.selectedRow.durationText }}</a-descriptions-item
+              >
+              <a-descriptions-item
+                :label="
+                  outsourcedDataTaskTableTexts.detailFields.lastErrorMessage
+                "
+                :span="2"
+              >
                 {{ page.selectedRow.lastErrorMessage || "-" }}
               </a-descriptions-item>
             </a-descriptions>
@@ -570,95 +762,6 @@ const taskMetricCards = computed(() => [
                 </template>
               </YTable>
             </div>
-          </a-tab-pane>
-
-          <a-tab-pane
-            key="data"
-            :tab="outsourcedDataTaskActionTexts.detailDataTabTitle"
-          >
-            <div class="outsourced-task-data-summary">
-              <div>
-                <span>{{ outsourcedDataTaskTableTexts.detailFields.originalFileName }}</span>
-                <strong>{{ page.selectedRow.originalFileName || "-" }}</strong>
-              </div>
-              <div>
-                <span>{{ outsourcedDataTaskTableTexts.detailFields.filesysFileId }}</span>
-                <strong>{{
-                  page.selectedRow.filesysFileId ||
-                  page.selectedRow.fileId ||
-                  "-"
-                }}</strong>
-              </div>
-              <div>
-                <span>{{ outsourcedDataTaskTableTexts.batchColumns.valuationDate }}</span>
-                <strong>{{ page.selectedRow.valuationDate || "-" }}</strong>
-              </div>
-            </div>
-            <YTable
-              :columns="dataEntryColumns"
-              :data="page.detailDataEntries"
-              :row-config="{ keyField: 'key' }"
-              :pageable="false"
-              :autoFlexColumn="false"
-            >
-              <template #name="{ row }">
-                <a-space>
-                  <FileSearchOutlined
-                    v-if="
-                      row.key === 'source-file' || row.key === 'parse-result'
-                    "
-                  />
-                  <DatabaseOutlined v-else />
-                  <span>{{ row.name }}</span>
-                </a-space>
-              </template>
-              <template #status="{ row }">
-                <a-tag :color="dataStatusColor(row.status)">{{
-                  row.statusName
-                }}</a-tag>
-              </template>
-              <template #action="{ row }">
-                <a-button
-                  v-if="row.href"
-                  type="link"
-                  size="small"
-                  :href="row.href"
-                  target="_blank"
-                >
-                  {{ outsourcedDataTaskActionTexts.openEntryButtonText }}
-                </a-button>
-                <span v-else class="outsourced-task-muted">
-                  {{ outsourcedDataTaskActionTexts.pendingEntryText }}
-                </span>
-              </template>
-            </YTable>
-          </a-tab-pane>
-
-          <a-tab-pane
-            key="logs"
-            :tab="outsourcedDataTaskActionTexts.detailLogsTabTitle"
-          >
-            <YTable
-              :columns="logColumns"
-              :data="page.detailLogRows"
-              :row-config="{ keyField: 'key' }"
-              :pageable="false"
-              :autoFlexColumn="false"
-            >
-              <template #status="{ row }">
-                <a-tag :color="page.formatStatusColor(row.status)">{{
-                  row.statusName
-                }}</a-tag>
-              </template>
-              <template #errorStack="{ row }">
-                <pre v-if="row.errorStack" class="outsourced-task-stack">{{
-                  row.errorStack
-                }}</pre>
-                <span v-else class="outsourced-task-muted">
-                  {{ outsourcedDataTaskActionTexts.noErrorStackText }}
-                </span>
-              </template>
-            </YTable>
           </a-tab-pane>
 
           <a-tab-pane
@@ -773,22 +876,29 @@ const taskMetricCards = computed(() => [
     >
       <template v-if="page.activeStep">
         <a-descriptions bordered size="small" :column="1">
-          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.step">{{
-            page.activeStep.stepName
-          }}</a-descriptions-item>
-          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.taskId">{{
-            page.activeStep.taskId || "-"
-          }}</a-descriptions-item>
-          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.taskType">{{
-            page.activeStep.taskType || "-"
-          }}</a-descriptions-item>
-          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.inputSummary">{{
-            page.activeStep.inputSummary || "-"
-          }}</a-descriptions-item>
-          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.outputSummary">{{
-            page.activeStep.outputSummary || "-"
-          }}</a-descriptions-item>
-          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.errorMessage">
+          <a-descriptions-item
+            :label="outsourcedDataTaskTableTexts.detailFields.step"
+            >{{ page.activeStep.stepName }}</a-descriptions-item
+          >
+          <a-descriptions-item
+            :label="outsourcedDataTaskTableTexts.detailFields.taskId"
+            >{{ page.activeStep.taskId || "-" }}</a-descriptions-item
+          >
+          <a-descriptions-item
+            :label="outsourcedDataTaskTableTexts.detailFields.taskType"
+            >{{ page.activeStep.taskType || "-" }}</a-descriptions-item
+          >
+          <a-descriptions-item
+            :label="outsourcedDataTaskTableTexts.detailFields.inputSummary"
+            >{{ page.activeStep.inputSummary || "-" }}</a-descriptions-item
+          >
+          <a-descriptions-item
+            :label="outsourcedDataTaskTableTexts.detailFields.outputSummary"
+            >{{ page.activeStep.outputSummary || "-" }}</a-descriptions-item
+          >
+          <a-descriptions-item
+            :label="outsourcedDataTaskTableTexts.detailFields.errorMessage"
+          >
             <span
               class="outsourced-task-step-error"
               :class="{
@@ -800,9 +910,10 @@ const taskMetricCards = computed(() => [
               {{ page.activeStep.errorMessage || "-" }}
             </span>
           </a-descriptions-item>
-          <a-descriptions-item :label="outsourcedDataTaskTableTexts.detailFields.logRef">{{
-            page.activeStep.logRef || "-"
-          }}</a-descriptions-item>
+          <a-descriptions-item
+            :label="outsourcedDataTaskTableTexts.detailFields.logRef"
+            >{{ page.activeStep.logRef || "-" }}</a-descriptions-item
+          >
         </a-descriptions>
       </template>
     </a-drawer>
@@ -810,13 +921,18 @@ const taskMetricCards = computed(() => [
     <a-drawer
       class="outsourced-task-drawer"
       :open="page.historyVisible"
-      :title="outsourcedDataTaskActionTexts.historyDrawerTitle"
+      :title="page.historyDrawerTitle"
       :width="1200"
       @close="page.closeHistoryDrawer"
     >
       <div class="outsourced-task-history">
         <div class="outsourced-task-history__summary">
-          <span>{{ outsourcedDataTaskActionTexts.historyDrawerDescription }}</span>
+          <div class="outsourced-task-history__summary-main">
+            {{ page.historyDrawerDescription }}
+          </div>
+          <div class="outsourced-task-history__summary-sub">
+            {{ page.historyDrawerFilterSummary }}
+          </div>
           <a-tag color="blue"
             >{{ outsourcedDataTaskActionTexts.historyTotalPrefix
             }}{{ page.historyPagination.total }}</a-tag

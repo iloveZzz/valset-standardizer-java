@@ -2,7 +2,7 @@
 
 .parse-queue-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
@@ -41,6 +41,10 @@
   background: rgba(255, 77, 79, 0.14);
 }
 
+.parse-queue-stat-card--realtime::after {
+  background: rgba(45, 140, 240, 0.14);
+}
+
 .parse-queue-stat-label {
   color: rgba(15, 23, 42, 0.56);
   font-size: 12px;
@@ -55,6 +59,11 @@
   font-size: 24px;
   font-weight: 850;
   line-height: 1.2;
+}
+
+.parse-queue-stat-value--status {
+  font-size: 18px;
+  letter-spacing: 0.01em;
 }
 
 .parse-queue-stat-desc {
@@ -98,7 +107,7 @@
 
 @media (max-width: 1200px) {
   .parse-queue-stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
 

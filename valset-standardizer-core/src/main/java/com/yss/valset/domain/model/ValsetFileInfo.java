@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -33,6 +34,7 @@ public class ValsetFileInfo {
     private String createdBy;
     private LocalDateTime receivedAt;
     private LocalDateTime storedAt;
+    private LocalDate businessDate;
     private LocalDateTime lastProcessedAt;
     private Long lastTaskId;
     private String errorMessage;

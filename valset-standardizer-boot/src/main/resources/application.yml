@@ -215,16 +215,6 @@ subject:
           step-description: STG/DWD/标准持仓/估值数据写入
           parse-lifecycle-stages:
             - TASK_PERSISTED
-        - stage: DATA_PROCESSING
-          step: DATA_PROCESSING
-          stage-name: 加工任务
-          step-name: 加工任务
-          stage-description: 后续数据加工、补充计算、派生数据生成
-          step-description: 后续数据加工、补充计算、派生数据生成
-          task-types:
-            - EVALUATE_MAPPING
-            - REFRESH_STANDARD_SUBJECT
-            - REFRESH_MAPPING_HINT
         - stage: VERIFY_ARCHIVE
           step: VERIFY_ARCHIVE
           stage-name: 校验归档

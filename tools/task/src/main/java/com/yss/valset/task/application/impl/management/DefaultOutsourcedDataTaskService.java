@@ -13,47 +13,57 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskStageSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import com.yss.valset.task.application.port.OutsourcedDataTaskGateway;
-import com.yss.valset.task.application.service.OutsourcedDataTaskManagementAppService;
-import com.yss.valset.task.domain.model.OutsourcedDataTaskStage;
+import com.yss.valset.task.application.service.OutsourcedDataTaskService;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yss.valset.batch.scheduler.SchedulerService;
+import com.yss.valset.domain.gateway.WorkflowTaskGateway;
+import com.yss.valset.domain.model.TaskStage;
+import com.yss.valset.domain.model.TaskStatus;
+import com.yss.valset.domain.model.TaskType;
+import com.yss.valset.domain.model.WorkflowTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * 默认估值表解析任务管理应用服务。
+ * 默认估值表解析任务应用服务。
  *
- * <p>当前先提供稳定的页面契约和静态聚合数据，后续接入持久化网关后替换数据来源。</p>
+ * <p>当前仅提供网关代理和空兜底，不再维护样例批次数据。</p>
  */
 @Service
-public class DefaultOutsourcedDataTaskManagementAppService implements OutsourcedDataTaskManagementAppService {
+public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskService {
 
     private static final OutsourcedDataTaskStageCatalog DEFAULT_STAGE_CATALOG = new OutsourcedDataTaskStageCatalog();
-    private static final List<OutsourcedDataTaskBatchDTO> SAMPLE_BATCHES = buildSampleBatches(DEFAULT_STAGE_CATALOG);
-
-    private static final List<OutsourcedDataTaskStepDTO> SAMPLE_STEPS = buildSampleSteps(DEFAULT_STAGE_CATALOG);
 
     private final OutsourcedDataTaskGateway outsourcedDataTaskGateway;
+    private final WorkflowTaskGateway workflowTaskGateway;
+    private final SchedulerService schedulerService;
+    private final ObjectMapper objectMapper;
     private OutsourcedDataTaskStageCatalog stageCatalog = new OutsourcedDataTaskStageCatalog();
 
-    public DefaultOutsourcedDataTaskManagementAppService() {
-        this.outsourcedDataTaskGateway = null;
+    public DefaultOutsourcedDataTaskService() {
+        this(null, null, null, null);
     }
 
     @Autowired
-    public DefaultOutsourcedDataTaskManagementAppService(OutsourcedDataTaskGateway outsourcedDataTaskGateway) {
+    public DefaultOutsourcedDataTaskService(OutsourcedDataTaskGateway outsourcedDataTaskGateway,
+                                           WorkflowTaskGateway workflowTaskGateway,
+                                           SchedulerService schedulerService,
+                                           ObjectMapper objectMapper) {
         this.outsourcedDataTaskGateway = outsourcedDataTaskGateway;
+        this.workflowTaskGateway = workflowTaskGateway;
+        this.schedulerService = schedulerService;
+        this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
     }
 
     @Autowired
@@ -109,11 +119,7 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
         if (outsourcedDataTaskGateway != null) {
             return outsourcedDataTaskGateway.listSteps(batchId);
         }
-        requireBatch(batchId);
-        return SAMPLE_STEPS.stream()
-                .filter(step -> Objects.equals(step.getBatchId(), batchId))
-                .sorted(Comparator.comparingInt(step -> stageOrder(step.getStage())))
-                .collect(Collectors.toList());
+        return Collections.emptyList();
     }
 
     @Override
@@ -136,13 +142,23 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
     @Override
     public OutsourcedDataTaskActionResultDTO execute(String batchId, OutsourcedDataTaskActionCommand command) {
         requireBatch(batchId);
-        return accepted(batchId, null, "EXECUTE", "已提交估值表解析任务执行请求");
+        OutsourcedDataTaskStepDTO currentStep = requireCurrentStep(batchId);
+        WorkflowTask sourceTask = requireWorkflowTask(currentStep);
+        boolean resumeFromFailure = isManualExecuteResume(batchId);
+        triggerCurrentTask(batchId, sourceTask, resumeFromFailure);
+        String message = resumeFromFailure
+                ? "已提交估值表解析任务继续执行请求"
+                : "已提交估值表解析任务手动执行请求";
+        return accepted(batchId, currentStep.getStepId(), "EXECUTE", message);
     }
 
     @Override
     public OutsourcedDataTaskActionResultDTO retry(String batchId, OutsourcedDataTaskActionCommand command) {
         requireBatch(batchId);
-        return accepted(batchId, null, "RETRY", "已提交估值表解析任务重跑请求");
+        OutsourcedDataTaskStepDTO currentStep = requireCurrentStep(batchId);
+        WorkflowTask sourceTask = requireWorkflowTask(currentStep);
+        Long taskId = cloneAndTrigger(sourceTask);
+        return accepted(batchId, currentStep.getStepId(), "RETRY", "已提交估值表解析任务全流程重跑请求，taskId=" + taskId);
     }
 
     @Override
@@ -153,35 +169,159 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
 
     @Override
     public OutsourcedDataTaskActionResultDTO retryStep(String batchId, String stepId, OutsourcedDataTaskActionCommand command) {
-        requireStep(batchId, stepId);
-        return accepted(batchId, stepId, "RETRY_STEP", "已提交估值表解析任务阶段重跑请求");
+        OutsourcedDataTaskStepDTO step = requireStep(batchId, stepId);
+        WorkflowTask sourceTask = requireWorkflowTask(step);
+        Long taskId = cloneAndTrigger(sourceTask);
+        return accepted(batchId, stepId, "RETRY_STEP", "已提交估值表解析任务阶段重跑请求，taskId=" + taskId);
     }
 
     @Override
     public List<OutsourcedDataTaskActionResultDTO> batchExecute(OutsourcedDataTaskBatchCommand command) {
-        return batchAction(command, "EXECUTE", "已提交批量执行请求");
+        return batchAction(command, true);
     }
 
     @Override
     public List<OutsourcedDataTaskActionResultDTO> batchRetry(OutsourcedDataTaskBatchCommand command) {
-        return batchAction(command, "RETRY", "已提交批量重跑请求");
+        return batchAction(command, false);
     }
 
     @Override
     public List<OutsourcedDataTaskActionResultDTO> batchStop(OutsourcedDataTaskBatchCommand command) {
-        return batchAction(command, "STOP", "已提交批量停止请求");
-    }
-
-    private List<OutsourcedDataTaskActionResultDTO> batchAction(OutsourcedDataTaskBatchCommand command, String action, String message) {
         if (command == null || command.getBatchIds() == null) {
             return Collections.emptyList();
         }
         return command.getBatchIds().stream()
                 .map(batchId -> {
                     requireBatch(batchId);
-                    return accepted(batchId, null, action, message);
+                    return accepted(batchId, null, "STOP", "已提交批量停止请求");
                 })
                 .collect(Collectors.toList());
+    }
+
+    private List<OutsourcedDataTaskActionResultDTO> batchAction(OutsourcedDataTaskBatchCommand command, boolean manualExecute) {
+        if (command == null || command.getBatchIds() == null) {
+            return Collections.emptyList();
+        }
+        return command.getBatchIds().stream()
+                .map(batchId -> {
+                    return manualExecute ? execute(batchId, null) : retry(batchId, null);
+                })
+                .collect(Collectors.toList());
+    }
+
+    private void triggerCurrentTask(String batchId, WorkflowTask sourceTask, boolean resumeFromFailure) {
+        if (sourceTask == null || sourceTask.getTaskId() == null) {
+            throw new IllegalArgumentException("估值表解析任务缺少可调度的工作流任务：" + batchId);
+        }
+        if (sourceTask.getTaskStatus() == TaskStatus.SUCCESS || sourceTask.getTaskStatus() == TaskStatus.RUNNING) {
+            throw new IllegalStateException("当前任务状态不允许重新调度：" + batchId + "，taskStatus=" + sourceTask.getTaskStatus());
+        }
+        if (resumeFromFailure) {
+            if (workflowTaskGateway == null || !workflowTaskGateway.markRetrying(sourceTask.getTaskId())) {
+                throw new IllegalStateException("估值表解析任务无法切换到重试状态：" + batchId);
+            }
+        }
+        triggerNow(sourceTask.getTaskId(), batchId);
+    }
+
+    private Long cloneAndTrigger(WorkflowTask sourceTask) {
+        if (sourceTask == null || sourceTask.getTaskType() == null) {
+            throw new IllegalArgumentException("工作流任务不能为空");
+        }
+        if (workflowTaskGateway == null) {
+            throw new IllegalStateException("工作流任务网关或调度器未启用，无法重跑任务");
+        }
+        WorkflowTask clone = WorkflowTask.builder()
+                .taskType(sourceTask.getTaskType())
+                .taskStatus(TaskStatus.PENDING)
+                .taskStage(sourceTask.getTaskStage() == null
+                        ? inferTaskStage(sourceTask.getTaskType())
+                        : sourceTask.getTaskStage())
+                .businessKey(sourceTask.getBusinessKey())
+                .fileId(sourceTask.getFileId())
+                .inputPayload(normalizeJson(sourceTask.getInputPayload()))
+                .build();
+        Long taskId = workflowTaskGateway.save(clone);
+        triggerNow(taskId, null);
+        return taskId;
+    }
+
+    private OutsourcedDataTaskStepDTO requireCurrentStep(String batchId) {
+        List<OutsourcedDataTaskStepDTO> steps = listSteps(batchId);
+        return steps.stream()
+                .filter(step -> step != null && hasText(step.getTaskId()))
+                .filter(step -> Boolean.TRUE.equals(step.getCurrentFlag())
+                        || isFailedOrBlocked(step.getStatus())
+                        || OutsourcedDataTaskStatus.RUNNING.name().equals(step.getStatus()))
+                .findFirst()
+                .orElseGet(() -> steps.stream()
+                        .filter(step -> step != null && hasText(step.getTaskId()))
+                        .reduce((left, right) -> right)
+                        .orElseThrow(() -> new IllegalArgumentException("估值表解析任务阶段不存在：" + batchId)));
+    }
+
+    private WorkflowTask requireWorkflowTask(OutsourcedDataTaskStepDTO step) {
+        Long taskId = parseLong(step == null ? null : step.getTaskId());
+        if (taskId == null || workflowTaskGateway == null) {
+            throw new IllegalArgumentException("估值表解析任务缺少对应的工作流任务：" + (step == null ? null : step.getStepId()));
+        }
+        return workflowTaskGateway.findById(taskId);
+    }
+
+    private boolean isManualExecuteResume(String batchId) {
+        OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
+        return batch != null && isAnyStatus(batch, OutsourcedDataTaskStatus.FAILED, OutsourcedDataTaskStatus.BLOCKED, OutsourcedDataTaskStatus.STOPPED);
+    }
+
+    private static boolean isFailedOrBlocked(String status) {
+        return OutsourcedDataTaskStatus.FAILED.name().equals(status)
+                || OutsourcedDataTaskStatus.BLOCKED.name().equals(status);
+    }
+
+    private static TaskStage inferTaskStage(TaskType taskType) {
+        if (taskType == null) {
+            return TaskStage.OTHER;
+        }
+        return switch (taskType) {
+            case EXTRACT_DATA -> TaskStage.EXTRACT;
+            case PARSE_WORKBOOK -> TaskStage.PARSE;
+            case MATCH_SUBJECT -> TaskStage.MATCH;
+            default -> TaskStage.OTHER;
+        };
+    }
+
+    private String normalizeJson(String payload) {
+        if (payload == null || payload.isBlank() || objectMapper == null) {
+            return payload;
+        }
+        try {
+            Object json = objectMapper.readValue(payload, Object.class);
+            return objectMapper.writeValueAsString(json);
+        } catch (Exception ignored) {
+            return payload;
+        }
+    }
+
+    private void triggerNow(Long taskId, String batchId) {
+        if (schedulerService == null) {
+            throw new IllegalStateException("调度器未启用，无法触发估值表解析任务：" + (batchId == null ? taskId : batchId));
+        }
+        try {
+            schedulerService.triggerNow(taskId);
+        } catch (Exception exception) {
+            throw new IllegalStateException("触发调度失败：" + (batchId == null ? taskId : batchId), exception);
+        }
+    }
+
+    private static Long parseLong(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private OutsourcedDataTaskBatchDTO requireBatch(String batchId) {
@@ -191,37 +331,24 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
                 return persisted.get();
             }
         }
-        return SAMPLE_BATCHES.stream()
-                .filter(batch -> Objects.equals(batch.getBatchId(), batchId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("估值表解析任务批次不存在：" + batchId));
+        throw new IllegalArgumentException("估值表解析任务批次不存在：" + batchId);
     }
 
     private OutsourcedDataTaskStepDTO requireStep(String batchId, String stepId) {
-        return SAMPLE_STEPS.stream()
-                .filter(step -> Objects.equals(step.getBatchId(), batchId))
-                .filter(step -> Objects.equals(step.getStepId(), stepId))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("估值表解析任务阶段不存在：" + stepId));
+        if (outsourcedDataTaskGateway != null) {
+            return outsourcedDataTaskGateway.listSteps(batchId).stream()
+                    .filter(step -> Objects.equals(step.getStepId(), stepId))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("估值表解析任务阶段不存在：" + stepId));
+        }
+        throw new IllegalArgumentException("估值表解析任务阶段不存在：" + stepId);
     }
 
     private List<OutsourcedDataTaskBatchDTO> filterBatches(OutsourcedDataTaskQueryCommand query) {
         if (query == null) {
-            return SAMPLE_BATCHES.stream()
-                    .filter(this::isCurrentBatch)
-                    .collect(Collectors.toList());
+            return Collections.emptyList();
         }
-        Predicate<OutsourcedDataTaskBatchDTO> predicate = batch -> matches(query.getBusinessDate(), batch.getBusinessDate())
-                && contains(batch.getManagerName(), query.getManagerName())
-                && (contains(batch.getProductName(), query.getProductKeyword()) || contains(batch.getProductCode(), query.getProductKeyword()))
-                && matches(query.getStage(), batch.getCurrentStage())
-                && matches(query.getStatus(), batch.getStatus())
-                && matches(query.getSourceType(), batch.getSourceType())
-                && (!hasText(query.getErrorType()) || contains(batch.getLastErrorCode(), query.getErrorType()) || contains(batch.getLastErrorMessage(), query.getErrorType()));
-        return SAMPLE_BATCHES.stream()
-                .filter(predicate)
-                .filter(batch -> isVisibleBatch(batch, query))
-                .collect(Collectors.toList());
+        return Collections.emptyList();
     }
 
     private List<OutsourcedDataTaskBatchDTO> loadBatches(OutsourcedDataTaskQueryCommand query) {
@@ -229,21 +356,6 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
             return outsourcedDataTaskGateway.listTasks(query);
         }
         return filterBatches(query);
-    }
-
-    private boolean isVisibleBatch(OutsourcedDataTaskBatchDTO batch, OutsourcedDataTaskQueryCommand query) {
-        if (query != null && Boolean.TRUE.equals(query.getIncludeHistory())) {
-            return true;
-        }
-        return isCurrentBatch(batch);
-    }
-
-    private boolean isCurrentBatch(OutsourcedDataTaskBatchDTO batch) {
-        if (batch == null) {
-            return false;
-        }
-        return hasText(batch.getBatchId())
-                && (batch.getBatchId().startsWith("FILE-") || hasText(batch.getFileId()));
     }
 
     private List<OutsourcedDataTaskStageSummaryDTO> buildStepSummaries(List<OutsourcedDataTaskBatchDTO> batches) {
@@ -254,7 +366,7 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
             }
             listSteps(batch.getBatchId()).stream()
                     .map(OutsourcedDataTaskStepDTO::getStage)
-                    .filter(DefaultOutsourcedDataTaskManagementAppService::hasText)
+                    .filter(DefaultOutsourcedDataTaskService::hasText)
                     .distinct()
                     .forEach(stage -> stageMap.computeIfAbsent(stage, key -> new ArrayList<>()).add(batch));
         });
@@ -312,17 +424,6 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
                 .anyMatch(status -> Objects.equals(batch.getStatus(), status.name()));
     }
 
-    private static boolean matches(String expected, String actual) {
-        return !hasText(expected) || Objects.equals(expected, actual);
-    }
-
-    private static boolean contains(String actual, String keyword) {
-        if (!hasText(keyword)) {
-            return true;
-        }
-        return actual != null && actual.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
-    }
-
     private static boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -338,99 +439,4 @@ public class DefaultOutsourcedDataTaskManagementAppService implements Outsourced
     private int stageOrder(String stage) {
         return stageCatalog.stageOrder(stage);
     }
-
-    private static List<OutsourcedDataTaskBatchDTO> buildSampleBatches(OutsourcedDataTaskStageCatalog catalog) {
-        return Arrays.asList(
-                batch("BATCH-20250227-001", "估值产品5 2025-02-27 估值数据处理", "2025-02-27", "2025-02-27", "W213412", "估值产品5", "临时机构", "FILE-001", "FS-001", "估值产品5估值表.xlsx", "MANUAL_UPLOAD", OutsourcedDataTaskStage.SUBJECT_RECOGNIZE, OutsourcedDataTaskStatus.RUNNING, 66, null, null, catalog),
-                batch("BATCH-20250227-002", "估值产品6 2025-02-27 估值数据处理", "2025-02-27", "2025-02-27", "W213413", "估值产品6", "临时机构", "FILE-002", "FS-002", "估值产品6估值表.xlsx", "FILESYS", OutsourcedDataTaskStage.STANDARD_LANDING, OutsourcedDataTaskStatus.FAILED, 70, "LANDING_FAILED", "标准表落地失败：DWD 持仓写入冲突", catalog),
-                batch("BATCH-20250227-003", "估值产品7 2025-02-27 估值数据处理", "2025-02-27", "2025-02-27", "W213414", "估值产品7", "临时机构", "FILE-003", "FS-003", "估值产品7估值表.xlsx", "EMAIL", OutsourcedDataTaskStage.VERIFY_ARCHIVE, OutsourcedDataTaskStatus.SUCCESS, 100, null, null, catalog)
-        );
-    }
-
-    private static OutsourcedDataTaskBatchDTO batch(String batchId,
-                                                   String batchName,
-                                                   String businessDate,
-                                                   String valuationDate,
-                                                   String productCode,
-                                                   String productName,
-                                                   String managerName,
-                                                   String fileId,
-                                                   String filesysFileId,
-                                                   String originalFileName,
-                                                   String sourceType,
-                                                   OutsourcedDataTaskStage currentStage,
-                                                   OutsourcedDataTaskStatus status,
-                                                   Integer progress,
-                                                   String errorCode,
-                                                   String errorMessage,
-                                                   OutsourcedDataTaskStageCatalog catalog) {
-        OutsourcedDataTaskBatchDTO batch = new OutsourcedDataTaskBatchDTO();
-        batch.setBatchId(batchId);
-        batch.setBatchName(batchName);
-        batch.setBusinessDate(businessDate);
-        batch.setValuationDate(valuationDate);
-        batch.setProductCode(productCode);
-        batch.setProductName(productName);
-        batch.setManagerName(managerName);
-        batch.setFileId(fileId);
-        batch.setFilesysFileId(filesysFileId);
-        batch.setOriginalFileName(originalFileName);
-        batch.setSourceType(sourceType);
-        batch.setCurrentStage(currentStage.name());
-        batch.setCurrentStep(currentStage.name());
-        batch.setCurrentStageName(catalog.stageLabel(currentStage.name()));
-        batch.setCurrentStepName(catalog.stageLabel(currentStage.name()));
-        batch.setStatus(status.name());
-        batch.setStatusName(catalog.statusLabel(status.name()));
-        batch.setProgress(progress);
-        batch.setStartedAt(businessDate + " 09:30:00");
-        batch.setEndedAt(status == OutsourcedDataTaskStatus.RUNNING ? null : businessDate + " 09:42:00");
-        batch.setDurationMs(status == OutsourcedDataTaskStatus.RUNNING ? null : 720000L);
-        batch.setDurationText(status == OutsourcedDataTaskStatus.RUNNING ? "运行中" : "12m");
-        batch.setLastErrorCode(errorCode);
-        batch.setLastErrorMessage(errorMessage);
-        return batch;
-    }
-
-    private static List<OutsourcedDataTaskStepDTO> buildSampleSteps(OutsourcedDataTaskStageCatalog catalog) {
-        List<OutsourcedDataTaskStepDTO> steps = new ArrayList<>();
-        SAMPLE_BATCHES.forEach(batch -> catalog.stageSequence().stream()
-                .forEach(stage -> steps.add(step(batch, stage, catalog))));
-        return steps;
-    }
-
-    private static OutsourcedDataTaskStepDTO step(OutsourcedDataTaskBatchDTO batch,
-                                                  OutsourcedDataTaskStage stage,
-                                                  OutsourcedDataTaskStageCatalog catalog) {
-        OutsourcedDataTaskStepDTO step = new OutsourcedDataTaskStepDTO();
-        step.setStepId(batch.getBatchId() + "-" + stage.name());
-        step.setBatchId(batch.getBatchId());
-        step.setStage(stage.name());
-        step.setStep(stage.name());
-        step.setStageName(stage.getLabel());
-        step.setStepName(stage.getLabel());
-        step.setTaskId("TASK-" + step.getStepId());
-        step.setTaskType(stage.name());
-        step.setRunNo(1);
-        boolean scheduledStage = stage == OutsourcedDataTaskStage.FILE_PARSE;
-        step.setTriggerMode(scheduledStage ? "SCHEDULE" : "DEPENDENCY");
-        step.setTriggerModeName(scheduledStage ? "调度执行" : "依赖触发");
-        boolean beforeCurrentStage = catalog.stageOrder(stage.name()) < catalog.stageOrder(batch.getCurrentStage());
-        boolean currentStage = Objects.equals(stage.name(), batch.getCurrentStage());
-        OutsourcedDataTaskStatus status = beforeCurrentStage ? OutsourcedDataTaskStatus.SUCCESS : (currentStage ? OutsourcedDataTaskStatus.valueOf(batch.getStatus()) : OutsourcedDataTaskStatus.PENDING);
-        step.setStatus(status.name());
-        step.setStatusName(catalog.statusLabel(status.name()));
-        step.setProgress(status == OutsourcedDataTaskStatus.SUCCESS ? 100 : (currentStage ? batch.getProgress() : 0));
-        step.setStartedAt(batch.getBusinessDate() + " 09:30:00");
-        step.setEndedAt(status == OutsourcedDataTaskStatus.RUNNING || status == OutsourcedDataTaskStatus.PENDING ? null : batch.getBusinessDate() + " 09:32:00");
-        step.setDurationMs(status == OutsourcedDataTaskStatus.PENDING ? null : 120000L);
-        step.setDurationText(status == OutsourcedDataTaskStatus.PENDING ? "-" : "2m");
-        step.setInputSummary(stage.getDescription());
-        step.setOutputSummary(status == OutsourcedDataTaskStatus.SUCCESS ? catalog.stageLabel(stage.name()) + "已完成" : null);
-        step.setErrorCode(currentStage ? batch.getLastErrorCode() : null);
-        step.setErrorMessage(currentStage ? batch.getLastErrorMessage() : null);
-        step.setLogRef("task:" + step.getTaskId());
-        return step;
-    }
-
 }

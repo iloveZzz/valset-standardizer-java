@@ -37,6 +37,11 @@ public interface WorkflowTaskGateway {
     boolean markRunning(Long taskId, String taskStage, LocalDateTime taskStartTime);
 
     /**
+     * 将任务标记为重试中，以便重新进入调度器执行。
+     */
+    boolean markRetrying(Long taskId);
+
+    /**
      * 更新任务阶段耗时。
      */
     void updateTaskTimings(Long taskId, Long parseTaskTimeMs, Long standardizeTimeMs, Long matchStandardSubjectTimeMs);

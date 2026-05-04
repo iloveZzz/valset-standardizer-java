@@ -29,6 +29,7 @@
     <include file="sql/common/transfer-source-poll-cron-cleanup.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-email.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/task.sql" relativeToChangelogFile="true"/>
+    <include file="sql/common/workflow-config.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/tr.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/indexes.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/schedule-drop.sql" relativeToChangelogFile="true"/>

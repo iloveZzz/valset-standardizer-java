@@ -52,9 +52,26 @@ export const workspaceNav: Array<{
     })),
   },
   {
-    title: "估值表解析任务",
-    path: "/outsourced-data-tasks",
+    title: "任务管理",
+    path: "/task-management",
     icon: ProjectOutlined,
+    children: [
+      {
+        title: "估值表解析任务",
+        path: "/task-management?scene=valuation",
+        icon: FileSearchOutlined,
+      },
+      {
+        title: "持仓穿透任务",
+        path: "/task-management?scene=holding",
+        icon: FileSearchOutlined,
+      },
+      {
+        title: "工作流配置",
+        path: "/task-management?scene=workflow",
+        icon: ProjectOutlined,
+      },
+    ],
   },
 ];
 
@@ -95,11 +112,38 @@ export const routes: RouteRecordRaw[] = [
     redirect: "/transfer/overview",
   },
   {
+    path: "/task-management",
+    name: "task-management",
+    component: () => import("@/views/TaskManagement/index.vue"),
+    meta: {
+      title: "任务管理",
+      keepAlive: false,
+    },
+  },
+  {
     path: "/outsourced-data-tasks",
     name: "outsourced-data-tasks",
-    component: () => import("@/views/OutsourcedDataTask/index.vue"),
+    component: () => import("@/views/TaskManagement/index.vue"),
     meta: {
       title: "估值表解析任务",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/holding-penetration-tasks",
+    name: "holding-penetration-tasks",
+    component: () => import("@/views/TaskManagement/index.vue"),
+    meta: {
+      title: "持仓穿透任务",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/workflow-configs",
+    name: "workflow-configs",
+    component: () => import("@/views/TaskManagement/index.vue"),
+    meta: {
+      title: "工作流配置",
       keepAlive: false,
     },
   },

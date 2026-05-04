@@ -39,7 +39,7 @@ tools/task
 
 ```text
 Controller
-  -> OutsourcedDataTaskManagementAppService
+  -> OutsourcedDataTaskService
     -> OutsourcedDataTaskGateway
       -> OutsourcedDataTaskRepository
         -> t_outsourced_data_task_batch

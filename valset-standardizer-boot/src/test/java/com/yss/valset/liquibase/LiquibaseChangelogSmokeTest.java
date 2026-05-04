@@ -21,7 +21,7 @@ class LiquibaseChangelogSmokeTest {
                     .map(changeSet -> changeSet.getFilePath())
                     .collect(Collectors.toSet());
 
-            assertThat(liquibase.getDatabaseChangeLog().getChangeSets()).hasSize(115);
+            assertThat(liquibase.getDatabaseChangeLog().getChangeSets()).hasSize(117);
             assertThat(changeSetPaths).contains(
                     "db/changelog/sql/common/core.sql",
                     "db/changelog/sql/common/workflow-task-rename.sql",
@@ -30,6 +30,7 @@ class LiquibaseChangelogSmokeTest {
                     "db/changelog/sql/common/knowledge.sql",
                     "db/changelog/sql/common/transfer.sql",
                     "db/changelog/sql/common/db-scheduler.sql",
+                    "db/changelog/sql/common/workflow-config.sql",
                     "db/changelog/sql/common/transfer-email.sql",
                     "db/changelog/sql/common/transfer-init.sql",
                     "db/changelog/sql/common/transfer-seed.sql",

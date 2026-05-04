@@ -88,6 +88,17 @@ public class WorkflowTaskGatewayImpl implements WorkflowTaskGateway {
         ) > 0;
     }
 
+    @Override
+    public boolean markRetrying(Long taskId) {
+        return workflowTaskRepository.update(
+                null,
+                Wrappers.lambdaUpdate(WorkflowTaskPO.class)
+                        .eq(WorkflowTaskPO::getTaskId, taskId)
+                        .in(WorkflowTaskPO::getTaskStatus, TaskStatus.FAILED.name(), TaskStatus.CANCELED.name())
+                        .set(WorkflowTaskPO::getTaskStatus, TaskStatus.RETRYING.name())
+        ) > 0;
+    }
+
     /**
      * 更新任务阶段耗时。
      */

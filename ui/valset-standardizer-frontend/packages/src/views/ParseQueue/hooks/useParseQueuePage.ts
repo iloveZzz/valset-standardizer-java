@@ -1,4 +1,4 @@
-import { computed, reactive, ref, watch } from "vue";
+import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
 import type { YTablePagination } from "@yss-ui/components";
 import { useRouter } from "vue-router";
@@ -14,6 +14,7 @@ import {
   subscribeParseQueue,
   type ParseQueueViewDTO,
 } from "@/api/parseQueue";
+import { subscribeParseLifecycleEventStream } from "@/services/parseLifecycleEventSse";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
   ParseQueuePage,
@@ -74,6 +75,9 @@ const formatFileStatusLabel = (value: string | undefined) => {
   return value || status;
 };
 
+const toPageIndex = (value?: number) =>
+  typeof value === "number" && value > 0 ? value - 1 : 0;
+
 const safeJson = (value: unknown) => {
   if (value === null || value === undefined || value === "") {
     return "{}";
@@ -105,9 +109,6 @@ const cloneJson = (value: unknown) => {
     return value;
   }
 };
-
-const normalizePageIndex = (value?: number) =>
-  typeof value === "number" && value > 0 ? value : 0;
 
 const mapStatus = (value?: string): ParseQueueStatus => {
   const status = String(value ?? "")
@@ -165,6 +166,40 @@ const isPageResult = (
   pageSize?: number;
 } => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
+const isQueueRowInCurrentScope = (
+  row: ParseQueueRow,
+  scope: ParseQueueQueryState,
+) => {
+  const normalize = (value: unknown) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase();
+  const matches = (
+    queryValue: string,
+    rowValue: unknown,
+    fallbackValues: unknown[] = [],
+  ) => {
+    const needle = normalize(queryValue);
+    if (!needle) {
+      return true;
+    }
+    const candidates = [rowValue, ...fallbackValues].map(normalize);
+    return candidates.includes(needle);
+  };
+
+  return (
+    matches(scope.transferId, row.transferId) &&
+    matches(scope.businessKey, row.businessKey) &&
+    matches(scope.sourceCode, row.sourceCode, [row.sourceId]) &&
+    matches(scope.routeId, row.routeId) &&
+    matches(scope.tagCode, row.tagCode) &&
+    matches(scope.fileStatus, row.fileStatus) &&
+    matches(scope.deliveryStatus, row.deliveryStatus) &&
+    matches(scope.parseStatus, row.parseStatus) &&
+    matches(scope.triggerMode, row.triggerMode)
+  );
+};
+
 export const useParseQueuePage = (): { page: ParseQueuePage } => {
   const router = useRouter();
   const route = useRoute();
@@ -181,8 +216,14 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
   const loading = ref(false);
   const listLoading = ref(false);
   const backfillLoading = ref(false);
+  const realtimeConnected = ref(false);
+  const realtimeConnecting = ref(false);
+  const realtimePaused = ref(false);
   const detailVisible = ref(false);
   const selectedRow = ref<ParseQueueRow | null>(null);
+  let listRequestId = 0;
+  let realtimeRefreshTimer: number | undefined;
+  let realtimeConnection: { close: () => void } | null = null;
 
   const total = computed(() => Number(pagination.value.total ?? 0));
   const pendingCount = computed(
@@ -197,7 +238,33 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
   const failedCount = computed(
     () => rows.value.filter((row) => row.parseStatus === "FAILED").length,
   );
+  const currentFilterSummary = computed(() => {
+    const segments = [
+      query.transferId && `分拣ID=${query.transferId}`,
+      query.businessKey && `业务键=${query.businessKey}`,
+      query.sourceCode && `来源编码=${query.sourceCode}`,
+      query.routeId && `路由ID=${query.routeId}`,
+      query.tagCode && `标签编码=${query.tagCode}`,
+      query.fileStatus && `文件状态=${query.fileStatus}`,
+      query.deliveryStatus && `投递状态=${query.deliveryStatus}`,
+      query.parseStatus && `解析状态=${query.parseStatus}`,
+      query.triggerMode && `触发方式=${query.triggerMode}`,
+    ].filter(Boolean);
+    return segments.length ? segments.join(" / ") : "全部条件";
+  });
   const tableData = computed(() => rows.value);
+  const realtimeStatusText = computed(() => {
+    if (realtimePaused.value) {
+      return "实时同步已暂停";
+    }
+    if (realtimeConnected.value) {
+      return "实时同步中";
+    }
+    if (realtimeConnecting.value) {
+      return "实时同步连接中";
+    }
+    return "实时同步未连接";
+  });
 
   const syncSelectedRow = () => {
     if (!selectedRow.value) {
@@ -226,10 +293,23 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     await openDetailDrawer({ queueId } as ParseQueueRow);
   };
 
-  const loadList = async () => {
-    listLoading.value = true;
+  const replaceRow = (mapped: ParseQueueRow) => {
+    const index = rows.value.findIndex((item) => item.queueId === mapped.queueId);
+    if (index >= 0) {
+      rows.value.splice(index, 1, mapped);
+    }
+    if (selectedRow.value?.queueId === mapped.queueId) {
+      selectedRow.value = mapped;
+    }
+  };
+
+  const loadList = async ({ silent = false }: { silent?: boolean } = {}) => {
+    const requestId = ++listRequestId;
+    if (!silent) {
+      listLoading.value = true;
+    }
     try {
-      const pageIndex = normalizePageIndex(pagination.value.current) - 1;
+      const pageIndex = toPageIndex(pagination.value.current);
       const pageSize = Number(pagination.value.pageSize ?? 10);
       const res = await listParseQueues({
         transferId: query.transferId || undefined,
@@ -247,27 +327,122 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
       const page = isPageResult(res)
         ? res
         : { data: Array.isArray(res) ? res : [] };
+      if (requestId !== listRequestId) {
+        return;
+      }
       rows.value = (page.data ?? []).map(mapRow);
       pagination.value.total = Number(page.totalCount ?? 0);
-      pagination.value.current = Number(page.pageIndex ?? pageIndex);
+      pagination.value.current = Number(page.pageIndex ?? pageIndex) + 1;
       pagination.value.pageSize = Number(page.pageSize ?? pageSize);
       syncSelectedRow();
     } catch (error) {
+      if (requestId !== listRequestId) {
+        return;
+      }
       message.error("加载待解析任务列表失败");
       throw error;
     } finally {
-      listLoading.value = false;
+      if (!silent && requestId === listRequestId) {
+        listLoading.value = false;
+      }
     }
   };
 
+  const clearRealtimeRefreshTimer = () => {
+    if (realtimeRefreshTimer !== undefined) {
+      clearTimeout(realtimeRefreshTimer);
+      realtimeRefreshTimer = undefined;
+    }
+  };
+
+  const queueRealtimeRefresh = () => {
+    clearRealtimeRefreshTimer();
+    realtimeRefreshTimer = window.setTimeout(() => {
+      realtimeRefreshTimer = undefined;
+      void loadList({ silent: true });
+    }, 600);
+  };
+
+  const refreshSingleRow = async (queueId: string) => {
+    try {
+      const res = await getParseQueue(queueId);
+      const next = unwrapSingleResult(res);
+      if (!next) {
+        queueRealtimeRefresh();
+        return;
+      }
+      const mapped = mapRow(next);
+      if (isQueueRowInCurrentScope(mapped, query)) {
+        replaceRow(mapped);
+        return;
+      }
+      queueRealtimeRefresh();
+    } catch {
+      queueRealtimeRefresh();
+    }
+  };
+
+  const connectRealtimeSync = () => {
+    if (realtimeConnection) {
+      return;
+    }
+    realtimeConnecting.value = true;
+    realtimeConnection = subscribeParseLifecycleEventStream(
+      {},
+      {
+        onEvent: (event) => {
+          if (realtimePaused.value) {
+            return;
+          }
+          if (event.queueId) {
+            void refreshSingleRow(event.queueId);
+            return;
+          }
+          if (event.transferId) {
+            queueRealtimeRefresh();
+          }
+        },
+        onOpen: () => {
+          realtimeConnected.value = true;
+          realtimeConnecting.value = false;
+        },
+        onClose: () => {
+          realtimeConnected.value = false;
+          realtimeConnecting.value = false;
+        },
+        onError: () => {
+          realtimeConnected.value = false;
+          realtimeConnecting.value = false;
+        },
+      },
+    );
+  };
+
+  const disconnectRealtimeSync = () => {
+    clearRealtimeRefreshTimer();
+    realtimeConnection?.close();
+    realtimeConnection = null;
+    realtimeConnected.value = false;
+    realtimeConnecting.value = false;
+  };
+
+  const toggleRealtimeSync = () => {
+    realtimePaused.value = !realtimePaused.value;
+    if (realtimePaused.value) {
+      clearRealtimeRefreshTimer();
+      return;
+    }
+    queueRealtimeRefresh();
+  };
+
   const runQuery = () => {
-    pagination.value.current = 0;
+    pagination.value.current = 1;
     void loadList();
   };
 
   const resetQuery = () => {
     Object.assign(query, defaultQuery());
-    pagination.value.current = 0;
+    pagination.value.current = 1;
     void loadList();
   };
 
@@ -494,6 +669,11 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     formatFileStatusLabel(value);
 
   void loadList();
+  connectRealtimeSync();
+
+  onBeforeUnmount(() => {
+    disconnectRealtimeSync();
+  });
 
   watch(
     () => route.query,
@@ -515,6 +695,11 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     total,
     pagination,
     query,
+    currentFilterSummary,
+    realtimeConnected,
+    realtimeConnecting,
+    realtimePaused,
+    realtimeStatusText,
     pendingCount,
     parsingCount,
     parsedCount,
@@ -537,6 +722,7 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     formatTriggerMode,
     formatStatus,
     safeJson,
+    toggleRealtimeSync,
   });
 
   return { page };

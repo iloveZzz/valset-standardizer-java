@@ -17,6 +17,10 @@ import com.yss.valset.task.infrastructure.entity.OutsourcedDataTaskStepPO;
 import com.yss.valset.task.infrastructure.mapper.OutsourcedDataTaskBatchRepository;
 import com.yss.valset.task.infrastructure.mapper.OutsourcedDataTaskLogRepository;
 import com.yss.valset.task.infrastructure.mapper.OutsourcedDataTaskStepRepository;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -65,6 +69,7 @@ class OutsourcedDataTaskGatewayImplTest {
         when(fileInfoGateway.findById(2001L)).thenReturn(ValsetFileInfo.builder()
                 .fileId(2001L)
                 .fileNameOriginal("委外产品X估值表.xlsx")
+                .businessDate(java.time.LocalDate.parse("2026-04-29"))
                 .sourceMetaJson("{\"filesysFileId\":\"FS-2001\"}")
                 .build());
         OutsourcedDataTaskGatewayImpl gateway = new OutsourcedDataTaskGatewayImpl(
@@ -80,6 +85,101 @@ class OutsourcedDataTaskGatewayImplTest {
         assertThat(batch.get().getOriginalFileName()).isEqualTo("委外产品X估值表.xlsx");
         assertThat(batch.get().getFilesysFileId()).isEqualTo("FS-2001");
         assertThat(batch.get().getFileId()).isEqualTo("2001");
+        assertThat(batch.get().getBusinessDate()).isEqualTo("2026-04-29");
+    }
+
+    @Test
+    void shouldResolveBatchDurationFromFileParseStartToVerifyArchiveEnd() {
+        OutsourcedDataTaskBatchRepository batchRepository = mock(OutsourcedDataTaskBatchRepository.class);
+        OutsourcedDataTaskStepRepository stepRepository = mock(OutsourcedDataTaskStepRepository.class);
+        OutsourcedDataTaskLogRepository logRepository = mock(OutsourcedDataTaskLogRepository.class);
+        ValsetFileInfoGateway fileInfoGateway = mock(ValsetFileInfoGateway.class);
+        when(batchRepository.selectById("FILE-2002")).thenReturn(batch("FILE-2002",
+                "FILE-2002",
+                "2026-04-30",
+                "2026-04-30",
+                "W2002",
+                "委外产品Z",
+                "临时机构",
+                "2002",
+                null,
+                null,
+                "EMAIL",
+                OutsourcedDataTaskStage.VERIFY_ARCHIVE,
+                OutsourcedDataTaskStatus.SUCCESS,
+                100,
+                null,
+                null));
+        OutsourcedDataTaskStepPO fileParseStep = new OutsourcedDataTaskStepPO();
+        fileParseStep.setStepId("FILE-2002-FILE_PARSE-1");
+        fileParseStep.setBatchId("FILE-2002");
+        fileParseStep.setStage(OutsourcedDataTaskStage.FILE_PARSE.name());
+        fileParseStep.setRunNo(1);
+        fileParseStep.setCurrentFlag(true);
+        fileParseStep.setStatus(OutsourcedDataTaskStatus.SUCCESS.name());
+        fileParseStep.setStartedAt(Instant.parse("2026-04-30T10:00:00Z").atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        fileParseStep.setEndedAt(Instant.parse("2026-04-30T10:01:00Z").atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        fileParseStep.setDurationMs(60000L);
+
+        OutsourcedDataTaskStepPO verifyArchiveStep = new OutsourcedDataTaskStepPO();
+        verifyArchiveStep.setStepId("FILE-2002-VERIFY_ARCHIVE-1");
+        verifyArchiveStep.setBatchId("FILE-2002");
+        verifyArchiveStep.setStage(OutsourcedDataTaskStage.VERIFY_ARCHIVE.name());
+        verifyArchiveStep.setRunNo(1);
+        verifyArchiveStep.setCurrentFlag(true);
+        verifyArchiveStep.setStatus(OutsourcedDataTaskStatus.SUCCESS.name());
+        verifyArchiveStep.setStartedAt(Instant.parse("2026-04-30T10:10:00Z").atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        verifyArchiveStep.setEndedAt(Instant.parse("2026-04-30T10:12:00Z").atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        verifyArchiveStep.setDurationMs(120000L);
+        when(stepRepository.selectList(any())).thenReturn(List.of(fileParseStep, verifyArchiveStep));
+
+        OutsourcedDataTaskGatewayImpl gateway = new OutsourcedDataTaskGatewayImpl(
+                batchRepository,
+                stepRepository,
+                logRepository,
+                fileInfoGateway
+        );
+
+        Optional<com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO> batch = gateway.findTask("FILE-2002");
+
+        assertThat(batch).isPresent();
+        assertThat(batch.get().getStartedAt()).isEqualTo("2026-04-30 18:00:00");
+        assertThat(batch.get().getDurationMs()).isEqualTo(720000L);
+        assertThat(batch.get().getDurationText()).isEqualTo("12m");
+    }
+
+    @Test
+    void shouldFilterTasksByTaskDateUsingBatchStartedAt() {
+        OutsourcedDataTaskBatchRepository batchRepository = mock(OutsourcedDataTaskBatchRepository.class);
+        OutsourcedDataTaskStepRepository stepRepository = mock(OutsourcedDataTaskStepRepository.class);
+        OutsourcedDataTaskLogRepository logRepository = mock(OutsourcedDataTaskLogRepository.class);
+        ValsetFileInfoGateway fileInfoGateway = mock(ValsetFileInfoGateway.class);
+        if (TableInfoHelper.getTableInfo(OutsourcedDataTaskBatchPO.class) == null) {
+            TableInfoHelper.initTableInfo(
+                    new org.apache.ibatis.builder.MapperBuilderAssistant(new MybatisConfiguration(), "test"),
+                    OutsourcedDataTaskBatchPO.class
+            );
+        }
+        when(batchRepository.selectPage(any(), any())).thenAnswer(invocation -> {
+            Wrapper<?> wrapper = invocation.getArgument(1);
+            assertThat(wrapper.getSqlSegment()).contains("started_at");
+            assertThat(wrapper.getSqlSegment()).doesNotContain("business_date");
+            Page<OutsourcedDataTaskBatchPO> page = new Page<>();
+            page.setRecords(List.of());
+            page.setTotal(0);
+            return page;
+        });
+        OutsourcedDataTaskGatewayImpl gateway = new OutsourcedDataTaskGatewayImpl(
+                batchRepository,
+                stepRepository,
+                logRepository,
+                fileInfoGateway
+        );
+
+        com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand query =
+                new com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand();
+        query.setTaskDate("2026-04-30");
+        gateway.pageTasks(query);
     }
 
     @Test
@@ -117,13 +217,12 @@ class OutsourcedDataTaskGatewayImplTest {
 
         List<com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO> steps = gateway.listSteps("FILE-3001");
 
-        assertThat(steps).hasSize(OutsourcedDataTaskStage.values().length - 1);
+        assertThat(steps).hasSize(5);
         assertThat(steps).extracting("stage").containsExactly(
                 OutsourcedDataTaskStage.FILE_PARSE.name(),
                 OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE.name(),
                 OutsourcedDataTaskStage.SUBJECT_RECOGNIZE.name(),
                 OutsourcedDataTaskStage.STANDARD_LANDING.name(),
-                OutsourcedDataTaskStage.DATA_PROCESSING.name(),
                 OutsourcedDataTaskStage.VERIFY_ARCHIVE.name()
         );
         assertThat(steps).allSatisfy(step -> assertThat(((com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO) step).getStatus())
@@ -134,10 +233,15 @@ class OutsourcedDataTaskGatewayImplTest {
             assertThat(dto.getDurationText()).isNotEqualTo("已完成");
         });
         assertThat(steps.stream()
-                .filter(step -> OutsourcedDataTaskStage.DATA_PROCESSING.name().equals(((com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO) step).getStage()))
+                .filter(step -> OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE.name().equals(((com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO) step).getStage()))
                 .map(step -> ((com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO) step).getDurationText())
                 .toList())
                 .containsOnly("-");
+        assertThat(steps.stream()
+                .filter(step -> OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE.name().equals(((com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO) step).getStage()))
+                .map(step -> ((com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO) step).getStartedAt())
+                .toList())
+                .containsOnlyNulls();
     }
 
     @Test
@@ -153,6 +257,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 .fileId(1001L)
                 .fileNameOriginal("委外产品5估值表.xlsx")
                 .fileFingerprint("fingerprint-001")
+                .businessDate(java.time.LocalDate.parse("2026-04-28"))
                 .sourceMetaJson("{\"filesysFileId\":\"FS-1001\"}")
                 .build());
         AtomicReference<OutsourcedDataTaskBatchPO> insertedBatch = new AtomicReference<>();
@@ -202,6 +307,7 @@ class OutsourcedDataTaskGatewayImplTest {
         assertThat(batch.getFilesysFileId()).isEqualTo("FS-1001");
         assertThat(batch.getOriginalFileName()).isEqualTo("委外产品5估值表.xlsx");
         assertThat(batch.getFileFingerprint()).isEqualTo("fingerprint-001");
+        assertThat(batch.getBusinessDate()).isEqualTo(java.time.LocalDate.parse("2026-04-28"));
 
         OutsourcedDataTaskBatchPO aggregatedBatch = batchUpdateCaptor.getValue();
         assertThat(aggregatedBatch.getBatchId()).isEqualTo("FILE-1001");
@@ -507,6 +613,73 @@ class OutsourcedDataTaskGatewayImplTest {
         assertThat(newStepCaptor.getValue().getCurrentFlag()).isTrue();
         assertThat(batchUpdateCaptor.getAllValues().get(batchUpdateCaptor.getAllValues().size() - 1).getStatus())
                 .isEqualTo(OutsourcedDataTaskStatus.RUNNING.name());
+    }
+
+    @Test
+    void shouldCreateNewRunWhenRerunUsesDifferentTaskIdEvenIfStageIsSuccess() {
+        OutsourcedDataTaskBatchRepository batchRepository = mock(OutsourcedDataTaskBatchRepository.class);
+        OutsourcedDataTaskStepRepository stepRepository = mock(OutsourcedDataTaskStepRepository.class);
+        OutsourcedDataTaskLogRepository logRepository = mock(OutsourcedDataTaskLogRepository.class);
+        ValsetFileInfoGateway fileInfoGateway = mock(ValsetFileInfoGateway.class);
+        OutsourcedDataTaskBatchPO batch = new OutsourcedDataTaskBatchPO();
+        batch.setBatchId("FILE-1002");
+        batch.setBatchName("FILE-1002");
+        batch.setCurrentStage(OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE.name());
+        batch.setStatus(OutsourcedDataTaskStatus.SUCCESS.name());
+        OutsourcedDataTaskStepPO oldStep = new OutsourcedDataTaskStepPO();
+        oldStep.setStepId("FILE-1002-STRUCTURE_STANDARDIZE-1");
+        oldStep.setBatchId("FILE-1002");
+        oldStep.setStage(OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE.name());
+        oldStep.setTaskId("31");
+        oldStep.setRunNo(1);
+        oldStep.setCurrentFlag(true);
+        oldStep.setStatus(OutsourcedDataTaskStatus.SUCCESS.name());
+        oldStep.setStartedAt(Instant.parse("2026-04-30T09:00:00Z").atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        oldStep.setEndedAt(Instant.parse("2026-04-30T09:03:00Z").atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        oldStep.setDurationMs(180000L);
+        List<OutsourcedDataTaskStepPO> insertedSteps = new ArrayList<>();
+        AtomicInteger stepSelectListCount = new AtomicInteger();
+        when(batchRepository.selectById(any())).thenReturn(batch);
+        when(logRepository.selectById(any())).thenReturn(null);
+        when(stepRepository.selectList(any())).thenAnswer(invocation -> {
+            int count = stepSelectListCount.incrementAndGet();
+            if (count == 1 || count == 2) {
+                return List.of(oldStep);
+            }
+            return insertedSteps;
+        });
+        org.mockito.Mockito.doAnswer(invocation -> {
+            insertedSteps.add(invocation.getArgument(0));
+            return 1;
+        }).when(stepRepository).insert(any(OutsourcedDataTaskStepPO.class));
+        OutsourcedDataTaskGatewayImpl gateway = new OutsourcedDataTaskGatewayImpl(
+                batchRepository,
+                stepRepository,
+                logRepository,
+                fileInfoGateway
+        );
+
+        gateway.recordParseLifecycleEvent(ParseLifecycleEvent.builder()
+                .eventId("event-structure-rerun")
+                .occurredAt(Instant.parse("2026-04-30T10:30:00Z"))
+                .stage(ParseLifecycleStage.TASK_STANDARDIZED)
+                .source("parse-execution")
+                .taskId(32L)
+                .fileId(1002L)
+                .businessKey("WORKFLOW:PARSE:EXCEL:1002")
+                .message("标准化完成")
+                .build());
+
+        ArgumentCaptor<OutsourcedDataTaskStepPO> newStepCaptor = ArgumentCaptor.forClass(OutsourcedDataTaskStepPO.class);
+        verify(stepRepository, org.mockito.Mockito.atLeast(2)).updateById(any(OutsourcedDataTaskStepPO.class));
+        verify(stepRepository).insert(newStepCaptor.capture());
+
+        assertThat(newStepCaptor.getValue().getStepId()).isEqualTo("FILE-1002-STRUCTURE_STANDARDIZE-2");
+        assertThat(newStepCaptor.getValue().getTaskId()).isEqualTo("32");
+        assertThat(newStepCaptor.getValue().getRunNo()).isEqualTo(2);
+        assertThat(newStepCaptor.getValue().getStartedAt()).isEqualTo(Instant.parse("2026-04-30T10:30:00Z").atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        assertThat(newStepCaptor.getValue().getEndedAt()).isNotNull();
+        assertThat(newStepCaptor.getValue().getStatus()).isEqualTo(OutsourcedDataTaskStatus.SUCCESS.name());
     }
 
     @Test

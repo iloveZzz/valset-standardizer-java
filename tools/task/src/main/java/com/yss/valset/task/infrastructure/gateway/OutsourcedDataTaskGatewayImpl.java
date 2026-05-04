@@ -206,8 +206,12 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             return Wrappers.lambdaQuery(OutsourcedDataTaskBatchPO.class)
                     .and(this::applyCurrentBatchFilter);
         }
+        LocalDate taskDate = parseDate(query.getTaskDate());
         LocalDate businessDate = parseDate(query.getBusinessDate());
         LambdaQueryWrapper<OutsourcedDataTaskBatchPO> wrapper = Wrappers.lambdaQuery(OutsourcedDataTaskBatchPO.class)
+                .eq(StringUtils.hasText(query.getBatchId()), OutsourcedDataTaskBatchPO::getBatchId, trim(query.getBatchId()))
+                .ge(taskDate != null, OutsourcedDataTaskBatchPO::getStartedAt, taskDate != null ? taskDate.atStartOfDay() : null)
+                .lt(taskDate != null, OutsourcedDataTaskBatchPO::getStartedAt, taskDate != null ? taskDate.plusDays(1).atStartOfDay() : null)
                 .eq(businessDate != null, OutsourcedDataTaskBatchPO::getBusinessDate, businessDate)
                 .like(StringUtils.hasText(query.getManagerName()), OutsourcedDataTaskBatchPO::getManagerName, trim(query.getManagerName()))
                 .and(StringUtils.hasText(query.getProductKeyword()), criteria -> criteria
@@ -245,11 +249,11 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         dto.setBatchId(po.getBatchId());
         dto.setBatchName(po.getBatchName());
         dto.setBusinessDate(formatDate(po.getBusinessDate()));
-        dto.setValuationDate(formatDate(po.getValuationDate()));
         dto.setProductCode(po.getProductCode());
         dto.setProductName(po.getProductName());
         dto.setManagerName(po.getManagerName());
         ValsetFileInfo fileInfo = resolveBatchFileInfo(po);
+        dto.setBusinessDate(formatDate(resolveBatchBusinessDate(po, fileInfo)));
         dto.setFileId(firstText(po.getFileId(), fileInfo == null || fileInfo.getFileId() == null ? null : String.valueOf(fileInfo.getFileId())));
         dto.setFilesysFileId(firstText(po.getFilesysFileId(), resolveFilesysFileId(fileInfo)));
         dto.setOriginalFileName(firstText(po.getOriginalFileName(), fileInfo == null ? null : fileInfo.getFileNameOriginal()));
@@ -263,13 +267,93 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         dto.setStatus(po.getStatus());
         dto.setStatusName(statusLabel(po.getStatus()));
         dto.setProgress(po.getProgress());
-        dto.setStartedAt(formatDateTime(po.getStartedAt()));
-        dto.setEndedAt(formatDateTime(po.getEndedAt()));
-        dto.setDurationMs(po.getDurationMs());
-        dto.setDurationText(formatDuration(po.getDurationMs(), po.getStatus()));
+        LocalDateTime startedAt = resolveBatchStartedAt(po.getBatchId(), po.getStartedAt());
+        LocalDateTime endedAt = resolveBatchEndedAt(po.getBatchId(), po.getEndedAt());
+        dto.setStartedAt(formatDateTime(startedAt));
+        dto.setEndedAt(formatDateTime(endedAt));
+        Long durationMs = durationMs(startedAt, endedAt);
+        dto.setDurationMs(durationMs);
+        dto.setDurationText(formatDuration(durationMs, po.getStatus()));
         dto.setLastErrorCode(po.getLastErrorCode());
         dto.setLastErrorMessage(po.getLastErrorMessage());
         return dto;
+    }
+
+    private LocalDateTime resolveBatchStartedAt(String batchId, LocalDateTime fallbackStartedAt) {
+        if (!StringUtils.hasText(batchId)) {
+            return fallbackStartedAt;
+        }
+        List<OutsourcedDataTaskStepPO> steps = stepRepository.selectList(
+                Wrappers.lambdaQuery(OutsourcedDataTaskStepPO.class)
+                        .eq(OutsourcedDataTaskStepPO::getBatchId, batchId)
+                        .eq(OutsourcedDataTaskStepPO::getCurrentFlag, true)
+                        .orderByAsc(OutsourcedDataTaskStepPO::getStage)
+                        .orderByDesc(OutsourcedDataTaskStepPO::getRunNo)
+                        .orderByAsc(OutsourcedDataTaskStepPO::getStartedAt)
+        );
+        return steps.stream()
+                .map(OutsourcedDataTaskStepPO::getStartedAt)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(fallbackStartedAt);
+    }
+
+    private LocalDateTime resolveBatchEndedAt(String batchId, LocalDateTime fallbackEndedAt) {
+        if (!StringUtils.hasText(batchId)) {
+            return fallbackEndedAt;
+        }
+        List<OutsourcedDataTaskStepPO> steps = stepRepository.selectList(
+                Wrappers.lambdaQuery(OutsourcedDataTaskStepPO.class)
+                        .eq(OutsourcedDataTaskStepPO::getBatchId, batchId)
+                        .eq(OutsourcedDataTaskStepPO::getCurrentFlag, true)
+                        .orderByDesc(OutsourcedDataTaskStepPO::getStage)
+                        .orderByDesc(OutsourcedDataTaskStepPO::getRunNo)
+                        .orderByDesc(OutsourcedDataTaskStepPO::getEndedAt)
+        );
+        return steps.stream()
+                .map(OutsourcedDataTaskStepPO::getEndedAt)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(fallbackEndedAt);
+    }
+
+    private Long resolveBatchDurationMs(List<OutsourcedDataTaskStepPO> steps,
+                                        LocalDateTime fallbackStartedAt,
+                                        LocalDateTime fallbackEndedAt) {
+        return durationMs(
+                resolveBatchStartedAt(steps, fallbackStartedAt),
+                resolveBatchEndedAt(steps, fallbackEndedAt)
+        );
+    }
+
+    private static LocalDateTime resolveBatchStartedAt(List<OutsourcedDataTaskStepPO> steps,
+                                                       LocalDateTime fallbackStartedAt) {
+        if (steps == null || steps.isEmpty()) {
+            return fallbackStartedAt;
+        }
+        return steps.stream()
+                .filter(step -> step.getStartedAt() != null)
+                .min(Comparator
+                        .comparing(OutsourcedDataTaskStepPO::getRunNo, Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparing(OutsourcedDataTaskStepPO::getStartedAt, Comparator.nullsFirst(Comparator.naturalOrder())))
+                .map(OutsourcedDataTaskStepPO::getStartedAt)
+                .filter(Objects::nonNull)
+                .orElse(fallbackStartedAt);
+    }
+
+    private static LocalDateTime resolveBatchEndedAt(List<OutsourcedDataTaskStepPO> steps,
+                                                     LocalDateTime fallbackEndedAt) {
+        if (steps == null || steps.isEmpty()) {
+            return fallbackEndedAt;
+        }
+        return steps.stream()
+                .filter(step -> step.getEndedAt() != null)
+                .max(Comparator
+                        .comparing(OutsourcedDataTaskStepPO::getRunNo, Comparator.nullsFirst(Comparator.naturalOrder()))
+                        .thenComparing(OutsourcedDataTaskStepPO::getEndedAt, Comparator.nullsFirst(Comparator.naturalOrder())))
+                .map(OutsourcedDataTaskStepPO::getEndedAt)
+                .filter(Objects::nonNull)
+                .orElse(fallbackEndedAt);
     }
 
     private List<String> resolveBatchIdsByStage(String stage) {
@@ -303,6 +387,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         }
         ValsetFileInfo fileInfo = loadFileInfo(event);
         po.setUpdatedAt(occurredAt);
+        po.setBusinessDate(resolveBatchBusinessDate(fileInfo, po.getBusinessDate(), occurredAt.toLocalDate()));
         po.setSourceType(firstText(event.getDataSourceType(), event.getSource(), po.getSourceType()));
         Long fileId = resolveFileId(event);
         po.setFileId(fileId == null ? po.getFileId() : String.valueOf(fileId));
@@ -330,7 +415,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                             OutsourcedDataTaskStatus status,
                             LocalDateTime occurredAt) {
         OutsourcedDataTaskStepPO po = findCurrentStep(batchId, stage);
-        if (shouldStartNewRun(po, status)) {
+        if (shouldStartNewRun(po, status, event == null ? null : event.getTaskId())) {
             markHistorical(po, occurredAt);
             po = null;
         }
@@ -407,6 +492,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         }
         ValsetFileInfo fileInfo = loadFileInfo(resolveFileId(event));
         po.setUpdatedAt(occurredAt);
+        po.setBusinessDate(resolveBatchBusinessDate(fileInfo, po.getBusinessDate(), occurredAt.toLocalDate()));
         Long fileId = resolveFileId(event);
         po.setFileId(fileId == null ? po.getFileId() : String.valueOf(fileId));
         po.setFilesysFileId(firstText(attributeText(event.getAttributes(), "filesysFileId"), resolveFilesysFileId(fileInfo), po.getFilesysFileId()));
@@ -431,7 +517,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                                     OutsourcedDataTaskStatus status,
                                     LocalDateTime occurredAt) {
         OutsourcedDataTaskStepPO po = findCurrentStep(batchId, stage);
-        if (shouldStartNewRun(po, status)) {
+        if (shouldStartNewRun(po, status, event == null ? null : event.getTaskId())) {
             markHistorical(po, occurredAt);
             po = null;
         }
@@ -524,9 +610,15 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         stepRepository.updateById(step);
     }
 
-    private static boolean shouldStartNewRun(OutsourcedDataTaskStepPO step, OutsourcedDataTaskStatus status) {
+    private static boolean shouldStartNewRun(OutsourcedDataTaskStepPO step, OutsourcedDataTaskStatus status, Long taskId) {
         if (step == null || status != OutsourcedDataTaskStatus.RUNNING) {
-            return false;
+            if (step == null || taskId == null) {
+                return false;
+            }
+            return !Objects.equals(step.getTaskId(), String.valueOf(taskId));
+        }
+        if (taskId != null && !Objects.equals(step.getTaskId(), String.valueOf(taskId))) {
+            return true;
         }
         return isTerminalStatus(step.getStatus());
     }
@@ -567,10 +659,11 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         batch.setProgress(resolveBatchProgress(
                 currentStep == null ? null : displayStage(enumStage(currentStep.getStage())),
                 enumStatus(status)));
+        batch.setStartedAt(resolveBatchStartedAt(batchId, batch.getStartedAt()));
         batch.setUpdatedAt(occurredAt);
         if (isTerminalStatus(status)) {
             batch.setEndedAt(occurredAt);
-            batch.setDurationMs(durationMs(batch.getStartedAt(), occurredAt));
+            batch.setDurationMs(resolveBatchDurationMs(steps, batch.getStartedAt(), occurredAt));
         } else {
             batch.setEndedAt(null);
             batch.setDurationMs(null);
@@ -1054,11 +1147,15 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 : status == OutsourcedDataTaskStatus.RUNNING
                 ? Math.min(95, resolveBatchProgress(batchStage, batchStatus))
                 : 0);
-        dto.setStartedAt(formatDateTime(batch.getStartedAt()));
+        String startedAt = stage == batchStage
+                ? formatDateTime(resolveBatchStartedAt(batch.getBatchId(), batch.getStartedAt()))
+                : null;
+        dto.setStartedAt(startedAt);
         dto.setEndedAt(status == OutsourcedDataTaskStatus.SUCCESS || status == OutsourcedDataTaskStatus.FAILED || status == OutsourcedDataTaskStatus.STOPPED
                 ? formatDateTime(batch.getEndedAt())
                 : null);
-        dto.setDurationMs(batch.getDurationMs());
+        Long durationMs = stage == batchStage ? batch.getDurationMs() : null;
+        dto.setDurationMs(durationMs);
         dto.setDurationText(stage == batchStage ? formatDuration(batch.getDurationMs(), batch.getStatus()) : "-");
         dto.setInputSummary(stage.getDescription());
         dto.setOutputSummary(status == OutsourcedDataTaskStatus.SUCCESS ? stage.getLabel() + "已完成" : null);
@@ -1097,6 +1194,20 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             return null;
         }
         return null;
+    }
+
+    private static LocalDate resolveBatchBusinessDate(OutsourcedDataTaskBatchPO batch, ValsetFileInfo fileInfo) {
+        if (fileInfo != null && fileInfo.getBusinessDate() != null) {
+            return fileInfo.getBusinessDate();
+        }
+        return batch == null ? null : batch.getBusinessDate();
+    }
+
+    private static LocalDate resolveBatchBusinessDate(ValsetFileInfo fileInfo, LocalDate currentValue, LocalDate fallbackValue) {
+        if (fileInfo != null && fileInfo.getBusinessDate() != null) {
+            return fileInfo.getBusinessDate();
+        }
+        return currentValue != null ? currentValue : fallbackValue;
     }
 
     private static Long parseLong(String value) {

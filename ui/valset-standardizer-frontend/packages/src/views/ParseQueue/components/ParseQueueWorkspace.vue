@@ -3,7 +3,9 @@ import { computed, h } from "vue";
 import { Modal } from "ant-design-vue";
 import {
   ExclamationCircleOutlined,
+  PauseCircleOutlined,
   ReloadOutlined,
+  PlayCircleOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
 import { YButton, YCard, YTable } from "@yss-ui/components";
@@ -85,7 +87,7 @@ const actionConfig = useTableActionConfig({
 
 const summaryDescription = computed(
   () =>
-    `当前查询共 ${page.total} 条，统计卡片基于当前页数据：待订阅 ${page.pendingCount} 条，解析中 ${page.parsingCount} 条，已解析 ${page.parsedCount} 条，解析失败 ${page.failedCount} 条。`,
+    `当前筛选：${page.currentFilterSummary}。查询总数 ${page.total} 条；统计卡片基于当前页数据：待订阅 ${page.pendingCount} 条，解析中 ${page.parsingCount} 条，已解析 ${page.parsedCount} 条，解析失败 ${page.failedCount} 条；实时同步状态：${page.realtimeStatusText}。`,
 );
 </script>
 
@@ -102,6 +104,7 @@ const summaryDescription = computed(
             <span class="workspace-pill">自动生成于投递成功之后</span>
             <span class="workspace-pill">支持手工补漏和强制重建</span>
             <span class="workspace-pill">解析状态独立管理</span>
+            <span class="workspace-pill">实时同步：{{ page.realtimeStatusText }}</span>
           </div>
         </div>
         <div class="workspace-header-actions">
@@ -118,13 +121,20 @@ const summaryDescription = computed(
               <template #icon><ReloadOutlined /></template>
               刷新列表
             </YButton>
+            <YButton @click="page.toggleRealtimeSync">
+              <template #icon>
+                <PauseCircleOutlined v-if="!page.realtimePaused" />
+                <PlayCircleOutlined v-else />
+              </template>
+              {{ page.realtimePaused ? "继续实时同步" : "暂停实时同步" }}
+            </YButton>
           </div>
         </div>
       </div>
 
       <div class="parse-queue-stat-grid">
         <div class="parse-queue-stat-card parse-queue-stat-card--total">
-          <div class="parse-queue-stat-label">查询总数</div>
+          <div class="parse-queue-stat-label">筛选总数</div>
           <div class="parse-queue-stat-value">{{ page.total }}</div>
           <div class="parse-queue-stat-desc">{{ summaryDescription }}</div>
         </div>
@@ -149,6 +159,15 @@ const summaryDescription = computed(
             当前页可通过重试或补漏重新生成
           </div>
         </div>
+        <div class="parse-queue-stat-card parse-queue-stat-card--realtime">
+          <div class="parse-queue-stat-label">实时同步状态</div>
+          <div class="parse-queue-stat-value parse-queue-stat-value--status">
+            {{ page.realtimeStatusText }}
+          </div>
+          <div class="parse-queue-stat-desc">
+            后端生命周期事件到达后自动同步当前筛选下的列表数据
+          </div>
+        </div>
       </div>
     </YCard>
 
@@ -171,7 +190,7 @@ const summaryDescription = computed(
           <WorkspaceTableToolbar
             title="待解析任务列表"
             :description="summaryDescription"
-            :meta="`当前页 ${page.tableData.length} 条，手工生成与补漏入口已开放`"
+            :meta="`当前筛选：${page.currentFilterSummary} · 当前页 ${page.tableData.length} 条 · ${page.realtimeStatusText}`"
           >
             <a-form layout="inline" class="workspace-table-toolbar-form">
               <a-form-item label="分拣ID">

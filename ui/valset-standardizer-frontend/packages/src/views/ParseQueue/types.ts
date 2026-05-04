@@ -56,6 +56,11 @@ export type ParseQueuePage = {
   loading: boolean;
   listLoading: boolean;
   backfillLoading: boolean;
+  realtimeConnected: boolean;
+  realtimeConnecting: boolean;
+  realtimePaused: boolean;
+  realtimeStatusText: string;
+  currentFilterSummary: string;
   rows: ParseQueueRow[];
   tableData: ParseQueueRow[];
   total: number;
@@ -83,4 +88,5 @@ export type ParseQueuePage = {
   formatTriggerMode: (value: string | undefined) => string;
   formatStatus: (value: string | undefined) => string;
   safeJson: (value: unknown) => string;
+  toggleRealtimeSync: () => void;
 };

@@ -418,6 +418,7 @@ public class ValsetFileInfoGatewayImpl implements ValsetFileInfoGateway {
                 .createdBy(firstNonBlank(stringValue(meta, META_CREATED_BY)))
                 .receivedAt(firstNonNull(toLocalDateTime(transferObject.receivedAt()), parseLocalDateTime(stringValue(meta, META_RECEIVED_AT))))
                 .storedAt(firstNonNull(toLocalDateTime(transferObject.storedAt()), parseLocalDateTime(stringValue(meta, META_STORED_AT))))
+                .businessDate(transferObject.businessDate())
                 .lastProcessedAt(parseLocalDateTime(stringValue(meta, META_LAST_PROCESSED_AT)))
                 .lastTaskId(parseLong(stringValue(meta, META_LAST_TASK_ID)))
                 .errorMessage(firstNonBlank(stringValue(meta, META_ERROR_MESSAGE), transferObject.errorMessage()))

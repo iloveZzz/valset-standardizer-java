@@ -8,6 +8,10 @@ import lombok.Data;
 @Data
 public class OutsourcedDataTaskQueryCommand {
 
+    private String batchId;
+
+    private String taskDate;
+
     private String businessDate;
 
     private String managerName;
