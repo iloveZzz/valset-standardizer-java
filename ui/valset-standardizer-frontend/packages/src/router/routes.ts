@@ -4,7 +4,6 @@ import {
   DatabaseOutlined,
   FileTextOutlined,
   FileSearchOutlined,
-  HistoryOutlined,
   InboxOutlined,
   ProjectOutlined,
   SwapOutlined,
@@ -25,9 +24,8 @@ const transferSectionIconMap: Record<string, Component> = {
   tag: TagsOutlined,
   "route-config": ApartmentOutlined,
   log: SwapOutlined,
-  "run-log": HistoryOutlined,
+  "run-log": SwapOutlined,
   "parse-queue": FileSearchOutlined,
-  "parse-lifecycle": HistoryOutlined,
   guide: FileTextOutlined,
 };
 
@@ -66,12 +64,12 @@ export const workspaceNav: Array<{
         path: "/task-management?scene=holding",
         icon: FileSearchOutlined,
       },
-      {
-        title: "工作流配置",
-        path: "/task-management?scene=workflow",
-        icon: ProjectOutlined,
-      },
     ],
+  },
+  {
+    title: "工作流配置",
+    path: "/workflow-configs",
+    icon: ProjectOutlined,
   },
 ];
 
@@ -85,7 +83,6 @@ const transferPageComponentMap = {
   "route-config": () => import("@/views/TransferRouteConfig/index.vue"),
   "run-log": () => import("@/views/TransferRunLog/index.vue"),
   "parse-queue": () => import("@/views/ParseQueue/index.vue"),
-  "parse-lifecycle": () => import("@/views/ParseLifecycle/index.vue"),
   guide: () => import("@/views/TransferGuide/index.vue"),
   object: () => import("@/views/TransferObject/index.vue"),
 } as const;
@@ -141,7 +138,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: "/workflow-configs",
     name: "workflow-configs",
-    component: () => import("@/views/TaskManagement/index.vue"),
+    component: () => import("@/views/WorkflowConfig/index.vue"),
     meta: {
       title: "工作流配置",
       keepAlive: false,

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.domain.model.ParsedValuationData;
+import com.yss.valset.application.service.workflow.WorkflowRuntimeParamService;
 import com.yss.valset.extract.extractor.CsvRawDataExtractor;
 import com.yss.valset.extract.extractor.PoiRawDataExtractor;
 import com.yss.valset.extract.parser.file.CsvValuationDataParser;
@@ -35,6 +36,8 @@ import java.sql.Connection;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RealWorkbookParseIntegrationTest {
@@ -100,7 +103,9 @@ class RealWorkbookParseIntegrationTest {
                 );
             } else {
                 ValuationSheetStyleMapper styleMapper = session.getMapper(ValuationSheetStyleMapper.class);
-                PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), styleMapper);
+                WorkflowRuntimeParamService workflowRuntimeParamService = mock(WorkflowRuntimeParamService.class);
+                when(workflowRuntimeParamService.skipExcelStyleParsing()).thenReturn(false);
+                PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), styleMapper, workflowRuntimeParamService);
                 extractor.extract(
                         DataSourceConfig.builder().sourceType(sourceType).sourceUri(source.toString()).build(),
                         9001L,

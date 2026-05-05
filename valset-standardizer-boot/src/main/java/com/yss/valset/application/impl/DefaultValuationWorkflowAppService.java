@@ -8,11 +8,14 @@ import com.yss.valset.application.dto.FullWorkflowResponse;
 import com.yss.valset.application.dto.StoredFileDTO;
 import com.yss.valset.application.dto.TaskViewDTO;
 import com.yss.valset.application.dto.UploadValuationFileResponse;
+import com.yss.valset.application.dto.workflow.WorkflowExecutionContextDTO;
 import com.yss.valset.analysis.application.port.ParseExecutionUseCase;
 import com.yss.valset.extract.application.port.ExtractDataExecutionUseCase;
 import com.yss.valset.application.port.MatchExecutionUseCase;
 import com.yss.valset.application.service.WorkflowTaskQueryAppService;
 import com.yss.valset.application.service.ValuationWorkflowAppService;
+import com.yss.valset.application.service.workflow.WorkflowExecutionContextResolver;
+import com.yss.valset.application.service.workflow.WorkflowRuntimeParamService;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.gateway.ValsetFileIngestLogGateway;
 import com.yss.valset.application.support.UploadedFileStorageService;
@@ -34,7 +37,6 @@ import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -63,8 +65,8 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final ValsetFileIngestLogGateway subjectMatchFileIngestLogGateway;
     private final Tracer tracer;
-    @Value("${subject.match.workflow.enable-match-process:true}")
-    private boolean enableMatchProcess;
+    private final WorkflowRuntimeParamService workflowRuntimeParamService;
+    private final WorkflowExecutionContextResolver workflowExecutionContextResolver;
 
     public DefaultValuationWorkflowAppService(UploadedFileStorageService uploadedFileStorageService,
                                               WorkflowTaskGateway taskGateway,
@@ -76,7 +78,9 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                                               WorkflowTaskReuseService taskReuseService,
                                               ValsetFileInfoGateway subjectMatchFileInfoGateway,
                                               ValsetFileIngestLogGateway subjectMatchFileIngestLogGateway,
-                                              Tracer tracer) {
+                                              Tracer tracer,
+                                              WorkflowRuntimeParamService workflowRuntimeParamService,
+                                              WorkflowExecutionContextResolver workflowExecutionContextResolver) {
         this.uploadedFileStorageService = uploadedFileStorageService;
         this.taskGateway = taskGateway;
         this.taskQueryAppService = taskQueryAppService;
@@ -88,6 +92,8 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.subjectMatchFileIngestLogGateway = subjectMatchFileIngestLogGateway;
         this.tracer = tracer;
+        this.workflowRuntimeParamService = workflowRuntimeParamService;
+        this.workflowExecutionContextResolver = workflowExecutionContextResolver;
     }
 
     @Override
@@ -108,6 +114,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         command.setFileFingerprint(storedFile.getFileFingerprint());
         command.setFileId(fileInfo.getFileId());
         command.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
+        applyWorkflowContext(command, workflowExecutionContextResolver.resolve(TaskType.EXTRACT_DATA, TaskStage.EXTRACT));
 
         String businessKey = buildExtractBusinessKey(command);
         WorkflowTask reusableTask = taskReuseService.findReusableSuccessfulTask(TaskType.EXTRACT_DATA, businessKey, command.getForceRebuild());
@@ -158,6 +165,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 command == null ? null : command.getFileId(),
                 command == null ? null : command.getWorkbookPath(),
                 command == null ? null : command.getDataSourceType());
+        applyWorkflowContext(command, workflowExecutionContextResolver.resolve(TaskType.PARSE_WORKBOOK, TaskStage.PARSE));
         TaskViewDTO taskViewDTO = runTask(
                 TaskType.PARSE_WORKBOOK,
                 buildParseBusinessKey(command),
@@ -181,10 +189,11 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
 
     @Override
     public TaskViewDTO match(MatchTaskCommand command) {
-        if (!enableMatchProcess) {
+        if (!workflowRuntimeParamService.enableMatchProcess()) {
             log.info("科目匹配流程已关闭，直接返回跳过结果，fileId={}, workbookPath={}", command.getFileId(), command.getWorkbookPath());
             return buildSkippedMatchTask(command, "subject.match.workflow.enable-match-process=false");
         }
+        applyWorkflowContext(command, workflowExecutionContextResolver.resolve(TaskType.MATCH_SUBJECT, TaskStage.MATCH));
         TaskViewDTO taskViewDTO = runTask(
                 TaskType.MATCH_SUBJECT,
                 buildMatchBusinessKey(command),
@@ -231,6 +240,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             parseTaskCommand.setFileNameOriginal(file.getOriginalFilename());
             parseTaskCommand.setCreatedBy(createdBy);
             parseTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
+            applyWorkflowContext(parseTaskCommand, workflowExecutionContextResolver.resolve(TaskType.PARSE_WORKBOOK, TaskStage.PARSE));
             // Step 2: 结构化解析 + 标准化落地
             TaskViewDTO parseTask = traceSpan("workflow.full.parse", () -> analyze(parseTaskCommand));
 
@@ -241,8 +251,9 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
             matchTaskCommand.setTopK(topK == null ? 5 : topK);
             matchTaskCommand.setCreatedBy(createdBy);
             matchTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
+            applyWorkflowContext(matchTaskCommand, workflowExecutionContextResolver.resolve(TaskType.MATCH_SUBJECT, TaskStage.MATCH));
             // Step 3: 科目匹配（可配置跳过）
-            TaskViewDTO matchTask = traceSpan("workflow.full.match", () -> enableMatchProcess
+            TaskViewDTO matchTask = traceSpan("workflow.full.match", () -> workflowRuntimeParamService.enableMatchProcess()
                     ? match(matchTaskCommand)
                     : buildSkippedMatchTask(matchTaskCommand, "subject.match.workflow.enable-match-process=false"));
 
@@ -298,6 +309,48 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 .businessKey(buildMatchBusinessKey(command))
                 .resultData(resultData)
                 .build();
+    }
+
+    private void applyWorkflowContext(ParseTaskCommand command, WorkflowExecutionContextDTO context) {
+        if (command == null || context == null) {
+            return;
+        }
+        command.setWorkflowCode(context.getWorkflowCode());
+        command.setWorkflowId(context.getWorkflowId());
+        command.setWorkflowVersionNo(context.getWorkflowVersionNo());
+        command.setWorkflowStageCode(context.getWorkflowStageCode());
+        command.setWorkflowStageName(context.getWorkflowStageName());
+        command.setWorkflowEngineType(context.getEngineType());
+        command.setWorkflowEngineExternalRef(context.getExternalRef());
+        command.setWorkflowEngineConfigJson(context.getConfigJson());
+    }
+
+    private void applyWorkflowContext(MatchTaskCommand command, WorkflowExecutionContextDTO context) {
+        if (command == null || context == null) {
+            return;
+        }
+        command.setWorkflowCode(context.getWorkflowCode());
+        command.setWorkflowId(context.getWorkflowId());
+        command.setWorkflowVersionNo(context.getWorkflowVersionNo());
+        command.setWorkflowStageCode(context.getWorkflowStageCode());
+        command.setWorkflowStageName(context.getWorkflowStageName());
+        command.setWorkflowEngineType(context.getEngineType());
+        command.setWorkflowEngineExternalRef(context.getExternalRef());
+        command.setWorkflowEngineConfigJson(context.getConfigJson());
+    }
+
+    private void applyWorkflowContext(ExtractDataTaskCommand command, WorkflowExecutionContextDTO context) {
+        if (command == null || context == null) {
+            return;
+        }
+        command.setWorkflowCode(context.getWorkflowCode());
+        command.setWorkflowId(context.getWorkflowId());
+        command.setWorkflowVersionNo(context.getWorkflowVersionNo());
+        command.setWorkflowStageCode(context.getWorkflowStageCode());
+        command.setWorkflowStageName(context.getWorkflowStageName());
+        command.setWorkflowEngineType(context.getEngineType());
+        command.setWorkflowEngineExternalRef(context.getExternalRef());
+        command.setWorkflowEngineConfigJson(context.getConfigJson());
     }
 
     private TaskViewDTO runTask(TaskType taskType,

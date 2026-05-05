@@ -7,6 +7,7 @@ import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.extract.extractor.CsvRawDataExtractor;
 import com.yss.valset.extract.extractor.PoiRawDataExtractor;
+import com.yss.valset.application.service.workflow.WorkflowRuntimeParamService;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
@@ -35,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RawDataExtractionIntegrationTest {
@@ -89,7 +92,9 @@ class RawDataExtractionIntegrationTest {
                 );
             } else {
                 ValuationSheetStyleMapper styleMapper = session.getMapper(ValuationSheetStyleMapper.class);
-                PoiRawDataExtractor poiExtractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), styleMapper);
+                WorkflowRuntimeParamService workflowRuntimeParamService = mock(WorkflowRuntimeParamService.class);
+                when(workflowRuntimeParamService.skipExcelStyleParsing()).thenReturn(false);
+                PoiRawDataExtractor poiExtractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), styleMapper, workflowRuntimeParamService);
                 extracted = poiExtractor.extract(
                         DataSourceConfig.builder().sourceType(sourceType).sourceUri(source.toString()).build(),
                         9001L,

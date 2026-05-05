@@ -4,7 +4,9 @@ import com.yss.cloud.dto.response.PageResult;
 import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
-import com.yss.valset.task.application.config.OutsourcedDataTaskStageCatalog;
+import com.yss.valset.application.dto.workflow.WorkflowExecutionContextDTO;
+import com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog;
+import com.yss.valset.task.application.service.workflow.WorkflowEngineDispatchService;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskActionResultDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
@@ -43,13 +45,14 @@ import java.util.stream.Collectors;
 @Service
 public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskService {
 
-    private static final OutsourcedDataTaskStageCatalog DEFAULT_STAGE_CATALOG = new OutsourcedDataTaskStageCatalog();
+    private static final WorkflowRuntimeCatalog DEFAULT_STAGE_CATALOG = new WorkflowRuntimeCatalog();
 
     private final OutsourcedDataTaskGateway outsourcedDataTaskGateway;
     private final WorkflowTaskGateway workflowTaskGateway;
     private final SchedulerService schedulerService;
     private final ObjectMapper objectMapper;
-    private OutsourcedDataTaskStageCatalog stageCatalog = new OutsourcedDataTaskStageCatalog();
+    private WorkflowEngineDispatchService workflowEngineDispatchService;
+    private WorkflowRuntimeCatalog stageCatalog = new WorkflowRuntimeCatalog();
 
     public DefaultOutsourcedDataTaskService() {
         this(null, null, null, null);
@@ -67,16 +70,25 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
     }
 
     @Autowired
-    public void setStageCatalog(OutsourcedDataTaskStageCatalog stageCatalog) {
+    public void setStageCatalog(WorkflowRuntimeCatalog stageCatalog) {
         if (stageCatalog != null) {
             this.stageCatalog = stageCatalog;
         }
     }
 
+    @Autowired
+    public void setWorkflowEngineDispatchService(WorkflowEngineDispatchService workflowEngineDispatchService) {
+        this.workflowEngineDispatchService = workflowEngineDispatchService;
+    }
+
     @Override
     public OutsourcedDataTaskSummaryDTO summary(OutsourcedDataTaskQueryCommand query) {
+        if (outsourcedDataTaskGateway != null) {
+            return enrichSummary(outsourcedDataTaskGateway.summary(query));
+        }
         List<OutsourcedDataTaskBatchDTO> batches = loadBatches(query);
         OutsourcedDataTaskSummaryDTO summary = new OutsourcedDataTaskSummaryDTO();
+        fillWorkflowMetadata(summary);
         summary.setTotalCount(batches.size());
         summary.setRunningCount(countByStatus(batches, OutsourcedDataTaskStatus.RUNNING));
         summary.setSuccessCount(countByStatus(batches, OutsourcedDataTaskStatus.SUCCESS));
@@ -84,6 +96,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                 .filter(batch -> isAnyStatus(batch, OutsourcedDataTaskStatus.FAILED, OutsourcedDataTaskStatus.BLOCKED))
                 .count());
         summary.setStepSummaries(buildStepSummaries(batches));
+        summary.setStageCatalog(summary.getStepSummaries());
         return summary;
     }
 
@@ -303,14 +316,74 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
     }
 
     private void triggerNow(Long taskId, String batchId) {
-        if (schedulerService == null) {
-            throw new IllegalStateException("调度器未启用，无法触发估值表解析任务：" + (batchId == null ? taskId : batchId));
-        }
+        WorkflowTask workflowTask = workflowTaskGateway == null ? null : workflowTaskGateway.findById(taskId);
+        WorkflowExecutionContextDTO executionContext = resolveWorkflowExecutionContext(workflowTask);
+        String stageCode = executionContext == null || !hasText(executionContext.getWorkflowStageCode())
+                ? inferTaskStage(workflowTask == null ? null : workflowTask.getTaskType()).name()
+                : executionContext.getWorkflowStageCode();
         try {
+            if (workflowEngineDispatchService != null) {
+                workflowEngineDispatchService.trigger(taskId, stageCode, executionContext);
+                return;
+            }
+            if (schedulerService == null) {
+                throw new IllegalStateException("调度器未启用，无法触发估值表解析任务：" + (batchId == null ? taskId : batchId));
+            }
             schedulerService.triggerNow(taskId);
         } catch (Exception exception) {
             throw new IllegalStateException("触发调度失败：" + (batchId == null ? taskId : batchId), exception);
         }
+    }
+
+    private WorkflowExecutionContextDTO resolveWorkflowExecutionContext(WorkflowTask workflowTask) {
+        if (workflowTask == null || !hasText(workflowTask.getInputPayload()) || objectMapper == null) {
+            return null;
+        }
+        try {
+            Map<?, ?> payload = objectMapper.readValue(workflowTask.getInputPayload(), Map.class);
+            WorkflowExecutionContextDTO context = new WorkflowExecutionContextDTO();
+            context.setWorkflowCode(textValue(payload.get("workflowCode")));
+            context.setWorkflowId(textValue(payload.get("workflowId")));
+            context.setWorkflowVersionNo(numberValue(payload.get("workflowVersionNo")));
+            context.setWorkflowStageCode(textValue(payload.get("workflowStageCode")));
+            context.setWorkflowStageName(textValue(payload.get("workflowStageName")));
+            context.setWorkflowStageDescription(textValue(payload.get("workflowStageDescription")));
+            context.setEngineType(textValue(payload.get("workflowEngineType")));
+            context.setExternalRef(textValue(payload.get("workflowEngineExternalRef")));
+            context.setConfigJson(textValue(payload.get("workflowEngineConfigJson")));
+            context.setBindingId(textValue(payload.get("workflowBindingId")));
+            Object bindingResolved = payload.get("workflowBindingResolved");
+            if (bindingResolved instanceof Boolean booleanValue) {
+                context.setBindingResolved(booleanValue);
+            } else if (bindingResolved != null) {
+                context.setBindingResolved(Boolean.valueOf(String.valueOf(bindingResolved)));
+            }
+            return context;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private Integer numberValue(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(String.valueOf(value));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String textValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value);
+        return text.isBlank() ? null : text.trim();
     }
 
     private static Long parseLong(String value) {
@@ -389,6 +462,29 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                     return summary;
                 })
                 .collect(Collectors.toList());
+    }
+
+    private OutsourcedDataTaskSummaryDTO enrichSummary(OutsourcedDataTaskSummaryDTO summary) {
+        if (summary == null) {
+            return null;
+        }
+        fillWorkflowMetadata(summary);
+        return summary;
+    }
+
+    private void fillWorkflowMetadata(OutsourcedDataTaskSummaryDTO summary) {
+        if (summary == null) {
+            return;
+        }
+        stageCatalog.activeWorkflowDefinition().ifPresentOrElse(definition -> {
+            summary.setWorkflowCode(definition.getWorkflowCode());
+            summary.setWorkflowId(definition.getWorkflowId());
+            summary.setVersionNo(definition.getVersionNo());
+        }, () -> {
+            summary.setWorkflowCode(stageCatalog.activeWorkflowCode());
+            summary.setWorkflowId(stageCatalog.activeWorkflowId());
+            summary.setVersionNo(stageCatalog.activeWorkflowVersionNo());
+        });
     }
 
     private OutsourcedDataTaskLogDTO toLog(OutsourcedDataTaskStepDTO step) {

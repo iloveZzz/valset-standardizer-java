@@ -1,7 +1,6 @@
-import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { message } from "ant-design-vue";
 import type { YTablePagination } from "@yss-ui/components";
-import { useRouter } from "vue-router";
 import { useRoute } from "vue-router";
 import {
   backfillParseQueue,
@@ -14,7 +13,6 @@ import {
   subscribeParseQueue,
   type ParseQueueViewDTO,
 } from "@/api/parseQueue";
-import { subscribeParseLifecycleEventStream } from "@/services/parseLifecycleEventSse";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
   ParseQueuePage,
@@ -166,42 +164,7 @@ const isPageResult = (
   pageSize?: number;
 } => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const isQueueRowInCurrentScope = (
-  row: ParseQueueRow,
-  scope: ParseQueueQueryState,
-) => {
-  const normalize = (value: unknown) =>
-    String(value ?? "")
-      .trim()
-      .toLowerCase();
-  const matches = (
-    queryValue: string,
-    rowValue: unknown,
-    fallbackValues: unknown[] = [],
-  ) => {
-    const needle = normalize(queryValue);
-    if (!needle) {
-      return true;
-    }
-    const candidates = [rowValue, ...fallbackValues].map(normalize);
-    return candidates.includes(needle);
-  };
-
-  return (
-    matches(scope.transferId, row.transferId) &&
-    matches(scope.businessKey, row.businessKey) &&
-    matches(scope.sourceCode, row.sourceCode, [row.sourceId]) &&
-    matches(scope.routeId, row.routeId) &&
-    matches(scope.tagCode, row.tagCode) &&
-    matches(scope.fileStatus, row.fileStatus) &&
-    matches(scope.deliveryStatus, row.deliveryStatus) &&
-    matches(scope.parseStatus, row.parseStatus) &&
-    matches(scope.triggerMode, row.triggerMode)
-  );
-};
-
 export const useParseQueuePage = (): { page: ParseQueuePage } => {
-  const router = useRouter();
   const route = useRoute();
   const query = reactive<ParseQueueQueryState>(defaultQuery());
   const rows = ref<ParseQueueRow[]>([]);
@@ -216,14 +179,9 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
   const loading = ref(false);
   const listLoading = ref(false);
   const backfillLoading = ref(false);
-  const realtimeConnected = ref(false);
-  const realtimeConnecting = ref(false);
-  const realtimePaused = ref(false);
   const detailVisible = ref(false);
   const selectedRow = ref<ParseQueueRow | null>(null);
   let listRequestId = 0;
-  let realtimeRefreshTimer: number | undefined;
-  let realtimeConnection: { close: () => void } | null = null;
 
   const total = computed(() => Number(pagination.value.total ?? 0));
   const pendingCount = computed(
@@ -253,18 +211,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     return segments.length ? segments.join(" / ") : "全部条件";
   });
   const tableData = computed(() => rows.value);
-  const realtimeStatusText = computed(() => {
-    if (realtimePaused.value) {
-      return "实时同步已暂停";
-    }
-    if (realtimeConnected.value) {
-      return "实时同步中";
-    }
-    if (realtimeConnecting.value) {
-      return "实时同步连接中";
-    }
-    return "实时同步未连接";
-  });
 
   const syncSelectedRow = () => {
     if (!selectedRow.value) {
@@ -291,16 +237,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
       return;
     }
     await openDetailDrawer({ queueId } as ParseQueueRow);
-  };
-
-  const replaceRow = (mapped: ParseQueueRow) => {
-    const index = rows.value.findIndex((item) => item.queueId === mapped.queueId);
-    if (index >= 0) {
-      rows.value.splice(index, 1, mapped);
-    }
-    if (selectedRow.value?.queueId === mapped.queueId) {
-      selectedRow.value = mapped;
-    }
   };
 
   const loadList = async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -348,93 +284,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     }
   };
 
-  const clearRealtimeRefreshTimer = () => {
-    if (realtimeRefreshTimer !== undefined) {
-      clearTimeout(realtimeRefreshTimer);
-      realtimeRefreshTimer = undefined;
-    }
-  };
-
-  const queueRealtimeRefresh = () => {
-    clearRealtimeRefreshTimer();
-    realtimeRefreshTimer = window.setTimeout(() => {
-      realtimeRefreshTimer = undefined;
-      void loadList({ silent: true });
-    }, 600);
-  };
-
-  const refreshSingleRow = async (queueId: string) => {
-    try {
-      const res = await getParseQueue(queueId);
-      const next = unwrapSingleResult(res);
-      if (!next) {
-        queueRealtimeRefresh();
-        return;
-      }
-      const mapped = mapRow(next);
-      if (isQueueRowInCurrentScope(mapped, query)) {
-        replaceRow(mapped);
-        return;
-      }
-      queueRealtimeRefresh();
-    } catch {
-      queueRealtimeRefresh();
-    }
-  };
-
-  const connectRealtimeSync = () => {
-    if (realtimeConnection) {
-      return;
-    }
-    realtimeConnecting.value = true;
-    realtimeConnection = subscribeParseLifecycleEventStream(
-      {},
-      {
-        onEvent: (event) => {
-          if (realtimePaused.value) {
-            return;
-          }
-          if (event.queueId) {
-            void refreshSingleRow(event.queueId);
-            return;
-          }
-          if (event.transferId) {
-            queueRealtimeRefresh();
-          }
-        },
-        onOpen: () => {
-          realtimeConnected.value = true;
-          realtimeConnecting.value = false;
-        },
-        onClose: () => {
-          realtimeConnected.value = false;
-          realtimeConnecting.value = false;
-        },
-        onError: () => {
-          realtimeConnected.value = false;
-          realtimeConnecting.value = false;
-        },
-      },
-    );
-  };
-
-  const disconnectRealtimeSync = () => {
-    clearRealtimeRefreshTimer();
-    realtimeConnection?.close();
-    realtimeConnection = null;
-    realtimeConnected.value = false;
-    realtimeConnecting.value = false;
-  };
-
-  const toggleRealtimeSync = () => {
-    realtimePaused.value = !realtimePaused.value;
-    if (realtimePaused.value) {
-      clearRealtimeRefreshTimer();
-      return;
-    }
-    queueRealtimeRefresh();
-  };
-
   const runQuery = () => {
     pagination.value.current = 1;
     void loadList();
@@ -467,16 +316,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     } catch {
       selectedRow.value = row;
     }
-  };
-
-  const openLifecyclePage = (row: ParseQueueRow) => {
-    void router.push({
-      path: "/transfer/parse-lifecycle",
-      query: {
-        queueId: row.queueId || undefined,
-        transferId: row.transferId || undefined,
-      },
-    });
   };
 
   const closeDetail = () => {
@@ -669,11 +508,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     formatFileStatusLabel(value);
 
   void loadList();
-  connectRealtimeSync();
-
-  onBeforeUnmount(() => {
-    disconnectRealtimeSync();
-  });
 
   watch(
     () => route.query,
@@ -696,10 +530,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     pagination,
     query,
     currentFilterSummary,
-    realtimeConnected,
-    realtimeConnecting,
-    realtimePaused,
-    realtimeStatusText,
     pendingCount,
     parsingCount,
     parsedCount,
@@ -711,7 +541,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     handlePageChange,
     openDetailDrawer,
     closeDetail,
-    openLifecyclePage,
     generateQueue,
     retryQueue,
     subscribeQueue,
@@ -722,7 +551,6 @@ export const useParseQueuePage = (): { page: ParseQueuePage } => {
     formatTriggerMode,
     formatStatus,
     safeJson,
-    toggleRealtimeSync,
   });
 
   return { page };

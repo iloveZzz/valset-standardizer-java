@@ -6,6 +6,7 @@ import com.yss.valset.application.event.lifecycle.WorkflowTaskLifecycleEvent;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskLogDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 
 import java.util.List;
@@ -17,6 +18,8 @@ import java.util.Optional;
 public interface OutsourcedDataTaskGateway {
 
     PageResult<OutsourcedDataTaskBatchDTO> pageTasks(OutsourcedDataTaskQueryCommand query);
+
+    OutsourcedDataTaskSummaryDTO summary(OutsourcedDataTaskQueryCommand query);
 
     List<OutsourcedDataTaskBatchDTO> listTasks(OutsourcedDataTaskQueryCommand query);
 

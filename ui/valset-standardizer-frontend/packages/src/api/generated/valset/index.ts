@@ -108,7 +108,6 @@ import type {
   SingleResultValsetFileInfoViewDTO,
   SseEmitter,
   StreamLogsParams,
-  SubscribeParams,
   TransferObjectRedeliverCommand,
   TransferObjectRetagCommand,
   TransferRouteUpsertCommand,
@@ -205,17 +204,6 @@ export const getJavaSpringBootQuartzApi = () => {
     return customInstance<SingleResultTaskViewDTO>({
       url: `/tasks/${taskId}`,
       method: "GET",
-    });
-  };
-
-  /**
-   * @summary subscribe
-   */
-  const subscribe = (params?: SubscribeParams) => {
-    return customInstance<SseEmitter>({
-      url: `/parse-lifecycle-events/stream`,
-      method: "GET",
-      params,
     });
   };
 
@@ -1430,7 +1418,6 @@ export const getJavaSpringBootQuartzApi = () => {
     createEvaluateTask,
     createExtractTask,
     queryTask,
-    subscribe,
     listTemplates,
     listGroupedTemplates,
     getTemplate,
@@ -1564,11 +1551,6 @@ export type CreateExtractTaskResult = NonNullable<
 export type QueryTaskResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryTask"]>
-  >
->;
-export type SubscribeResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["subscribe"]>
   >
 >;
 export type ListTemplatesResult = NonNullable<

@@ -8,7 +8,11 @@ import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
 import com.yss.valset.domain.model.ValsetFileInfo;
-import com.yss.valset.task.application.config.OutsourcedDataTaskStageCatalog;
+import com.yss.valset.task.application.dto.workflow.WorkflowDefinitionDTO;
+import com.yss.valset.task.application.dto.workflow.WorkflowStageDTO;
+import com.yss.valset.task.application.dto.workflow.WorkflowStatusMappingDTO;
+import com.yss.valset.task.application.port.workflow.WorkflowConfigGateway;
+import com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStage;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
 import com.yss.valset.task.infrastructure.entity.OutsourcedDataTaskBatchPO;
@@ -29,7 +33,6 @@ import java.util.ArrayList;
 import java.util.Optional;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -421,13 +424,11 @@ class OutsourcedDataTaskGatewayImplTest {
         when(batchRepository.selectById(any())).thenAnswer(invocation -> batchSelectCount.incrementAndGet() >= 2 ? insertedBatch.get() : null);
         when(stepRepository.selectList(any())).thenAnswer(invocation -> stepSelectListCount.incrementAndGet() == 3 ? insertedSteps : List.of());
 
-        OutsourcedDataTaskStageCatalog catalog = new OutsourcedDataTaskStageCatalog();
-        catalog.getStages().stream()
-                .filter(stage -> Objects.equals(stage.getStage(), OutsourcedDataTaskStage.STANDARD_LANDING.name()))
-                .findFirst()
-                .orElseThrow()
-                .getTaskTypes()
-                .add(TaskType.EVALUATE_MAPPING.name());
+        WorkflowRuntimeCatalog catalog = catalogWithDefinition(definition(
+                List.of(stage(OutsourcedDataTaskStage.STANDARD_LANDING.name(), TaskType.EVALUATE_MAPPING.name(), null)),
+                List.of(),
+                List.of()
+        ));
 
         OutsourcedDataTaskGatewayImpl gateway = new OutsourcedDataTaskGatewayImpl(
                 batchRepository,
@@ -472,22 +473,11 @@ class OutsourcedDataTaskGatewayImplTest {
         when(stepRepository.selectById(any())).thenReturn(null);
         when(logRepository.selectById(any())).thenReturn(null);
 
-        OutsourcedDataTaskStageCatalog catalog = new OutsourcedDataTaskStageCatalog();
-        catalog.setIgnoredWorkflowTaskTypes(List.of());
-        catalog.setSuccessTaskStatuses(List.of(TaskStatus.RETRYING.name()));
-        catalog.setRunningTaskStatuses(List.of(TaskStatus.RUNNING.name()));
-        catalog.getStages().stream()
-                .filter(stage -> Objects.equals(stage.getStage(), OutsourcedDataTaskStage.FILE_PARSE.name()))
-                .findFirst()
-                .orElseThrow()
-                .getTaskTypes()
-                .add(TaskType.PARSE_WORKBOOK.name());
-        catalog.getStages().stream()
-                .filter(stage -> Objects.equals(stage.getStage(), OutsourcedDataTaskStage.FILE_PARSE.name()))
-                .findFirst()
-                .orElseThrow()
-                .getTaskStages()
-                .add(TaskStage.PARSE.name());
+        WorkflowRuntimeCatalog catalog = catalogWithDefinition(definition(
+                List.of(stage(OutsourcedDataTaskStage.FILE_PARSE.name(), TaskType.PARSE_WORKBOOK.name(), TaskStage.PARSE.name())),
+                List.of(),
+                List.of(status("WORKFLOW_TASK", TaskStatus.RETRYING.name(), OutsourcedDataTaskStatus.SUCCESS.name(), "重试视为成功"))
+        ));
 
         OutsourcedDataTaskGatewayImpl gateway = new OutsourcedDataTaskGatewayImpl(
                 batchRepository,
@@ -845,6 +835,52 @@ class OutsourcedDataTaskGatewayImplTest {
             step.setDurationMs(120000L);
         }
         return step;
+    }
+
+    private static WorkflowRuntimeCatalog catalogWithDefinition(WorkflowDefinitionDTO definition) {
+        WorkflowConfigGateway gateway = mock(WorkflowConfigGateway.class);
+        when(gateway.findActiveByCode("VALUATION_PARSE")).thenReturn(Optional.of(definition));
+        WorkflowRuntimeCatalog catalog = new WorkflowRuntimeCatalog();
+        catalog.setWorkflowConfigGateway(gateway);
+        return catalog;
+    }
+
+    private static WorkflowDefinitionDTO definition(List<WorkflowStageDTO> stages,
+                                                    List<String> ignoredWorkflowTaskTypes,
+                                                    List<WorkflowStatusMappingDTO> statusMappings) {
+        WorkflowDefinitionDTO definition = new WorkflowDefinitionDTO();
+        definition.setWorkflowId("wf-test");
+        definition.setWorkflowCode("VALUATION_PARSE");
+        definition.setWorkflowName("估值表解析工作流");
+        definition.setVersionNo(1);
+        definition.setStages(stages);
+        definition.setIgnoredWorkflowTaskTypes(ignoredWorkflowTaskTypes);
+        definition.setStatusMappings(statusMappings);
+        return definition;
+    }
+
+    private static WorkflowStageDTO stage(String stageCode, String taskType, String taskStage) {
+        WorkflowStageDTO stage = new WorkflowStageDTO();
+        stage.setStageCode(stageCode);
+        stage.setStepCode(stageCode);
+        stage.setStageName(stageCode);
+        stage.setStepName(stageCode);
+        stage.setEnabled(Boolean.TRUE);
+        stage.setTaskTypes(taskType == null ? List.of() : List.of(taskType));
+        stage.setTaskStages(taskStage == null ? List.of() : List.of(taskStage));
+        return stage;
+    }
+
+    private static WorkflowStatusMappingDTO status(String sourceType,
+                                                   String sourceStatus,
+                                                   String targetStatus,
+                                                   String label) {
+        WorkflowStatusMappingDTO mapping = new WorkflowStatusMappingDTO();
+        mapping.setSourceType(sourceType);
+        mapping.setSourceStatus(sourceStatus);
+        mapping.setTargetStatus(targetStatus);
+        mapping.setStatusLabel(label);
+        return mapping;
     }
 
     private static OutsourcedDataTaskBatchPO batch(String batchId,

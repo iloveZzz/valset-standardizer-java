@@ -38,4 +38,44 @@ public class ExtractDataTaskCommand {
      * 可选的创建者标识符。
      */
     private String createdBy;
+
+    /**
+     * 工作流编码。
+     */
+    private String workflowCode;
+
+    /**
+     * 工作流主键。
+     */
+    private String workflowId;
+
+    /**
+     * 工作流版本号。
+     */
+    private Integer workflowVersionNo;
+
+    /**
+     * 当前工作流阶段编码。
+     */
+    private String workflowStageCode;
+
+    /**
+     * 当前工作流阶段名称。
+     */
+    private String workflowStageName;
+
+    /**
+     * 执行平台类型。
+     */
+    private String workflowEngineType;
+
+    /**
+     * 外部执行标识。
+     */
+    private String workflowEngineExternalRef;
+
+    /**
+     * 执行平台扩展参数。
+     */
+    private String workflowEngineConfigJson;
 }

@@ -9,13 +9,13 @@ import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.valset.extract.repository.mapper.ValuationSheetStyleMapper;
+import com.yss.valset.application.service.workflow.WorkflowRuntimeParamService;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -44,7 +44,9 @@ class PoiRawDataExtractorTest {
 
         ObjectMapper objectMapper = new ObjectMapper();
         ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, objectMapper,sheetStyleMapper);
+        WorkflowRuntimeParamService workflowRuntimeParamService = mock(WorkflowRuntimeParamService.class);
+        when(workflowRuntimeParamService.skipExcelStyleParsing()).thenReturn(false);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, objectMapper, sheetStyleMapper, workflowRuntimeParamService);
 
         int count = extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
@@ -71,8 +73,9 @@ class PoiRawDataExtractorTest {
         doReturn(List.of()).when(mapper).insert(anyList(), anyInt());
 
         ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
-        ReflectionTestUtils.setField(extractor, "skipExcelStyleParsing", true);
+        WorkflowRuntimeParamService workflowRuntimeParamService = mock(WorkflowRuntimeParamService.class);
+        when(workflowRuntimeParamService.skipExcelStyleParsing()).thenReturn(true);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), sheetStyleMapper, workflowRuntimeParamService);
 
         int count = extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
@@ -95,7 +98,9 @@ class PoiRawDataExtractorTest {
 
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
+        WorkflowRuntimeParamService workflowRuntimeParamService = mock(WorkflowRuntimeParamService.class);
+        when(workflowRuntimeParamService.skipExcelStyleParsing()).thenReturn(false);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), sheetStyleMapper, workflowRuntimeParamService);
 
         int count = extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
@@ -114,7 +119,9 @@ class PoiRawDataExtractorTest {
 
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
+        WorkflowRuntimeParamService workflowRuntimeParamService = mock(WorkflowRuntimeParamService.class);
+        when(workflowRuntimeParamService.skipExcelStyleParsing()).thenReturn(false);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), sheetStyleMapper, workflowRuntimeParamService);
 
         int count = extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(file.toString()).build(),
@@ -138,7 +145,9 @@ class PoiRawDataExtractorTest {
     void extractMissingWorkbookThrowsFileAccessException() {
         ValuationFileDataMapper mapper = mock(ValuationFileDataMapper.class);
         ValuationSheetStyleMapper sheetStyleMapper = mock(ValuationSheetStyleMapper.class);
-        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(),sheetStyleMapper);
+        WorkflowRuntimeParamService workflowRuntimeParamService = mock(WorkflowRuntimeParamService.class);
+        when(workflowRuntimeParamService.skipExcelStyleParsing()).thenReturn(false);
+        PoiRawDataExtractor extractor = new PoiRawDataExtractor(mapper, new ObjectMapper(), sheetStyleMapper, workflowRuntimeParamService);
         assertThatThrownBy(() -> extractor.extract(
                 DataSourceConfig.builder().sourceType(DataSourceType.EXCEL).sourceUri(tempDir.resolve("missing.xlsx").toString()).build(),
                 1L,

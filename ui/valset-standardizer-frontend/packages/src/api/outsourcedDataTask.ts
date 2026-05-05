@@ -93,10 +93,14 @@ export type OutsourcedDataTaskStageSummaryDTO = {
 };
 
 export type OutsourcedDataTaskSummaryDTO = {
+  workflowCode?: string;
+  workflowId?: string;
+  versionNo?: number;
   totalCount?: number;
   runningCount?: number;
   successCount?: number;
   failedCount?: number;
+  stageCatalog?: OutsourcedDataTaskStageSummaryDTO[];
   stepSummaries?: OutsourcedDataTaskStageSummaryDTO[];
 };
 

@@ -449,7 +449,7 @@ export type OutsourcedDataTaskPage = {
 
 ## 10. 风险点
 
-- 当前已有 `ParseQueue`、`ParseLifecycle` 偏 transfer 解析队列语义，不能直接作为本页面的领域模型。
+- 当前已有 `ParseQueue` 偏 transfer 解析队列语义，不能直接作为本页面的领域模型。
 - `FullWorkflowResponse` 目前只覆盖上传、解析、匹配、提取等局部任务，不足以表达完整批次链路。
 - 后续 TODO 数据加工任务尚未明确领域边界，需要先抽象为 `DATA_PROCESSING` 阶段，再逐步接具体任务。
 - 如果后端不保存阶段明细，前端无法稳定展示展开表和重跑本阶段。

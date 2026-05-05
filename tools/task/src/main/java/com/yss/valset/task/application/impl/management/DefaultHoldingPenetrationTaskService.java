@@ -166,7 +166,9 @@ public class DefaultHoldingPenetrationTaskService implements HoldingPenetrationT
         if (summary == null) {
             return null;
         }
-        summary.setStepSummaries(mergeStageSummaries(summary.getStepSummaries()));
+        List<OutsourcedDataTaskStageSummaryDTO> merged = mergeStageSummaries(summary.getStepSummaries());
+        summary.setStepSummaries(merged);
+        summary.setStageCatalog(merged);
         return summary;
     }
 

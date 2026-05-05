@@ -47,10 +47,6 @@
       "description": "知识库导入接口。"
     },
     {
-      "name": "ParseLifecycleEventController",
-      "description": "解析生命周期事件流控制器。"
-    },
-    {
       "name": "TaskController",
       "description": "任务API入口点。"
     },
@@ -386,82 +382,6 @@
             "required": true,
             "example": 0,
             "name": "taskId"
-          }
-        ]
-      }
-    },
-    "/parse-lifecycle-events/stream": {
-      "get": {
-        "summary": "subscribe",
-        "deprecated": false,
-        "description": "",
-        "tags": [
-          "ParseLifecycleEventController"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/SseEmitter"
-                }
-              }
-            }
-          }
-        },
-        "operationId": "subscribe",
-        "parameters": [
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "No comments found.",
-            "required": false,
-            "name": "source"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "No comments found.",
-            "required": false,
-            "name": "queueId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "No comments found.",
-            "required": false,
-            "name": "transferId"
-          },
-          {
-            "schema": {
-              "format": "int64",
-              "type": "number"
-            },
-            "in": "query",
-            "description": "No comments found.",
-            "required": false,
-            "example": 0,
-            "name": "taskId"
-          },
-          {
-            "schema": {
-              "format": "string",
-              "type": "string"
-            },
-            "in": "query",
-            "description": "No comments found.",
-            "required": false,
-            "name": "stage"
           }
         ]
       }

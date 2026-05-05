@@ -11,9 +11,9 @@ import com.yss.valset.extract.repository.entity.DwdExternalValuationStandardMetr
 import com.yss.valset.extract.repository.entity.DwdExternalValuationStandardSubjectPO;
 import com.yss.valset.extract.repository.mapper.DwdExternalValuationStandardMetricRepository;
 import com.yss.valset.extract.repository.mapper.DwdExternalValuationStandardSubjectRepository;
+import com.yss.valset.application.service.workflow.WorkflowRuntimeParamService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -37,8 +37,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
     private final DwdExternalValuationStandardSubjectRepository subjectRepository;
     private final DwdExternalValuationStandardMetricRepository metricRepository;
     private final ObjectMapper objectMapper;
-    @Value("${subject.match.workflow.persist-standardized-dwd-details:false}")
-    private boolean persistStandardizedDwdDetails;
+    private final WorkflowRuntimeParamService workflowRuntimeParamService;
 
     @Override
     public void saveStandardizedExternalValuation(Long valuationId, Long fileId, ParsedValuationData standardizedValuationData) {
@@ -46,7 +45,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
             log.info("标准化 DWD 明细写入跳过，原因=standardizedValuationData为空，valuationId={}, fileId={}", valuationId, fileId);
             return;
         }
-        if (persistStandardizedDwdDetails) {
+        if (workflowRuntimeParamService.persistStandardizedDwdDetails()) {
             // Step: 仅在开关开启时落地标准化中间明细，便于审计与回放
             saveSubjects(valuationId, fileId, standardizedValuationData.getSubjects());
             saveMetrics(valuationId, fileId, standardizedValuationData.getMetrics());

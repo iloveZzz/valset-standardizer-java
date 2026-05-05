@@ -56,10 +56,6 @@ export type ParseQueuePage = {
   loading: boolean;
   listLoading: boolean;
   backfillLoading: boolean;
-  realtimeConnected: boolean;
-  realtimeConnecting: boolean;
-  realtimePaused: boolean;
-  realtimeStatusText: string;
   currentFilterSummary: string;
   rows: ParseQueueRow[];
   tableData: ParseQueueRow[];
@@ -77,7 +73,6 @@ export type ParseQueuePage = {
   handlePageChange: (params: { current: number; pageSize: number }) => void;
   openDetailDrawer: (row: ParseQueueRow) => void;
   closeDetail: () => void;
-  openLifecyclePage: (row: ParseQueueRow) => void;
   generateQueue: (row: ParseQueueRow, forceRebuild?: boolean) => void;
   retryQueue: (row: ParseQueueRow) => void;
   subscribeQueue: (row: ParseQueueRow) => void;
@@ -88,5 +83,4 @@ export type ParseQueuePage = {
   formatTriggerMode: (value: string | undefined) => string;
   formatStatus: (value: string | undefined) => string;
   safeJson: (value: unknown) => string;
-  toggleRealtimeSync: () => void;
 };

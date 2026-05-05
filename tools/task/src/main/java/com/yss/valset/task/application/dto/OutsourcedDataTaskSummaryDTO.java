@@ -10,6 +10,12 @@ import java.util.List;
 @Data
 public class OutsourcedDataTaskSummaryDTO {
 
+    private String workflowCode;
+
+    private String workflowId;
+
+    private Integer versionNo;
+
     private long totalCount;
 
     private long runningCount;
@@ -17,6 +23,8 @@ public class OutsourcedDataTaskSummaryDTO {
     private long successCount;
 
     private long failedCount;
+
+    private List<OutsourcedDataTaskStageSummaryDTO> stageCatalog;
 
     private List<OutsourcedDataTaskStageSummaryDTO> stepSummaries;
 }

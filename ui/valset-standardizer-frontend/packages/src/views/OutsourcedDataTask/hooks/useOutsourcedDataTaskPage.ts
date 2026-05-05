@@ -46,7 +46,7 @@ import {
 } from "../constants";
 
 const defaultStageCatalog = outsourcedDataTaskStageCatalog;
-const activeStageCatalog = ref(defaultStageCatalog);
+const activeStageCatalog = ref([...defaultStageCatalog]);
 const hiddenStageDisplayMap: Partial<Record<OutsourcedDataTaskStage, OutsourcedDataTaskStage>> = {
   DATA_PROCESSING: "STANDARD_LANDING",
 };
@@ -60,31 +60,42 @@ const normalizeVisibleStage = (
   return hiddenStageDisplayMap[stage] ?? normalizeStage(stage);
 };
 
-const normalizeStageCatalog = (
-  summaries?: OutsourcedDataTaskStepSummary[],
-): Array<{
-  stage: OutsourcedDataTaskStage;
-  step: OutsourcedDataTaskStage;
-  stageName: string;
-  stepName: string;
-  stageDescription: string;
-  stepDescription: string;
-}> =>
-  summaries?.length
-    ? summaries
-        .filter((item) => !isHiddenStage(item.stage ?? item.step))
+const isCatalogStageMatch = (
+  item: { stage: string; step: string },
+  value?: string,
+) => String(value ?? "").trim() === item.stage || String(value ?? "").trim() === item.step;
+
+type StageCatalogItem = {
+  stage?: string;
+  step?: string;
+  stageName?: string;
+  stepName?: string;
+  stageDescription?: string;
+  stepDescription?: string;
+  sortOrder?: number;
+};
+
+const normalizeStageCatalog = (stages?: StageCatalogItem[]) =>
+  stages?.length
+    ? stages
+        .slice()
+        .filter((item) => Boolean(item.stage || item.step))
+        .sort((left, right) => Number(left.sortOrder ?? 0) - Number(right.sortOrder ?? 0))
         .map((item) => {
           const stage = String(item.stage ?? item.step ?? "").trim() as OutsourcedDataTaskStage;
+          const step = String(item.step ?? item.stage ?? stage).trim() as OutsourcedDataTaskStage;
+          const stageName = String(item.stageName ?? item.stepName ?? stage).trim();
+          const stepName = String(item.stepName ?? item.stageName ?? stageName).trim();
           return {
             stage,
-            step: stage,
-            stageName: item.stageName ?? item.stepName ?? stage,
-            stepName: item.stepName ?? item.stageName ?? stage,
-            stageDescription: item.stageDescription ?? item.stepDescription ?? "",
-            stepDescription: item.stepDescription ?? item.stageDescription ?? "",
+            step,
+            stageName: stageName || stage,
+            stepName: stepName || stageName || stage,
+            stageDescription: String(item.stageDescription ?? item.stepDescription ?? "").trim(),
+            stepDescription: String(item.stepDescription ?? item.stageDescription ?? "").trim(),
           };
         })
-    : defaultStageCatalog;
+    : [...defaultStageCatalog];
 
 const defaultQuery = (): OutsourcedDataTaskQueryState => ({
   batchId: "",
@@ -110,9 +121,10 @@ const RECOVERABLE_EXECUTE_STATUS_SET = new Set<OutsourcedDataTaskStatus>([
 
 const normalizeStage = (value?: string): OutsourcedDataTaskStage => {
   const stage = String(value ?? "").trim() as OutsourcedDataTaskStage;
-  return activeStageCatalog.value.some((item) => item.stage === stage)
-    ? stage
-    : activeStageCatalog.value[0]?.stage ?? "FILE_PARSE";
+  return (
+    activeStageCatalog.value.find((item) => isCatalogStageMatch(item, stage))
+      ?.stage ?? activeStageCatalog.value[0]?.stage ?? "FILE_PARSE"
+  );
 };
 
 const normalizeStatus = (value?: string): OutsourcedDataTaskStatus => {
@@ -151,14 +163,21 @@ const matches = (actual: string | undefined, keyword: string) => {
 };
 
 const getStageOrder = (stage: string) => {
-  const index = activeStageCatalog.value.findIndex((item) => item.stage === stage);
+  const index = activeStageCatalog.value.findIndex((item) =>
+    isCatalogStageMatch(item, stage),
+  );
   return index >= 0 ? index : activeStageCatalog.value.length;
 };
 
 const hasStage = (row: OutsourcedDataTaskBatchRow, stage: string) =>
   row.currentStep === stage ||
   row.currentStage === stage ||
-  row.steps.some((step) => step.step === stage || step.stage === stage);
+  row.steps.some(
+    (step) =>
+      step.step === stage ||
+      step.stage === stage ||
+      step.step === normalizeStage(stage),
+  );
 
 const parseTimelineDate = (value?: string) => {
   const text = String(value ?? "").trim();
@@ -305,16 +324,20 @@ const normalizeBatchRowFromSteps = (
   const currentStage = resolveBatchStageFromSteps(orderedSteps);
   const currentStatus = resolveBatchStatusFromSteps(orderedSteps);
   const currentStep =
-    [...orderedSteps].reverse().find((step) => step.stage === currentStage) ??
+    [...orderedSteps].reverse().find(
+      (step) => step.stage === currentStage || step.step === currentStage,
+    ) ??
     orderedSteps[orderedSteps.length - 1];
-  const stageMeta = activeStageCatalog.value.find((item) => item.stage === currentStage);
+  const stageMeta = activeStageCatalog.value.find((item) =>
+    isCatalogStageMatch(item, currentStage),
+  );
   return {
     ...row,
     currentStage,
     currentStep: currentStage,
     currentStageName: stageMeta?.stageName ?? row.currentStageName,
     currentStepName:
-      stageMeta?.stageName ?? row.currentStepName ?? row.currentStageName,
+      stageMeta?.stepName ?? row.currentStepName ?? row.currentStageName,
     status: currentStatus,
     statusName: statusLabel(currentStatus),
     progress:
@@ -355,58 +378,58 @@ const buildSteps = (
 ): OutsourcedDataTaskStepRow[] => {
   const stageCatalog = activeStageCatalog.value;
   const currentIndex = stageCatalog.findIndex(
-    (item) => item.stage === currentStage,
+    (item) => isCatalogStageMatch(item, currentStage),
   );
   return alignStepTimeline(
     sortSteps(
       stageCatalog.map((item, index) => {
-      const isBefore = index < currentIndex;
-      const isCurrent = index === currentIndex;
-      const stepStatus: OutsourcedDataTaskStatus = isBefore
-        ? "SUCCESS"
-        : isCurrent
-          ? status
-          : "PENDING";
-      return {
-        stepId: `${batchId}-${item.stage}`,
-        batchId,
-        stage: item.stage,
-        step: item.stage,
-        stageName: item.stageName,
-        stepName: item.stageName,
-        taskId: `TASK-${batchId}-${index + 1}`,
-        taskType: item.stage,
-        runNo: 1,
-        triggerMode: index === 0 ? "SCHEDULE" : "DEPENDENCY",
-        triggerModeName: triggerModeLabel(
-          index === 0 ? "SCHEDULE" : "DEPENDENCY",
-        ),
-        status: stepStatus,
-        statusName: statusLabel(stepStatus),
-        progress: stepStatus === "SUCCESS" ? 100 : isCurrent ? 66 : 0,
-        startedAt: "2025-02-27 09:30:00",
-        endedAt:
-          stepStatus === "SUCCESS" || stepStatus === "FAILED"
-            ? "2025-02-27 09:32:00"
-            : undefined,
-        durationText: stepStatus === "PENDING" ? "-" : "2m",
-        inputSummary: item.stageDescription,
-        outputSummary:
-          stepStatus === "SUCCESS"
-            ? `${item.stageName}${outsourcedDataTaskPreviewText.stepCompletedSuffix}`
-            : "",
-        errorCode: isCurrent && status === "FAILED" ? "TASK_FAILED" : "",
-        errorMessage:
-          isCurrent && status === "FAILED"
-            ? outsourcedDataTaskPreviewText.landingFailureMessage
-            : "",
-        errorStack:
-          isCurrent && status === "FAILED"
-            ? "com.yss.valset.task.StandardLandingException: DWD 持仓写入冲突\n\tat com.yss.valset.standardize.StandardLandingService.writeDwd(StandardLandingService.java:128)\n\tat com.yss.valset.batch.dispatcher.DefaultTaskDispatcher.dispatch(DefaultTaskDispatcher.java:76)"
-            : "",
-        logRef: `task:${batchId}:${item.stage}`,
-      };
-    }),
+        const isBefore = index < currentIndex;
+        const isCurrent = index === currentIndex;
+        const stepStatus: OutsourcedDataTaskStatus = isBefore
+          ? "SUCCESS"
+          : isCurrent
+            ? status
+            : "PENDING";
+        return {
+          stepId: `${batchId}-${item.step}`,
+          batchId,
+          stage: item.stage,
+          step: item.step,
+          stageName: item.stageName,
+          stepName: item.stepName,
+          taskId: `TASK-${batchId}-${index + 1}`,
+          taskType: item.step,
+          runNo: 1,
+          triggerMode: index === 0 ? "SCHEDULE" : "DEPENDENCY",
+          triggerModeName: triggerModeLabel(
+            index === 0 ? "SCHEDULE" : "DEPENDENCY",
+          ),
+          status: stepStatus,
+          statusName: statusLabel(stepStatus),
+          progress: stepStatus === "SUCCESS" ? 100 : isCurrent ? 66 : 0,
+          startedAt: "2025-02-27 09:30:00",
+          endedAt:
+            stepStatus === "SUCCESS" || stepStatus === "FAILED"
+              ? "2025-02-27 09:32:00"
+              : undefined,
+          durationText: stepStatus === "PENDING" ? "-" : "2m",
+          inputSummary: item.stageDescription,
+          outputSummary:
+            stepStatus === "SUCCESS"
+              ? `${item.stepName}${outsourcedDataTaskPreviewText.stepCompletedSuffix}`
+              : "",
+          errorCode: isCurrent && status === "FAILED" ? "TASK_FAILED" : "",
+          errorMessage:
+            isCurrent && status === "FAILED"
+              ? outsourcedDataTaskPreviewText.landingFailureMessage
+              : "",
+          errorStack:
+            isCurrent && status === "FAILED"
+              ? "com.yss.valset.task.StandardLandingException: DWD 持仓写入冲突\n\tat com.yss.valset.standardize.StandardLandingService.writeDwd(StandardLandingService.java:128)\n\tat com.yss.valset.batch.dispatcher.DefaultTaskDispatcher.dispatch(DefaultTaskDispatcher.java:76)"
+              : "",
+          logRef: `task:${batchId}:${item.step}`,
+        };
+      }),
     ),
     batchStartedAt,
     batchEndedAt,
@@ -418,14 +441,16 @@ const mapStep = (
 ): OutsourcedDataTaskStepRow => {
   const stage = normalizeVisibleStage(step.step ?? step.stage);
   const status = normalizeStatus(step.status);
-  const stageMeta = activeStageCatalog.value.find((item) => item.stage === stage);
+  const stageMeta = activeStageCatalog.value.find(
+    (item) => isCatalogStageMatch(item, stage),
+  );
   return {
     stepId: String(step.stepId ?? ""),
     batchId: String(step.batchId ?? ""),
     stage,
     step: stage,
     stageName: step.stepName ?? step.stageName ?? stageMeta?.stageName ?? stage,
-    stepName: step.stepName ?? step.stageName ?? stageMeta?.stageName ?? stage,
+    stepName: step.stepName ?? step.stageName ?? stageMeta?.stepName ?? stage,
     taskId: String(step.taskId ?? ""),
     taskType: String(step.taskType ?? stage),
     runNo: Number(step.runNo ?? 0),
@@ -615,7 +640,9 @@ const mapBatch = (
   const batchId = String(batch.batchId ?? "");
   const stage = normalizeVisibleStage(batch.currentStep ?? batch.currentStage);
   const status = normalizeStatus(batch.status);
-  const stageMeta = activeStageCatalog.value.find((item) => item.stage === stage);
+  const stageMeta = activeStageCatalog.value.find(
+    (item) => isCatalogStageMatch(item, stage),
+  );
   return {
     batchId,
     batchName: String(batch.batchName ?? batchId),
@@ -637,7 +664,7 @@ const mapBatch = (
     currentStepName:
       batch.currentStepName ??
       batch.currentStageName ??
-      stageMeta?.stageName ??
+      stageMeta?.stepName ??
       stage,
     status,
     statusName: batch.statusName ?? statusLabel(status),
@@ -666,15 +693,6 @@ export const useOutsourcedDataTaskPage = (): {
   const rows = ref<OutsourcedDataTaskBatchRow[]>([]);
   const historyRows = ref<OutsourcedDataTaskBatchRow[]>([]);
   const summary = ref<OutsourcedDataTaskSummaryDTO | null>(null);
-  watch(
-    () => summary.value?.stepSummaries,
-    (value) => {
-      activeStageCatalog.value = normalizeStageCatalog(
-        value as OutsourcedDataTaskStepSummary[] | undefined,
-      ) as typeof defaultStageCatalog;
-    },
-    { immediate: true },
-  );
   const selectedRowKeys = ref<string[]>([]);
   const selectedRow = ref<OutsourcedDataTaskBatchRow | null>(null);
   const selectedDetail = ref<OutsourcedDataTaskBatchDetailDTO | null>(null);
@@ -689,6 +707,25 @@ export const useOutsourcedDataTaskPage = (): {
   const historyVisible = ref(false);
   const historyAnchorRow = ref<OutsourcedDataTaskBatchRow | null>(null);
   const expandedBatchIds = ref<string[]>([]);
+
+  watch(
+    () => activeStageCatalog.value,
+    () => {
+      rows.value = rows.value.map((row) =>
+        normalizeBatchRowFromSteps(row, row.steps),
+      );
+      historyRows.value = historyRows.value.map((row) =>
+        normalizeBatchRowFromSteps(row, row.steps),
+      );
+      if (selectedRow.value) {
+        selectedRow.value = normalizeBatchRowFromSteps(
+          selectedRow.value,
+          selectedRow.value.steps,
+        );
+      }
+    },
+  );
+
   const pagination = ref<YTablePagination>({
     current: 1,
     pageSize: 10,
@@ -715,8 +752,9 @@ export const useOutsourcedDataTaskPage = (): {
   );
   const historyDrawerFilterSummary = computed(() => {
     const historyStepName =
-      activeStageCatalog.value.find((item) => item.stage === historyQuery.step)
-        ?.stepName ?? historyQuery.step;
+      activeStageCatalog.value.find((item) =>
+        isCatalogStageMatch(item, historyQuery.step),
+      )?.stepName ?? historyQuery.step;
     const filters = [
       historyQuery.taskDate &&
         `${outsourcedDataTaskQueryTexts.taskDatePrefix}${historyQuery.taskDate}`,
@@ -783,11 +821,15 @@ export const useOutsourcedDataTaskPage = (): {
     if (sourceSummaries?.length) {
       return catalog.map((item) => {
         const current = sourceSummaries.find(
-          (stage) => stage.stage === item.stage || stage.step === item.stage,
+          (stage) =>
+            stage.stage === item.stage ||
+            stage.step === item.stage ||
+            stage.stage === item.step ||
+            stage.step === item.step,
         );
         return {
           ...item,
-          step: item.stage,
+          step: item.step,
           stepName: item.stepName,
           stepDescription: item.stepDescription,
           totalCount: Number(current?.totalCount ?? 0),
@@ -799,11 +841,11 @@ export const useOutsourcedDataTaskPage = (): {
     }
     return catalog.map((item) => {
       const currentRows = filteredRows.value.filter((row) =>
-        hasStage(row, item.stage),
+        hasStage(row, item.stage) || hasStage(row, item.step),
       );
       return {
         ...item,
-        step: item.stage,
+        step: item.step,
         stepName: item.stepName,
         stepDescription: item.stepDescription,
         totalCount: currentRows.length,
@@ -848,6 +890,15 @@ const buildQueryParams = (
         rows.value.map((row) => [row.batchId, row.steps]),
       );
       summary.value = unwrapSingleResult(summaryRes) ?? null;
+      const workflowStageCatalog =
+        summary.value?.stageCatalog?.length
+          ? summary.value.stageCatalog
+          : summary.value?.stepSummaries;
+      if (workflowStageCatalog?.length) {
+        activeStageCatalog.value = normalizeStageCatalog(workflowStageCatalog);
+      } else {
+        activeStageCatalog.value = [...defaultStageCatalog];
+      }
       rows.value = (pageRes.data ?? []).map((item) => {
         const batchId = String(item.batchId ?? "");
         const mapped = mapBatch(item);
@@ -897,6 +948,10 @@ const buildQueryParams = (
     } finally {
       historyLoading.value = false;
     }
+  };
+
+  const initialize = async () => {
+    await loadList();
   };
 
   const runQuery = () => {
@@ -1381,7 +1436,7 @@ const buildQueryParams = (
     isContinueExecuteStatus,
   } as OutsourcedDataTaskPage);
 
-  void loadList();
+  void initialize();
 
   return { page };
 };

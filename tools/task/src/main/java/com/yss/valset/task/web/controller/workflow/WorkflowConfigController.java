@@ -2,9 +2,12 @@ package com.yss.valset.task.web.controller.workflow;
 
 import com.yss.cloud.dto.response.PageResult;
 import com.yss.cloud.dto.response.SingleResult;
+import com.yss.valset.task.application.command.workflow.WorkflowConfigAuditQueryCommand;
 import com.yss.valset.task.application.command.workflow.WorkflowConfigQueryCommand;
 import com.yss.valset.task.application.command.workflow.WorkflowConfigSaveCommand;
+import com.yss.valset.task.application.dto.workflow.WorkflowConfigAuditDTO;
 import com.yss.valset.task.application.dto.workflow.WorkflowDefinitionDTO;
+import com.yss.valset.task.application.dto.workflow.WorkflowVersionDiffDTO;
 import com.yss.valset.task.application.service.workflow.WorkflowConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -63,10 +66,73 @@ public class WorkflowConfigController {
         return SingleResult.of(workflowConfigService.getActiveDefinition(workflowCode));
     }
 
+    @GetMapping("/audits")
+    @Operation(summary = "分页查询工作流配置审计")
+    public PageResult<WorkflowConfigAuditDTO> pageAudits(@RequestParam(value = "workflowCode", required = false) String workflowCode,
+                                                         @RequestParam(value = "versionNo", required = false) Integer versionNo,
+                                                         @RequestParam(value = "actionType", required = false) String actionType,
+                                                         @RequestParam(value = "actionResult", required = false) String actionResult,
+                                                         @RequestParam(value = "pageIndex", required = false) Integer pageIndex,
+                                                         @RequestParam(value = "pageSize", required = false) Integer pageSize) {
+        WorkflowConfigAuditQueryCommand query = new WorkflowConfigAuditQueryCommand();
+        query.setWorkflowCode(workflowCode);
+        query.setVersionNo(versionNo);
+        query.setActionType(actionType);
+        query.setActionResult(actionResult);
+        query.setPageIndex(pageIndex);
+        query.setPageSize(pageSize);
+        return workflowConfigService.pageAuditRecords(query);
+    }
+
+    @GetMapping("/audits/{auditId}")
+    @Operation(summary = "查询工作流配置审计详情")
+    public SingleResult<WorkflowConfigAuditDTO> getAuditRecord(@PathVariable String auditId) {
+        return SingleResult.of(workflowConfigService.getAuditRecord(auditId));
+    }
+
+    @GetMapping("/compare")
+    @Operation(summary = "比较工作流配置版本")
+    public SingleResult<WorkflowVersionDiffDTO> compareVersions(@RequestParam("leftWorkflowId") String leftWorkflowId,
+                                                                @RequestParam("rightWorkflowId") String rightWorkflowId) {
+        return SingleResult.of(workflowConfigService.compareVersions(leftWorkflowId, rightWorkflowId));
+    }
+
     @PostMapping("/draft")
     @Operation(summary = "保存工作流配置草稿")
     public SingleResult<WorkflowDefinitionDTO> saveDraft(@Valid @RequestBody WorkflowConfigSaveCommand command) {
         return SingleResult.of(workflowConfigService.saveDraft(command));
+    }
+
+    @PostMapping("/{workflowId}/copy")
+    @Operation(summary = "复制工作流配置版本")
+    public SingleResult<WorkflowDefinitionDTO> copyVersion(@PathVariable String workflowId) {
+        return SingleResult.of(workflowConfigService.copyVersion(workflowId));
+    }
+
+    @PostMapping("/import")
+    @Operation(summary = "导入工作流配置")
+    public SingleResult<WorkflowDefinitionDTO> importConfig(@Valid @RequestBody WorkflowConfigSaveCommand command) {
+        return SingleResult.of(workflowConfigService.importConfig(command));
+    }
+
+    @PostMapping("/validate")
+    @Operation(summary = "校验工作流配置")
+    public SingleResult<Boolean> validate(@Valid @RequestBody WorkflowConfigSaveCommand command) {
+        workflowConfigService.validate(command);
+        return SingleResult.of(Boolean.TRUE);
+    }
+
+    @GetMapping("/{workflowId}/export")
+    @Operation(summary = "导出工作流配置")
+    public SingleResult<WorkflowDefinitionDTO> exportConfig(@PathVariable String workflowId) {
+        return SingleResult.of(workflowConfigService.exportConfig(workflowId));
+    }
+
+    @PostMapping("/{workflowId}/rollback/{sourceWorkflowId}")
+    @Operation(summary = "回滚工作流配置版本")
+    public SingleResult<WorkflowDefinitionDTO> rollbackVersion(@PathVariable String workflowId,
+                                                               @PathVariable String sourceWorkflowId) {
+        return SingleResult.of(workflowConfigService.rollbackVersion(workflowId, sourceWorkflowId));
     }
 
     @PostMapping("/{workflowId}/publish")

@@ -10,25 +10,42 @@ import {
 } from "@yss-ui/components";
 import {
   disableWorkflowConfig,
+  copyWorkflowConfigVersion,
+  compareWorkflowConfigs,
+  exportWorkflowConfig,
   getWorkflowConfig,
   pageWorkflowConfigs,
+  rollbackWorkflowConfigVersion,
   publishWorkflowConfig,
+  importWorkflowConfig,
   saveWorkflowConfigDraft,
+  validateWorkflowConfig,
   type WorkflowDefinitionDTO,
   type WorkflowStageDTO,
   type WorkflowStatusMappingDTO,
+  type WorkflowVersionDiffDTO,
 } from "@/api/workflowConfig";
 import "./index.less";
 
 defineOptions({ name: "WorkflowConfigPage" });
 
 const loading = ref(false);
+const workflowcConfTbRef = ref<any>(null);
+const mappingTableRef = ref<any>(null);
 const detailLoading = ref(false);
 const saving = ref(false);
 const rows = ref<WorkflowDefinitionDTO[]>([]);
 const total = ref(0);
 const detailVisible = ref(false);
-const activeTab = ref("base");
+const compareVisible = ref(false);
+const rollbackVisible = ref(false);
+const compareSourceRow = ref<WorkflowDefinitionDTO | null>(null);
+const compareTargetWorkflowId = ref("");
+const compareLoading = ref(false);
+const compareResult = ref<WorkflowVersionDiffDTO | null>(null);
+const rollbackRow = ref<WorkflowDefinitionDTO | null>(null);
+const rollbackSourceWorkflowId = ref("");
+const rollbackLoading = ref(false);
 const pagination = ref<YTablePagination>({
   current: 1,
   pageSize: 20,
@@ -51,7 +68,7 @@ const form = reactive<WorkflowDefinitionDTO>({
   businessType: "VALUATION",
   engineType: "INTERNAL",
   parseFallbackStage: "FILE_PARSE",
-  workflowFallbackStage: "DATA_PROCESSING",
+  workflowFallbackStage: "STANDARD_LANDING",
   versionNo: 1,
   description: "",
   stages: [],
@@ -80,6 +97,10 @@ const statusOptions = [
   { label: "已停用", value: "DISABLED" },
 ];
 
+const businessTypeOptions = [
+  { label: "估值业务", value: "VALUATION" },
+];
+
 const smallFieldProps = {
   size: "small",
 };
@@ -88,12 +109,38 @@ const columns: YTableColumn[] = [
   { type: "seq", title: "序号", width: 70, align: "center" },
   { field: "workflowCode", title: "工作流编码", minWidth: 180 },
   { field: "workflowName", title: "工作流名称", minWidth: 200 },
-  { field: "businessType", title: "业务类型", width: 120 },
-  { field: "engineType", title: "执行平台", width: 150 },
+  {
+    field: "businessType",
+    title: "业务类型",
+    width: 140,
+    formatter: ({ cellValue }: any) =>
+      resolveOptionLabel(businessTypeOptions, cellValue),
+  },
+  {
+    field: "engineType",
+    title: "执行平台",
+    width: 150,
+    formatter: ({ cellValue }: any) =>
+      resolveOptionLabel(engineOptions, cellValue),
+  },
   { field: "versionNo", title: "版本", width: 90, align: "center" },
-  { field: "status", title: "状态", width: 120, align: "center" },
+  {
+    field: "status",
+    title: "状态",
+    width: 120,
+    align: "center",
+    formatter: ({ cellValue }: any) =>
+      resolveOptionLabel(statusOptions, cellValue) || cellValue || "",
+  },
   { field: "updatedAt", title: "更新时间", width: 190 },
-  { field: "action", title: "操作", width: 220, fixed: "right" as const },
+  { field: "action", title: "操作", width: 420, fixed: "right" as const },
+];
+
+const diffColumns: YTableColumn[] = [
+  { field: "path", title: "字段", minWidth: 240 },
+  { field: "leftValue", title: "左侧版本", minWidth: 240 },
+  { field: "rightValue", title: "右侧版本", minWidth: 240 },
+  { field: "changeType", title: "类型", width: 120 },
 ];
 
 const sourceTypeOptions = [
@@ -249,110 +296,6 @@ const mappingTableColumns: YTableColumn[] = [
   { field: "action", title: "操作", width: 90, fixed: "right" as const },
 ];
 
-const defaultStages = (): WorkflowStageDTO[] => [
-  {
-    stageCode: "FILE_PARSE",
-    stepCode: "FILE_PARSE",
-    stageName: "文件解析",
-    stepName: "文件解析",
-    stageDescription: "文件识别、Sheet 解析、结构化解析",
-    stepDescription: "文件识别、Sheet 解析、结构化解析",
-    sortOrder: 1,
-    retryable: true,
-    skippable: false,
-    enabled: true,
-    taskTypes: ["EXTRACT_DATA"],
-    taskStages: ["EXTRACT"],
-    parseLifecycleStages: [],
-  },
-  {
-    stageCode: "STRUCTURE_STANDARDIZE",
-    stepCode: "STRUCTURE_STANDARDIZE",
-    stageName: "结构标准化",
-    stepName: "结构标准化",
-    stageDescription: "字段映射、数据清洗、STG 结构转换",
-    stepDescription: "字段映射、数据清洗、STG 结构转换",
-    sortOrder: 2,
-    retryable: true,
-    skippable: false,
-    enabled: true,
-    taskTypes: [],
-    taskStages: ["STANDARDIZE"],
-    parseLifecycleStages: ["TASK_STANDARDIZED"],
-  },
-  {
-    stageCode: "SUBJECT_RECOGNIZE",
-    stepCode: "SUBJECT_RECOGNIZE",
-    stageName: "科目识别",
-    stepName: "科目识别",
-    stageDescription: "科目匹配、属性识别、标签补全",
-    stepDescription: "科目匹配、属性识别、标签补全",
-    sortOrder: 3,
-    retryable: true,
-    skippable: false,
-    enabled: true,
-    taskTypes: ["MATCH_SUBJECT"],
-    taskStages: ["MATCH"],
-    parseLifecycleStages: [],
-  },
-  {
-    stageCode: "STANDARD_LANDING",
-    stepCode: "STANDARD_LANDING",
-    stageName: "标准表落地",
-    stepName: "标准表落地",
-    stageDescription: "STG/DWD/标准持仓/估值数据写入",
-    stepDescription: "STG/DWD/标准持仓/估值数据写入",
-    sortOrder: 4,
-    retryable: true,
-    skippable: false,
-    enabled: true,
-    taskTypes: [],
-    taskStages: [],
-    parseLifecycleStages: ["TASK_PERSISTED"],
-  },
-  {
-    stageCode: "VERIFY_ARCHIVE",
-    stepCode: "VERIFY_ARCHIVE",
-    stageName: "校验归档",
-    stepName: "校验归档",
-    stageDescription: "一致性校验、结果确认、归档完成",
-    stepDescription: "一致性校验、结果确认、归档完成",
-    sortOrder: 5,
-    retryable: true,
-    skippable: false,
-    enabled: true,
-    taskTypes: ["EXPORT_RESULT"],
-    taskStages: [],
-    parseLifecycleStages: ["TASK_SUCCEEDED", "QUEUE_COMPLETED"],
-  },
-];
-
-const defaultStatusMappings = (): WorkflowStatusMappingDTO[] =>
-  [
-    ["WORKFLOW_TASK", "SUCCESS", "SUCCESS", "已完成"],
-    ["WORKFLOW_TASK", "FAILED", "FAILED", "失败"],
-    ["WORKFLOW_TASK", "CANCELED", "STOPPED", "已停止"],
-    ["WORKFLOW_TASK", "RUNNING", "RUNNING", "处理中"],
-    ["WORKFLOW_TASK", "RETRYING", "RUNNING", "处理中"],
-    ["PARSE_LIFECYCLE", "TASK_EXECUTION_STARTED", "RUNNING", "处理中"],
-    ["PARSE_LIFECYCLE", "TASK_CREATED", "RUNNING", "处理中"],
-    ["PARSE_LIFECYCLE", "TASK_DISPATCHED", "RUNNING", "处理中"],
-    ["PARSE_LIFECYCLE", "QUEUE_SUBSCRIBED", "RUNNING", "处理中"],
-    ["PARSE_LIFECYCLE", "TASK_RAW_PARSED", "SUCCESS", "已完成"],
-    ["PARSE_LIFECYCLE", "TASK_STANDARDIZED", "SUCCESS", "已完成"],
-    ["PARSE_LIFECYCLE", "TASK_PERSISTED", "SUCCESS", "已完成"],
-    ["PARSE_LIFECYCLE", "TASK_SUCCEEDED", "SUCCESS", "已完成"],
-    ["PARSE_LIFECYCLE", "QUEUE_COMPLETED", "SUCCESS", "已完成"],
-    ["PARSE_LIFECYCLE", "TASK_FAILED", "FAILED", "失败"],
-    ["PARSE_LIFECYCLE", "QUEUE_FAILED", "FAILED", "失败"],
-    ["PARSE_LIFECYCLE", "QUEUE_SKIPPED", "STOPPED", "已停止"],
-  ].map(([sourceType, sourceStatus, targetStatus, statusLabel]) => ({
-    sourceType,
-    sourceStatus,
-    targetStatus,
-    statusLabel,
-  }));
-
 const stageOptions = computed(() =>
   (form.stages || []).map((item) => ({
     label: item.stageName || item.stageCode || "",
@@ -367,15 +310,15 @@ const baseFormSchema = computed<ISchema>(() => ({
       type: "void",
       "x-component": "FormLayout",
       "x-component-props": {
-        layout: "vertical",
+        layout: "horizontal",
+        labelWidth: 128,
+        maxColumns: 2,
+        minColumns: 1,
       },
       properties: {
         grid: {
           type: "void",
           "x-component": "FormGrid",
-          "x-component-props": {
-            maxColumns: 2,
-          },
           properties: {
             workflowCode: {
               type: "string",
@@ -383,11 +326,17 @@ const baseFormSchema = computed<ISchema>(() => ({
               required: true,
               "x-decorator": "FormItem",
               "x-component": "Input",
+              "x-decorator-props": {
+                gridSpan: 1,
+              },
               "x-component-props": smallFieldProps,
             },
             workflowName: {
               type: "string",
               title: "工作流名称",
+              "x-decorator-props": {
+                gridSpan: 1,
+              },
               required: true,
               "x-decorator": "FormItem",
               "x-component": "Input",
@@ -396,6 +345,9 @@ const baseFormSchema = computed<ISchema>(() => ({
             businessType: {
               type: "string",
               title: "业务类型",
+              "x-decorator-props": {
+                gridSpan: 1,
+              },
               "x-decorator": "FormItem",
               "x-component": "Input",
               "x-component-props": smallFieldProps,
@@ -404,6 +356,9 @@ const baseFormSchema = computed<ISchema>(() => ({
               type: "string",
               title: "执行平台",
               enum: engineOptions,
+              "x-decorator-props": {
+                gridSpan: 1,
+              },
               "x-decorator": "FormItem",
               "x-component": "Select",
               "x-component-props": smallFieldProps,
@@ -411,6 +366,9 @@ const baseFormSchema = computed<ISchema>(() => ({
             versionNo: {
               type: "number",
               title: "版本号",
+              "x-decorator-props": {
+                gridSpan: 1,
+              },
               "x-decorator": "FormItem",
               "x-component": "NumberPicker",
               "x-component-props": {
@@ -421,6 +379,9 @@ const baseFormSchema = computed<ISchema>(() => ({
             parseFallbackStage: {
               type: "string",
               title: "解析事件默认阶段",
+              "x-decorator-props": {
+                gridSpan: 1,
+              },
               enum: stageOptions.value,
               "x-decorator": "FormItem",
               "x-component": "Select",
@@ -429,6 +390,9 @@ const baseFormSchema = computed<ISchema>(() => ({
             workflowFallbackStage: {
               type: "string",
               title: "工作流任务默认阶段",
+              "x-decorator-props": {
+                gridSpan: 1,
+              },
               enum: stageOptions.value,
               "x-decorator": "FormItem",
               "x-component": "Select",
@@ -608,6 +572,19 @@ const normalizeArrayValue = (value?: string[] | string) => {
     .filter(Boolean);
 };
 
+const normalizeLegacyFallbackStage = (value?: string) => {
+  if (!value) {
+    return value;
+  }
+  if (value === "DATA_PROCESSING") {
+    return "STANDARD_LANDING";
+  }
+  if (value === "RAW_DATA_EXTRACT") {
+    return "FILE_PARSE";
+  }
+  return value;
+};
+
 const normalizeWorkflowForm = () => {
   form.stages = (form.stages || []).map((stage, index) => {
     const sortOrder = stage.sortOrder || index + 1;
@@ -670,7 +647,9 @@ const removeStage = (index: number) => {
 };
 
 const removeStageRow = (row: WorkflowStageDTO) => {
-  const index = (form.stages || []).indexOf(row);
+  const index = (form.stages || []).findIndex(
+    (item) => item.stageCode === row.stageCode,
+  );
   if (index >= 0) {
     removeStage(index);
   }
@@ -695,11 +674,47 @@ const removeStatusMapping = (index: number) => {
 };
 
 const removeStatusMappingRow = (row: WorkflowStatusMappingDTO) => {
-  const index = (form.statusMappings || []).indexOf(row);
+  const index = (form.statusMappings || []).findIndex((item) =>
+    row.mappingId
+      ? item.mappingId === row.mappingId
+      : item.sourceType === row.sourceType &&
+        item.sourceStatus === row.sourceStatus &&
+        item.targetStatus === row.targetStatus,
+  );
   if (index >= 0) {
     removeStatusMapping(index);
   }
 };
+
+const sameWorkflowVersionOptions = computed(() =>
+  rows.value
+    .filter(
+      (item) =>
+        item.workflowCode &&
+        compareSourceRow.value?.workflowCode &&
+        item.workflowCode === compareSourceRow.value.workflowCode &&
+        item.workflowId !== compareSourceRow.value.workflowId,
+    )
+    .map((item) => ({
+      label: `${item.versionNo || ""} / ${item.workflowName || item.workflowCode || ""}`,
+      value: item.workflowId || "",
+    })),
+);
+
+const rollbackSourceOptions = computed(() =>
+  rows.value
+    .filter(
+      (item) =>
+        item.workflowCode &&
+        rollbackRow.value?.workflowCode &&
+        item.workflowCode === rollbackRow.value.workflowCode &&
+        item.workflowId !== rollbackRow.value.workflowId,
+    )
+    .map((item) => ({
+      label: `${item.versionNo || ""} / ${item.workflowName || item.workflowCode || ""}`,
+      value: item.workflowId || "",
+    })),
+);
 
 const resetForm = (data?: WorkflowDefinitionDTO) => {
   const next = data || {};
@@ -711,15 +726,15 @@ const resetForm = (data?: WorkflowDefinitionDTO) => {
     businessType: next.businessType || "VALUATION",
     engineType: next.engineType || "INTERNAL",
     parseFallbackStage: next.parseFallbackStage || "FILE_PARSE",
-    workflowFallbackStage: next.workflowFallbackStage || "DATA_PROCESSING",
+    workflowFallbackStage:
+      normalizeLegacyFallbackStage(next.workflowFallbackStage) ||
+      "STANDARD_LANDING",
     versionNo: next.versionNo || 1,
     enabled: next.enabled,
     status: next.status,
     description: next.description || "",
-    stages: next.stages?.length ? next.stages : defaultStages(),
-    statusMappings: next.statusMappings?.length
-      ? next.statusMappings
-      : defaultStatusMappings(),
+    stages: next.stages || [],
+    statusMappings: next.statusMappings || [],
     executorBindings: next.executorBindings?.length
       ? next.executorBindings
       : [
@@ -773,7 +788,6 @@ const loadData = async () => {
 
 const openCreate = () => {
   resetForm();
-  activeTab.value = "base";
   detailVisible.value = true;
 };
 
@@ -783,7 +797,6 @@ const openEdit = async (row: WorkflowDefinitionDTO) => {
   }
   detailLoading.value = true;
   detailVisible.value = true;
-  activeTab.value = "base";
   try {
     const res = await getWorkflowConfig(row.workflowId);
     resetForm(res.data);
@@ -795,15 +808,53 @@ const openEdit = async (row: WorkflowDefinitionDTO) => {
 const saveDraft = async () => {
   saving.value = true;
   try {
-    syncEngineFormToDefinition();
-    normalizeWorkflowForm();
-    const res = await saveWorkflowConfigDraft({ ...form });
+    const res = await saveDraftFromCurrentForm();
     resetForm(res.data);
+    detailVisible.value = false;
     message.success("草稿已保存");
     await loadData();
   } finally {
     saving.value = false;
   }
+};
+
+const importDraft = async () => {
+  saving.value = true;
+  try {
+    syncEditableTableDataFromInstances();
+    syncEngineFormToDefinition();
+    normalizeWorkflowForm();
+    const res = await importWorkflowConfig({ ...form });
+    resetForm(res.data);
+    detailVisible.value = false;
+    message.success("工作流配置已导入并保存草稿");
+    await loadData();
+  } finally {
+    saving.value = false;
+  }
+};
+
+const validateCurrent = async () => {
+  try {
+    syncEngineFormToDefinition();
+    normalizeWorkflowForm();
+    await validateWorkflowConfig({ ...form });
+    message.success("工作流配置校验通过");
+  } catch {
+    message.error("工作流配置校验失败");
+  }
+};
+
+const copyVersion = async (row: WorkflowDefinitionDTO) => {
+  if (!row.workflowId) {
+    message.warning("请先保存草稿");
+    return;
+  }
+  const res = await copyWorkflowConfigVersion(row.workflowId);
+  resetForm(res.data);
+  detailVisible.value = true;
+  message.success("已复制为新版本草稿");
+  await loadData();
 };
 
 const publish = async (row?: WorkflowDefinitionDTO) => {
@@ -812,11 +863,111 @@ const publish = async (row?: WorkflowDefinitionDTO) => {
     message.warning("请先保存草稿");
     return;
   }
-  syncEngineFormToDefinition();
-  const res = await publishWorkflowConfig(workflowId);
-  resetForm(res.data);
-  message.success("工作流配置已发布");
-  await loadData();
+  if (row?.workflowId) {
+    const res = await publishWorkflowConfig(row.workflowId);
+    message.success("工作流配置已发布");
+    await loadData();
+    if (form.workflowId === row.workflowId) {
+      resetForm(res.data);
+      detailVisible.value = false;
+    }
+    return;
+  }
+  saving.value = true;
+  try {
+    const draftRes = await saveDraftFromCurrentForm();
+    const draftWorkflowId = draftRes.data?.workflowId || workflowId;
+    const res = await publishWorkflowConfig(draftWorkflowId);
+    resetForm(res.data);
+    detailVisible.value = false;
+    message.success("工作流配置已保存并发布");
+    await loadData();
+  } finally {
+    saving.value = false;
+  }
+};
+
+const exportRow = async (row: WorkflowDefinitionDTO) => {
+  if (!row.workflowId) {
+    return;
+  }
+  const res = await exportWorkflowConfig(row.workflowId);
+  const payload = JSON.stringify(res.data || {}, null, 2);
+  const blob = new Blob([payload], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${row.workflowCode || "workflow"}-v${row.versionNo || 1}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  message.success("已导出工作流配置");
+};
+
+const openCompare = (row: WorkflowDefinitionDTO) => {
+  compareSourceRow.value = row;
+  compareTargetWorkflowId.value = "";
+  compareResult.value = null;
+  compareVisible.value = true;
+  const candidates = rows.value.filter(
+    (item) =>
+      item.workflowCode &&
+      row.workflowCode &&
+      item.workflowCode === row.workflowCode &&
+      item.workflowId !== row.workflowId,
+  );
+  compareTargetWorkflowId.value = candidates[0]?.workflowId || "";
+};
+
+const runCompare = async () => {
+  if (!compareSourceRow.value?.workflowId || !compareTargetWorkflowId.value) {
+    message.warning("请选择要对比的版本");
+    return;
+  }
+  compareLoading.value = true;
+  try {
+    const res = await compareWorkflowConfigs(
+      compareSourceRow.value.workflowId,
+      compareTargetWorkflowId.value,
+    );
+    compareResult.value = res.data || null;
+  } finally {
+    compareLoading.value = false;
+  }
+};
+
+const openRollback = (row: WorkflowDefinitionDTO) => {
+  rollbackRow.value = row;
+  rollbackSourceWorkflowId.value = "";
+  rollbackVisible.value = true;
+  const candidates = rows.value.filter(
+    (item) =>
+      item.workflowCode &&
+      row.workflowCode &&
+      item.workflowCode === row.workflowCode &&
+      item.workflowId !== row.workflowId,
+  );
+  rollbackSourceWorkflowId.value = candidates[0]?.workflowId || "";
+};
+
+const runRollback = async () => {
+  if (!rollbackRow.value?.workflowId || !rollbackSourceWorkflowId.value) {
+    message.warning("请选择回滚来源版本");
+    return;
+  }
+  rollbackLoading.value = true;
+  try {
+    await rollbackWorkflowConfigVersion(
+      rollbackRow.value.workflowId,
+      rollbackSourceWorkflowId.value,
+    );
+    message.success("已生成回滚草稿");
+    rollbackVisible.value = false;
+    await loadData();
+  } finally {
+    rollbackLoading.value = false;
+  }
 };
 
 const disable = async (row: WorkflowDefinitionDTO) => {
@@ -840,6 +991,24 @@ const handlePageChange = (paginationInfo: any) => {
   pagination.value.current = query.pageIndex;
   pagination.value.pageSize = query.pageSize;
   loadData();
+};
+
+const saveDraftFromCurrentForm = async () => {
+  syncEditableTableDataFromInstances();
+  syncEngineFormToDefinition();
+  normalizeWorkflowForm();
+  return saveWorkflowConfigDraft({ ...form });
+};
+
+const syncEditableTableDataFromInstances = () => {
+  const stageTableData =
+    workflowcConfTbRef.value?.getTableInstance?.()?.getTableData?.()
+      ?.tableData || [];
+  const mappingTableData =
+    mappingTableRef.value?.getTableInstance?.()?.getTableData?.()?.tableData ||
+    [];
+  form.stages = Array.isArray(stageTableData) ? stageTableData : [];
+  form.statusMappings = Array.isArray(mappingTableData) ? mappingTableData : [];
 };
 
 onMounted(loadData);
@@ -908,7 +1077,7 @@ onMounted(loadData);
       </template>
       <template #status="{ row }">
         <a-tag :color="row.enabled ? 'green' : 'default'">
-          {{ row.status || "DRAFT" }}
+          {{ resolveOptionLabel(statusOptions, row.status) || row.status || "草稿" }}
         </a-tag>
       </template>
       <template #action="{ row }">
@@ -916,8 +1085,20 @@ onMounted(loadData);
           <a-button type="link" size="small" @click="openEdit(row)"
             >编辑</a-button
           >
+          <a-button type="link" size="small" @click="copyVersion(row)"
+            >复制</a-button
+          >
           <a-button type="link" size="small" @click="publish(row)"
             >发布</a-button
+          >
+          <a-button type="link" size="small" @click="exportRow(row)"
+            >导出</a-button
+          >
+          <a-button type="link" size="small" @click="openCompare(row)"
+            >对比</a-button
+          >
+          <a-button type="link" size="small" @click="openRollback(row)"
+            >回滚</a-button
           >
           <a-button type="link" size="small" danger @click="disable(row)"
             >停用</a-button
@@ -926,15 +1107,18 @@ onMounted(loadData);
       </template>
     </YTable>
 
-    <a-drawer
+    <a-modal
       v-model:open="detailVisible"
-      width="920"
+      :width="'80vw'"
       :title="form.workflowName || '工作流配置'"
-      class="workflow-config-drawer"
+      centered
+      class="workflow-config-modal"
+      wrap-class-name="workflow-config-modal-wrap"
     >
       <a-spin :spinning="detailLoading">
-        <a-tabs v-model:activeKey="activeTab">
-          <a-tab-pane key="base" tab="基础信息">
+        <div class="workflow-config-modal-body">
+          <section class="workflow-config-section">
+            <div class="workflow-config-section__title">基础信息</div>
             <YssFormily
               v-model="form"
               :schema="baseFormSchema"
@@ -950,9 +1134,10 @@ onMounted(loadData);
                 />
               </template>
             </YssFormily>
-          </a-tab-pane>
+          </section>
 
-          <a-tab-pane key="stages" tab="阶段编排">
+          <section class="workflow-config-section">
+            <div class="workflow-config-section__title">阶段编排</div>
             <YssFormily
               v-model="form"
               :schema="stageFormSchema"
@@ -963,6 +1148,7 @@ onMounted(loadData);
                 <div class="workflow-config-edit-table">
                   <YTable
                     :columns="stageTableColumns"
+                    ref="workflowcConfTbRef"
                     :data="form.stages"
                     size="small"
                     :pageable="false"
@@ -994,16 +1180,17 @@ onMounted(loadData);
                     </template>
                   </YTable>
                   <div class="workflow-config-edit-table__actions">
-                    <a-button type="primary" size="small" @click="addStage"
-                      >新增阶段</a-button
-                    >
+                    <a-button type="primary" size="small" @click="addStage">
+                      新增阶段
+                    </a-button>
                   </div>
                 </div>
               </template>
             </YssFormily>
-          </a-tab-pane>
+          </section>
 
-          <a-tab-pane key="mapping" tab="事件映射">
+          <section class="workflow-config-section">
+            <div class="workflow-config-section__title">事件映射</div>
             <YssFormily
               v-model="form"
               :schema="mappingFormSchema"
@@ -1032,6 +1219,7 @@ onMounted(loadData);
                       isEsc: true,
                     }"
                     :toolbar-config="{ custom: false }"
+                    ref="mappingTableRef"
                   >
                     <template #action="{ row }">
                       <a-button
@@ -1056,9 +1244,10 @@ onMounted(loadData);
                 </div>
               </template>
             </YssFormily>
-          </a-tab-pane>
+          </section>
 
-          <a-tab-pane key="engine" tab="平台适配">
+          <section class="workflow-config-section">
+            <div class="workflow-config-section__title">平台适配</div>
             <YssFormily
               v-model="engineForm"
               class="workflow-engine-form"
@@ -1075,13 +1264,17 @@ onMounted(loadData);
                 />
               </template>
             </YssFormily>
-          </a-tab-pane>
-        </a-tabs>
+          </section>
+        </div>
       </a-spin>
 
       <template #footer>
         <a-space>
           <a-button size="small" @click="detailVisible = false">关闭</a-button>
+          <a-button size="small" @click="validateCurrent">校验</a-button>
+          <a-button size="small" :loading="saving" @click="importDraft"
+            >导入</a-button
+          >
           <a-button size="small" :loading="saving" @click="saveDraft"
             >保存草稿</a-button
           >
@@ -1094,6 +1287,60 @@ onMounted(loadData);
           >
         </a-space>
       </template>
-    </a-drawer>
+    </a-modal>
+
+    <a-modal
+      v-model:open="compareVisible"
+      :width="'72vw'"
+      title="版本对比"
+      centered
+      class="workflow-config-modal"
+      wrap-class-name="workflow-config-modal-wrap"
+      @ok="runCompare"
+      :confirm-loading="compareLoading"
+    >
+      <a-space direction="vertical" style="width: 100%">
+        <a-select
+          v-model:value="compareTargetWorkflowId"
+          size="small"
+          allow-clear
+          placeholder="选择对比版本"
+          :options="sameWorkflowVersionOptions"
+        />
+        <YTable
+          v-if="compareResult?.items?.length"
+          size="small"
+          :columns="diffColumns"
+          :data="compareResult.items"
+          :pageable="false"
+          :toolbar-config="{ custom: false }"
+        />
+        <a-empty v-else description="请选择版本并点击对比" />
+      </a-space>
+    </a-modal>
+
+    <a-modal
+      v-model:open="rollbackVisible"
+      :width="'56vw'"
+      title="回滚为草稿"
+      centered
+      class="workflow-config-modal"
+      wrap-class-name="workflow-config-modal-wrap"
+      @ok="runRollback"
+      :confirm-loading="rollbackLoading"
+    >
+      <a-space direction="vertical" style="width: 100%">
+        <a-select
+          v-model:value="rollbackSourceWorkflowId"
+          size="small"
+          allow-clear
+          placeholder="选择回滚来源版本"
+          :options="rollbackSourceOptions"
+        />
+        <div class="workflow-config-hint">
+          选择的版本会复制为当前工作流的新草稿版本，不会直接覆盖已有发布版本。
+        </div>
+      </a-space>
+    </a-modal>
   </div>
 </template>

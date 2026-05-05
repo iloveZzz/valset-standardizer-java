@@ -3,9 +3,7 @@ import { computed, h } from "vue";
 import { Modal } from "ant-design-vue";
 import {
   ExclamationCircleOutlined,
-  PauseCircleOutlined,
   ReloadOutlined,
-  PlayCircleOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
 import { YButton, YCard, YTable } from "@yss-ui/components";
@@ -63,12 +61,6 @@ const actionConfig = useTableActionConfig({
       clickFn: ({ row }: any) => page.openDetailDrawer(row),
     },
     {
-      text: "生命周期",
-      key: "lifecycle",
-      type: "link",
-      clickFn: ({ row }: any) => page.openLifecyclePage(row),
-    },
-    {
       text: "补生成",
       key: "generate",
       type: "link",
@@ -87,7 +79,7 @@ const actionConfig = useTableActionConfig({
 
 const summaryDescription = computed(
   () =>
-    `当前筛选：${page.currentFilterSummary}。查询总数 ${page.total} 条；统计卡片基于当前页数据：待订阅 ${page.pendingCount} 条，解析中 ${page.parsingCount} 条，已解析 ${page.parsedCount} 条，解析失败 ${page.failedCount} 条；实时同步状态：${page.realtimeStatusText}。`,
+    `当前筛选：${page.currentFilterSummary}。查询总数 ${page.total} 条；统计卡片基于当前页数据：待订阅 ${page.pendingCount} 条，解析中 ${page.parsingCount} 条，已解析 ${page.parsedCount} 条，解析失败 ${page.failedCount} 条。`,
 );
 </script>
 
@@ -104,7 +96,6 @@ const summaryDescription = computed(
             <span class="workspace-pill">自动生成于投递成功之后</span>
             <span class="workspace-pill">支持手工补漏和强制重建</span>
             <span class="workspace-pill">解析状态独立管理</span>
-            <span class="workspace-pill">实时同步：{{ page.realtimeStatusText }}</span>
           </div>
         </div>
         <div class="workspace-header-actions">
@@ -120,13 +111,6 @@ const summaryDescription = computed(
             <YButton :loading="page.loading" @click="page.runQuery">
               <template #icon><ReloadOutlined /></template>
               刷新列表
-            </YButton>
-            <YButton @click="page.toggleRealtimeSync">
-              <template #icon>
-                <PauseCircleOutlined v-if="!page.realtimePaused" />
-                <PlayCircleOutlined v-else />
-              </template>
-              {{ page.realtimePaused ? "继续实时同步" : "暂停实时同步" }}
             </YButton>
           </div>
         </div>
@@ -159,15 +143,6 @@ const summaryDescription = computed(
             当前页可通过重试或补漏重新生成
           </div>
         </div>
-        <div class="parse-queue-stat-card parse-queue-stat-card--realtime">
-          <div class="parse-queue-stat-label">实时同步状态</div>
-          <div class="parse-queue-stat-value parse-queue-stat-value--status">
-            {{ page.realtimeStatusText }}
-          </div>
-          <div class="parse-queue-stat-desc">
-            后端生命周期事件到达后自动同步当前筛选下的列表数据
-          </div>
-        </div>
       </div>
     </YCard>
 
@@ -190,7 +165,7 @@ const summaryDescription = computed(
           <WorkspaceTableToolbar
             title="待解析任务列表"
             :description="summaryDescription"
-            :meta="`当前筛选：${page.currentFilterSummary} · 当前页 ${page.tableData.length} 条 · ${page.realtimeStatusText}`"
+            :meta="`当前筛选：${page.currentFilterSummary} · 当前页 ${page.tableData.length} 条`"
           >
             <a-form layout="inline" class="workspace-table-toolbar-form">
               <a-form-item label="分拣ID">
@@ -317,12 +292,6 @@ const summaryDescription = computed(
         </div>
 
         <div class="parse-queue-detail-actions">
-          <YButton
-            type="primary"
-            @click="page.openLifecyclePage(page.selectedRow)"
-          >
-            查看生命周期
-          </YButton>
           <YButton
             :loading="page.loading"
             :disabled="

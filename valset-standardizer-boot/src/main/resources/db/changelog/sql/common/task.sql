@@ -165,6 +165,42 @@ ALTER TABLE t_outsourced_data_task_step
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_outsourced_data_task_step' AND index_name = 'idx_outsourced_task_step_current'
 CREATE INDEX idx_outsourced_task_step_current ON t_outsourced_data_task_step (batch_id, stage, current_flag);
 
+--changeset codex:20260505-01-mysql-outsourced-task-query-indexes dbms:mysql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_outsourced_data_task_batch'
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_outsourced_data_task_batch' AND index_name = 'idx_outsourced_task_batch_started'
+CREATE INDEX idx_outsourced_task_batch_started ON t_outsourced_data_task_batch (started_at, batch_id);
+
+--changeset codex:20260505-02-mysql-outsourced-task-file-index dbms:mysql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_outsourced_data_task_batch'
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_outsourced_data_task_batch' AND index_name = 'idx_outsourced_task_batch_file_id'
+CREATE INDEX idx_outsourced_task_batch_file_id ON t_outsourced_data_task_batch (file_id);
+
+--changeset codex:20260505-03-mysql-outsourced-task-step-stage-batch-index dbms:mysql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 't_outsourced_data_task_step'
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 't_outsourced_data_task_step' AND index_name = 'idx_outsourced_task_step_stage_batch'
+CREATE INDEX idx_outsourced_task_step_stage_batch ON t_outsourced_data_task_step (stage, batch_id);
+
+--changeset codex:20260505-01-postgres-outsourced-task-query-indexes dbms:postgresql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 't_outsourced_data_task_batch'
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 't_outsourced_data_task_batch' AND indexname = 'idx_outsourced_task_batch_started'
+CREATE INDEX idx_outsourced_task_batch_started ON t_outsourced_data_task_batch (started_at, batch_id);
+
+--changeset codex:20260505-02-postgres-outsourced-task-file-index dbms:postgresql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 't_outsourced_data_task_batch'
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 't_outsourced_data_task_batch' AND indexname = 'idx_outsourced_task_batch_file_id'
+CREATE INDEX idx_outsourced_task_batch_file_id ON t_outsourced_data_task_batch (file_id);
+
+--changeset codex:20260505-03-postgres-outsourced-task-step-stage-batch-index dbms:postgresql
+--preconditions onFail:MARK_RAN onError:HALT
+--precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 't_outsourced_data_task_step'
+--precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE schemaname = 'public' AND tablename = 't_outsourced_data_task_step' AND indexname = 'idx_outsourced_task_step_stage_batch'
+CREATE INDEX idx_outsourced_task_step_stage_batch ON t_outsourced_data_task_step (stage, batch_id);
+
 --changeset codex:20260501-01-postgres-outsourced-task-step-current-flag dbms:postgresql
 --preconditions onFail:MARK_RAN onError:HALT
 --precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 't_outsourced_data_task_step'

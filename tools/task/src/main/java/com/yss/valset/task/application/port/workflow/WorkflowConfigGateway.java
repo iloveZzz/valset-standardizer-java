@@ -17,6 +17,8 @@ public interface WorkflowConfigGateway {
 
     Optional<WorkflowDefinitionDTO> findActiveByCode(String workflowCode);
 
+    Optional<WorkflowDefinitionDTO> findLatestByCode(String workflowCode);
+
     WorkflowDefinitionDTO save(WorkflowDefinitionDTO definition);
 
     void disableOtherVersions(String workflowCode, String keepWorkflowId);

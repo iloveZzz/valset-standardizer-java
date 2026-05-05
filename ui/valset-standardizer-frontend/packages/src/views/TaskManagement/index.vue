@@ -4,11 +4,10 @@ import { useRoute } from "vue-router";
 import "./index.less";
 import OutsourcedDataTaskPage from "../OutsourcedDataTask/index.vue";
 import HoldingPenetrationTaskPage from "../HoldingPenetrationTask/index.vue";
-import WorkflowConfigPage from "../WorkflowConfig/index.vue";
 
 defineOptions({ name: "TaskManagementPage" });
 
-type TaskSceneKey = "valuation" | "holding" | "workflow";
+type TaskSceneKey = "valuation" | "holding";
 
 const sceneOptions: Array<{
   key: TaskSceneKey;
@@ -32,13 +31,6 @@ const sceneOptions: Array<{
     path: "/holding-penetration-tasks",
     component: HoldingPenetrationTaskPage,
   },
-  {
-    key: "workflow",
-    label: "工作流配置",
-    description: "维护任务阶段、状态归类和未来调度平台适配参数。",
-    path: "/workflow-configs",
-    component: WorkflowConfigPage,
-  },
 ];
 
 const route = useRoute();
@@ -50,12 +42,6 @@ const resolveSceneKey = (): TaskSceneKey => {
   }
   if (scene === "valuation") {
     return "valuation";
-  }
-  if (scene === "workflow") {
-    return "workflow";
-  }
-  if (route.path.includes("workflow-configs")) {
-    return "workflow";
   }
   return route.path.includes("holding-penetration-tasks")
     ? "holding"

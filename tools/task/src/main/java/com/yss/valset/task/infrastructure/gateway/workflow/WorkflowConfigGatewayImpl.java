@@ -110,6 +110,21 @@ public class WorkflowConfigGatewayImpl implements WorkflowConfigGateway {
     }
 
     @Override
+    public Optional<WorkflowDefinitionDTO> findLatestByCode(String workflowCode) {
+        if (!StringUtils.hasText(workflowCode)) {
+            return Optional.empty();
+        }
+        WorkflowDefinitionPO po = definitionRepository.selectOne(
+                Wrappers.lambdaQuery(WorkflowDefinitionPO.class)
+                        .eq(WorkflowDefinitionPO::getWorkflowCode, workflowCode)
+                        .orderByDesc(WorkflowDefinitionPO::getVersionNo)
+                        .orderByDesc(WorkflowDefinitionPO::getUpdatedAt)
+                        .orderByDesc(WorkflowDefinitionPO::getWorkflowId)
+                        .last("limit 1"));
+        return Optional.ofNullable(po).map(this::toDefinitionDetailDTO);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public WorkflowDefinitionDTO save(WorkflowDefinitionDTO definition) {
         LocalDateTime now = LocalDateTime.now();

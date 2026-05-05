@@ -290,3 +290,110 @@ ON CONFLICT (mapping_id) DO NOTHING;
 INSERT INTO t_workflow_executor_binding (binding_id, workflow_id, stage_id, engine_type, external_ref, config_json, enabled, created_at, updated_at)
 SELECT 'wfeb_internal_default', 'wf_valuation_parse_v1', NULL, 'INTERNAL', 'DefaultTaskDispatcher', '{}', TRUE, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM t_workflow_executor_binding WHERE binding_id = 'wfeb_internal_default');
+
+--changeset codex:20260505-02-mysql-workflow-fallback-stage-fix dbms:mysql
+UPDATE t_workflow_definition
+SET workflow_fallback_stage = 'STANDARD_LANDING',
+    updated_at = NOW()
+WHERE workflow_code = 'VALUATION_PARSE'
+  AND workflow_fallback_stage = 'DATA_PROCESSING';
+
+--changeset codex:20260505-02-postgres-workflow-fallback-stage-fix dbms:postgresql
+UPDATE t_workflow_definition
+SET workflow_fallback_stage = 'STANDARD_LANDING',
+    updated_at = NOW()
+WHERE workflow_code = 'VALUATION_PARSE'
+  AND workflow_fallback_stage = 'DATA_PROCESSING';
+
+--changeset codex:20260505-01-mysql-workflow-config-audit dbms:mysql
+CREATE TABLE IF NOT EXISTS t_workflow_config_audit (
+    audit_id VARCHAR(64) PRIMARY KEY,
+    workflow_id VARCHAR(64) NOT NULL,
+    workflow_code VARCHAR(128) NOT NULL,
+    version_no INT NOT NULL,
+    action_type VARCHAR(64) NOT NULL,
+    action_result VARCHAR(32) NOT NULL,
+    operator_name VARCHAR(128),
+    operator_id VARCHAR(64),
+    before_json TEXT,
+    after_json TEXT,
+    remark VARCHAR(1024),
+    created_at DATETIME,
+    KEY idx_workflow_config_audit_workflow (workflow_code, version_no),
+    KEY idx_workflow_config_audit_action (action_type, action_result)
+);
+
+--changeset codex:20260505-01-postgres-workflow-config-audit dbms:postgresql
+CREATE TABLE IF NOT EXISTS t_workflow_config_audit (
+    audit_id VARCHAR(64) PRIMARY KEY,
+    workflow_id VARCHAR(64) NOT NULL,
+    workflow_code VARCHAR(128) NOT NULL,
+    version_no INT NOT NULL,
+    action_type VARCHAR(64) NOT NULL,
+    action_result VARCHAR(32) NOT NULL,
+    operator_name VARCHAR(128),
+    operator_id VARCHAR(64),
+    before_json TEXT,
+    after_json TEXT,
+    remark VARCHAR(1024),
+    created_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_config_audit_workflow ON t_workflow_config_audit (workflow_code, version_no);
+CREATE INDEX IF NOT EXISTS idx_workflow_config_audit_action ON t_workflow_config_audit (action_type, action_result);
+
+--changeset codex:20260505-03-mysql-workflow-runtime-param dbms:mysql
+CREATE TABLE IF NOT EXISTS t_workflow_runtime_param (
+    runtime_param_id VARCHAR(64) PRIMARY KEY,
+    param_namespace VARCHAR(128) NOT NULL,
+    skip_excel_style_parsing TINYINT(1) NOT NULL DEFAULT 0,
+    enable_match_process TINYINT(1) NOT NULL DEFAULT 1,
+    persist_standardized_dwd_details TINYINT(1) NOT NULL DEFAULT 0,
+    description VARCHAR(1024),
+    created_at DATETIME,
+    updated_at DATETIME,
+    UNIQUE KEY uk_workflow_runtime_param_namespace (param_namespace)
+);
+
+INSERT INTO t_workflow_runtime_param (
+    runtime_param_id,
+    param_namespace,
+    skip_excel_style_parsing,
+    enable_match_process,
+    persist_standardized_dwd_details,
+    description,
+    created_at,
+    updated_at
+)
+SELECT 'wfrp_subject_match_workflow', 'subject.match.workflow', 0, 0, 0, '估值解析流程运行参数', NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_workflow_runtime_param WHERE param_namespace = 'subject.match.workflow'
+);
+
+--changeset codex:20260505-03-postgres-workflow-runtime-param dbms:postgresql
+CREATE TABLE IF NOT EXISTS t_workflow_runtime_param (
+    runtime_param_id VARCHAR(64) PRIMARY KEY,
+    param_namespace VARCHAR(128) NOT NULL,
+    skip_excel_style_parsing BOOLEAN NOT NULL DEFAULT FALSE,
+    enable_match_process BOOLEAN NOT NULL DEFAULT TRUE,
+    persist_standardized_dwd_details BOOLEAN NOT NULL DEFAULT FALSE,
+    description VARCHAR(1024),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uk_workflow_runtime_param_namespace UNIQUE (param_namespace)
+);
+
+INSERT INTO t_workflow_runtime_param (
+    runtime_param_id,
+    param_namespace,
+    skip_excel_style_parsing,
+    enable_match_process,
+    persist_standardized_dwd_details,
+    description,
+    created_at,
+    updated_at
+)
+SELECT 'wfrp_subject_match_workflow', 'subject.match.workflow', FALSE, FALSE, FALSE, '估值解析流程运行参数', NOW(), NOW()
+WHERE NOT EXISTS (
+    SELECT 1 FROM t_workflow_runtime_param WHERE param_namespace = 'subject.match.workflow'
+);

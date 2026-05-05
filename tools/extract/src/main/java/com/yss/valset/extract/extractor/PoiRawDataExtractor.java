@@ -13,6 +13,7 @@ import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.valset.extract.repository.mapper.ValuationSheetStyleMapper;
 import com.yss.valset.extract.support.ExcelUniverSnapshotSupport;
+import com.yss.valset.application.service.workflow.WorkflowRuntimeParamService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.fesod.sheet.FesodSheet;
@@ -23,7 +24,6 @@ import org.apache.fesod.sheet.metadata.data.ReadCellData;
 import org.apache.fesod.sheet.read.listener.ReadListener;
 import org.apache.fesod.sheet.read.metadata.holder.ReadRowHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.io.IOException;
@@ -57,8 +57,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
     private final ValuationFileDataMapper valuationFileDataMapper;
     private final ObjectMapper objectMapper;
     private final ValuationSheetStyleMapper valuationSheetStyleMapper;
-    @Value("${subject.match.workflow.skip-excel-style-parsing:false}")
-    private boolean skipExcelStyleParsing;
+    private final WorkflowRuntimeParamService workflowRuntimeParamService;
 
     @Override
     public int extract(DataSourceConfig config, Long taskId, Long fileId) {
@@ -74,9 +73,9 @@ public class PoiRawDataExtractor implements RawDataExtractor {
         long startedAt = System.currentTimeMillis();
         try {
             if (SpreadsheetXmlSupport.isSpreadsheetXml(filePath)) {
-                try (ExcelUniverSnapshotSupport snapshotSupport = skipExcelStyleParsing ? null : new ExcelUniverSnapshotSupport(filePath)) {
+                try (ExcelUniverSnapshotSupport snapshotSupport = workflowRuntimeParamService.skipExcelStyleParsing() ? null : new ExcelUniverSnapshotSupport(filePath)) {
                     SpreadsheetXmlSupport.SpreadsheetXmlWorkbook workbook = SpreadsheetXmlSupport.read(filePath);
-                    FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId, snapshotSupport, skipExcelStyleParsing);
+                    FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId, snapshotSupport, workflowRuntimeParamService.skipExcelStyleParsing());
                     for (SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet : workbook.sheets()) {
                         List<List<String>> sheetRows = sheet.rows();
                         for (int rowIndex = 0; rowIndex < sheetRows.size(); rowIndex++) {
@@ -99,8 +98,8 @@ public class PoiRawDataExtractor implements RawDataExtractor {
             throw exception;
         }
 
-        try (ExcelUniverSnapshotSupport snapshotSupport = skipExcelStyleParsing ? null : new ExcelUniverSnapshotSupport(filePath)) {
-            FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId, snapshotSupport, skipExcelStyleParsing);
+        try (ExcelUniverSnapshotSupport snapshotSupport = workflowRuntimeParamService.skipExcelStyleParsing() ? null : new ExcelUniverSnapshotSupport(filePath)) {
+            FesodRawRowListener listener = new FesodRawRowListener(taskId, fileId, snapshotSupport, workflowRuntimeParamService.skipExcelStyleParsing());
             FesodSheet.read(filePath.toString(), listener)
                     .headRowNumber(0)
                     .extraRead(CellExtraTypeEnum.MERGE)

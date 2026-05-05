@@ -197,7 +197,8 @@ const statusLabelMap = Object.fromEntries(
 const statusOptions = outsourcedDataTaskStatusCatalog;
 
 const formatStepLabel = (stage: string) =>
-  page.stepSummaries.find((item) => item.stage === stage)?.stepName || stage;
+  page.stepSummaries.find((item) => item.step === stage || item.stage === stage)
+    ?.stepName || stage;
 
 const formatStatusLabel = (status: string) => statusLabelMap[status] || status;
 
@@ -417,11 +418,11 @@ const taskMetricCards = computed(() => [
         <div class="outsourced-task-stage-chain">
           <button
             v-for="(item, index) in page.stepSummaries"
-            :key="item.stage"
+            :key="item.step"
             size="small"
             class="outsourced-task-stage"
             :class="{
-              'is-active': page.query.step === item.stage,
+              'is-active': page.query.step === item.step,
               'is-complete': isCompletedStage(item),
               'is-abnormal': isAbnormalStage(item),
             }"

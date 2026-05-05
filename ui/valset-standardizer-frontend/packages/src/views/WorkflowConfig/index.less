@@ -38,6 +38,24 @@
   width: 100%;
 }
 
+.workflow-config-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.workflow-config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workflow-config-section__title {
+  color: #182033;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .workflow-config-edit-table__actions {
   display: flex;
   justify-content: flex-end;
@@ -45,11 +63,25 @@
 }
 
 .workflow-engine-form {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
-.workflow-config-drawer {
-  .ant-drawer-body {
+.workflow-config-modal-wrap {
+  .workflow-config-modal {
+    max-width: calc(100vw - 32px);
+  }
+
+  .ant-modal-content {
+    display: flex;
+    max-height: 80vh;
+    height: 80vh;
+    flex-direction: column;
+  }
+
+  .ant-modal-body {
+    flex: 1;
+    min-height: 0;
     padding-top: 12px;
+    overflow: auto;
   }
 }

@@ -1,5 +1,6 @@
 package com.yss.valset.task.infrastructure.gateway;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,9 +16,11 @@ import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
 import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
-import com.yss.valset.task.application.config.OutsourcedDataTaskStageCatalog;
+import com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskLogDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskStageSummaryDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.port.OutsourcedDataTaskGateway;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStage;
@@ -43,6 +46,7 @@ import java.util.Comparator;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -72,10 +76,10 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
 
     private final ValsetFileInfoGateway valsetFileInfoGateway;
 
-    private OutsourcedDataTaskStageCatalog stageCatalog = new OutsourcedDataTaskStageCatalog();
+    private WorkflowRuntimeCatalog stageCatalog = new WorkflowRuntimeCatalog();
 
     @org.springframework.beans.factory.annotation.Autowired
-    public void setStageCatalog(OutsourcedDataTaskStageCatalog stageCatalog) {
+    public void setStageCatalog(WorkflowRuntimeCatalog stageCatalog) {
         if (stageCatalog != null) {
             this.stageCatalog = stageCatalog;
         }
@@ -95,6 +99,70 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 ? List.of()
                 : page.getRecords().stream().map(this::toBatchDTO).toList();
         return PageResult.of(records, page.getTotal(), page.getSize(), page.getCurrent());
+    }
+
+    @Override
+    public OutsourcedDataTaskSummaryDTO summary(OutsourcedDataTaskQueryCommand query) {
+        List<String> batchIds = batchRepository.selectMaps(
+                        buildBatchSummaryQuery(query)
+                                .select("batch_id")
+                ).stream()
+                .map(item -> textValue(mapValue(item, "batch_id")))
+                .filter(StringUtils::hasText)
+                .toList();
+        if (batchIds.isEmpty()) {
+            OutsourcedDataTaskSummaryDTO summary = new OutsourcedDataTaskSummaryDTO();
+            summary.setStepSummaries(stageCatalog.stageSequence().stream()
+                    .map(stage -> toStageSummary(stage.name(), Map.of()))
+                    .toList());
+            summary.setStageCatalog(summary.getStepSummaries());
+            fillWorkflowMetadata(summary);
+            return summary;
+        }
+        List<Map<String, Object>> statusCounts = batchRepository.selectMaps(
+                new QueryWrapper<OutsourcedDataTaskBatchPO>()
+                        .select("status", "COUNT(1) AS total_count")
+                        .in("batch_id", batchIds)
+                        .groupBy("status")
+        );
+        List<Map<String, Object>> stageCounts = stepRepository.selectMaps(
+                new QueryWrapper<OutsourcedDataTaskStepPO>()
+                        .select("stage", "status", "COUNT(1) AS total_count")
+                        .eq("current_flag", true)
+                        .in("batch_id", batchIds)
+                        .groupBy("stage", "status")
+        );
+        Map<String, Long> statusCountMap = statusCounts.stream()
+                .collect(Collectors.toMap(
+                        item -> textValue(mapValue(item, "status")),
+                        item -> longValue(mapValue(item, "total_count")),
+                        Long::sum,
+                        LinkedHashMap::new
+                ));
+        Map<String, Map<String, Long>> stageStatusCountMap = stageCounts.stream()
+                .collect(Collectors.groupingBy(
+                        item -> displayStageName(textValue(mapValue(item, "stage"))),
+                        LinkedHashMap::new,
+                        Collectors.toMap(
+                                item -> textValue(mapValue(item, "status")),
+                                item -> longValue(mapValue(item, "total_count")),
+                                Long::sum,
+                                LinkedHashMap::new
+                        )
+                ));
+        OutsourcedDataTaskSummaryDTO summary = new OutsourcedDataTaskSummaryDTO();
+        long totalCount = statusCountMap.values().stream().mapToLong(Long::longValue).sum();
+        summary.setTotalCount(totalCount);
+        summary.setRunningCount(statusCountMap.getOrDefault(OutsourcedDataTaskStatus.RUNNING.name(), 0L));
+        summary.setSuccessCount(statusCountMap.getOrDefault(OutsourcedDataTaskStatus.SUCCESS.name(), 0L));
+        summary.setFailedCount(statusCountMap.getOrDefault(OutsourcedDataTaskStatus.FAILED.name(), 0L)
+                + statusCountMap.getOrDefault(OutsourcedDataTaskStatus.BLOCKED.name(), 0L));
+        summary.setStepSummaries(stageCatalog.stageSequence().stream()
+                .map(stage -> toStageSummary(stage.name(), stageStatusCountMap.getOrDefault(stage.name(), Map.of())))
+                .toList());
+        summary.setStageCatalog(summary.getStepSummaries());
+        fillWorkflowMetadata(summary);
+        return summary;
     }
 
     @Override
@@ -237,11 +305,85 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         return wrapper;
     }
 
+    private QueryWrapper<OutsourcedDataTaskBatchPO> buildBatchSummaryQuery(OutsourcedDataTaskQueryCommand query) {
+        QueryWrapper<OutsourcedDataTaskBatchPO> wrapper = Wrappers.query();
+        if (query == null) {
+            applyCurrentBatchFilter(wrapper);
+            return wrapper;
+        }
+        LocalDate taskDate = parseDate(query.getTaskDate());
+        LocalDate businessDate = parseDate(query.getBusinessDate());
+        wrapper.eq(StringUtils.hasText(query.getBatchId()), "batch_id", trim(query.getBatchId()))
+                .ge(taskDate != null, "started_at", taskDate != null ? taskDate.atStartOfDay() : null)
+                .lt(taskDate != null, "started_at", taskDate != null ? taskDate.plusDays(1).atStartOfDay() : null)
+                .eq(businessDate != null, "business_date", businessDate)
+                .like(StringUtils.hasText(query.getManagerName()), "manager_name", trim(query.getManagerName()))
+                .and(StringUtils.hasText(query.getProductKeyword()), criteria -> criteria
+                        .like("product_code", trim(query.getProductKeyword()))
+                        .or()
+                        .like("product_name", trim(query.getProductKeyword())))
+                .eq(StringUtils.hasText(query.getStatus()), "status", trim(query.getStatus()))
+                .eq(StringUtils.hasText(query.getSourceType()), "source_type", trim(query.getSourceType()))
+                .and(StringUtils.hasText(query.getErrorType()), criteria -> criteria
+                        .like("last_error_code", trim(query.getErrorType()))
+                        .or()
+                        .like("last_error_message", trim(query.getErrorType())));
+        if (StringUtils.hasText(query.getStage())) {
+            List<String> stageBatchIds = resolveBatchIdsByStage(query.getStage());
+            if (stageBatchIds.isEmpty()) {
+                return wrapper.eq("batch_id", "__NO_MATCH__");
+            }
+            wrapper.in("batch_id", stageBatchIds);
+        }
+        if (!Boolean.TRUE.equals(query.getIncludeHistory())) {
+            applyCurrentBatchFilter(wrapper);
+        }
+        return wrapper;
+    }
+
     private void applyCurrentBatchFilter(LambdaQueryWrapper<OutsourcedDataTaskBatchPO> wrapper) {
         wrapper.and(criteria -> criteria
                 .likeRight(OutsourcedDataTaskBatchPO::getBatchId, "FILE-")
                 .or()
                 .isNotNull(OutsourcedDataTaskBatchPO::getFileId));
+    }
+
+    private void applyCurrentBatchFilter(QueryWrapper<OutsourcedDataTaskBatchPO> wrapper) {
+        wrapper.and(criteria -> criteria
+                .likeRight("batch_id", "FILE-")
+                .or()
+                .isNotNull("file_id"));
+    }
+
+    private OutsourcedDataTaskStageSummaryDTO toStageSummary(String stage, Map<String, Long> statusCounts) {
+        OutsourcedDataTaskStageSummaryDTO summary = new OutsourcedDataTaskStageSummaryDTO();
+        summary.setStage(stage);
+        summary.setStep(stage);
+        summary.setStageName(stageCatalog.stageLabel(stage));
+        summary.setStepName(stageCatalog.stageLabel(stage));
+        summary.setStageDescription(stageCatalog.stageDescription(stage));
+        summary.setStepDescription(stageCatalog.stageDescription(stage));
+        summary.setTotalCount(statusCounts.values().stream().mapToLong(Long::longValue).sum());
+        summary.setRunningCount(statusCounts.getOrDefault(OutsourcedDataTaskStatus.RUNNING.name(), 0L));
+        summary.setFailedCount(statusCounts.getOrDefault(OutsourcedDataTaskStatus.FAILED.name(), 0L)
+                + statusCounts.getOrDefault(OutsourcedDataTaskStatus.BLOCKED.name(), 0L));
+        summary.setPendingCount(statusCounts.getOrDefault(OutsourcedDataTaskStatus.PENDING.name(), 0L));
+        return summary;
+    }
+
+    private void fillWorkflowMetadata(OutsourcedDataTaskSummaryDTO summary) {
+        if (summary == null) {
+            return;
+        }
+        stageCatalog.activeWorkflowDefinition().ifPresentOrElse(definition -> {
+            summary.setWorkflowCode(definition.getWorkflowCode());
+            summary.setWorkflowId(definition.getWorkflowId());
+            summary.setVersionNo(definition.getVersionNo());
+        }, () -> {
+            summary.setWorkflowCode(stageCatalog.activeWorkflowCode());
+            summary.setWorkflowId(stageCatalog.activeWorkflowId());
+            summary.setVersionNo(stageCatalog.activeWorkflowVersionNo());
+        });
     }
 
     private OutsourcedDataTaskBatchDTO toBatchDTO(OutsourcedDataTaskBatchPO po) {
@@ -906,6 +1048,44 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         return stage;
     }
 
+    private static String displayStageName(String stage) {
+        OutsourcedDataTaskStage displayStage = displayStage(enumStage(stage));
+        return displayStage == null ? stage : displayStage.name();
+    }
+
+    private static Object mapValue(Map<String, Object> item, String key) {
+        if (item == null || key == null) {
+            return null;
+        }
+        Object value = item.get(key);
+        if (value != null) {
+            return value;
+        }
+        value = item.get(key.toUpperCase(Locale.ROOT));
+        if (value != null) {
+            return value;
+        }
+        return item.get(key.toLowerCase(Locale.ROOT));
+    }
+
+    private static String textValue(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private static long longValue(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException ignored) {
+            return 0L;
+        }
+    }
+
     private static OutsourcedDataTaskStatus enumStatus(String status) {
         if (!StringUtils.hasText(status)) {
             return null;
@@ -1197,16 +1377,10 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     }
 
     private static LocalDate resolveBatchBusinessDate(OutsourcedDataTaskBatchPO batch, ValsetFileInfo fileInfo) {
-        if (fileInfo != null && fileInfo.getBusinessDate() != null) {
-            return fileInfo.getBusinessDate();
-        }
         return batch == null ? null : batch.getBusinessDate();
     }
 
     private static LocalDate resolveBatchBusinessDate(ValsetFileInfo fileInfo, LocalDate currentValue, LocalDate fallbackValue) {
-        if (fileInfo != null && fileInfo.getBusinessDate() != null) {
-            return fileInfo.getBusinessDate();
-        }
         return currentValue != null ? currentValue : fallbackValue;
     }
 

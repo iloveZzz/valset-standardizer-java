@@ -7,11 +7,15 @@ import com.yss.valset.extract.application.command.ExtractDataTaskCommand;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.dto.TaskCreateResponse;
+import com.yss.valset.application.dto.workflow.WorkflowExecutionContextDTO;
 import com.yss.valset.application.service.WorkflowTaskAppService;
+import com.yss.valset.application.service.workflow.WorkflowExecutionContextResolver;
+import com.yss.valset.task.application.service.workflow.WorkflowEngineDispatchService;
 import com.yss.valset.batch.scheduler.SchedulerService;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.model.WorkflowTask;
 import com.yss.valset.domain.model.TaskStatus;
+import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskType;
 import com.yss.valset.application.support.WorkflowTaskReuseService;
 import lombok.extern.slf4j.Slf4j;
@@ -32,17 +36,26 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     private final SchedulerService schedulerService;
     private final ObjectMapper objectMapper;
     private final WorkflowTaskReuseService taskReuseService;
+    private final WorkflowExecutionContextResolver workflowExecutionContextResolver;
+    private WorkflowEngineDispatchService workflowEngineDispatchService;
 
     public WorkflowTaskAppServiceImpl(
             WorkflowTaskGateway taskGateway,
             SchedulerService schedulerService,
             ObjectMapper objectMapper,
-            WorkflowTaskReuseService taskReuseService
+            WorkflowTaskReuseService taskReuseService,
+            WorkflowExecutionContextResolver workflowExecutionContextResolver
     ) {
         this.taskGateway = taskGateway;
         this.schedulerService = schedulerService;
         this.objectMapper = objectMapper;
         this.taskReuseService = taskReuseService;
+        this.workflowExecutionContextResolver = workflowExecutionContextResolver;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setWorkflowEngineDispatchService(WorkflowEngineDispatchService workflowEngineDispatchService) {
+        this.workflowEngineDispatchService = workflowEngineDispatchService;
     }
 
     /**
@@ -96,6 +109,16 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
             }
 
             log.info("创建任务开始，taskType={}, businessKey={}", taskType, businessKey);
+            WorkflowExecutionContextDTO executionContext = workflowExecutionContextResolver.resolve(taskType, inferTaskStage(taskType));
+            enrichWorkflowContext(command, executionContext);
+            if (executionContext != null && Boolean.TRUE.equals(executionContext.getBindingResolved())
+                    && executionContext.getEngineType() != null
+                    && !"INTERNAL".equalsIgnoreCase(executionContext.getEngineType())) {
+                log.warn("当前工作流绑定了非 INTERNAL 执行平台，任务仍回退到内部调度执行，taskType={}, engineType={}, stageCode={}",
+                        taskType,
+                        executionContext.getEngineType(),
+                        executionContext.getWorkflowStageCode());
+            }
             WorkflowTask workflowTask = WorkflowTask.builder()
                     .taskType(taskType)
                     .taskStatus(TaskStatus.PENDING)
@@ -104,7 +127,7 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
                     .inputPayload(objectMapper.writeValueAsString(command))
                     .build();
             Long taskId = taskGateway.save(workflowTask);
-            schedulerService.triggerNow(taskId);
+            triggerWorkflowTask(taskId, taskType, executionContext);
             log.info("任务创建并触发成功，taskId={}, taskType={}, businessKey={}", taskId, taskType, businessKey);
             return TaskCreateResponse.builder()
                     .taskId(taskId == null ? null : String.valueOf(taskId))
@@ -203,10 +226,101 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
         return false;
     }
 
+    private void enrichWorkflowContext(Object command, WorkflowExecutionContextDTO executionContext) {
+        if (command == null || executionContext == null) {
+            return;
+        }
+        if (command instanceof ParseTaskCommand parseTaskCommand) {
+            applyWorkflowContext(parseTaskCommand, executionContext);
+            return;
+        }
+        if (command instanceof MatchTaskCommand matchTaskCommand) {
+            applyWorkflowContext(matchTaskCommand, executionContext);
+            return;
+        }
+        if (command instanceof EvaluateMappingTaskCommand evaluateMappingTaskCommand) {
+            applyWorkflowContext(evaluateMappingTaskCommand, executionContext);
+            return;
+        }
+        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
+            applyWorkflowContext(extractDataTaskCommand, executionContext);
+        }
+    }
+
+    private void applyWorkflowContext(ParseTaskCommand command, WorkflowExecutionContextDTO executionContext) {
+        command.setWorkflowCode(executionContext.getWorkflowCode());
+        command.setWorkflowId(executionContext.getWorkflowId());
+        command.setWorkflowVersionNo(executionContext.getWorkflowVersionNo());
+        command.setWorkflowStageCode(executionContext.getWorkflowStageCode());
+        command.setWorkflowStageName(executionContext.getWorkflowStageName());
+        command.setWorkflowEngineType(executionContext.getEngineType());
+        command.setWorkflowEngineExternalRef(executionContext.getExternalRef());
+        command.setWorkflowEngineConfigJson(executionContext.getConfigJson());
+    }
+
+    private void applyWorkflowContext(MatchTaskCommand command, WorkflowExecutionContextDTO executionContext) {
+        command.setWorkflowCode(executionContext.getWorkflowCode());
+        command.setWorkflowId(executionContext.getWorkflowId());
+        command.setWorkflowVersionNo(executionContext.getWorkflowVersionNo());
+        command.setWorkflowStageCode(executionContext.getWorkflowStageCode());
+        command.setWorkflowStageName(executionContext.getWorkflowStageName());
+        command.setWorkflowEngineType(executionContext.getEngineType());
+        command.setWorkflowEngineExternalRef(executionContext.getExternalRef());
+        command.setWorkflowEngineConfigJson(executionContext.getConfigJson());
+    }
+
+    private void applyWorkflowContext(EvaluateMappingTaskCommand command, WorkflowExecutionContextDTO executionContext) {
+        command.setWorkflowCode(executionContext.getWorkflowCode());
+        command.setWorkflowId(executionContext.getWorkflowId());
+        command.setWorkflowVersionNo(executionContext.getWorkflowVersionNo());
+        command.setWorkflowStageCode(executionContext.getWorkflowStageCode());
+        command.setWorkflowStageName(executionContext.getWorkflowStageName());
+        command.setWorkflowEngineType(executionContext.getEngineType());
+        command.setWorkflowEngineExternalRef(executionContext.getExternalRef());
+        command.setWorkflowEngineConfigJson(executionContext.getConfigJson());
+    }
+
+    private void applyWorkflowContext(ExtractDataTaskCommand command, WorkflowExecutionContextDTO executionContext) {
+        command.setWorkflowCode(executionContext.getWorkflowCode());
+        command.setWorkflowId(executionContext.getWorkflowId());
+        command.setWorkflowVersionNo(executionContext.getWorkflowVersionNo());
+        command.setWorkflowStageCode(executionContext.getWorkflowStageCode());
+        command.setWorkflowStageName(executionContext.getWorkflowStageName());
+        command.setWorkflowEngineType(executionContext.getEngineType());
+        command.setWorkflowEngineExternalRef(executionContext.getExternalRef());
+        command.setWorkflowEngineConfigJson(executionContext.getConfigJson());
+    }
+
+    private void triggerWorkflowTask(Long taskId, TaskType taskType, WorkflowExecutionContextDTO executionContext) {
+        String stageCode = executionContext == null || executionContext.getWorkflowStageCode() == null
+                ? inferTaskStage(taskType).name()
+                : executionContext.getWorkflowStageCode();
+        if (workflowEngineDispatchService != null) {
+            workflowEngineDispatchService.trigger(taskId, stageCode, executionContext);
+            return;
+        }
+        if (schedulerService == null) {
+            throw new IllegalStateException("调度器未启用，无法触发工作流任务：" + taskId);
+        }
+        schedulerService.triggerNow(taskId);
+    }
+
     private String normalizeDataSourceType(String dataSourceType) {
         if (dataSourceType == null || dataSourceType.isBlank()) {
             return "EXCEL";
         }
         return dataSourceType.trim().toUpperCase();
+    }
+
+    private TaskStage inferTaskStage(TaskType taskType) {
+        if (taskType == null) {
+            return TaskStage.OTHER;
+        }
+        return switch (taskType) {
+            case EXTRACT_DATA -> TaskStage.EXTRACT;
+            case PARSE_WORKBOOK -> TaskStage.PARSE;
+            case MATCH_SUBJECT -> TaskStage.MATCH;
+            default -> TaskStage.OTHER;
+        };
     }
 }

@@ -270,7 +270,6 @@ export * from "./singleResultTransferRunLogCleanupResponse";
 export * from "./singleResultTransferRunLogCleanupResponseCode";
 export * from "./singleResultValsetFileInfoRepairResultDTO";
 export * from "./singleResultValsetFileInfoRepairResultDTOCode";
-export * from "./subscribeParams";
 export * from "./transferMailInfoViewDTO";
 export * from "./transferObjectAttachmentViewDTO";
 export * from "./transferObjectRedeliverCommand";
