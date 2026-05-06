@@ -44,11 +44,21 @@ class SpringBatchWorkflowPlatformAdapterTest {
             assertThat(adapter.query(definition, instance).getRawStatus()).isEqualTo("COMPLETED");
             List<WorkflowPlatformExecutionResult> logs = adapter.queryLogs(definition, instance, null);
             assertThat(logs).hasSize(2);
-            assertThat(logs.get(0).getStageLogs().get(0).getPayload())
+            Map<String, Object> stagePayload = logs.get(0).getStageLogs().get(0).getPayload();
+            assertThat(stagePayload)
                     .containsEntry("executionStatus", "SUCCEEDED")
                     .containsKey("input")
                     .containsKey("output")
                     .containsKey("metadata");
+            assertThat(stagePayload.get("output")).isInstanceOf(Map.class);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> output = (Map<String, Object>) stagePayload.get("output");
+            assertThat(output)
+                    .containsEntry("businessStage", "FILE_PARSE")
+                    .containsEntry("stageFamily", "EXTRACT")
+                    .containsKey("stagePlan")
+                    .containsKey("qualityChecks")
+                    .containsKey("targetTables");
         }
     }
 
