@@ -28,28 +28,12 @@ export const outsourcedDataTaskStageCatalog: Array<{
     stepDescription: "字段映射、数据清洗、STG 结构转换",
   },
   {
-    stage: "SUBJECT_RECOGNIZE",
-    step: "SUBJECT_RECOGNIZE",
-    stageName: "科目识别",
-    stepName: "科目识别",
-    stageDescription: "科目匹配、属性识别、标签补全",
-    stepDescription: "科目匹配、属性识别、标签补全",
-  },
-  {
     stage: "STANDARD_LANDING",
     step: "STANDARD_LANDING",
     stageName: "标准表落地",
     stepName: "标准表落地",
     stageDescription: "STG/DWD/标准持仓/估值数据写入",
     stepDescription: "STG/DWD/标准持仓/估值数据写入",
-  },
-  {
-    stage: "VERIFY_ARCHIVE",
-    step: "VERIFY_ARCHIVE",
-    stageName: "校验归档",
-    stepName: "校验归档",
-    stageDescription: "一致性校验、结果确认、归档完成",
-    stepDescription: "一致性校验、结果确认、归档完成",
   },
 ];
 
@@ -88,7 +72,7 @@ export const outsourcedDataTaskMetricCardText = {
   },
   success: {
     label: "处理完成",
-    description: "已完成校验归档并进入可用状态的批次",
+    description: "已完成标准表落地并进入可用状态的批次",
   },
   failed: {
     label: "异常待处理",
@@ -117,7 +101,7 @@ export const outsourcedDataTaskPreviewText = {
 export const outsourcedDataTaskActionTexts = {
   pageHeaderTitle: "估值表解析任务管理",
   pageHeaderDescription:
-    "覆盖文件解析、结构标准化、标准表落地和校验归档，支持手动执行、失败续跑与重跑。",
+    "覆盖文件解析、结构标准化、标准表落地，支持手动执行、失败续跑与重跑。",
   retryBatchConfirmTitle: "重跑估值表解析任务",
   retryBatchConfirmContent: "将从流程起点重新执行该批次，是否继续？",
   executeBatchConfirmTitle: "手动执行估值表解析任务",

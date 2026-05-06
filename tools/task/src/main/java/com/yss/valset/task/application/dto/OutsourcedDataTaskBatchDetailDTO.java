@@ -15,12 +15,4 @@ public class OutsourcedDataTaskBatchDetailDTO {
     private List<OutsourcedDataTaskStepDTO> steps;
 
     private String currentBlockPoint;
-
-    private String fileResultUrl;
-
-    private String rawDataUrl;
-
-    private String stgDataUrl;
-
-    private String dwdDataUrl;
 }

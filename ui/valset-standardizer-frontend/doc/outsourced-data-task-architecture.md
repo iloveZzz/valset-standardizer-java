@@ -8,13 +8,13 @@
 
 ## 2. 与现有 tools 模块的边界
 
-| 模块 | 现有职责 | 与任务模块关系 |
-|---|---|---|
-| `tools/transfer` | 文件来源、规则、路由、投递 | 不作为本页面主链路；仅作为文件来源事实的可选输入 |
-| `tools/analysis` | 解析队列、解析生命周期、ODS/CSV 解析事件 | 向任务模块提供解析阶段事实 |
-| `tools/extract` | 结构标准化、标准化落地能力 | 向任务模块提供标准化和落地阶段事实 |
-| `tools/batch` | 调度和任务派发 | 触发任务阶段执行，后续写入阶段事件 |
-| `tools/task` | 批次聚合、阶段链路、任务控制、页面接口 | 新增独立任务管理中枢 |
+| 模块             | 现有职责                                 | 与任务模块关系                                   |
+| ---------------- | ---------------------------------------- | ------------------------------------------------ |
+| `tools/transfer` | 文件来源、规则、路由、投递               | 不作为本页面主链路；仅作为文件来源事实的可选输入 |
+| `tools/analysis` | 解析队列、解析生命周期、ODS/CSV 解析事件 | 向任务模块提供解析阶段事实                       |
+| `tools/extract`  | 结构标准化、标准化落地能力               | 向任务模块提供标准化和落地阶段事实               |
+| `tools/batch`    | 调度和任务派发                           | 触发任务阶段执行，后续写入阶段事件               |
+| `tools/task`     | 批次聚合、阶段链路、任务控制、页面接口   | 新增独立任务管理中枢                             |
 
 ## 3. 后端分层
 
@@ -81,10 +81,7 @@ businessDate + productCode + fileFingerprint
 
 1. `FILE_PARSE`
 2. `STRUCTURE_STANDARDIZE`
-3. `SUBJECT_RECOGNIZE`
-4. `STANDARD_LANDING`
-5. `DATA_PROCESSING`
-6. `VERIFY_ARCHIVE`
+3. `STANDARD_LANDING`
 
 当前 DTO：
 
@@ -96,20 +93,20 @@ businessDate + productCode + fileFingerprint
 
 Controller 根路径不带 `/api` 前缀，继续遵守当前工程策略，由前端代理统一补 `/api`。
 
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| `GET` | `/outsourced-data-tasks/summary` | 查询任务总览 |
-| `GET` | `/outsourced-data-tasks` | 分页查询任务批次 |
-| `GET` | `/outsourced-data-tasks/{batchId}` | 查询批次详情 |
-| `GET` | `/outsourced-data-tasks/{batchId}/steps` | 查询阶段明细 |
-| `GET` | `/outsourced-data-tasks/{batchId}/logs` | 分页查询日志 |
-| `POST` | `/outsourced-data-tasks/{batchId}/execute` | 执行批次 |
-| `POST` | `/outsourced-data-tasks/{batchId}/retry` | 重跑批次 |
-| `POST` | `/outsourced-data-tasks/{batchId}/stop` | 停止批次 |
-| `POST` | `/outsourced-data-tasks/{batchId}/steps/{stepId}/retry` | 重跑阶段 |
-| `POST` | `/outsourced-data-tasks/batch-execute` | 批量执行 |
-| `POST` | `/outsourced-data-tasks/batch-retry` | 批量重跑 |
-| `POST` | `/outsourced-data-tasks/batch-stop` | 批量停止 |
+| 方法   | 路径                                                    | 说明             |
+| ------ | ------------------------------------------------------- | ---------------- |
+| `GET`  | `/outsourced-data-tasks/summary`                        | 查询任务总览     |
+| `GET`  | `/outsourced-data-tasks`                                | 分页查询任务批次 |
+| `GET`  | `/outsourced-data-tasks/{batchId}`                      | 查询批次详情     |
+| `GET`  | `/outsourced-data-tasks/{batchId}/steps`                | 查询阶段明细     |
+| `GET`  | `/outsourced-data-tasks/{batchId}/logs`                 | 分页查询日志     |
+| `POST` | `/outsourced-data-tasks/{batchId}/execute`              | 执行批次         |
+| `POST` | `/outsourced-data-tasks/{batchId}/retry`                | 重跑批次         |
+| `POST` | `/outsourced-data-tasks/{batchId}/stop`                 | 停止批次         |
+| `POST` | `/outsourced-data-tasks/{batchId}/steps/{stepId}/retry` | 重跑阶段         |
+| `POST` | `/outsourced-data-tasks/batch-execute`                  | 批量执行         |
+| `POST` | `/outsourced-data-tasks/batch-retry`                    | 批量重跑         |
+| `POST` | `/outsourced-data-tasks/batch-stop`                     | 批量停止         |
 
 ## 6. 当前落地状态
 
@@ -123,7 +120,7 @@ Controller 根路径不带 `/api` 前缀，继续遵守当前工程策略，由�
 - 新增 Liquibase `task.sql`，包含 `t_outsourced_data_task_batch`、`t_outsourced_data_task_step`、`t_outsourced_data_task_log`。
 - DDL 主键和关联字段使用字符串标识，匹配 `BATCH-*`、`FILE-*`、`TASK-*` 等业务批次和底层任务标识。
 - 新增 `OutsourcedDataTaskLifecycleListener`，监听 `ParseLifecycleEvent` 并归档解析生命周期事件。
-- 新增 `WorkflowTaskLifecycleEvent`，由 `DefaultTaskDispatcher` 发布通用工作流任务状态，事件包含文件标识、输入摘要、输出摘要和上下文字段，任务模块归档非解析任务到对应阶段，其中加工类任务落到 `DATA_PROCESSING`。
+- 新增 `WorkflowTaskLifecycleEvent`，由 `DefaultTaskDispatcher` 发布通用工作流任务状态，事件包含文件标识、输入摘要、输出摘要和上下文字段。
 - `ParseQueueObserverJob` 在构建、创建、派发、完成、失败解析任务时补充 `fileId`、数据源类型和原始文件名，避免队列事件与解析执行事件拆成不同批次。
 - 批次状态和当前阶段由阶段明细落库后统一聚合刷新，前端只消费后端返回结果。
 - 默认应用服务在 Spring 环境中优先使用持久化 Gateway；静态样例只作为无 Gateway 的单元测试兜底。
@@ -133,5 +130,4 @@ Controller 根路径不带 `/api` 前缀，继续遵守当前工程策略，由�
 
 待完成：
 
-- 继续细化 `DATA_PROCESSING` 的业务子类型和操作编排，避免所有后续加工只显示为同一个阶段明细。
 - 刷新 OpenAPI 产物后，决定保留当前手写 API 封装或迁移到 generated client。

@@ -11,7 +11,6 @@ export type OutsourcedDataTaskQueryParams = {
   status?: string;
   sourceType?: string;
   errorType?: string;
-  includeHistory?: boolean;
   pageIndex?: number;
   pageSize?: number;
 };
@@ -69,16 +68,6 @@ export type OutsourcedDataTaskStepDTO = {
   logRef?: string;
 };
 
-export type OutsourcedDataTaskLogDTO = {
-  logId?: string;
-  batchId?: string;
-  stepId?: string;
-  stage?: string;
-  logLevel?: string;
-  message?: string;
-  occurredAt?: string;
-};
-
 export type OutsourcedDataTaskStageSummaryDTO = {
   stage?: string;
   step?: string;
@@ -108,11 +97,6 @@ export type OutsourcedDataTaskBatchDetailDTO = {
   batch?: OutsourcedDataTaskBatchDTO;
   steps?: OutsourcedDataTaskStepDTO[];
   currentBlockPoint?: string;
-  fileResultUrl?: string;
-  rawDataUrl?: string;
-  stgDataUrl?: string;
-  dwdDataUrl?: string;
-  standardDataUrl?: string;
 };
 
 export type OutsourcedDataTaskActionCommand = {
@@ -156,13 +140,6 @@ export type MultiResultOutsourcedDataTaskStepDTO = {
   data?: OutsourcedDataTaskStepDTO[];
 };
 
-export type PageResultOutsourcedDataTaskLogDTO = {
-  data?: OutsourcedDataTaskLogDTO[];
-  totalCount?: number;
-  pageIndex?: number;
-  pageSize?: number;
-};
-
 export type SingleResultOutsourcedDataTaskActionResultDTO = {
   data?: OutsourcedDataTaskActionResultDTO;
 };
@@ -195,21 +172,6 @@ export const listOutsourcedDataTaskSteps = (batchId: string) =>
   customInstance<MultiResultOutsourcedDataTaskStepDTO>({
     url: `/outsourced-data-tasks/${batchId}/steps`,
     method: "GET",
-  });
-
-export const pageOutsourcedDataTaskLogs = (
-  batchId: string,
-  params?: {
-    stage?: string;
-    step?: string;
-    pageIndex?: number;
-    pageSize?: number;
-  },
-) =>
-  customInstance<PageResultOutsourcedDataTaskLogDTO>({
-    url: `/outsourced-data-tasks/${batchId}/logs`,
-    method: "GET",
-    params,
   });
 
 export const executeOutsourcedDataTask = (

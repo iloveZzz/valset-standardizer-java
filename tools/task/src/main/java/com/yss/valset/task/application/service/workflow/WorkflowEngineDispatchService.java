@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 工作流执行平台分发服务。
+ * 估值内部工作流分发服务。
  */
 public interface WorkflowEngineDispatchService {
 

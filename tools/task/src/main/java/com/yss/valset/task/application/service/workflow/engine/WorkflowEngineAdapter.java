@@ -6,7 +6,12 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 工作流执行平台适配器。
+ * 估值内部工作流执行适配器。
+ *
+ * <p>
+ * 该接口只面向估值文件解析、结构标准化、标准科目匹配和结果落库等内部流程，
+ * 不承载通用 ETL 平台编排能力。
+ * </p>
  */
 public interface WorkflowEngineAdapter {
 

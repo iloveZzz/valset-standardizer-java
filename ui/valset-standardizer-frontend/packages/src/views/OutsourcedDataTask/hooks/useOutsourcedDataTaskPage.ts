@@ -9,22 +9,18 @@ import {
   getOutsourcedDataTask,
   getOutsourcedDataTaskSummary,
   listOutsourcedDataTaskSteps,
-  pageOutsourcedDataTaskLogs,
   pageOutsourcedDataTasks,
   retryOutsourcedDataTask,
   retryOutsourcedDataTaskStep,
   stopOutsourcedDataTask,
   type OutsourcedDataTaskBatchDetailDTO,
   type OutsourcedDataTaskBatchDTO,
-  type OutsourcedDataTaskLogDTO,
   type OutsourcedDataTaskStepDTO,
   type OutsourcedDataTaskSummaryDTO,
 } from "@/api/outsourcedDataTask";
 import { unwrapMultiResult, unwrapSingleResult } from "@/utils/api-response";
 import type {
   OutsourcedDataTaskBatchRow,
-  OutsourcedDataTaskDataEntry,
-  OutsourcedDataTaskLogRow,
   OutsourcedDataTaskManualState,
   OutsourcedDataTaskPage,
   OutsourcedDataTaskQueryState,
@@ -37,33 +33,30 @@ import {
   outsourcedDataTaskStageCatalog,
   outsourcedDataTaskStatusCatalog,
   outsourcedDataTaskTriggerModeLabels,
-  outsourcedDataTaskDataEntryStatusLabels,
   outsourcedDataTaskPreviewText,
   outsourcedDataTaskFeedbackTexts,
-  outsourcedDataTaskActionTexts,
-  outsourcedDataTaskQueryTexts,
-  outsourcedDataTaskTableTexts,
 } from "../constants";
 
 const defaultStageCatalog = outsourcedDataTaskStageCatalog;
 const activeStageCatalog = ref([...defaultStageCatalog]);
-const hiddenStageDisplayMap: Partial<Record<OutsourcedDataTaskStage, OutsourcedDataTaskStage>> = {
+const hiddenStageDisplayMap: Record<string, OutsourcedDataTaskStage> = {
   DATA_PROCESSING: "STANDARD_LANDING",
 };
 
-const isHiddenStage = (stage?: string) => String(stage ?? "").trim() === "DATA_PROCESSING";
+const isHiddenStage = (stage?: string) =>
+  String(stage ?? "").trim() === "DATA_PROCESSING";
 
-const normalizeVisibleStage = (
-  value?: string,
-): OutsourcedDataTaskStage => {
-  const stage = String(value ?? "").trim() as OutsourcedDataTaskStage;
+const normalizeVisibleStage = (value?: string): OutsourcedDataTaskStage => {
+  const stage = String(value ?? "").trim();
   return hiddenStageDisplayMap[stage] ?? normalizeStage(stage);
 };
 
 const isCatalogStageMatch = (
   item: { stage: string; step: string },
   value?: string,
-) => String(value ?? "").trim() === item.stage || String(value ?? "").trim() === item.step;
+) =>
+  String(value ?? "").trim() === item.stage ||
+  String(value ?? "").trim() === item.step;
 
 type StageCatalogItem = {
   stage?: string;
@@ -80,19 +73,34 @@ const normalizeStageCatalog = (stages?: StageCatalogItem[]) =>
     ? stages
         .slice()
         .filter((item) => Boolean(item.stage || item.step))
-        .sort((left, right) => Number(left.sortOrder ?? 0) - Number(right.sortOrder ?? 0))
+        .sort(
+          (left, right) =>
+            Number(left.sortOrder ?? 0) - Number(right.sortOrder ?? 0),
+        )
         .map((item) => {
-          const stage = String(item.stage ?? item.step ?? "").trim() as OutsourcedDataTaskStage;
-          const step = String(item.step ?? item.stage ?? stage).trim() as OutsourcedDataTaskStage;
-          const stageName = String(item.stageName ?? item.stepName ?? stage).trim();
-          const stepName = String(item.stepName ?? item.stageName ?? stageName).trim();
+          const stage = String(
+            item.stage ?? item.step ?? "",
+          ).trim() as OutsourcedDataTaskStage;
+          const step = String(
+            item.step ?? item.stage ?? stage,
+          ).trim() as OutsourcedDataTaskStage;
+          const stageName = String(
+            item.stageName ?? item.stepName ?? stage,
+          ).trim();
+          const stepName = String(
+            item.stepName ?? item.stageName ?? stageName,
+          ).trim();
           return {
             stage,
             step,
             stageName: stageName || stage,
             stepName: stepName || stageName || stage,
-            stageDescription: String(item.stageDescription ?? item.stepDescription ?? "").trim(),
-            stepDescription: String(item.stepDescription ?? item.stageDescription ?? "").trim(),
+            stageDescription: String(
+              item.stageDescription ?? item.stepDescription ?? "",
+            ).trim(),
+            stepDescription: String(
+              item.stepDescription ?? item.stageDescription ?? "",
+            ).trim(),
           };
         })
     : [...defaultStageCatalog];
@@ -106,7 +114,6 @@ const defaultQuery = (): OutsourcedDataTaskQueryState => ({
   status: "",
   sourceType: "",
   errorType: "",
-  includeHistory: false,
 });
 
 const LIVE_STATUS_SET = new Set<OutsourcedDataTaskStatus>([
@@ -123,7 +130,9 @@ const normalizeStage = (value?: string): OutsourcedDataTaskStage => {
   const stage = String(value ?? "").trim() as OutsourcedDataTaskStage;
   return (
     activeStageCatalog.value.find((item) => isCatalogStageMatch(item, stage))
-      ?.stage ?? activeStageCatalog.value[0]?.stage ?? "FILE_PARSE"
+      ?.stage ??
+    activeStageCatalog.value[0]?.stage ??
+    "FILE_PARSE"
   );
 };
 
@@ -137,8 +146,8 @@ const normalizeStatus = (value?: string): OutsourcedDataTaskStatus => {
 const statusLabel = (value?: string) => {
   const status = normalizeStatus(value);
   return (
-    outsourcedDataTaskStatusCatalog.find((item) => item.status === status)?.label ??
-    status
+    outsourcedDataTaskStatusCatalog.find((item) => item.status === status)
+      ?.label ?? status
   );
 };
 
@@ -213,7 +222,9 @@ const formatTimelineDuration = (durationMs?: number) => {
   return remainSeconds ? `${minutes}m${remainSeconds}s` : `${minutes}m`;
 };
 
-const alignStepTimeline = <T extends { startedAt?: string; endedAt?: string; durationText?: string }>(
+const alignStepTimeline = <
+  T extends { startedAt?: string; endedAt?: string; durationText?: string },
+>(
   steps: T[],
   batchStartedAt?: string,
   batchEndedAt?: string,
@@ -247,12 +258,14 @@ const alignStepTimeline = <T extends { startedAt?: string; endedAt?: string; dur
   const totalMs = timeWindowEndedAt.getTime() - startedAt.getTime();
   const count = steps.length;
   return steps.map((step, index) => {
-    const nextStartMs = index === 0
-      ? startedAt.getTime()
-      : startedAt.getTime() + Math.floor((totalMs * index) / count);
-    const nextEndMs = index === count - 1
-      ? timeWindowEndedAt.getTime()
-      : startedAt.getTime() + Math.floor((totalMs * (index + 1)) / count);
+    const nextStartMs =
+      index === 0
+        ? startedAt.getTime()
+        : startedAt.getTime() + Math.floor((totalMs * index) / count);
+    const nextEndMs =
+      index === count - 1
+        ? timeWindowEndedAt.getTime()
+        : startedAt.getTime() + Math.floor((totalMs * (index + 1)) / count);
     const nextStartedAt = new Date(nextStartMs);
     const nextEndedAt = new Date(Math.max(nextEndMs, nextStartMs));
     const durationMs = nextEndedAt.getTime() - nextStartedAt.getTime();
@@ -317,17 +330,22 @@ const normalizeBatchRowFromSteps = (
   row: OutsourcedDataTaskBatchRow,
   steps: OutsourcedDataTaskStepRow[],
 ): OutsourcedDataTaskBatchRow => {
-  const orderedSteps = alignStepTimeline(sortSteps(steps), row.startedAt, row.endedAt);
+  const orderedSteps = alignStepTimeline(
+    sortSteps(steps),
+    row.startedAt,
+    row.endedAt,
+  );
   if (!orderedSteps.length) {
     return { ...row, steps: orderedSteps };
   }
   const currentStage = resolveBatchStageFromSteps(orderedSteps);
   const currentStatus = resolveBatchStatusFromSteps(orderedSteps);
   const currentStep =
-    [...orderedSteps].reverse().find(
-      (step) => step.stage === currentStage || step.step === currentStage,
-    ) ??
-    orderedSteps[orderedSteps.length - 1];
+    [...orderedSteps]
+      .reverse()
+      .find(
+        (step) => step.stage === currentStage || step.step === currentStage,
+      ) ?? orderedSteps[orderedSteps.length - 1];
   const stageMeta = activeStageCatalog.value.find((item) =>
     isCatalogStageMatch(item, currentStage),
   );
@@ -348,9 +366,18 @@ const normalizeBatchRowFromSteps = (
           : currentStatus === "RUNNING"
             ? Number(currentStep?.progress ?? row.progress ?? 0)
             : Number(row.progress ?? 0),
-    startedAt: String(orderedSteps[0]?.startedAt ?? row.startedAt ?? currentStep?.startedAt ?? ""),
-    endedAt:
-      String(orderedSteps[orderedSteps.length - 1]?.endedAt ?? row.endedAt ?? currentStep?.endedAt ?? ""),
+    startedAt: String(
+      orderedSteps[0]?.startedAt ??
+        row.startedAt ??
+        currentStep?.startedAt ??
+        "",
+    ),
+    endedAt: String(
+      orderedSteps[orderedSteps.length - 1]?.endedAt ??
+        row.endedAt ??
+        currentStep?.endedAt ??
+        "",
+    ),
     durationText: String(currentStep?.durationText ?? row.durationText ?? "-"),
     steps: orderedSteps,
   };
@@ -377,8 +404,8 @@ const buildSteps = (
   batchEndedAt?: string,
 ): OutsourcedDataTaskStepRow[] => {
   const stageCatalog = activeStageCatalog.value;
-  const currentIndex = stageCatalog.findIndex(
-    (item) => isCatalogStageMatch(item, currentStage),
+  const currentIndex = stageCatalog.findIndex((item) =>
+    isCatalogStageMatch(item, currentStage),
   );
   return alignStepTimeline(
     sortSteps(
@@ -441,8 +468,8 @@ const mapStep = (
 ): OutsourcedDataTaskStepRow => {
   const stage = normalizeVisibleStage(step.step ?? step.stage);
   const status = normalizeStatus(step.status);
-  const stageMeta = activeStageCatalog.value.find(
-    (item) => isCatalogStageMatch(item, stage),
+  const stageMeta = activeStageCatalog.value.find((item) =>
+    isCatalogStageMatch(item, stage),
   );
   return {
     stepId: String(step.stepId ?? ""),
@@ -470,144 +497,6 @@ const mapStep = (
     logRef: step.logRef,
   };
 };
-
-const buildDataEntries = (
-  row: OutsourcedDataTaskBatchRow | null,
-  detail?: OutsourcedDataTaskBatchDetailDTO | null,
-): OutsourcedDataTaskDataEntry[] => {
-  const hasFile = Boolean(
-    row?.filesysFileId || row?.fileId || row?.originalFileName,
-  );
-  const entries: OutsourcedDataTaskDataEntry[] = [
-    {
-      key: "source-file",
-      name: outsourcedDataTaskTableTexts.dataEntryNames.sourceFile,
-      description: row?.originalFileName
-        ? `${row.originalFileName}${outsourcedDataTaskTableTexts.dataEntryDescriptions.sourceFileExisting}${row.filesysFileId || row.fileId || "-"}`
-        : outsourcedDataTaskTableTexts.dataEntryDescriptions.sourceFileMissing,
-      status: hasFile ? "READY" : "WAITING",
-      statusName: hasFile
-        ? outsourcedDataTaskDataEntryStatusLabels.READY
-        : outsourcedDataTaskDataEntryStatusLabels.WAITING,
-      href: detail?.rawDataUrl,
-    },
-    {
-      key: "parse-result",
-      name: outsourcedDataTaskTableTexts.dataEntryNames.parseResult,
-      description: outsourcedDataTaskTableTexts.dataEntryDescriptions.parseResult,
-      status: detail?.fileResultUrl
-        ? "READY"
-        : row?.currentStep === "FILE_PARSE" ||
-            row?.currentStage === "FILE_PARSE"
-          ? "WAITING"
-          : "READY",
-      statusName: detail?.fileResultUrl
-        ? outsourcedDataTaskDataEntryStatusLabels.READY
-        : row?.currentStep === "FILE_PARSE" ||
-            row?.currentStage === "FILE_PARSE"
-          ? statusLabel("RUNNING")
-          : outsourcedDataTaskDataEntryStatusLabels.READY,
-      href: detail?.fileResultUrl,
-    },
-    {
-      key: "stg",
-      name: outsourcedDataTaskTableTexts.dataEntryNames.stg,
-      description: outsourcedDataTaskTableTexts.dataEntryDescriptions.stg,
-      status: detail?.stgDataUrl
-        ? "READY"
-        : row?.progress && row.progress >= 45
-          ? "READY"
-          : "WAITING",
-      statusName: detail?.stgDataUrl
-        ? outsourcedDataTaskDataEntryStatusLabels.READY
-        : row?.progress && row.progress >= 45
-          ? outsourcedDataTaskDataEntryStatusLabels.READY
-          : outsourcedDataTaskDataEntryStatusLabels.WAITING,
-      href: detail?.stgDataUrl,
-    },
-    {
-      key: "dwd",
-      name: outsourcedDataTaskTableTexts.dataEntryNames.dwd,
-      description: outsourcedDataTaskTableTexts.dataEntryDescriptions.dwd,
-      status:
-        (row?.currentStep === "STANDARD_LANDING" ||
-          row?.currentStage === "STANDARD_LANDING") &&
-        row.status === "FAILED"
-          ? "ERROR"
-          : detail?.dwdDataUrl
-            ? "READY"
-            : row?.progress && row.progress >= 70
-              ? "READY"
-              : "WAITING",
-      statusName:
-        (row?.currentStep === "STANDARD_LANDING" ||
-          row?.currentStage === "STANDARD_LANDING") &&
-        row.status === "FAILED"
-          ? outsourcedDataTaskDataEntryStatusLabels.ERROR
-          : detail?.dwdDataUrl
-            ? outsourcedDataTaskDataEntryStatusLabels.READY
-            : row?.progress && row.progress >= 70
-              ? outsourcedDataTaskDataEntryStatusLabels.READY
-              : outsourcedDataTaskDataEntryStatusLabels.WAITING,
-      href: detail?.dwdDataUrl,
-    },
-    {
-      key: "standard",
-      name: outsourcedDataTaskTableTexts.dataEntryNames.standard,
-      description: outsourcedDataTaskTableTexts.dataEntryDescriptions.standard,
-      status: detail?.standardDataUrl
-        ? "READY"
-        : row?.status === "SUCCESS"
-          ? "READY"
-          : "WAITING",
-      statusName: detail?.standardDataUrl
-        ? outsourcedDataTaskDataEntryStatusLabels.READY
-        : row?.status === "SUCCESS"
-          ? statusLabel("SUCCESS")
-          : outsourcedDataTaskDataEntryStatusLabels.WAITING,
-      href: detail?.standardDataUrl,
-    },
-  ];
-  return entries;
-};
-
-const buildLogRows = (
-  row: OutsourcedDataTaskBatchRow | null,
-): OutsourcedDataTaskLogRow[] =>
-  sortSteps(row?.steps ?? []).map((step) => ({
-    key: step.stepId,
-    stageName: step.stageName,
-    stepName: step.stepName,
-    status: step.status,
-    statusName: step.statusName,
-    startedAt: step.startedAt || "-",
-    durationText: step.durationText || "-",
-    message:
-      step.errorMessage ||
-      step.outputSummary ||
-      step.inputSummary ||
-      outsourcedDataTaskPreviewText.stepLogWaitingText,
-    errorStack: step.errorStack,
-  }));
-
-const mapLogRow = (
-  log: OutsourcedDataTaskLogDTO,
-  activeStep: OutsourcedDataTaskStepRow,
-): OutsourcedDataTaskLogRow => ({
-  key: String(
-    log.logId ??
-      `${activeStep.stepId}-${log.occurredAt ?? ""}-${log.message ?? ""}`,
-  ),
-  stageName: activeStep.stageName,
-  stepName: activeStep.stepName,
-  status: activeStep.status,
-  statusName: activeStep.statusName,
-  startedAt: String(log.occurredAt ?? activeStep.startedAt ?? "-"),
-  durationText: activeStep.durationText || "-",
-  message: String(log.message ?? ""),
-  logLevel: String(log.logLevel ?? "INFO"),
-  occurredAt: String(log.occurredAt ?? ""),
-});
 
 const buildManualState = (
   row: OutsourcedDataTaskBatchRow | null,
@@ -640,8 +529,8 @@ const mapBatch = (
   const batchId = String(batch.batchId ?? "");
   const stage = normalizeVisibleStage(batch.currentStep ?? batch.currentStage);
   const status = normalizeStatus(batch.status);
-  const stageMeta = activeStageCatalog.value.find(
-    (item) => isCatalogStageMatch(item, stage),
+  const stageMeta = activeStageCatalog.value.find((item) =>
+    isCatalogStageMatch(item, stage),
   );
   return {
     batchId,
@@ -689,32 +578,19 @@ export const useOutsourcedDataTaskPage = (): {
   page: OutsourcedDataTaskPage;
 } => {
   const query = reactive<OutsourcedDataTaskQueryState>(defaultQuery());
-  const historyQuery = reactive<OutsourcedDataTaskQueryState>(defaultQuery());
   const rows = ref<OutsourcedDataTaskBatchRow[]>([]);
-  const historyRows = ref<OutsourcedDataTaskBatchRow[]>([]);
   const summary = ref<OutsourcedDataTaskSummaryDTO | null>(null);
   const selectedRowKeys = ref<string[]>([]);
   const selectedRow = ref<OutsourcedDataTaskBatchRow | null>(null);
   const selectedDetail = ref<OutsourcedDataTaskBatchDetailDTO | null>(null);
-  const activeStep = ref<OutsourcedDataTaskStepRow | null>(null);
-  const stepLogVisible = ref(false);
-  const stepLogLoading = ref(false);
-  const stepLogRows = ref<OutsourcedDataTaskLogRow[]>([]);
-  const stepDataVisible = ref(false);
   const detailVisible = ref(false);
   const loading = ref(false);
-  const historyLoading = ref(false);
-  const historyVisible = ref(false);
-  const historyAnchorRow = ref<OutsourcedDataTaskBatchRow | null>(null);
   const expandedBatchIds = ref<string[]>([]);
 
   watch(
     () => activeStageCatalog.value,
     () => {
       rows.value = rows.value.map((row) =>
-        normalizeBatchRowFromSteps(row, row.steps),
-      );
-      historyRows.value = historyRows.value.map((row) =>
         normalizeBatchRowFromSteps(row, row.steps),
       );
       if (selectedRow.value) {
@@ -732,48 +608,6 @@ export const useOutsourcedDataTaskPage = (): {
     total: 0,
     showSizeChanger: true,
     pageSizeOptions: ["10", "20", "50"],
-  });
-  const historyPagination = ref<YTablePagination>({
-    current: 1,
-    pageSize: 10,
-    total: 0,
-    showSizeChanger: true,
-    pageSizeOptions: ["10", "20", "50"],
-  });
-  const historyDrawerTitle = computed(() =>
-    historyAnchorRow.value
-      ? `${outsourcedDataTaskActionTexts.historyDrawerTitle} · ${historyAnchorRow.value.batchName || historyAnchorRow.value.batchId}`
-      : outsourcedDataTaskActionTexts.historyDrawerTitle,
-  );
-  const historyDrawerDescription = computed(() =>
-    historyAnchorRow.value
-      ? `当前批次：${historyAnchorRow.value.batchId} · ${historyAnchorRow.value.batchName}`
-      : outsourcedDataTaskActionTexts.historyDrawerDescription,
-  );
-  const historyDrawerFilterSummary = computed(() => {
-    const historyStepName =
-      activeStageCatalog.value.find((item) =>
-        isCatalogStageMatch(item, historyQuery.step),
-      )?.stepName ?? historyQuery.step;
-    const filters = [
-      historyQuery.taskDate &&
-        `${outsourcedDataTaskQueryTexts.taskDatePrefix}${historyQuery.taskDate}`,
-      historyQuery.managerName &&
-        `${outsourcedDataTaskQueryTexts.managerNamePrefix}${historyQuery.managerName}`,
-      historyQuery.productKeyword &&
-        `${outsourcedDataTaskQueryTexts.productKeywordPrefix}${historyQuery.productKeyword}`,
-      historyQuery.step &&
-        `${outsourcedDataTaskQueryTexts.stepPrefix}${historyStepName}`,
-      historyQuery.status &&
-        `${outsourcedDataTaskQueryTexts.statusPrefix}${statusLabel(historyQuery.status)}`,
-      historyQuery.sourceType &&
-        `${outsourcedDataTaskQueryTexts.sourceTypePrefix}${historyQuery.sourceType}`,
-      historyQuery.errorType &&
-        `${outsourcedDataTaskQueryTexts.errorTypePrefix}${historyQuery.errorType}`,
-    ].filter(Boolean);
-    return filters.length
-      ? `当前筛选：${filters.join(" / ")}`
-      : "当前筛选：全部";
   });
 
   const filteredRows = computed(() =>
@@ -840,8 +674,8 @@ export const useOutsourcedDataTaskPage = (): {
       });
     }
     return catalog.map((item) => {
-      const currentRows = filteredRows.value.filter((row) =>
-        hasStage(row, item.stage) || hasStage(row, item.step),
+      const currentRows = filteredRows.value.filter(
+        (row) => hasStage(row, item.stage) || hasStage(row, item.step),
       );
       return {
         ...item,
@@ -860,28 +694,26 @@ export const useOutsourcedDataTaskPage = (): {
     });
   });
 
-const buildQueryParams = (
-  sourceQuery: OutsourcedDataTaskQueryState,
-  sourcePagination: YTablePagination,
-  includeHistory = false,
-) => ({
-  batchId: sourceQuery.batchId || undefined,
-  taskDate: sourceQuery.taskDate || undefined,
-  managerName: sourceQuery.managerName || undefined,
-  productKeyword: sourceQuery.productKeyword || undefined,
-  step: sourceQuery.step || undefined,
-  status: sourceQuery.status || undefined,
-  sourceType: sourceQuery.sourceType || undefined,
-  errorType: sourceQuery.errorType || undefined,
-  includeHistory,
-  pageIndex: Number(sourcePagination.current ?? 1),
-  pageSize: Number(sourcePagination.pageSize ?? 10),
-});
+  const buildQueryParams = (
+    sourceQuery: OutsourcedDataTaskQueryState,
+    sourcePagination: YTablePagination,
+  ) => ({
+    batchId: sourceQuery.batchId || undefined,
+    taskDate: sourceQuery.taskDate || undefined,
+    managerName: sourceQuery.managerName || undefined,
+    productKeyword: sourceQuery.productKeyword || undefined,
+    step: sourceQuery.step || undefined,
+    status: sourceQuery.status || undefined,
+    sourceType: sourceQuery.sourceType || undefined,
+    errorType: sourceQuery.errorType || undefined,
+    pageIndex: Number(sourcePagination.current ?? 1),
+    pageSize: Number(sourcePagination.pageSize ?? 10),
+  });
 
   const loadList = async () => {
     loading.value = true;
     try {
-      const params = buildQueryParams(query, pagination.value, false);
+      const params = buildQueryParams(query, pagination.value);
       const [summaryRes, pageRes] = await Promise.all([
         getOutsourcedDataTaskSummary(params),
         pageOutsourcedDataTasks(params),
@@ -890,10 +722,9 @@ const buildQueryParams = (
         rows.value.map((row) => [row.batchId, row.steps]),
       );
       summary.value = unwrapSingleResult(summaryRes) ?? null;
-      const workflowStageCatalog =
-        summary.value?.stageCatalog?.length
-          ? summary.value.stageCatalog
-          : summary.value?.stepSummaries;
+      const workflowStageCatalog = summary.value?.stageCatalog?.length
+        ? summary.value.stageCatalog
+        : summary.value?.stepSummaries;
       if (workflowStageCatalog?.length) {
         activeStageCatalog.value = normalizeStageCatalog(workflowStageCatalog);
       } else {
@@ -920,33 +751,6 @@ const buildQueryParams = (
       pagination.value.total = 0;
     } finally {
       loading.value = false;
-    }
-  };
-
-  const loadHistoryList = async () => {
-    historyLoading.value = true;
-    try {
-      const params = buildQueryParams(
-        historyQuery,
-        historyPagination.value,
-        true,
-      );
-      const pageRes = await pageOutsourcedDataTasks(params);
-      historyRows.value = (pageRes.data ?? []).map((item) => mapBatch(item));
-      historyPagination.value.total = Number(
-        pageRes.totalCount ?? historyRows.value.length,
-      );
-      historyPagination.value.current = Number(
-        pageRes.pageIndex ?? params.pageIndex ?? 1,
-      );
-      historyPagination.value.pageSize = Number(
-        pageRes.pageSize ?? params.pageSize ?? 10,
-      );
-    } catch {
-      historyRows.value = [];
-      historyPagination.value.total = 0;
-    } finally {
-      historyLoading.value = false;
     }
   };
 
@@ -979,50 +783,6 @@ const buildQueryParams = (
   const selectStatus = (status: string) => {
     query.status = query.status === status ? "" : status;
     runQuery();
-  };
-
-  const openHistoryDrawer = (row?: OutsourcedDataTaskBatchRow) => {
-    historyAnchorRow.value = row ?? null;
-    const source = row
-      ? {
-          batchId: row.batchId,
-          taskDate: query.taskDate,
-          managerName: row.managerName || query.managerName,
-          productKeyword: row.productName || query.productKeyword,
-          step: row.currentStep || query.step,
-          status: row.status || query.status,
-          sourceType: row.sourceType || query.sourceType,
-          errorType: query.errorType,
-        }
-      : query;
-    Object.assign(historyQuery, {
-      batchId: source.batchId,
-      taskDate: source.taskDate,
-      managerName: source.managerName,
-      productKeyword: source.productKeyword,
-      step: source.step,
-      status: source.status,
-      sourceType: source.sourceType,
-      errorType: source.errorType,
-      includeHistory: true,
-    });
-    historyPagination.value.current = 1;
-    historyVisible.value = true;
-    void loadHistoryList();
-  };
-
-  const closeHistoryDrawer = () => {
-    historyVisible.value = false;
-    historyAnchorRow.value = null;
-  };
-
-  const handleHistoryPageChange = (params: {
-    current: number;
-    pageSize: number;
-  }) => {
-    historyPagination.value.current = params.current;
-    historyPagination.value.pageSize = params.pageSize;
-    void loadHistoryList();
   };
 
   const updateBatchSteps = (
@@ -1142,85 +902,6 @@ const buildQueryParams = (
     }
   };
 
-  const openStepLogs = async (row: OutsourcedDataTaskStepRow) => {
-    activeStep.value = row;
-    stepLogVisible.value = true;
-    stepLogLoading.value = true;
-    stepLogRows.value = [];
-    try {
-      const pageResult = await pageOutsourcedDataTaskLogs(row.batchId, {
-        stage: row.stage ?? row.step,
-        step: row.step ?? row.stage,
-        pageIndex: 1,
-        pageSize: 50,
-      });
-      const logs = pageResult.data ?? [];
-      stepLogRows.value = logs.map((log) => mapLogRow(log, row));
-      if (!logs.length) {
-        stepLogRows.value = [
-          {
-            key: row.stepId,
-            stepName: row.stepName,
-            stageName: row.stageName,
-            status: row.status,
-            statusName: row.statusName,
-            startedAt: row.startedAt || "-",
-            durationText: row.durationText || "-",
-            message:
-              row.errorMessage ||
-              row.outputSummary ||
-              row.inputSummary ||
-              outsourcedDataTaskPreviewText.stepLogEmptyText,
-            errorStack: row.errorStack,
-            logLevel:
-              row.status === "FAILED" || row.status === "BLOCKED"
-                ? "ERROR"
-                : "INFO",
-            occurredAt: row.startedAt,
-          },
-        ];
-      }
-    } catch {
-      stepLogRows.value = [
-        {
-          key: row.stepId,
-          stepName: row.stepName,
-          stageName: row.stageName,
-          status: row.status,
-          statusName: row.statusName,
-          startedAt: row.startedAt || "-",
-          durationText: row.durationText || "-",
-          message:
-            row.errorMessage ||
-            row.outputSummary ||
-            row.inputSummary ||
-            outsourcedDataTaskPreviewText.stepLogUnavailableText,
-          errorStack: row.errorStack,
-          logLevel:
-            row.status === "FAILED" || row.status === "BLOCKED"
-              ? "ERROR"
-              : "INFO",
-          occurredAt: row.startedAt,
-        },
-      ];
-    } finally {
-      stepLogLoading.value = false;
-    }
-  };
-
-  const closeStepLogs = () => {
-    stepLogVisible.value = false;
-  };
-
-  const openStepData = (row: OutsourcedDataTaskStepRow) => {
-    activeStep.value = row;
-    stepDataVisible.value = true;
-  };
-
-  const closeStepData = () => {
-    stepDataVisible.value = false;
-  };
-
   const openDetailDrawer = async (row: OutsourcedDataTaskBatchRow) => {
     selectedRow.value = row;
     selectedDetail.value = null;
@@ -1266,7 +947,9 @@ const buildQueryParams = (
       await request;
       await refreshAfterAction(successMessage);
     } catch {
-      message.warning(outsourcedDataTaskFeedbackTexts.backendUnavailableWarning);
+      message.warning(
+        outsourcedDataTaskFeedbackTexts.backendUnavailableWarning,
+      );
     }
   };
 
@@ -1279,12 +962,6 @@ const buildQueryParams = (
     },
     get tableData() {
       return tableData.value;
-    },
-    get historyLoading() {
-      return historyLoading.value;
-    },
-    get historyRows() {
-      return historyRows.value;
     },
     get stepSummaries() {
       return stepSummaries.value;
@@ -1307,12 +984,6 @@ const buildQueryParams = (
     set pagination(value: YTablePagination) {
       pagination.value = value;
     },
-    get historyPagination() {
-      return historyPagination.value;
-    },
-    set historyPagination(value: YTablePagination) {
-      historyPagination.value = value;
-    },
     query,
     get selectedRowKeys() {
       return selectedRowKeys.value;
@@ -1323,44 +994,11 @@ const buildQueryParams = (
     get selectedRow() {
       return selectedRow.value;
     },
-    get detailDataEntries() {
-      return buildDataEntries(selectedRow.value, selectedDetail.value);
-    },
-    get detailLogRows() {
-      return buildLogRows(selectedRow.value);
-    },
     get manualState() {
       return buildManualState(selectedRow.value, selectedDetail.value);
     },
     get detailVisible() {
       return detailVisible.value;
-    },
-    get historyVisible() {
-      return historyVisible.value;
-    },
-    get historyDrawerTitle() {
-      return historyDrawerTitle.value;
-    },
-    get historyDrawerDescription() {
-      return historyDrawerDescription.value;
-    },
-    get historyDrawerFilterSummary() {
-      return historyDrawerFilterSummary.value;
-    },
-    get stepLogVisible() {
-      return stepLogVisible.value;
-    },
-    get stepLogLoading() {
-      return stepLogLoading.value;
-    },
-    get stepLogRows() {
-      return stepLogRows.value;
-    },
-    get stepDataVisible() {
-      return stepDataVisible.value;
-    },
-    get activeStep() {
-      return activeStep.value;
     },
     runQuery,
     resetQuery,
@@ -1373,13 +1011,6 @@ const buildQueryParams = (
       `outsourced-task-step-row--${row.status.toLowerCase()}`,
     openDetailDrawer,
     closeDetailDrawer,
-    openStepLogs,
-    closeStepLogs,
-    openStepData,
-    closeStepData,
-    openHistoryDrawer,
-    closeHistoryDrawer,
-    handleHistoryPageChange,
     executeBatch: (row) => {
       const successPrefix = isContinueExecuteStatus(row.status)
         ? outsourcedDataTaskFeedbackTexts.submitExecuteContinueSuccessPrefix

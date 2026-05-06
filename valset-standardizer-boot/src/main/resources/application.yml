@@ -44,7 +44,7 @@ server:
 
 yss:
   mybatis:
-    mapper-scan: com.yss.valset.extract.repository.mapper
+    mapper-scan: com.yss.valset.extract.repository.mapper,com.yss.valset.transfer.infrastructure.mapper,com.yss.valset.task.infrastructure.mapper,com.yss.valset.analysis.infrastructure.mapper,com.yss.valset.workflow.infrastructure.mapper
 
 management:
   endpoints:

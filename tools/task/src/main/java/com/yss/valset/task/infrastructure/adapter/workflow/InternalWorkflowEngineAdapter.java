@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 内置工作流执行平台适配器。
+ * 估值内部工作流执行适配器。
  */
 @Component
 public class InternalWorkflowEngineAdapter implements WorkflowEngineAdapter {

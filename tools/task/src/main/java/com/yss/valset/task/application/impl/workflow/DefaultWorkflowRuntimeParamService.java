@@ -4,7 +4,6 @@ import com.yss.valset.application.command.workflow.WorkflowRuntimeParamSaveComma
 import com.yss.valset.application.dto.workflow.WorkflowRuntimeParamDTO;
 import com.yss.valset.application.service.workflow.WorkflowRuntimeParamService;
 import com.yss.valset.common.support.WorkflowRuntimeParamProperties;
-import com.yss.valset.task.application.port.workflow.WorkflowRuntimeParamGateway;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -20,13 +19,10 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
 
     private static final String DEFAULT_NAMESPACE = "subject.match.workflow";
 
-    private final WorkflowRuntimeParamGateway runtimeParamGateway;
     private final WorkflowRuntimeParamProperties defaultProperties;
     private final AtomicReference<WorkflowRuntimeParamDTO> cache = new AtomicReference<>();
 
-    public DefaultWorkflowRuntimeParamService(WorkflowRuntimeParamGateway runtimeParamGateway,
-                                             WorkflowRuntimeParamProperties defaultProperties) {
-        this.runtimeParamGateway = runtimeParamGateway;
+    public DefaultWorkflowRuntimeParamService(WorkflowRuntimeParamProperties defaultProperties) {
         this.defaultProperties = defaultProperties;
     }
 
@@ -39,8 +35,7 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
         synchronized (cache) {
             cached = cache.get();
             if (cached == null) {
-                WorkflowRuntimeParamDTO loaded = runtimeParamGateway.findByNamespace(DEFAULT_NAMESPACE)
-                        .orElseGet(this::defaultRuntimeParam);
+                WorkflowRuntimeParamDTO loaded = defaultRuntimeParam();
                 cache.set(copy(loaded));
                 cached = loaded;
             }
@@ -51,7 +46,7 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
     @Override
     public WorkflowRuntimeParamDTO saveRuntimeParam(WorkflowRuntimeParamSaveCommand command) {
         WorkflowRuntimeParamSaveCommand normalized = normalize(command);
-        WorkflowRuntimeParamDTO saved = runtimeParamGateway.save(normalized);
+        WorkflowRuntimeParamDTO saved = toRuntimeParam(normalized);
         cache.set(copy(saved));
         return copy(saved);
     }
@@ -99,6 +94,19 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
         dto.setSkipExcelStyleParsing(defaultProperties.isSkipExcelStyleParsing());
         dto.setEnableMatchProcess(defaultProperties.isEnableMatchProcess());
         dto.setPersistStandardizedDwdDetails(defaultProperties.isPersistStandardizedDwdDetails());
+        return dto;
+    }
+
+    private WorkflowRuntimeParamDTO toRuntimeParam(WorkflowRuntimeParamSaveCommand command) {
+        WorkflowRuntimeParamDTO dto = defaultRuntimeParam();
+        if (command == null) {
+            return dto;
+        }
+        dto.setParamNamespace(command.getParamNamespace());
+        dto.setSkipExcelStyleParsing(command.getSkipExcelStyleParsing());
+        dto.setEnableMatchProcess(command.getEnableMatchProcess());
+        dto.setPersistStandardizedDwdDetails(command.getPersistStandardizedDwdDetails());
+        dto.setDescription(command.getDescription());
         return dto;
     }
 

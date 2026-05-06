@@ -114,7 +114,7 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
             if (executionContext != null && Boolean.TRUE.equals(executionContext.getBindingResolved())
                     && executionContext.getEngineType() != null
                     && !"INTERNAL".equalsIgnoreCase(executionContext.getEngineType())) {
-                log.warn("当前工作流绑定了非 INTERNAL 执行平台，任务仍回退到内部调度执行，taskType={}, engineType={}, stageCode={}",
+                log.warn("当前工作流绑定了非 INTERNAL 的执行配置，任务仍回退到估值内部流程执行，taskType={}, engineType={}, stageCode={}",
                         taskType,
                         executionContext.getEngineType(),
                         executionContext.getWorkflowStageCode());

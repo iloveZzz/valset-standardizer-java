@@ -49,12 +49,11 @@ class WorkflowEngineDispatchServiceTest {
     }
 
     @Test
-    void shouldFallbackToSchedulerWhenAdapterUnsupported() {
-        when(internalAdapter.engineType()).thenReturn(WorkflowEngineType.LITEFLOW);
+    void shouldFallbackToSchedulerWhenEngineTypeIsNotInternal() {
         DefaultWorkflowEngineDispatchService service = new DefaultWorkflowEngineDispatchService(schedulerService, List.of(internalAdapter));
         WorkflowExecutionContextDTO context = new WorkflowExecutionContextDTO();
         context.setWorkflowCode("VALUATION_PARSE");
-        context.setEngineType("LITEFLOW");
+        context.setEngineType("EXTERNAL");
 
         service.trigger(33L, "PARSE", context);
 

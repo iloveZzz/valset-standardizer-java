@@ -34,27 +34,24 @@
 
 ## 3. 业务链路定义
 
-建议把页面固定为 6 个阶段：
+建议把页面固定为 3 个阶段：
 
-| 阶段编码 | 阶段名称 | 说明 | 典型来源 |
-|---|---|---|---|
-| `FILE_PARSE` | 文件解析 | 文件识别、Sheet 解析、原始行列抽取 | `valuation-workflows/analyze`、解析任务 |
-| `STRUCTURE_STANDARDIZE` | 结构标准化 | 字段映射、数据清洗、STG 结构转换 | 标准化任务 |
-| `SUBJECT_RECOGNIZE` | 科目识别 | 科目匹配、属性识别、标签补全 | match 任务、知识库匹配 |
-| `STANDARD_LANDING` | 标准表落地 | STG/DWD/标准持仓/估值数据写入 | 落地任务 |
-| `DATA_PROCESSING` | 加工任务 | 后续 TODO 数据加工、派生数据生成 | 后续加工调度 |
-| `VERIFY_ARCHIVE` | 校验归档 | 一致性校验、结果确认、归档完成 | 校验任务 |
+| 阶段编码                | 阶段名称   | 说明                               | 典型来源                                |
+| ----------------------- | ---------- | ---------------------------------- | --------------------------------------- |
+| `FILE_PARSE`            | 文件解析   | 文件识别、Sheet 解析、原始行列抽取 | `valuation-workflows/analyze`、解析任务 |
+| `STRUCTURE_STANDARDIZE` | 结构标准化 | 字段映射、数据清洗、STG 结构转换   | 标准化任务                              |
+| `STANDARD_LANDING`      | 标准表落地 | STG/DWD/标准持仓/估值数据写入      | 落地任务                                |
 
 状态建议统一为：
 
-| 状态编码 | 状态名称 | 前端颜色 |
-|---|---|---|
-| `PENDING` | 待处理 | default |
-| `RUNNING` | 处理中 | processing |
-| `SUCCESS` | 已完成 | success |
-| `FAILED` | 失败 | error |
-| `STOPPED` | 已停止 | warning |
-| `BLOCKED` | 阻塞 | error |
+| 状态编码  | 状态名称 | 前端颜色   |
+| --------- | -------- | ---------- |
+| `PENDING` | 待处理   | default    |
+| `RUNNING` | 处理中   | processing |
+| `SUCCESS` | 已完成   | success    |
+| `FAILED`  | 失败     | error      |
+| `STOPPED` | 已停止   | warning    |
+| `BLOCKED` | 阻塞     | error      |
 
 ## 4. 后端 TODO
 
@@ -70,27 +67,27 @@
 
 建议字段：
 
-| 字段 | 说明 |
-|---|---|
-| `batchId` | 批次主键 |
-| `batchName` | 批次名称 |
-| `businessDate` | 业务日期 |
-| `valuationDate` | 估值日期 |
-| `productCode` | 产品代码 |
-| `productName` | 产品名称 |
-| `managerName` | 管理人或机构 |
-| `fileId` | 文件主键 |
-| `filesysFileId` | 文件服务文件标识 |
-| `originalFileName` | 原始文件名 |
-| `sourceType` | 数据来源 |
-| `currentStage` | 当前阶段 |
-| `status` | 批次状态 |
-| `progress` | 批次进度 |
-| `startedAt` | 开始时间 |
-| `endedAt` | 结束时间 |
-| `durationMs` | 耗时 |
-| `lastErrorCode` | 最近错误编码 |
-| `lastErrorMessage` | 最近错误摘要 |
+| 字段               | 说明             |
+| ------------------ | ---------------- |
+| `batchId`          | 批次主键         |
+| `batchName`        | 批次名称         |
+| `businessDate`     | 业务日期         |
+| `valuationDate`    | 估值日期         |
+| `productCode`      | 产品代码         |
+| `productName`      | 产品名称         |
+| `managerName`      | 管理人或机构     |
+| `fileId`           | 文件主键         |
+| `filesysFileId`    | 文件服务文件标识 |
+| `originalFileName` | 原始文件名       |
+| `sourceType`       | 数据来源         |
+| `currentStage`     | 当前阶段         |
+| `status`           | 批次状态         |
+| `progress`         | 批次进度         |
+| `startedAt`        | 开始时间         |
+| `endedAt`          | 结束时间         |
+| `durationMs`       | 耗时             |
+| `lastErrorCode`    | 最近错误编码     |
+| `lastErrorMessage` | 最近错误摘要     |
 
 ### P0. 阶段明细模型
 
@@ -106,27 +103,27 @@
 
 建议字段：
 
-| 字段 | 说明 |
-|---|---|
-| `stepId` | 阶段明细主键 |
-| `batchId` | 批次主键 |
-| `stage` | 阶段编码 |
-| `stageName` | 阶段名称 |
-| `taskId` | 底层任务 ID |
-| `taskType` | 底层任务类型 |
-| `runNo` | 执行次数 |
-| `currentFlag` | 是否当前有效阶段记录 |
-| `triggerMode` | 调度执行、手动执行、依赖触发 |
-| `status` | 阶段状态 |
-| `progress` | 阶段进度 |
-| `startedAt` | 开始时间 |
-| `endedAt` | 结束时间 |
-| `durationMs` | 耗时 |
-| `inputSummary` | 输入摘要 |
-| `outputSummary` | 输出摘要 |
-| `errorCode` | 错误编码 |
-| `errorMessage` | 错误摘要 |
-| `logRef` | 日志定位 |
+| 字段            | 说明                         |
+| --------------- | ---------------------------- |
+| `stepId`        | 阶段明细主键                 |
+| `batchId`       | 批次主键                     |
+| `stage`         | 阶段编码                     |
+| `stageName`     | 阶段名称                     |
+| `taskId`        | 底层任务 ID                  |
+| `taskType`      | 底层任务类型                 |
+| `runNo`         | 执行次数                     |
+| `currentFlag`   | 是否当前有效阶段记录         |
+| `triggerMode`   | 调度执行、手动执行、依赖触发 |
+| `status`        | 阶段状态                     |
+| `progress`      | 阶段进度                     |
+| `startedAt`     | 开始时间                     |
+| `endedAt`       | 结束时间                     |
+| `durationMs`    | 耗时                         |
+| `inputSummary`  | 输入摘要                     |
+| `outputSummary` | 输出摘要                     |
+| `errorCode`     | 错误编码                     |
+| `errorMessage`  | 错误摘要                     |
+| `logRef`        | 日志定位                     |
 
 ### P0. 查询接口
 
@@ -141,13 +138,13 @@
 
 建议接口：
 
-| 方法 | 路径 | 返回 |
-|---|---|---|
-| `GET` | `/api/outsourced-data-tasks/summary` | `SingleResult<OutsourcedDataTaskSummaryDTO>` |
-| `GET` | `/api/outsourced-data-tasks` | `PageResult<OutsourcedDataTaskBatchDTO>` |
-| `GET` | `/api/outsourced-data-tasks/{batchId}` | `SingleResult<OutsourcedDataTaskBatchDetailDTO>` |
-| `GET` | `/api/outsourced-data-tasks/{batchId}/steps` | `MultiResult<OutsourcedDataTaskStepDTO>` |
-| `GET` | `/api/outsourced-data-tasks/{batchId}/logs` | `PageResult<OutsourcedDataTaskLogDTO>` |
+| 方法  | 路径                                         | 返回                                             |
+| ----- | -------------------------------------------- | ------------------------------------------------ |
+| `GET` | `/api/outsourced-data-tasks/summary`         | `SingleResult<OutsourcedDataTaskSummaryDTO>`     |
+| `GET` | `/api/outsourced-data-tasks`                 | `PageResult<OutsourcedDataTaskBatchDTO>`         |
+| `GET` | `/api/outsourced-data-tasks/{batchId}`       | `SingleResult<OutsourcedDataTaskBatchDetailDTO>` |
+| `GET` | `/api/outsourced-data-tasks/{batchId}/steps` | `MultiResult<OutsourcedDataTaskStepDTO>`         |
+| `GET` | `/api/outsourced-data-tasks/{batchId}/logs`  | `PageResult<OutsourcedDataTaskLogDTO>`           |
 
 ### P1. 操作接口
 
@@ -161,21 +158,20 @@
 
 建议接口：
 
-| 方法 | 路径 | 说明 |
-|---|---|---|
-| `POST` | `/api/outsourced-data-tasks/{batchId}/execute` | 执行批次 |
-| `POST` | `/api/outsourced-data-tasks/{batchId}/retry` | 重跑批次 |
-| `POST` | `/api/outsourced-data-tasks/{batchId}/stop` | 停止批次 |
+| 方法   | 路径                                                        | 说明     |
+| ------ | ----------------------------------------------------------- | -------- |
+| `POST` | `/api/outsourced-data-tasks/{batchId}/execute`              | 执行批次 |
+| `POST` | `/api/outsourced-data-tasks/{batchId}/retry`                | 重跑批次 |
+| `POST` | `/api/outsourced-data-tasks/{batchId}/stop`                 | 停止批次 |
 | `POST` | `/api/outsourced-data-tasks/{batchId}/steps/{stepId}/retry` | 重跑阶段 |
-| `POST` | `/api/outsourced-data-tasks/batch-execute` | 批量执行 |
-| `POST` | `/api/outsourced-data-tasks/batch-retry` | 批量重跑 |
-| `POST` | `/api/outsourced-data-tasks/batch-stop` | 批量停止 |
+| `POST` | `/api/outsourced-data-tasks/batch-execute`                  | 批量执行 |
+| `POST` | `/api/outsourced-data-tasks/batch-retry`                    | 批量重跑 |
+| `POST` | `/api/outsourced-data-tasks/batch-stop`                     | 批量停止 |
 
 ### P1. 任务事件与进度
 
 - [x] 打通底层任务事件到批次阶段明细。
 - [x] 监听解析生命周期事件并写入批次、阶段、日志。
-- [x] 监听通用工作流任务事件，将后续加工类任务写入 `DATA_PROCESSING`。
 - [x] 每个阶段开始、成功、失败、停止时写入完整阶段事件。
 - [x] 批次聚合状态在阶段事件落库后同步刷新。
 - [x] 如已有 SSE 能力，新增批次维度事件订阅；否则本期先使用列表轮询。
@@ -236,21 +232,21 @@
 
 建议列：
 
-| 列名 | 字段 |
-|---|---|
-| 数据批次名称 | `batchName` |
-| 产品代码 | `productCode` |
-| 产品名称 | `productName` |
-| 管理人 | `managerName` |
-| 估值日期 | `valuationDate` |
-| 文件名称 | `originalFileName` |
-| 当前阶段 | `currentStageName` |
-| 状态 | `statusName` |
-| 进度 | `progress` |
-| 开始时间 | `startedAt` |
-| 耗时 | `durationText` |
-| 异常原因 | `lastErrorMessage` |
-| 操作 | 查看、执行、重跑、停止、展开 |
+| 列名         | 字段                         |
+| ------------ | ---------------------------- |
+| 数据批次名称 | `batchName`                  |
+| 产品代码     | `productCode`                |
+| 产品名称     | `productName`                |
+| 管理人       | `managerName`                |
+| 估值日期     | `valuationDate`              |
+| 文件名称     | `originalFileName`           |
+| 当前阶段     | `currentStageName`           |
+| 状态         | `statusName`                 |
+| 进度         | `progress`                   |
+| 开始时间     | `startedAt`                  |
+| 耗时         | `durationText`               |
+| 异常原因     | `lastErrorMessage`           |
+| 操作         | 查看、执行、重跑、停止、展开 |
 
 ### P0. API 联调
 
@@ -269,16 +265,16 @@
 
 建议列：
 
-| 列名 | 字段 |
-|---|---|
-| 阶段名称 | `stageName` |
-| 任务开始时间 | `startedAt` |
-| 执行耗时 | `durationText` |
-| 执行次数 | `runNo` |
-| 触发方式 | `triggerModeName` |
-| 状态 | `statusName` |
-| 错误摘要 | `errorMessage` |
-| 操作 | 查看日志、查看数据、重跑 |
+| 列名         | 字段                     |
+| ------------ | ------------------------ |
+| 阶段名称     | `stageName`              |
+| 任务开始时间 | `startedAt`              |
+| 执行耗时     | `durationText`           |
+| 执行次数     | `runNo`                  |
+| 触发方式     | `triggerModeName`        |
+| 状态         | `statusName`             |
+| 错误摘要     | `errorMessage`           |
+| 操作         | 查看日志、查看数据、重跑 |
 
 ### P1. 详情抽屉
 
@@ -451,6 +447,5 @@ export type OutsourcedDataTaskPage = {
 
 - 当前已有 `ParseQueue` 偏 transfer 解析队列语义，不能直接作为本页面的领域模型。
 - `FullWorkflowResponse` 目前只覆盖上传、解析、匹配、提取等局部任务，不足以表达完整批次链路。
-- 后续 TODO 数据加工任务尚未明确领域边界，需要先抽象为 `DATA_PROCESSING` 阶段，再逐步接具体任务。
 - 如果后端不保存阶段明细，前端无法稳定展示展开表和重跑本阶段。
 - 如果错误原因只存在原始 payload 中，前端异常筛选和可读提示会很弱，需要后端结构化错误字段。

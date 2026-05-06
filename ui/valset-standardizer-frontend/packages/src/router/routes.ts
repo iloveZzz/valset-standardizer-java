@@ -59,17 +59,7 @@ export const workspaceNav: Array<{
         path: "/task-management?scene=valuation",
         icon: FileSearchOutlined,
       },
-      {
-        title: "持仓穿透任务",
-        path: "/task-management?scene=holding",
-        icon: FileSearchOutlined,
-      },
     ],
-  },
-  {
-    title: "工作流配置",
-    path: "/workflow-configs",
-    icon: ProjectOutlined,
   },
 ];
 
@@ -123,24 +113,6 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/TaskManagement/index.vue"),
     meta: {
       title: "估值表解析任务",
-      keepAlive: false,
-    },
-  },
-  {
-    path: "/holding-penetration-tasks",
-    name: "holding-penetration-tasks",
-    component: () => import("@/views/TaskManagement/index.vue"),
-    meta: {
-      title: "持仓穿透任务",
-      keepAlive: false,
-    },
-  },
-  {
-    path: "/workflow-configs",
-    name: "workflow-configs",
-    component: () => import("@/views/WorkflowConfig/index.vue"),
-    meta: {
-      title: "工作流配置",
       keepAlive: false,
     },
   },

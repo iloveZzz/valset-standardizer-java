@@ -1,6 +1,7 @@
 --liquibase formatted sql
 
 --changeset codex:20260504-01-mysql-workflow-config dbms:mysql
+--validCheckSum 9:7dfac4fbb3264cae0dc744666c19c188
 CREATE TABLE IF NOT EXISTS t_workflow_definition (
     workflow_id VARCHAR(64) PRIMARY KEY,
     workflow_code VARCHAR(128) NOT NULL,
@@ -81,7 +82,7 @@ CREATE TABLE IF NOT EXISTS t_workflow_executor_binding (
 );
 
 INSERT INTO t_workflow_definition (workflow_id, workflow_code, workflow_name, business_type, engine_type, parse_fallback_stage, workflow_fallback_stage, version_no, enabled, status, description, created_at, updated_at)
-SELECT 'wf_valuation_parse_v1', 'VALUATION_PARSE', '估值表解析工作流', 'VALUATION', 'INTERNAL', 'FILE_PARSE', 'DATA_PROCESSING', 1, 1, 'PUBLISHED', '从 yml 下沉的默认估值表解析阶段配置', NOW(), NOW()
+SELECT 'wf_valuation_parse_v1', 'VALUATION_PARSE', '估值表解析工作流', 'VALUATION', 'INTERNAL', 'FILE_PARSE', 'STANDARD_LANDING', 1, 1, 'PUBLISHED', '从 yml 下沉的默认估值表解析阶段配置', NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM t_workflow_definition WHERE workflow_code = 'VALUATION_PARSE');
 
 INSERT INTO t_workflow_stage (stage_id, workflow_id, stage_code, step_code, stage_name, step_name, stage_description, step_description, sort_order, retryable, skippable, enabled, created_at, updated_at)
@@ -91,31 +92,24 @@ INSERT INTO t_workflow_stage (stage_id, workflow_id, stage_code, step_code, stag
 SELECT 'wfs_structure_standardize', 'wf_valuation_parse_v1', 'STRUCTURE_STANDARDIZE', 'STRUCTURE_STANDARDIZE', '结构标准化', '结构标准化', '字段映射、数据清洗、STG 结构转换', '字段映射、数据清洗、STG 结构转换', 2, 1, 0, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM t_workflow_stage WHERE workflow_id = 'wf_valuation_parse_v1' AND stage_code = 'STRUCTURE_STANDARDIZE');
 INSERT INTO t_workflow_stage (stage_id, workflow_id, stage_code, step_code, stage_name, step_name, stage_description, step_description, sort_order, retryable, skippable, enabled, created_at, updated_at)
-SELECT 'wfs_subject_recognize', 'wf_valuation_parse_v1', 'SUBJECT_RECOGNIZE', 'SUBJECT_RECOGNIZE', '科目识别', '科目识别', '科目匹配、属性识别、标签补全', '科目匹配、属性识别、标签补全', 3, 1, 0, 1, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM t_workflow_stage WHERE workflow_id = 'wf_valuation_parse_v1' AND stage_code = 'SUBJECT_RECOGNIZE');
-INSERT INTO t_workflow_stage (stage_id, workflow_id, stage_code, step_code, stage_name, step_name, stage_description, step_description, sort_order, retryable, skippable, enabled, created_at, updated_at)
-SELECT 'wfs_standard_landing', 'wf_valuation_parse_v1', 'STANDARD_LANDING', 'STANDARD_LANDING', '标准表落地', '标准表落地', 'STG/DWD/标准持仓/估值数据写入', 'STG/DWD/标准持仓/估值数据写入', 4, 1, 0, 1, NOW(), NOW()
+SELECT 'wfs_standard_landing', 'wf_valuation_parse_v1', 'STANDARD_LANDING', 'STANDARD_LANDING', '标准表落地', '标准表落地', 'STG/DWD/标准持仓/估值数据写入', 'STG/DWD/标准持仓/估值数据写入', 3, 1, 0, 1, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM t_workflow_stage WHERE workflow_id = 'wf_valuation_parse_v1' AND stage_code = 'STANDARD_LANDING');
-INSERT INTO t_workflow_stage (stage_id, workflow_id, stage_code, step_code, stage_name, step_name, stage_description, step_description, sort_order, retryable, skippable, enabled, created_at, updated_at)
-SELECT 'wfs_verify_archive', 'wf_valuation_parse_v1', 'VERIFY_ARCHIVE', 'VERIFY_ARCHIVE', '校验归档', '校验归档', '一致性校验、结果确认、归档完成', '一致性校验、结果确认、归档完成', 5, 1, 0, 1, NOW(), NOW()
-WHERE NOT EXISTS (SELECT 1 FROM t_workflow_stage WHERE workflow_id = 'wf_valuation_parse_v1' AND stage_code = 'VERIFY_ARCHIVE');
 
 INSERT INTO t_workflow_stage_mapping (mapping_id, workflow_id, stage_id, mapping_type, mapping_value, ignored, created_at) VALUES
 ('wfsm_task_type_extract', 'wf_valuation_parse_v1', 'wfs_file_parse', 'TASK_TYPE', 'EXTRACT_DATA', 0, NOW()),
 ('wfsm_task_stage_extract', 'wf_valuation_parse_v1', 'wfs_file_parse', 'TASK_STAGE', 'EXTRACT', 0, NOW()),
 ('wfsm_task_stage_standardize', 'wf_valuation_parse_v1', 'wfs_structure_standardize', 'TASK_STAGE', 'STANDARDIZE', 0, NOW()),
 ('wfsm_parse_standardized', 'wf_valuation_parse_v1', 'wfs_structure_standardize', 'PARSE_LIFECYCLE', 'TASK_STANDARDIZED', 0, NOW()),
-('wfsm_task_type_match', 'wf_valuation_parse_v1', 'wfs_subject_recognize', 'TASK_TYPE', 'MATCH_SUBJECT', 0, NOW()),
-('wfsm_task_stage_match', 'wf_valuation_parse_v1', 'wfs_subject_recognize', 'TASK_STAGE', 'MATCH', 0, NOW()),
 ('wfsm_parse_persisted', 'wf_valuation_parse_v1', 'wfs_standard_landing', 'PARSE_LIFECYCLE', 'TASK_PERSISTED', 0, NOW()),
-('wfsm_task_type_export', 'wf_valuation_parse_v1', 'wfs_verify_archive', 'TASK_TYPE', 'EXPORT_RESULT', 0, NOW()),
-('wfsm_parse_succeeded', 'wf_valuation_parse_v1', 'wfs_verify_archive', 'PARSE_LIFECYCLE', 'TASK_SUCCEEDED', 0, NOW()),
-('wfsm_parse_queue_completed', 'wf_valuation_parse_v1', 'wfs_verify_archive', 'PARSE_LIFECYCLE', 'QUEUE_COMPLETED', 0, NOW()),
+('wfsm_parse_succeeded', 'wf_valuation_parse_v1', 'wfs_standard_landing', 'PARSE_LIFECYCLE', 'TASK_SUCCEEDED', 0, NOW()),
+('wfsm_parse_queue_completed', 'wf_valuation_parse_v1', 'wfs_standard_landing', 'PARSE_LIFECYCLE', 'QUEUE_COMPLETED', 0, NOW()),
 ('wfsm_ignore_cycle_started', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'CYCLE_STARTED', 1, NOW()),
 ('wfsm_ignore_cycle_finished', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'CYCLE_FINISHED', 1, NOW()),
 ('wfsm_ignore_batch_started', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'BATCH_STARTED', 1, NOW()),
 ('wfsm_ignore_batch_empty', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'BATCH_EMPTY', 1, NOW()),
 ('wfsm_ignore_batch_finished', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'BATCH_FINISHED', 1, NOW()),
+('wfsm_ignore_match_subject', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'MATCH_SUBJECT', 1, NOW()),
+('wfsm_ignore_export_result', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'EXPORT_RESULT', 1, NOW()),
 ('wfsm_ignore_parse_workbook', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'PARSE_WORKBOOK', 1, NOW())
 ON DUPLICATE KEY UPDATE mapping_id = mapping_id;
 
@@ -233,15 +227,13 @@ CREATE INDEX IF NOT EXISTS idx_workflow_executor_binding_stage ON t_workflow_exe
 CREATE INDEX IF NOT EXISTS idx_workflow_executor_binding_engine ON t_workflow_executor_binding (engine_type);
 
 INSERT INTO t_workflow_definition (workflow_id, workflow_code, workflow_name, business_type, engine_type, parse_fallback_stage, workflow_fallback_stage, version_no, enabled, status, description, created_at, updated_at)
-SELECT 'wf_valuation_parse_v1', 'VALUATION_PARSE', '估值表解析工作流', 'VALUATION', 'INTERNAL', 'FILE_PARSE', 'DATA_PROCESSING', 1, TRUE, 'PUBLISHED', '从 yml 下沉的默认估值表解析阶段配置', NOW(), NOW()
+SELECT 'wf_valuation_parse_v1', 'VALUATION_PARSE', '估值表解析工作流', 'VALUATION', 'INTERNAL', 'FILE_PARSE', 'STANDARD_LANDING', 1, TRUE, 'PUBLISHED', '从 yml 下沉的默认估值表解析阶段配置', NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM t_workflow_definition WHERE workflow_code = 'VALUATION_PARSE');
 
 INSERT INTO t_workflow_stage (stage_id, workflow_id, stage_code, step_code, stage_name, step_name, stage_description, step_description, sort_order, retryable, skippable, enabled, created_at, updated_at) VALUES
 ('wfs_file_parse', 'wf_valuation_parse_v1', 'FILE_PARSE', 'FILE_PARSE', '文件解析', '文件解析', '文件识别、Sheet 解析、结构化解析', '文件识别、Sheet 解析、结构化解析', 1, TRUE, FALSE, TRUE, NOW(), NOW()),
 ('wfs_structure_standardize', 'wf_valuation_parse_v1', 'STRUCTURE_STANDARDIZE', 'STRUCTURE_STANDARDIZE', '结构标准化', '结构标准化', '字段映射、数据清洗、STG 结构转换', '字段映射、数据清洗、STG 结构转换', 2, TRUE, FALSE, TRUE, NOW(), NOW()),
-('wfs_subject_recognize', 'wf_valuation_parse_v1', 'SUBJECT_RECOGNIZE', 'SUBJECT_RECOGNIZE', '科目识别', '科目识别', '科目匹配、属性识别、标签补全', '科目匹配、属性识别、标签补全', 3, TRUE, FALSE, TRUE, NOW(), NOW()),
-('wfs_standard_landing', 'wf_valuation_parse_v1', 'STANDARD_LANDING', 'STANDARD_LANDING', '标准表落地', '标准表落地', 'STG/DWD/标准持仓/估值数据写入', 'STG/DWD/标准持仓/估值数据写入', 4, TRUE, FALSE, TRUE, NOW(), NOW()),
-('wfs_verify_archive', 'wf_valuation_parse_v1', 'VERIFY_ARCHIVE', 'VERIFY_ARCHIVE', '校验归档', '校验归档', '一致性校验、结果确认、归档完成', '一致性校验、结果确认、归档完成', 5, TRUE, FALSE, TRUE, NOW(), NOW())
+('wfs_standard_landing', 'wf_valuation_parse_v1', 'STANDARD_LANDING', 'STANDARD_LANDING', '标准表落地', '标准表落地', 'STG/DWD/标准持仓/估值数据写入', 'STG/DWD/标准持仓/估值数据写入', 3, TRUE, FALSE, TRUE, NOW(), NOW())
 ON CONFLICT (stage_id) DO NOTHING;
 
 INSERT INTO t_workflow_stage_mapping (mapping_id, workflow_id, stage_id, mapping_type, mapping_value, ignored, created_at) VALUES
@@ -249,17 +241,16 @@ INSERT INTO t_workflow_stage_mapping (mapping_id, workflow_id, stage_id, mapping
 ('wfsm_task_stage_extract', 'wf_valuation_parse_v1', 'wfs_file_parse', 'TASK_STAGE', 'EXTRACT', FALSE, NOW()),
 ('wfsm_task_stage_standardize', 'wf_valuation_parse_v1', 'wfs_structure_standardize', 'TASK_STAGE', 'STANDARDIZE', FALSE, NOW()),
 ('wfsm_parse_standardized', 'wf_valuation_parse_v1', 'wfs_structure_standardize', 'PARSE_LIFECYCLE', 'TASK_STANDARDIZED', FALSE, NOW()),
-('wfsm_task_type_match', 'wf_valuation_parse_v1', 'wfs_subject_recognize', 'TASK_TYPE', 'MATCH_SUBJECT', FALSE, NOW()),
-('wfsm_task_stage_match', 'wf_valuation_parse_v1', 'wfs_subject_recognize', 'TASK_STAGE', 'MATCH', FALSE, NOW()),
 ('wfsm_parse_persisted', 'wf_valuation_parse_v1', 'wfs_standard_landing', 'PARSE_LIFECYCLE', 'TASK_PERSISTED', FALSE, NOW()),
-('wfsm_task_type_export', 'wf_valuation_parse_v1', 'wfs_verify_archive', 'TASK_TYPE', 'EXPORT_RESULT', FALSE, NOW()),
-('wfsm_parse_succeeded', 'wf_valuation_parse_v1', 'wfs_verify_archive', 'PARSE_LIFECYCLE', 'TASK_SUCCEEDED', FALSE, NOW()),
-('wfsm_parse_queue_completed', 'wf_valuation_parse_v1', 'wfs_verify_archive', 'PARSE_LIFECYCLE', 'QUEUE_COMPLETED', FALSE, NOW()),
+('wfsm_parse_succeeded', 'wf_valuation_parse_v1', 'wfs_standard_landing', 'PARSE_LIFECYCLE', 'TASK_SUCCEEDED', FALSE, NOW()),
+('wfsm_parse_queue_completed', 'wf_valuation_parse_v1', 'wfs_standard_landing', 'PARSE_LIFECYCLE', 'QUEUE_COMPLETED', FALSE, NOW()),
 ('wfsm_ignore_cycle_started', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'CYCLE_STARTED', TRUE, NOW()),
 ('wfsm_ignore_cycle_finished', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'CYCLE_FINISHED', TRUE, NOW()),
 ('wfsm_ignore_batch_started', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'BATCH_STARTED', TRUE, NOW()),
 ('wfsm_ignore_batch_empty', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'BATCH_EMPTY', TRUE, NOW()),
 ('wfsm_ignore_batch_finished', 'wf_valuation_parse_v1', NULL, 'IGNORE_PARSE_LIFECYCLE', 'BATCH_FINISHED', TRUE, NOW()),
+('wfsm_ignore_match_subject', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'MATCH_SUBJECT', TRUE, NOW()),
+('wfsm_ignore_export_result', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'EXPORT_RESULT', TRUE, NOW()),
 ('wfsm_ignore_parse_workbook', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'PARSE_WORKBOOK', TRUE, NOW())
 ON CONFLICT (mapping_id) DO NOTHING;
 
@@ -304,6 +295,70 @@ SET workflow_fallback_stage = 'STANDARD_LANDING',
     updated_at = NOW()
 WHERE workflow_code = 'VALUATION_PARSE'
   AND workflow_fallback_stage = 'DATA_PROCESSING';
+
+--changeset codex:20260606-01-mysql-valuation-parse-prune-stages dbms:mysql
+UPDATE t_workflow_definition
+SET workflow_fallback_stage = 'STANDARD_LANDING',
+    updated_at = NOW()
+WHERE workflow_code = 'VALUATION_PARSE'
+  AND workflow_fallback_stage IN ('DATA_PROCESSING', 'SUBJECT_RECOGNIZE', 'VERIFY_ARCHIVE');
+
+UPDATE t_workflow_stage
+SET sort_order = 3,
+    updated_at = NOW()
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND stage_code = 'STANDARD_LANDING'
+  AND sort_order <> 3;
+
+DELETE FROM t_workflow_stage_mapping
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND mapping_id IN ('wfsm_task_type_match', 'wfsm_task_stage_match', 'wfsm_task_type_export');
+
+INSERT INTO t_workflow_stage_mapping (mapping_id, workflow_id, stage_id, mapping_type, mapping_value, ignored, created_at) VALUES
+('wfsm_ignore_match_subject', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'MATCH_SUBJECT', 1, NOW()),
+('wfsm_ignore_export_result', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'EXPORT_RESULT', 1, NOW())
+ON DUPLICATE KEY UPDATE mapping_id = mapping_id;
+
+UPDATE t_workflow_stage_mapping
+SET stage_id = 'wfs_standard_landing'
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND mapping_id IN ('wfsm_parse_succeeded', 'wfsm_parse_queue_completed');
+
+DELETE FROM t_workflow_stage
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND stage_code IN ('SUBJECT_RECOGNIZE', 'VERIFY_ARCHIVE', 'DATA_PROCESSING');
+
+--changeset codex:20260606-01-postgres-valuation-parse-prune-stages dbms:postgresql
+UPDATE t_workflow_definition
+SET workflow_fallback_stage = 'STANDARD_LANDING',
+    updated_at = NOW()
+WHERE workflow_code = 'VALUATION_PARSE'
+  AND workflow_fallback_stage IN ('DATA_PROCESSING', 'SUBJECT_RECOGNIZE', 'VERIFY_ARCHIVE');
+
+UPDATE t_workflow_stage
+SET sort_order = 3,
+    updated_at = NOW()
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND stage_code = 'STANDARD_LANDING'
+  AND sort_order <> 3;
+
+DELETE FROM t_workflow_stage_mapping
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND mapping_id IN ('wfsm_task_type_match', 'wfsm_task_stage_match', 'wfsm_task_type_export');
+
+INSERT INTO t_workflow_stage_mapping (mapping_id, workflow_id, stage_id, mapping_type, mapping_value, ignored, created_at) VALUES
+('wfsm_ignore_match_subject', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'MATCH_SUBJECT', TRUE, NOW()),
+('wfsm_ignore_export_result', 'wf_valuation_parse_v1', NULL, 'IGNORE_WORKFLOW_TASK_TYPE', 'EXPORT_RESULT', TRUE, NOW())
+ON CONFLICT (mapping_id) DO NOTHING;
+
+UPDATE t_workflow_stage_mapping
+SET stage_id = 'wfs_standard_landing'
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND mapping_id IN ('wfsm_parse_succeeded', 'wfsm_parse_queue_completed');
+
+DELETE FROM t_workflow_stage
+WHERE workflow_id = 'wf_valuation_parse_v1'
+  AND stage_code IN ('SUBJECT_RECOGNIZE', 'VERIFY_ARCHIVE', 'DATA_PROCESSING');
 
 --changeset codex:20260505-01-mysql-workflow-config-audit dbms:mysql
 CREATE TABLE IF NOT EXISTS t_workflow_config_audit (
@@ -397,3 +452,197 @@ SELECT 'wfrp_subject_match_workflow', 'subject.match.workflow', FALSE, FALSE, FA
 WHERE NOT EXISTS (
     SELECT 1 FROM t_workflow_runtime_param WHERE param_namespace = 'subject.match.workflow'
 );
+
+--changeset codex:20260606-02-mysql-outsourced-workflow-config dbms:mysql
+CREATE TABLE IF NOT EXISTS t_outsourced_workflow_definition (
+    workflow_id VARCHAR(64) PRIMARY KEY,
+    workflow_code VARCHAR(128) NOT NULL,
+    workflow_name VARCHAR(256) NOT NULL,
+    parse_fallback_stage VARCHAR(64),
+    workflow_fallback_stage VARCHAR(64),
+    version_no INT NOT NULL DEFAULT 1,
+    enabled TINYINT(1) NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL,
+    description VARCHAR(1024),
+    created_at DATETIME,
+    updated_at DATETIME,
+    UNIQUE KEY uk_outsourced_workflow_definition_code_version (workflow_code, version_no),
+    KEY idx_outsourced_workflow_definition_code_enabled (workflow_code, enabled)
+);
+
+CREATE TABLE IF NOT EXISTS t_outsourced_workflow_stage (
+    stage_id VARCHAR(64) PRIMARY KEY,
+    workflow_id VARCHAR(64) NOT NULL,
+    stage_code VARCHAR(64) NOT NULL,
+    stage_name VARCHAR(128) NOT NULL,
+    stage_description VARCHAR(512),
+    sort_order INT NOT NULL,
+    enabled TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME,
+    updated_at DATETIME,
+    UNIQUE KEY uk_outsourced_workflow_stage_code (workflow_id, stage_code),
+    KEY idx_outsourced_workflow_stage_workflow_sort (workflow_id, sort_order)
+);
+
+INSERT INTO t_outsourced_workflow_definition (
+    workflow_id,
+    workflow_code,
+    workflow_name,
+    parse_fallback_stage,
+    workflow_fallback_stage,
+    version_no,
+    enabled,
+    status,
+    description,
+    created_at,
+    updated_at
+)
+SELECT
+    'owf_valuation_parse_v1',
+    'VALUATION_PARSE',
+    '估值表解析工作流',
+    'FILE_PARSE',
+    'STANDARD_LANDING',
+    1,
+    1,
+    'PUBLISHED',
+    '估值表解析阶段配置（精简版）',
+    NOW(),
+    NOW()
+WHERE NOT EXISTS (SELECT 1 FROM t_outsourced_workflow_definition WHERE workflow_code = 'VALUATION_PARSE');
+
+INSERT INTO t_outsourced_workflow_stage (
+    stage_id,
+    workflow_id,
+    stage_code,
+    stage_name,
+    stage_description,
+    sort_order,
+    enabled,
+    created_at,
+    updated_at
+)
+SELECT 'owfs_file_parse', 'owf_valuation_parse_v1', 'FILE_PARSE', '文件解析', '文件识别、Sheet 解析、结构化解析', 1, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM t_outsourced_workflow_stage WHERE workflow_id = 'owf_valuation_parse_v1' AND stage_code = 'FILE_PARSE');
+INSERT INTO t_outsourced_workflow_stage (
+    stage_id,
+    workflow_id,
+    stage_code,
+    stage_name,
+    stage_description,
+    sort_order,
+    enabled,
+    created_at,
+    updated_at
+)
+SELECT 'owfs_structure_standardize', 'owf_valuation_parse_v1', 'STRUCTURE_STANDARDIZE', '结构标准化', '字段映射、数据清洗、STG 结构转换', 2, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM t_outsourced_workflow_stage WHERE workflow_id = 'owf_valuation_parse_v1' AND stage_code = 'STRUCTURE_STANDARDIZE');
+INSERT INTO t_outsourced_workflow_stage (
+    stage_id,
+    workflow_id,
+    stage_code,
+    stage_name,
+    stage_description,
+    sort_order,
+    enabled,
+    created_at,
+    updated_at
+)
+SELECT 'owfs_standard_landing', 'owf_valuation_parse_v1', 'STANDARD_LANDING', '标准表落地', 'STG/DWD/标准持仓/估值数据写入', 3, 1, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM t_outsourced_workflow_stage WHERE workflow_id = 'owf_valuation_parse_v1' AND stage_code = 'STANDARD_LANDING');
+
+--changeset codex:20260606-02-postgres-outsourced-workflow-config dbms:postgresql
+CREATE TABLE IF NOT EXISTS t_outsourced_workflow_definition (
+    workflow_id VARCHAR(64) PRIMARY KEY,
+    workflow_code VARCHAR(128) NOT NULL,
+    workflow_name VARCHAR(256) NOT NULL,
+    parse_fallback_stage VARCHAR(64),
+    workflow_fallback_stage VARCHAR(64),
+    version_no INT NOT NULL DEFAULT 1,
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    status VARCHAR(32) NOT NULL,
+    description VARCHAR(1024),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uk_outsourced_workflow_definition_code_version UNIQUE (workflow_code, version_no)
+);
+CREATE INDEX IF NOT EXISTS idx_outsourced_workflow_definition_code_enabled ON t_outsourced_workflow_definition (workflow_code, enabled);
+
+CREATE TABLE IF NOT EXISTS t_outsourced_workflow_stage (
+    stage_id VARCHAR(64) PRIMARY KEY,
+    workflow_id VARCHAR(64) NOT NULL,
+    stage_code VARCHAR(64) NOT NULL,
+    stage_name VARCHAR(128) NOT NULL,
+    stage_description VARCHAR(512),
+    sort_order INT NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT uk_outsourced_workflow_stage_code UNIQUE (workflow_id, stage_code)
+);
+CREATE INDEX IF NOT EXISTS idx_outsourced_workflow_stage_workflow_sort ON t_outsourced_workflow_stage (workflow_id, sort_order);
+
+INSERT INTO t_outsourced_workflow_definition (
+    workflow_id,
+    workflow_code,
+    workflow_name,
+    parse_fallback_stage,
+    workflow_fallback_stage,
+    version_no,
+    enabled,
+    status,
+    description,
+    created_at,
+    updated_at
+)
+SELECT
+    'owf_valuation_parse_v1',
+    'VALUATION_PARSE',
+    '估值表解析工作流',
+    'FILE_PARSE',
+    'STANDARD_LANDING',
+    1,
+    TRUE,
+    'PUBLISHED',
+    '估值表解析阶段配置（精简版）',
+    NOW(),
+    NOW()
+WHERE NOT EXISTS (SELECT 1 FROM t_outsourced_workflow_definition WHERE workflow_code = 'VALUATION_PARSE');
+
+INSERT INTO t_outsourced_workflow_stage (
+    stage_id,
+    workflow_id,
+    stage_code,
+    stage_name,
+    stage_description,
+    sort_order,
+    enabled,
+    created_at,
+    updated_at
+) VALUES
+('owfs_file_parse', 'owf_valuation_parse_v1', 'FILE_PARSE', '文件解析', '文件识别、Sheet 解析、结构化解析', 1, TRUE, NOW(), NOW()),
+('owfs_structure_standardize', 'owf_valuation_parse_v1', 'STRUCTURE_STANDARDIZE', '结构标准化', '字段映射、数据清洗、STG 结构转换', 2, TRUE, NOW(), NOW()),
+('owfs_standard_landing', 'owf_valuation_parse_v1', 'STANDARD_LANDING', '标准表落地', 'STG/DWD/标准持仓/估值数据写入', 3, TRUE, NOW(), NOW())
+ON CONFLICT (stage_id) DO NOTHING;
+
+--changeset codex:20260606-03-mysql-drop-legacy-workflow-config dbms:mysql
+DROP TABLE IF EXISTS t_workflow_executor_binding;
+DROP TABLE IF EXISTS t_workflow_stage_mapping;
+DROP TABLE IF EXISTS t_workflow_status_mapping;
+DROP TABLE IF EXISTS t_workflow_config_audit;
+DROP TABLE IF EXISTS t_workflow_stage;
+DROP TABLE IF EXISTS t_workflow_definition;
+
+--changeset codex:20260606-03-postgres-drop-legacy-workflow-config dbms:postgresql
+DROP TABLE IF EXISTS t_workflow_executor_binding;
+DROP TABLE IF EXISTS t_workflow_stage_mapping;
+DROP TABLE IF EXISTS t_workflow_status_mapping;
+DROP TABLE IF EXISTS t_workflow_config_audit;
+DROP TABLE IF EXISTS t_workflow_stage;
+DROP TABLE IF EXISTS t_workflow_definition;
+
+--changeset codex:20260606-04-mysql-drop-workflow-runtime-param dbms:mysql
+DROP TABLE IF EXISTS t_workflow_runtime_param;
+
+--changeset codex:20260606-04-postgres-drop-workflow-runtime-param dbms:postgresql
+DROP TABLE IF EXISTS t_workflow_runtime_param;

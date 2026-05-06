@@ -3,7 +3,7 @@ package com.yss.valset.task.application.dto.workflow;
 import lombok.Data;
 
 /**
- * 工作流执行平台绑定视图。
+ * 估值内部流程绑定视图。
  */
 @Data
 public class WorkflowExecutorBindingDTO {

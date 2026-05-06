@@ -64,6 +64,26 @@
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-taskflow-adapter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-taskflow-springbatch</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-taskflow-dolohinscheduler</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-taskflow-xxljob</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
             <artifactId>valset-standardizer-batch</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -186,6 +206,10 @@
                         <include>com.yss.datamiddle:valset-standardizer-transfer</include>
                         <include>com.yss.datamiddle:valset-standardizer-task</include>
                         <include>com.yss.datamiddle:valset-standardizer-batch</include>
+                        <include>com.yss.datamiddle:valset-standardizer-taskflow-adapter</include>
+                        <include>com.yss.datamiddle:valset-standardizer-taskflow-springbatch</include>
+                        <include>com.yss.datamiddle:valset-standardizer-taskflow-dolohinscheduler</include>
+                        <include>com.yss.datamiddle:valset-standardizer-taskflow-xxljob</include>
                     </includes>
                     <projectName>${project.description}</projectName>
                 </configuration>

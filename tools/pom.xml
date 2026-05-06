@@ -20,5 +20,6 @@
         <module>task</module>
         <module>batch</module>
         <module>transfer</module>
+        <module>workflow</module>
     </modules>
 </project>

@@ -26,8 +26,6 @@ public class OutsourcedDataTaskQueryCommand {
 
     private String errorType;
 
-    private Boolean includeHistory;
-
     private Integer pageIndex;
 
     private Integer pageSize;

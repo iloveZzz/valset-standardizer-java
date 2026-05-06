@@ -1,11 +1,8 @@
 package com.yss.valset.task.application.service.workflow.engine;
 
 /**
- * 工作流执行平台类型。
+ * 估值内部工作流执行类型。
  */
 public enum WorkflowEngineType {
-    INTERNAL,
-    XXL_JOB,
-    LITEFLOW,
-    DOLPHIN_SCHEDULER
+    INTERNAL
 }

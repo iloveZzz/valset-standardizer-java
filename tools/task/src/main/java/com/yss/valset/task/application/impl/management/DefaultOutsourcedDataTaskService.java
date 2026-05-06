@@ -10,7 +10,6 @@ import com.yss.valset.task.application.service.workflow.WorkflowEngineDispatchSe
 import com.yss.valset.task.application.dto.OutsourcedDataTaskActionResultDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
-import com.yss.valset.task.application.dto.OutsourcedDataTaskLogDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStageSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
@@ -28,7 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
@@ -40,19 +38,19 @@ import java.util.stream.Collectors;
 /**
  * 默认估值表解析任务应用服务。
  *
- * <p>当前仅提供网关代理和空兜底，不再维护样例批次数据。</p>
+ * <p>
+ * 当前仅提供网关代理和空兜底，不再维护样例批次数据。
+ * </p>
  */
 @Service
 public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskService {
-
-    private static final WorkflowRuntimeCatalog DEFAULT_STAGE_CATALOG = new WorkflowRuntimeCatalog();
 
     private final OutsourcedDataTaskGateway outsourcedDataTaskGateway;
     private final WorkflowTaskGateway workflowTaskGateway;
     private final SchedulerService schedulerService;
     private final ObjectMapper objectMapper;
     private WorkflowEngineDispatchService workflowEngineDispatchService;
-    private WorkflowRuntimeCatalog stageCatalog = new WorkflowRuntimeCatalog();
+    private WorkflowRuntimeCatalog stageCatalog;
 
     public DefaultOutsourcedDataTaskService() {
         this(null, null, null, null);
@@ -60,9 +58,9 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
 
     @Autowired
     public DefaultOutsourcedDataTaskService(OutsourcedDataTaskGateway outsourcedDataTaskGateway,
-                                           WorkflowTaskGateway workflowTaskGateway,
-                                           SchedulerService schedulerService,
-                                           ObjectMapper objectMapper) {
+            WorkflowTaskGateway workflowTaskGateway,
+            SchedulerService schedulerService,
+            ObjectMapper objectMapper) {
         this.outsourcedDataTaskGateway = outsourcedDataTaskGateway;
         this.workflowTaskGateway = workflowTaskGateway;
         this.schedulerService = schedulerService;
@@ -120,10 +118,6 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         detail.setBatch(batch);
         detail.setSteps(listSteps(batchId));
         detail.setCurrentBlockPoint(batch.getLastErrorMessage());
-        detail.setFileResultUrl("/files/" + batch.getFileId());
-        detail.setRawDataUrl("/valuation-workflows/" + batch.getFileId() + "/raw-data");
-        detail.setStgDataUrl("/valuation-workflows/" + batch.getFileId() + "/stg-data");
-        detail.setDwdDataUrl("/valuation-workflows/" + batch.getFileId() + "/dwd-data");
         return detail;
     }
 
@@ -133,23 +127,6 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             return outsourcedDataTaskGateway.listSteps(batchId);
         }
         return Collections.emptyList();
-    }
-
-    @Override
-    public PageResult<OutsourcedDataTaskLogDTO> pageLogs(String batchId, String stage, Integer pageIndex, Integer pageSize) {
-        if (outsourcedDataTaskGateway != null) {
-            return outsourcedDataTaskGateway.pageLogs(batchId, stage, pageIndex, pageSize);
-        }
-        requireBatch(batchId);
-        List<OutsourcedDataTaskLogDTO> logs = listSteps(batchId).stream()
-                .filter(step -> !hasText(stage) || Objects.equals(step.getStage(), stage))
-                .map(this::toLog)
-                .collect(Collectors.toList());
-        int normalizedPageIndex = normalizePageIndex(pageIndex);
-        int normalizedPageSize = normalizePageSize(pageSize);
-        int fromIndex = Math.min((normalizedPageIndex - 1) * normalizedPageSize, logs.size());
-        int toIndex = Math.min(fromIndex + normalizedPageSize, logs.size());
-        return PageResult.of(logs.subList(fromIndex, toIndex), logs.size(), normalizedPageSize, normalizedPageIndex);
     }
 
     @Override
@@ -181,7 +158,8 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
     }
 
     @Override
-    public OutsourcedDataTaskActionResultDTO retryStep(String batchId, String stepId, OutsourcedDataTaskActionCommand command) {
+    public OutsourcedDataTaskActionResultDTO retryStep(String batchId, String stepId,
+            OutsourcedDataTaskActionCommand command) {
         OutsourcedDataTaskStepDTO step = requireStep(batchId, stepId);
         WorkflowTask sourceTask = requireWorkflowTask(step);
         Long taskId = cloneAndTrigger(sourceTask);
@@ -211,7 +189,8 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                 .collect(Collectors.toList());
     }
 
-    private List<OutsourcedDataTaskActionResultDTO> batchAction(OutsourcedDataTaskBatchCommand command, boolean manualExecute) {
+    private List<OutsourcedDataTaskActionResultDTO> batchAction(OutsourcedDataTaskBatchCommand command,
+            boolean manualExecute) {
         if (command == null || command.getBatchIds() == null) {
             return Collections.emptyList();
         }
@@ -283,7 +262,8 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
 
     private boolean isManualExecuteResume(String batchId) {
         OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
-        return batch != null && isAnyStatus(batch, OutsourcedDataTaskStatus.FAILED, OutsourcedDataTaskStatus.BLOCKED, OutsourcedDataTaskStatus.STOPPED);
+        return batch != null && isAnyStatus(batch, OutsourcedDataTaskStatus.FAILED, OutsourcedDataTaskStatus.BLOCKED,
+                OutsourcedDataTaskStatus.STOPPED);
     }
 
     private static boolean isFailedOrBlocked(String status) {
@@ -432,6 +412,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
     }
 
     private List<OutsourcedDataTaskStageSummaryDTO> buildStepSummaries(List<OutsourcedDataTaskBatchDTO> batches) {
+        WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
         Map<String, List<OutsourcedDataTaskBatchDTO>> stageMap = new java.util.HashMap<>();
         batches.forEach(batch -> {
             if (batch == null || !hasText(batch.getBatchId())) {
@@ -443,20 +424,22 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                     .distinct()
                     .forEach(stage -> stageMap.computeIfAbsent(stage, key -> new ArrayList<>()).add(batch));
         });
-        return stageCatalog.stageSequence().stream()
+        return runtimeCatalog.stageSequence().stream()
                 .map(stage -> {
-                    List<OutsourcedDataTaskBatchDTO> stageBatches = stageMap.getOrDefault(stage.name(), Collections.emptyList());
+                    List<OutsourcedDataTaskBatchDTO> stageBatches = stageMap.getOrDefault(stage.name(),
+                            Collections.emptyList());
                     OutsourcedDataTaskStageSummaryDTO summary = new OutsourcedDataTaskStageSummaryDTO();
                     summary.setStage(stage.name());
                     summary.setStep(stage.name());
-                    summary.setStageName(stageCatalog.stageLabel(stage.name()));
-                    summary.setStepName(stageCatalog.stageLabel(stage.name()));
-                    summary.setStageDescription(stageCatalog.stageDescription(stage.name()));
-                    summary.setStepDescription(stageCatalog.stageDescription(stage.name()));
+                    summary.setStageName(runtimeCatalog.stageLabel(stage.name()));
+                    summary.setStepName(runtimeCatalog.stageLabel(stage.name()));
+                    summary.setStageDescription(runtimeCatalog.stageDescription(stage.name()));
+                    summary.setStepDescription(runtimeCatalog.stageDescription(stage.name()));
                     summary.setTotalCount(stageBatches.size());
                     summary.setRunningCount(countByStatus(stageBatches, OutsourcedDataTaskStatus.RUNNING));
                     summary.setFailedCount(stageBatches.stream()
-                            .filter(batch -> isAnyStatus(batch, OutsourcedDataTaskStatus.FAILED, OutsourcedDataTaskStatus.BLOCKED))
+                            .filter(batch -> isAnyStatus(batch, OutsourcedDataTaskStatus.FAILED,
+                                    OutsourcedDataTaskStatus.BLOCKED))
                             .count());
                     summary.setPendingCount(countByStatus(stageBatches, OutsourcedDataTaskStatus.PENDING));
                     return summary;
@@ -476,27 +459,16 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         if (summary == null) {
             return;
         }
-        stageCatalog.activeWorkflowDefinition().ifPresentOrElse(definition -> {
+        WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
+        runtimeCatalog.activeWorkflowDefinition().ifPresentOrElse(definition -> {
             summary.setWorkflowCode(definition.getWorkflowCode());
             summary.setWorkflowId(definition.getWorkflowId());
             summary.setVersionNo(definition.getVersionNo());
         }, () -> {
-            summary.setWorkflowCode(stageCatalog.activeWorkflowCode());
-            summary.setWorkflowId(stageCatalog.activeWorkflowId());
-            summary.setVersionNo(stageCatalog.activeWorkflowVersionNo());
+            summary.setWorkflowCode(runtimeCatalog.activeWorkflowCode());
+            summary.setWorkflowId(runtimeCatalog.activeWorkflowId());
+            summary.setVersionNo(runtimeCatalog.activeWorkflowVersionNo());
         });
-    }
-
-    private OutsourcedDataTaskLogDTO toLog(OutsourcedDataTaskStepDTO step) {
-        OutsourcedDataTaskLogDTO log = new OutsourcedDataTaskLogDTO();
-        log.setLogId("LOG-" + step.getStepId());
-        log.setBatchId(step.getBatchId());
-        log.setStepId(step.getStepId());
-        log.setStage(step.getStage());
-        log.setLogLevel(OutsourcedDataTaskStatus.FAILED.name().equals(step.getStatus()) ? "ERROR" : "INFO");
-        log.setMessage(hasText(step.getErrorMessage()) ? step.getErrorMessage() : step.getStageName() + "执行完成");
-        log.setOccurredAt(step.getEndedAt() == null ? step.getStartedAt() : step.getEndedAt());
-        return log;
     }
 
     private OutsourcedDataTaskActionResultDTO accepted(String batchId, String stepId, String action, String message) {
@@ -532,7 +504,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         return pageSize == null || pageSize < 1 ? 10 : Math.min(pageSize, 200);
     }
 
-    private int stageOrder(String stage) {
-        return stageCatalog.stageOrder(stage);
+    private WorkflowRuntimeCatalog stageCatalog() {
+        return Objects.requireNonNull(stageCatalog, "WorkflowRuntimeCatalog 未注入");
     }
 }

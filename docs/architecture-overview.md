@@ -41,6 +41,7 @@
 - `knowledge`
 - `extract`
 - `analysis`
+- `task`
 - `batch`
 
 职责分别是：
@@ -48,13 +49,23 @@
 - `knowledge`：标准科目、历史映射、评估样本等知识加载
 - `extract`：原始数据抽取、标准化辅助、匹配引擎
 - `analysis`：待解析事件订阅、队列状态管理、结构化解析执行
-- `batch`：任务调度、任务路由、执行器分派
+- `task`：估值内部流程的引擎适配、阶段分发、状态查询
+- `batch`：任务调度、任务路由、执行器分派，主要支撑内部流程触发
+- `workflow`：通用 ETL 平台适配层，负责统一工作流定义、实例、状态和阶段日志，并对接 Spring Batch、DolphinScheduler、XXL-JOB 等底层实现
 
 ### 2.5 `boot`
 
 - 负责 REST 接口
 - 负责任务创建与流程编排
 - 负责启动入口和运行时配置
+
+### 2.6 通用 ETL 工作流模块
+
+- `taskflow-adapter`：统一工作流 DTO、状态枚举、阶段日志、适配器接口和通用 API
+- `taskflow-springbatch`：Spring Batch 的参数映射与执行适配
+- `taskflow-dolohinscheduler`：DolphinScheduler 的参数映射与执行适配
+- `taskflow-xxljob`：XXL-JOB 的参数映射与执行适配
+- 这一层与估值内部 `WorkflowEngineAdapter` 分离，避免把外部调度器语义混进估值 parse-task 模型
 
 ## 3. 总体架构
 
@@ -177,6 +188,7 @@ flowchart LR
 - `WorkflowTaskReuseService` 根据 `businessKey` 和 `forceRebuild` 决定是否复用成功任务
 - 调度服务只负责触发，不承载业务逻辑
 - `DefaultTaskDispatcher` 按 `TaskType` 路由到执行器
+- `WorkflowEngineAdapter` 只处理估值内部流程，不承载通用 ETL 或外部调度平台适配
 
 ## 6. 数据分层
 
@@ -214,6 +226,16 @@ flowchart LR
 - `t_stg_external_valuation_header`
 - `t_stg_external_valuation_subject`
 - `t_stg_external_valuation_metric`
+
+### 6.6 通用 ETL 层
+
+- `workflowDefinition`
+- `workflowStage`
+- `workflowInstance`
+- `workflowStageLog`
+- `engineBinding`
+
+这一层已经补齐数据库持久化、Repository 和统一 API，运行态由 `workflowDefinition`、`workflowStage`、`workflowInstance`、`workflowStageLog` 和 `engineBinding` 共同承载。
 
 用于保存解析后的结构化视图。
 

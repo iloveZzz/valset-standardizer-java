@@ -22,6 +22,12 @@
     <file url="file://$PROJECT_DIR$/tools/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/tools/task/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/tools/transfer/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tools/workflow/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tools/workflow/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tools/workflow/taskflow-adapter/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tools/workflow/taskflow-dolohinscheduler/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tools/workflow/taskflow-springbatch/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/tools/workflow/taskflow-xxljob/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/valset-standardizer-boot/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/valset-standardizer-boot/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/valset-standardizer-core/src/main/java" charset="UTF-8" />

@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 默认工作流执行平台分发服务。
+ * 默认估值内部工作流分发服务。
  */
 @Service
 public class DefaultWorkflowEngineDispatchService implements WorkflowEngineDispatchService {
@@ -34,7 +34,7 @@ public class DefaultWorkflowEngineDispatchService implements WorkflowEngineDispa
             throw new IllegalArgumentException("任务id不能为空");
         }
         WorkflowEngineAdapter adapter = resolveAdapter(context);
-        if (adapter == null || adapter.engineType() != WorkflowEngineType.INTERNAL) {
+        if (adapter == null) {
             triggerInternal(taskId);
             return;
         }
@@ -47,7 +47,7 @@ public class DefaultWorkflowEngineDispatchService implements WorkflowEngineDispa
             throw new IllegalArgumentException("任务id不能为空");
         }
         WorkflowEngineAdapter adapter = resolveAdapter(context);
-        if (adapter == null || adapter.engineType() != WorkflowEngineType.INTERNAL) {
+        if (adapter == null) {
             triggerInternal(taskId);
             return;
         }
@@ -72,8 +72,11 @@ public class DefaultWorkflowEngineDispatchService implements WorkflowEngineDispa
             return null;
         }
         String engineType = context.getEngineType().trim();
+        if (!WorkflowEngineType.INTERNAL.name().equalsIgnoreCase(engineType)) {
+            return null;
+        }
         return workflowEngineAdapters.stream()
-                .filter(adapter -> adapter != null && adapter.engineType().name().equalsIgnoreCase(engineType))
+                .filter(adapter -> adapter != null && adapter.engineType() == WorkflowEngineType.INTERNAL)
                 .findFirst()
                 .orElse(null);
     }

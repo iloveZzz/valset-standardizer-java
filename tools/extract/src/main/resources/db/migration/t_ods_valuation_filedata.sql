@@ -1,6 +1,6 @@
 -- ODS Layer Table: Raw Valuation File Data
 -- This table stores raw extracted row data from Excel/CSV valuation files
--- without any domain-level interpretation, supporting the Extract phase of the ETL pipeline.
+-- without any domain-level interpretation, supporting the Extract phase of the valuation file parsing flow.
 --
 -- Requirements: 3.1, 3.3
 -- Feature: ODS Data Extraction

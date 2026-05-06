@@ -14,9 +14,15 @@
 - `valset-standardizer-tools`：非 DDD 的通用工具库聚合模块
   - `valset-standardizer-extract`：Excel / CSV 文件解析与 `t_ods_valuation_filedata` 持久化
   - `valset-standardizer-analysis`：基于 ODS 原始行数据的估值分析
-  - `valset-standardizer-knowledge`：标准科目、历史映射提示和评估样本加载
-  - `valset-standardizer-batch`：基于 db-scheduler 的任务调度与分发
-  - `valset-standardizer-transfer`：文件收发分拣调度与任务分发，当前基于 db-scheduler
+- `valset-standardizer-knowledge`：标准科目、历史映射提示和评估样本加载
+- `valset-standardizer-task`：估值内部流程的任务适配、阶段分发与状态查询
+- `valset-standardizer-batch`：基于 db-scheduler 的任务调度与分发
+- `valset-standardizer-transfer`：文件收发分拣调度与任务分发，当前基于 db-scheduler
+- `valset-standardizer-workflow`：通用 ETL 平台适配层，下面包含
+  - `valset-standardizer-taskflow-adapter`：统一工作流 DTO、状态、日志、控制接口与数据库运行态
+  - `valset-standardizer-taskflow-springbatch`：Spring Batch 适配实现
+  - `valset-standardizer-taskflow-dolohinscheduler`：DolphinScheduler 适配实现
+  - `valset-standardizer-taskflow-xxljob`：XXL-JOB 适配实现
 - `valset-standardizer-infra`：通用基础设施支持代码
 - `valset-standardizer-boot`：启动类、应用服务、控制器
 
@@ -27,7 +33,9 @@
 3. `API` / `DB` 数据源继续走原有分析器。
 4. 文件主数据现在统一由 `t_transfer_object` 承担，估值文件通过 `VALUATION_TABLE` 标签识别，`t_transfer_object_tag` 记录接入分类，`file_id` 仍作为任务关联键保留。
 5. `t_valset_workflow_task` 记录流程阶段 `task_stage`，并分别记录 `task_start_time`、`parse_task_time_ms`、`standardize_time_ms`、`match_standard_subject_time_ms`，其中三段耗时分别对应文件解析、标准结构化、标准科目匹配。
-6. 同一份文件默认会复用已成功完成的抽取任务、解析任务和匹配任务；如果需要重新执行，可在接口里传入 `forceRebuild=true`。上传返回里会带 `fileFingerprint`，便于排查是否命中同一份文件。
+6. `WorkflowEngineAdapter` 仅用于估值内部流程的触发、重试和查询，不承担通用 ETL 平台编排。
+7. 同一份文件默认会复用已成功完成的抽取任务、解析任务和匹配任务；如果需要重新执行，可在接口里传入 `forceRebuild=true`。上传返回里会带 `fileFingerprint`，便于排查是否命中同一份文件。
+8. 通用 ETL 场景走 `valset-standardizer-workflow`，对外统一 `/api/etl/workflows/**`，与估值内部 `WorkflowEngineAdapter` 分离。
 
 当前版本以“可编译、可运行、可拆分”的多模块实现为目标，便于后续继续扩展估值表标准化、分析和匹配能力。
 
@@ -36,6 +44,8 @@
 - 接口调用说明：`docs/valuation-workflow-api.md`
 - 数据库初始化说明：`docs/valuation-workflow-db-init.md`
 - 文件管理设计：`docs/file-management-design.md`
+- 估值内部工作流引擎适配设计：`docs/workflow-engine-internal-scope.md`
+- 通用 ETL 平台设计：`docs/etl-platform-design.md`
 - 本地链路观测（OTEL + Tempo）：`docs/observability/otel-local-collector-tempo.md`
 - 文件管理接口：`/api/files/upload`、`/api/files/{fileId}`、`/api/files`、`/api/files/by-path`、`/api/files/by-path/ingest-logs`、`/api/files/by-path/sheet-styles`、`/api/files/{fileId}/ingest-logs`、`/api/files/{fileId}/sheet-styles`
 

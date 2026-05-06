@@ -6,7 +6,7 @@ import com.yss.valset.domain.model.DataSourceType;
 /**
  * 原始数据提取器接口。
  * <p>
- * 该接口定义 ETL 中“提取”阶段的领域抽象，负责将 Excel 或 CSV 文件中的行级数据
+ * 该接口定义估值文件解析链路中“提取”阶段的领域抽象，负责将 Excel 或 CSV 文件中的行级数据
  * 以原样方式落入 ODS 层，不做领域解析。
  * </p>
  * <p>

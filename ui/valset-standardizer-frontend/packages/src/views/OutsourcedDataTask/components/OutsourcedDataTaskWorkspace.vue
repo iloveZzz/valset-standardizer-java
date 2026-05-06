@@ -102,12 +102,6 @@ const columns = computed<YTableColumn[]>(() => [
   },
 ]);
 
-const historyColumns = computed<YTableColumn[]>(() =>
-  columns.value.filter(
-    (column) => Boolean(column.field) && column.field !== "action",
-  ),
-);
-
 const stepColumns = computed<YTableColumn[]>(() => [
   {
     field: "stepName",
@@ -138,52 +132,8 @@ const stepColumns = computed<YTableColumn[]>(() => [
   {
     field: "action",
     title: outsourcedDataTaskTableTexts.stepColumns.action,
-    width: 190,
+    width: 110,
     fixed: "right" as const,
-  },
-]);
-
-const logColumns = computed<YTableColumn[]>(() => [
-  {
-    field: "stepName",
-    title: outsourcedDataTaskTableTexts.logColumns.stepName,
-    width: 140,
-  },
-  {
-    field: "logLevel",
-    title: outsourcedDataTaskTableTexts.logColumns.logLevel,
-    width: 90,
-  },
-  {
-    field: "occurredAt",
-    title: outsourcedDataTaskTableTexts.logColumns.occurredAt,
-    width: 180,
-  },
-  {
-    field: "startedAt",
-    title: outsourcedDataTaskTableTexts.logColumns.startedAt,
-    width: 180,
-  },
-  {
-    field: "durationText",
-    title: outsourcedDataTaskTableTexts.logColumns.durationText,
-    width: 90,
-  },
-  {
-    field: "status",
-    title: outsourcedDataTaskTableTexts.logColumns.status,
-    width: 100,
-  },
-  {
-    field: "message",
-    title: outsourcedDataTaskTableTexts.logColumns.message,
-    minWidth: 260,
-    ellipsis: true,
-  },
-  {
-    field: "errorStack",
-    title: outsourcedDataTaskTableTexts.logColumns.errorStack,
-    minWidth: 320,
   },
 ]);
 
@@ -195,6 +145,15 @@ const statusLabelMap = Object.fromEntries(
   outsourcedDataTaskStatusCatalog.map((item) => [item.status, item.label]),
 );
 const statusOptions = outsourcedDataTaskStatusCatalog;
+
+const formatBatchName = (row: OutsourcedDataTaskBatchRow) => {
+  const fileName = String(row.originalFileName ?? "").trim();
+  const batchId = String(row.batchId ?? "").trim();
+  if (fileName && batchId) {
+    return `${fileName}:${batchId}`;
+  }
+  return fileName || batchId || row.batchName;
+};
 
 const formatStepLabel = (stage: string) =>
   page.stepSummaries.find((item) => item.step === stage || item.stage === stage)
@@ -263,10 +222,6 @@ const confirmStop = (row: OutsourcedDataTaskBatchRow) => {
     outsourcedDataTaskActionTexts.stopBatchConfirmContent,
     () => page.stopBatch(row),
   );
-};
-
-const openHistory = (row: OutsourcedDataTaskBatchRow) => {
-  page.openHistoryDrawer(row);
 };
 
 const confirmRetryStep = (row: OutsourcedDataTaskStepRow) => {
@@ -543,7 +498,7 @@ const taskMetricCards = computed(() => [
         @toggle-row-expand="page.handleExpandChange"
       >
         <template #batchName="{ row }">
-          <a @click="page.openDetailDrawer(row)">{{ row.batchName }}</a>
+          <a @click="page.openDetailDrawer(row)">{{ formatBatchName(row) }}</a>
         </template>
         <template #currentStepName="{ row }">
           <a-tag color="blue">{{ row.currentStepName }}</a-tag>
@@ -597,12 +552,6 @@ const taskMetricCards = computed(() => [
               </template>
               <template #action="{ row: stepRow }">
                 <a-space>
-                  <a @click="page.openStepLogs(stepRow)">
-                    {{ outsourcedDataTaskActionTexts.stepLogButtonText }}
-                  </a>
-                  <a @click="page.openStepData(stepRow)">
-                    {{ outsourcedDataTaskActionTexts.stepDataButtonText }}
-                  </a>
                   <a
                     :class="{ 'is-disabled': stepRow.status === 'PENDING' }"
                     @click="confirmRetryStep(stepRow)"
@@ -634,9 +583,6 @@ const taskMetricCards = computed(() => [
             </a>
             <a v-if="row.status === 'RUNNING'" @click="confirmStop(row)">
               {{ outsourcedDataTaskActionTexts.stopButtonText }}
-            </a>
-            <a @click="openHistory(row)">
-              {{ outsourcedDataTaskActionTexts.historyButtonText }}
             </a>
           </a-space>
         </template>
@@ -747,12 +693,6 @@ const taskMetricCards = computed(() => [
                 </template>
                 <template #action="{ row }">
                   <a-space>
-                    <a @click="page.openStepLogs(row)">
-                      {{ outsourcedDataTaskActionTexts.stepLogButtonText }}
-                    </a>
-                    <a @click="page.openStepData(row)">
-                      {{ outsourcedDataTaskActionTexts.stepDataButtonText }}
-                    </a>
                     <a
                       :class="{ 'is-disabled': row.status === 'PENDING' }"
                       @click="confirmRetryStep(row)"
@@ -814,161 +754,6 @@ const taskMetricCards = computed(() => [
           </a-tab-pane>
         </a-tabs>
       </template>
-    </a-drawer>
-
-    <a-drawer
-      class="outsourced-task-drawer"
-      :open="page.stepLogVisible"
-      :title="
-        page.activeStep
-          ? `${page.activeStep.stepName}${outsourcedDataTaskActionTexts.detailStepLogSuffix}`
-          : outsourcedDataTaskActionTexts.detailStepLogFallbackTitle
-      "
-      :width="880"
-      @close="page.closeStepLogs"
-    >
-      <YTable
-        :columns="logColumns"
-        :data="page.stepLogRows"
-        :loading="page.stepLogLoading"
-        :row-config="{ keyField: 'key' }"
-        :pageable="false"
-        :autoFlexColumn="false"
-      >
-        <template #logLevel="{ row }">
-          <a-tag
-            :color="
-              row.logLevel === 'ERROR'
-                ? 'red'
-                : row.logLevel === 'WARN'
-                  ? 'orange'
-                  : 'blue'
-            "
-          >
-            {{ row.logLevel || "INFO" }}
-          </a-tag>
-        </template>
-        <template #status="{ row }">
-          <a-tag :color="page.formatStatusColor(row.status)">{{
-            row.statusName
-          }}</a-tag>
-        </template>
-        <template #errorStack="{ row }">
-          <pre v-if="row.errorStack" class="outsourced-task-stack">{{
-            row.errorStack
-          }}</pre>
-          <span v-else class="outsourced-task-muted">
-            {{ outsourcedDataTaskActionTexts.noErrorStackText }}
-          </span>
-        </template>
-      </YTable>
-    </a-drawer>
-
-    <a-drawer
-      class="outsourced-task-drawer"
-      :open="page.stepDataVisible"
-      :title="
-        page.activeStep
-          ? `${page.activeStep.stepName}${outsourcedDataTaskActionTexts.detailStepDataSuffix}`
-          : outsourcedDataTaskActionTexts.detailStepDataFallbackTitle
-      "
-      :width="720"
-      @close="page.closeStepData"
-    >
-      <template v-if="page.activeStep">
-        <a-descriptions bordered size="small" :column="1">
-          <a-descriptions-item
-            :label="outsourcedDataTaskTableTexts.detailFields.step"
-            >{{ page.activeStep.stepName }}</a-descriptions-item
-          >
-          <a-descriptions-item
-            :label="outsourcedDataTaskTableTexts.detailFields.taskId"
-            >{{ page.activeStep.taskId || "-" }}</a-descriptions-item
-          >
-          <a-descriptions-item
-            :label="outsourcedDataTaskTableTexts.detailFields.taskType"
-            >{{ page.activeStep.taskType || "-" }}</a-descriptions-item
-          >
-          <a-descriptions-item
-            :label="outsourcedDataTaskTableTexts.detailFields.inputSummary"
-            >{{ page.activeStep.inputSummary || "-" }}</a-descriptions-item
-          >
-          <a-descriptions-item
-            :label="outsourcedDataTaskTableTexts.detailFields.outputSummary"
-            >{{ page.activeStep.outputSummary || "-" }}</a-descriptions-item
-          >
-          <a-descriptions-item
-            :label="outsourcedDataTaskTableTexts.detailFields.errorMessage"
-          >
-            <span
-              class="outsourced-task-step-error"
-              :class="{
-                'is-highlight':
-                  page.activeStep.status === 'FAILED' ||
-                  page.activeStep.status === 'BLOCKED',
-              }"
-            >
-              {{ page.activeStep.errorMessage || "-" }}
-            </span>
-          </a-descriptions-item>
-          <a-descriptions-item
-            :label="outsourcedDataTaskTableTexts.detailFields.logRef"
-            >{{ page.activeStep.logRef || "-" }}</a-descriptions-item
-          >
-        </a-descriptions>
-      </template>
-    </a-drawer>
-
-    <a-drawer
-      class="outsourced-task-drawer"
-      :open="page.historyVisible"
-      :title="page.historyDrawerTitle"
-      :width="1200"
-      @close="page.closeHistoryDrawer"
-    >
-      <div class="outsourced-task-history">
-        <div class="outsourced-task-history__summary">
-          <div class="outsourced-task-history__summary-main">
-            {{ page.historyDrawerDescription }}
-          </div>
-          <div class="outsourced-task-history__summary-sub">
-            {{ page.historyDrawerFilterSummary }}
-          </div>
-          <a-tag color="blue"
-            >{{ outsourcedDataTaskActionTexts.historyTotalPrefix
-            }}{{ page.historyPagination.total }}</a-tag
-          >
-        </div>
-        <YTable
-          :columns="historyColumns"
-          :data="page.historyRows"
-          :loading="page.historyLoading"
-          :height="720"
-          :row-config="{ keyField: 'batchId' }"
-          :checkbox-config="{ highlight: true }"
-          :pageable="true"
-          :autoFlexColumn="false"
-          v-model:pagination="page.historyPagination"
-          :toolbar-config="{ custom: false }"
-          @page-change="page.handleHistoryPageChange"
-        >
-          <template #batchName="{ row }">
-            <a @click="page.openDetailDrawer(row)">{{ row.batchName }}</a>
-          </template>
-          <template #status="{ row }">
-            <a-tag :color="page.formatStatusColor(row.status)">{{
-              row.statusName
-            }}</a-tag>
-          </template>
-          <template #progress="{ row }">
-            <a-progress
-              :percent="row.progress"
-              size="small"
-              :status="row.status === 'FAILED' ? 'exception' : undefined"
-            />
-          </template>
-        </YTable>
-      </div>
     </a-drawer>
   </div>
 </template>
