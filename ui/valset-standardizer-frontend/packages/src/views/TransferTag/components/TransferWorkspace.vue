@@ -37,12 +37,14 @@ const actionConfig = useTableActionConfig({
       text: "修改",
       key: "edit",
       type: "link",
+      hideFn: ({ row }: any) => page.isDefaultTag(row),
       clickFn: ({ row }: any) => page.openEditDialog(row),
     },
     {
       text: "删除",
       key: "delete",
       type: "link",
+      hideFn: ({ row }: any) => page.isDefaultTag(row),
       clickFn: ({ row }: any) => page.confirmDelete(row),
     },
   ],
@@ -58,6 +60,7 @@ const columns: YTableColumn[] = [
   { field: "tagCode", title: "标签编码", width: 180 },
   { field: "tagName", title: "标签名称", width: 220 },
   { field: "tagValue", title: "标签值", width: 160 },
+  { field: "defaultTag", title: "标签类型", width: 120 },
   { field: "matchStrategy", title: "匹配策略", width: 160 },
   { field: "priority", title: "优先级", width: 100 },
   { field: "enabled", title: "启用", width: 100 },
@@ -78,6 +81,7 @@ const columns: YTableColumn[] = [
             <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
             <span class="workspace-pill">模板名固定 transfer_tag</span>
             <span class="workspace-pill">支持试跑验证</span>
+            <span class="workspace-pill">默认标签固定启用且不可编辑</span>
           </div>
         </div>
         <div class="workspace-header-actions">
@@ -112,16 +116,22 @@ const columns: YTableColumn[] = [
           <a-switch
             :checked="Boolean(row.enabled)"
             :loading="page.isEnabledUpdating(row.tagId)"
-            :disabled="page.isEnabledUpdating(row.tagId)"
+            :disabled="
+              page.isEnabledUpdating(row.tagId) || page.isDefaultTag(row)
+            "
             checked-children="启用"
             un-checked-children="停用"
             @change="(checked) => page.toggleEnabled(row, checked === true)"
           />
         </template>
+        <template #defaultTag="{ row }">
+          <a-tag v-if="page.isDefaultTag(row)" color="gold">默认标签</a-tag>
+          <a-tag v-else color="default">普通标签</a-tag>
+        </template>
         <template #toolbar-left>
           <WorkspaceTableToolbar
             title="标签列表"
-            :description="`总数 ${page.total} 条，点击操作按钮查看详情或执行试跑。`"
+            :description="`总数 ${page.total} 条，默认标签固定启用且不可编辑、删除。`"
             :meta="`当前模板 ${page.templateNamePreview || 'transfer_tag'}`"
           >
             <a-form layout="inline" class="workspace-table-toolbar-form">
@@ -234,6 +244,14 @@ const columns: YTableColumn[] = [
       @close="page.closeDetail"
     >
       <template v-if="page.selectedRow">
+        <a-alert
+          v-if="page.isDefaultTag(page.selectedRow)"
+          type="warning"
+          show-icon
+          message="这是默认标签"
+          description="默认标签固定为启用状态，不能修改、删除或切换启用状态。"
+          style="margin-bottom: 16px"
+        />
         <a-descriptions bordered :column="1" size="small">
           <a-descriptions-item label="标签编码">
             {{ page.selectedRow.tagCode || "-" }}
@@ -243,6 +261,9 @@ const columns: YTableColumn[] = [
           </a-descriptions-item>
           <a-descriptions-item label="标签值">
             {{ page.selectedRow.tagValue || "-" }}
+          </a-descriptions-item>
+          <a-descriptions-item label="标签类型">
+            {{ page.formatDefaultTag(page.selectedRow) }}
           </a-descriptions-item>
           <a-descriptions-item label="启用状态">
             {{ page.formatEnabled(page.selectedRow.enabled) }}
@@ -388,3 +409,5 @@ const columns: YTableColumn[] = [
     </a-drawer>
   </div>
 </template>
+
+<style scoped></style>

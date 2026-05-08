@@ -8,6 +8,8 @@ import type { Object } from "./object";
 
 export interface TransferTagUpsertCommand {
   /** No comments found. */
+  defaultTag?: boolean;
+  /** No comments found. */
   enabled?: boolean;
   /** No comments found. */
   matchStrategy?: string;

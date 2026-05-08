@@ -30,7 +30,7 @@ const goTo = (path: string) => {
       <div class="brand-brand">
         <div class="brand-mark">转换</div>
         <div class="brand-copy">
-          <div class="brand-title">Transfer</div>
+          <div class="brand-title">分拣HUB</div>
           <div class="brand-subtitle">YSS 文件收发管理</div>
         </div>
       </div>

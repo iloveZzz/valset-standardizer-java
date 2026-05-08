@@ -12,6 +12,8 @@ export interface TransferTagViewDTO {
   /** No comments found. */
   enabled?: boolean;
   /** No comments found. */
+  defaultTag?: boolean;
+  /** No comments found. */
   formTemplateName?: string;
   /** No comments found. */
   matchStrategy?: string;

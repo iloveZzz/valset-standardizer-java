@@ -38,6 +38,7 @@ public class TransferTagFormTemplate extends FormTemplate {
         values.put("matchStrategy", "SCRIPT_RULE");
         values.put("scriptLanguage", "qlexpress4");
         values.put("scriptBody", DEFAULT_VALUATION_TABLE_SCRIPT);
+        values.put("defaultTag", Boolean.FALSE);
         Map<String, Object> tagMeta = new LinkedHashMap<>();
         tagMeta.put("scanLimit", 100);
         tagMeta.put("headerKeywords", java.util.List.of("科目代码", "科目名称"));
@@ -69,6 +70,10 @@ public class TransferTagFormTemplate extends FormTemplate {
                         YssFormilyDsl.input("tagName", "标签名称").required().placeholder("例如：邮件附件类型").gridSpan(1),
                         YssFormilyDsl.input("tagValue", "标签值").required().placeholder("例如：xlsx").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
+                        YssFormilyDsl.switchField("defaultTag", "默认标签")
+                                .gridSpan(1)
+                                .disabledExpr("{{ $values.tagCode !== 'BUSINESS_DATE' }}")
+                                .tooltip("默认标签固定为启用状态，保存后不可编辑或删除"),
                         YssFormilyDsl.select("matchStrategy", "匹配策略")
                                 .required()
                                 .options(

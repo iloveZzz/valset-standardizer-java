@@ -6,6 +6,7 @@ export interface TagViewDTO {
   tagName?: string;
   tagValue?: string;
   enabled?: boolean;
+  defaultTag?: boolean;
   priority?: number;
   matchStrategy?: string;
   scriptLanguage?: string;
@@ -51,6 +52,7 @@ export interface TagPage {
   };
   enabledUpdatingIds: Record<string, boolean>;
   isEnabledUpdating: (tagId?: string) => boolean;
+  isDefaultTag: (row?: TagViewDTO | null) => boolean;
   toggleEnabled: (row: TagViewDTO, checked: boolean) => Promise<void> | void;
   templateNamePreview: string;
   templateDescription: string;
@@ -100,6 +102,7 @@ export interface TagPage {
   submitTest: () => Promise<void> | void;
   closeTest: () => void;
   formatEnabled: (value: boolean | undefined) => string;
+  formatDefaultTag: (row?: TagViewDTO | null) => string;
   formatMatchStrategy: (value?: string) => string;
   resolveScriptEditorLanguage: (value: string | undefined) => string;
   resetScriptBody: () => void;

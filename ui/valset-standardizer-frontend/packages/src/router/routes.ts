@@ -40,7 +40,7 @@ export const workspaceNav: Array<{
   }>;
 }> = [
   {
-    title: "源数据分拣",
+    title: "分拣HUB",
     path: "/transfer",
     icon: DatabaseOutlined,
     children: transferSectionOptions.map((item) => ({

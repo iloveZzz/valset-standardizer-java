@@ -35,4 +35,6 @@ public class TransferTagUpsertCommand {
     private String regexPattern;
 
     private Map<String, Object> tagMeta;
+
+    private Boolean defaultTag = Boolean.FALSE;
 }

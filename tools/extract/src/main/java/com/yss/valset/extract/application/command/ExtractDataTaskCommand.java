@@ -25,6 +25,26 @@ public class ExtractDataTaskCommand {
     private String fileFingerprint;
 
     /**
+     * 文件服务任务标识。
+     */
+    private String filesysTaskId;
+
+    /**
+     * 文件服务文件标识。
+     */
+    private String filesysFileId;
+
+    /**
+     * 文件服务对象键。
+     */
+    private String filesysObjectKey;
+
+    /**
+     * 是否立即完成文件服务上传。
+     */
+    private Boolean filesysInstantUpload;
+
+    /**
      * 文件主数据标识。
      */
     private Long fileId;

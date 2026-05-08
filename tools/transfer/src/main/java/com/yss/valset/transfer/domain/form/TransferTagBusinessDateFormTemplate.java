@@ -26,6 +26,7 @@ public class TransferTagBusinessDateFormTemplate extends FormTemplate {
     public Map<String, Object> initialValues() {
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("enabled", Boolean.TRUE);
+        values.put("defaultTag", Boolean.TRUE);
         values.put("priority", 10);
         values.put("matchStrategy", "REGEX_RULE");
         values.put("tagCode", "BUSINESS_DATE");
@@ -33,6 +34,7 @@ public class TransferTagBusinessDateFormTemplate extends FormTemplate {
         values.put("tagValue", "DATE");
         values.put("regexPattern", BUSINESS_DATE_REGEX_PATTERN);
         Map<String, Object> tagMeta = new LinkedHashMap<>();
+        tagMeta.put("defaultTag", Boolean.TRUE);
         tagMeta.put("candidateFields", List.of("fileName", "originalName", "subject", "path"));
         tagMeta.put("supportedFormats", List.of("yyyy-MM-dd", "yyyyMMdd", "yyyy/MM/dd", "yyyy年MM月dd日"));
         values.put("tagMeta", tagMeta);
@@ -65,6 +67,10 @@ public class TransferTagBusinessDateFormTemplate extends FormTemplate {
                         YssFormilyDsl.input("tagName", "标签名称").required().placeholder("例如：业务日期").gridSpan(1),
                         YssFormilyDsl.input("tagValue", "标签值").required().placeholder("例如：DATE").gridSpan(1),
                         YssFormilyDsl.switchField("enabled", "启用").gridSpan(1),
+                        YssFormilyDsl.switchField("defaultTag", "默认标签")
+                                .gridSpan(1)
+                                .disabledExpr("{{ true }}")
+                                .tooltip("业务日期标签默认启用且固定为默认标签"),
                         YssFormilyDsl.slot("regexPattern", "正则表达式", "regexPattern")
                                 .required()
                                 .placeholder("例如：(?:\\d{4}[-/]\\d{2}[-/]\\d{2}|\\d{8}|\\d{4}年\\d{1,2}月\\d{1,2}日)")

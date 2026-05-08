@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Map;
 
 /**
  * 默认标签管理服务。
@@ -46,22 +47,28 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
 
     @Override
     public TransferTagMutationResponse upsertTag(TransferTagUpsertCommand command) {
-        validateCommand(command);
         boolean createMode = command.getTagId() == null;
         TransferTagDefinition existing = createMode ? null : transferTagGateway.findById(command.getTagId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "未找到标签，tagId=" + command.getTagId()));
+        if (!createMode && isDefaultTag(existing)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "默认标签不可编辑");
+        }
+        validateCommand(command);
+        boolean defaultTag = isDefaultTag(command.getTagCode(), command.getTagMeta())
+                || Boolean.TRUE.equals(command.getDefaultTag());
+        Map<String, Object> tagMeta = mergeDefaultTagMeta(command.getTagMeta(), defaultTag);
         TransferTagDefinition definition = new TransferTagDefinition(
                 command.getTagId(),
                 command.getTagCode(),
                 command.getTagName(),
                 command.getTagValue(),
-                Boolean.TRUE.equals(command.getEnabled()),
+                defaultTag || Boolean.TRUE.equals(command.getEnabled()),
                 command.getPriority() == null ? 10 : command.getPriority(),
                 command.getMatchStrategy(),
                 command.getScriptLanguage(),
                 command.getScriptBody(),
                 command.getRegexPattern(),
-                command.getTagMeta(),
+                tagMeta,
                 createMode ? Instant.now() : existing.createdAt(),
                 Instant.now()
         );
@@ -78,6 +85,9 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
     public TransferTagMutationResponse deleteTag(String tagId) {
         TransferTagDefinition existing = transferTagGateway.findById(tagId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "未找到标签，tagId=" + tagId));
+        if (isDefaultTag(existing)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "默认标签不可删除");
+        }
         transferTagGateway.deleteById(tagId);
         return TransferTagMutationResponse.builder()
                 .operation("delete")
@@ -97,6 +107,11 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "标签配置不能为空");
         }
         String matchStrategy = command.getMatchStrategy() == null ? "" : command.getMatchStrategy().trim().toUpperCase();
+        boolean defaultTagRequested = Boolean.TRUE.equals(command.getDefaultTag())
+                || isDefaultTag(command.getTagCode(), command.getTagMeta());
+        if (defaultTagRequested && !"BUSINESS_DATE".equalsIgnoreCase(normalize(command.getTagCode()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "默认标签仅允许业务日期标签");
+        }
         transferTagGateway.findByTagCode(command.getTagCode())
                 .ifPresent(existing -> {
                     if (command.getTagId() == null || !command.getTagId().equals(existing.tagId())) {
@@ -124,7 +139,8 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
                 .tagCode(definition.tagCode())
                 .tagName(definition.tagName())
                 .tagValue(definition.tagValue())
-                .enabled(definition.enabled())
+                .enabled(isDefaultTag(definition) || definition.enabled())
+                .defaultTag(isDefaultTag(definition))
                 .priority(definition.priority())
                 .matchStrategy(definition.matchStrategy())
                 .scriptLanguage(definition.scriptLanguage())
@@ -135,6 +151,45 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
                 .updatedAt(toLocalDateTime(definition.updatedAt()))
                 .formTemplateName(TransferFormTemplateNames.TRANSFER_TAG)
                 .build();
+    }
+
+    private boolean isDefaultTag(TransferTagDefinition definition) {
+        if (definition == null) {
+            return false;
+        }
+        return isDefaultTag(definition.tagCode(), definition.tagMeta());
+    }
+
+    private boolean isDefaultTag(String tagCode, Map<String, Object> tagMeta) {
+        if ("BUSINESS_DATE".equalsIgnoreCase(normalize(tagCode))) {
+            return true;
+        }
+        if (tagMeta == null || tagMeta.isEmpty()) {
+            return false;
+        }
+        Object defaultTag = tagMeta.get("defaultTag");
+        if (defaultTag instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        Object isDefaultTag = tagMeta.get("isDefaultTag");
+        if (isDefaultTag instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        return "true".equalsIgnoreCase(String.valueOf(defaultTag)) || "true".equalsIgnoreCase(String.valueOf(isDefaultTag));
+    }
+
+    private Map<String, Object> mergeDefaultTagMeta(Map<String, Object> tagMeta, boolean defaultTag) {
+        Map<String, Object> merged = tagMeta == null ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(tagMeta);
+        if (defaultTag) {
+            merged.put("defaultTag", Boolean.TRUE);
+        } else {
+            merged.remove("defaultTag");
+        }
+        return merged;
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private Instant toInstant(java.time.LocalDateTime value) {

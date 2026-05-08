@@ -16,6 +16,11 @@
     <dependencies>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
             <artifactId>valset-standardizer-taskflow-adapter</artifactId>
             <version>${project.version}</version>
         </dependency>

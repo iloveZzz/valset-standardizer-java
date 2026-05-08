@@ -24,6 +24,8 @@ public class TransferTagViewDTO {
 
     private Boolean enabled;
 
+    private Boolean defaultTag;
+
     private Integer priority;
 
     private String matchStrategy;

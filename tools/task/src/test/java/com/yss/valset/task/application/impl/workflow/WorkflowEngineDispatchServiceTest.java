@@ -10,7 +10,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -33,10 +37,28 @@ class WorkflowEngineDispatchServiceTest {
         context.setWorkflowCode("VALUATION_PARSE");
         context.setEngineType("INTERNAL");
         context.setWorkflowStageCode("PARSE");
+        Map<String, Object> commonContext = new LinkedHashMap<>();
+        commonContext.put("createdBy", "zhudaoming");
+        commonContext.put("forceRebuild", Boolean.TRUE);
+        context.setCommonContext(commonContext);
+        Map<String, Object> businessContext = new LinkedHashMap<>();
+        businessContext.put("fileId", 1001);
+        businessContext.put("workbookPath", "/tmp/sample.xlsx");
+        businessContext.put("dataSourceType", "EXCEL");
+        context.setBusinessContext(businessContext);
+        context.setBusinessContextJson("{\"commonContext\":{\"createdBy\":\"zhudaoming\",\"forceRebuild\":true},\"businessContext\":{\"fileId\":1001,\"workbookPath\":\"/tmp/sample.xlsx\",\"dataSourceType\":\"EXCEL\"}}");
 
         service.trigger(11L, "PARSE", context);
 
-        verify(internalAdapter).trigger(eq("VALUATION_PARSE"), eq("PARSE"), anyMap());
+        var captor = forClass(Map.class);
+        verify(internalAdapter).trigger(eq("VALUATION_PARSE"), eq("PARSE"), captor.capture());
+        assertThat(captor.getValue())
+                .containsEntry("fileId", 1001)
+                .containsEntry("workbookPath", "/tmp/sample.xlsx")
+                .containsEntry("dataSourceType", "EXCEL")
+                .containsEntry("createdBy", "zhudaoming")
+                .containsEntry("forceRebuild", Boolean.TRUE)
+                .containsEntry("workflowBusinessContextJson", "{\"commonContext\":{\"createdBy\":\"zhudaoming\",\"forceRebuild\":true},\"businessContext\":{\"fileId\":1001,\"workbookPath\":\"/tmp/sample.xlsx\",\"dataSourceType\":\"EXCEL\"}}");
     }
 
     @Test

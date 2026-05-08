@@ -5,6 +5,8 @@ import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
 import com.yss.valset.application.dto.workflow.WorkflowExecutionContextDTO;
+import com.yss.valset.application.dto.workflow.WorkflowContextKeys;
+import com.yss.valset.application.dto.workflow.WorkflowContextPayloadSupport;
 import com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog;
 import com.yss.valset.task.application.service.workflow.WorkflowEngineDispatchService;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskActionResultDTO;
@@ -331,6 +333,24 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             context.setEngineType(textValue(payload.get("workflowEngineType")));
             context.setExternalRef(textValue(payload.get("workflowEngineExternalRef")));
             context.setConfigJson(textValue(payload.get("workflowEngineConfigJson")));
+            Map<String, Object> contextPayload = parseContextEnvelope(context.getConfigJson());
+            Map<String, Object> commonContext = WorkflowContextPayloadSupport.extractSection(contextPayload, WorkflowContextKeys.COMMON_CONTEXT);
+            String createdBy = textValue(payload.get("createdBy"));
+            if (createdBy != null) {
+                commonContext.putIfAbsent(WorkflowContextKeys.CREATED_BY, createdBy);
+            }
+            Object forceRebuild = payload.get("forceRebuild");
+            if (forceRebuild != null) {
+                commonContext.putIfAbsent(WorkflowContextKeys.FORCE_REBUILD, forceRebuild instanceof Boolean booleanValue
+                        ? booleanValue
+                        : Boolean.valueOf(String.valueOf(forceRebuild)));
+            }
+            context.setCommonContext(commonContext);
+            Map<String, Object> businessContext = WorkflowContextPayloadSupport.extractSection(contextPayload, WorkflowContextKeys.BUSINESS_CONTEXT);
+            context.setBusinessContext(businessContext.isEmpty()
+                    ? WorkflowContextPayloadSupport.flattenEnvelope(contextPayload)
+                    : businessContext);
+            context.setBusinessContextJson(context.getConfigJson());
             context.setBindingId(textValue(payload.get("workflowBindingId")));
             Object bindingResolved = payload.get("workflowBindingResolved");
             if (bindingResolved instanceof Boolean booleanValue) {
@@ -364,6 +384,20 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         }
         String text = String.valueOf(value);
         return text.isBlank() ? null : text.trim();
+    }
+
+    private Map<String, Object> parseContextEnvelope(String configJson) {
+        if (!hasText(configJson)) {
+            return Collections.emptyMap();
+        }
+        try {
+            Map<?, ?> raw = objectMapper.readValue(configJson, Map.class);
+            Map<String, Object> context = new java.util.LinkedHashMap<>();
+            raw.forEach((key, value) -> context.put(String.valueOf(key), value));
+            return context;
+        } catch (Exception ignored) {
+            return Collections.emptyMap();
+        }
     }
 
     private static Long parseLong(String value) {

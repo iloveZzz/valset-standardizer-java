@@ -10,6 +10,9 @@ import com.yss.valset.application.dto.TaskCreateResponse;
 import com.yss.valset.application.dto.workflow.WorkflowExecutionContextDTO;
 import com.yss.valset.application.service.WorkflowTaskAppService;
 import com.yss.valset.application.service.workflow.WorkflowExecutionContextResolver;
+import com.yss.valset.application.support.WorkflowBusinessContextBuilder;
+import com.yss.valset.application.support.WorkflowCommonContextBuilder;
+import com.yss.valset.application.support.WorkflowContextEnvelopeBuilder;
 import com.yss.valset.task.application.service.workflow.WorkflowEngineDispatchService;
 import com.yss.valset.batch.scheduler.SchedulerService;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
@@ -24,6 +27,7 @@ import org.springframework.stereotype.Service;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 /**
  * 默认工作流任务创建服务。
@@ -37,6 +41,9 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     private final ObjectMapper objectMapper;
     private final WorkflowTaskReuseService taskReuseService;
     private final WorkflowExecutionContextResolver workflowExecutionContextResolver;
+    private final WorkflowCommonContextBuilder workflowCommonContextBuilder;
+    private final WorkflowBusinessContextBuilder workflowBusinessContextBuilder;
+    private final WorkflowContextEnvelopeBuilder workflowContextEnvelopeBuilder;
     private WorkflowEngineDispatchService workflowEngineDispatchService;
 
     public WorkflowTaskAppServiceImpl(
@@ -44,13 +51,19 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
             SchedulerService schedulerService,
             ObjectMapper objectMapper,
             WorkflowTaskReuseService taskReuseService,
-            WorkflowExecutionContextResolver workflowExecutionContextResolver
+            WorkflowExecutionContextResolver workflowExecutionContextResolver,
+            WorkflowCommonContextBuilder workflowCommonContextBuilder,
+            WorkflowBusinessContextBuilder workflowBusinessContextBuilder,
+            WorkflowContextEnvelopeBuilder workflowContextEnvelopeBuilder
     ) {
         this.taskGateway = taskGateway;
         this.schedulerService = schedulerService;
         this.objectMapper = objectMapper;
         this.taskReuseService = taskReuseService;
         this.workflowExecutionContextResolver = workflowExecutionContextResolver;
+        this.workflowCommonContextBuilder = workflowCommonContextBuilder;
+        this.workflowBusinessContextBuilder = workflowBusinessContextBuilder;
+        this.workflowContextEnvelopeBuilder = workflowContextEnvelopeBuilder;
     }
 
     @org.springframework.beans.factory.annotation.Autowired
@@ -111,6 +124,8 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
             log.info("创建任务开始，taskType={}, businessKey={}", taskType, businessKey);
             WorkflowExecutionContextDTO executionContext = workflowExecutionContextResolver.resolve(taskType, inferTaskStage(taskType));
             enrichWorkflowContext(command, executionContext);
+            enrichCommonContext(command, executionContext);
+            enrichBusinessContext(command, executionContext);
             if (executionContext != null && Boolean.TRUE.equals(executionContext.getBindingResolved())
                     && executionContext.getEngineType() != null
                     && !"INTERNAL".equalsIgnoreCase(executionContext.getEngineType())) {
@@ -245,6 +260,71 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
         if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
             applyWorkflowContext(extractDataTaskCommand, executionContext);
         }
+    }
+
+    private void enrichCommonContext(Object command, WorkflowExecutionContextDTO executionContext) {
+        if (command == null || executionContext == null) {
+            return;
+        }
+        Map<String, Object> commonContext = buildCommonContext(command);
+        executionContext.setCommonContext(commonContext);
+    }
+
+    private void enrichBusinessContext(Object command, WorkflowExecutionContextDTO executionContext) {
+        if (command == null || executionContext == null) {
+            return;
+        }
+        Map<String, Object> commonContext = executionContext.getCommonContext();
+        Map<String, Object> businessContext = buildBusinessContext(command);
+        executionContext.setBusinessContext(businessContext);
+        executionContext.setBusinessContextJson(writeWorkflowContextJson(commonContext, businessContext));
+        if (command instanceof ParseTaskCommand parseTaskCommand) {
+            parseTaskCommand.setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
+            return;
+        }
+        if (command instanceof MatchTaskCommand matchTaskCommand) {
+            matchTaskCommand.setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
+            return;
+        }
+        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
+            extractDataTaskCommand.setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
+        }
+    }
+
+    private Map<String, Object> buildCommonContext(Object command) {
+        if (command instanceof ParseTaskCommand parseTaskCommand) {
+            return workflowCommonContextBuilder.build(parseTaskCommand);
+        }
+        if (command instanceof MatchTaskCommand matchTaskCommand) {
+            return workflowCommonContextBuilder.build(matchTaskCommand);
+        }
+        if (command instanceof EvaluateMappingTaskCommand evaluateMappingTaskCommand) {
+            return workflowCommonContextBuilder.build(evaluateMappingTaskCommand);
+        }
+        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
+            return workflowCommonContextBuilder.build(extractDataTaskCommand);
+        }
+        return new java.util.LinkedHashMap<>();
+    }
+
+    private Map<String, Object> buildBusinessContext(Object command) {
+        if (command instanceof ParseTaskCommand parseTaskCommand) {
+            return workflowBusinessContextBuilder.build(parseTaskCommand);
+        }
+        if (command instanceof MatchTaskCommand matchTaskCommand) {
+            return workflowBusinessContextBuilder.build(matchTaskCommand);
+        }
+        if (command instanceof EvaluateMappingTaskCommand evaluateMappingTaskCommand) {
+            return workflowBusinessContextBuilder.build(evaluateMappingTaskCommand);
+        }
+        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
+            return workflowBusinessContextBuilder.build(extractDataTaskCommand);
+        }
+        return new java.util.LinkedHashMap<>();
+    }
+
+    private String writeWorkflowContextJson(Map<String, Object> commonContext, Map<String, Object> businessContext) {
+        return workflowContextEnvelopeBuilder.buildEnvelopeJson(commonContext, businessContext);
     }
 
     private void applyWorkflowContext(ParseTaskCommand command, WorkflowExecutionContextDTO executionContext) {

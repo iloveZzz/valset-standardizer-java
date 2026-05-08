@@ -33,6 +33,7 @@ if (!(isExcelFile(source) || isCsvFile(source))) {
 return fn.isValuationTableByMeta(source, tagMeta);
 `;
 const api = getJavaSpringBootQuartzApi();
+const DEFAULT_TAG_CODE = "BUSINESS_DATE";
 const defaultQuery = (): QueryState => ({
   tagCode: "",
   enabled: "",
@@ -79,6 +80,25 @@ const stringifyJsonValue = (value: unknown) => {
   }
 };
 
+const isDefaultTag = (row?: TagViewDTO | null) => {
+  if (!row) {
+    return false;
+  }
+  if (row.defaultTag) {
+    return true;
+  }
+  const tagCode = String(row.tagCode ?? "")
+    .trim()
+    .toUpperCase();
+  if (tagCode === DEFAULT_TAG_CODE) {
+    return true;
+  }
+  const tagMeta =
+    row.tagMeta && typeof row.tagMeta === "object" ? row.tagMeta : undefined;
+  const defaultTag = tagMeta?.defaultTag ?? tagMeta?.isDefaultTag;
+  return defaultTag === true || String(defaultTag).toLowerCase() === "true";
+};
+
 const buildTemplateValues = (
   initialValues: Record<string, any>,
   row?: TagViewDTO,
@@ -88,6 +108,7 @@ const buildTemplateValues = (
   tagCode: row?.tagCode ?? "",
   tagName: row?.tagName ?? "",
   tagValue: row?.tagValue ?? "",
+  defaultTag: row?.defaultTag ?? Boolean(initialValues.defaultTag),
   enabled: row?.enabled ?? true,
   priority: row?.priority ?? 10,
   matchStrategy: row?.matchStrategy ?? "SCRIPT_AND_REGEX",
@@ -105,6 +126,10 @@ const buildPayloadFromTemplate = (
   tagCode: String(templateValues.tagCode ?? "").trim(),
   tagName: String(templateValues.tagName ?? "").trim(),
   tagValue: String(templateValues.tagValue ?? "").trim(),
+  defaultTag:
+    templateValues.defaultTag === undefined
+      ? false
+      : Boolean(templateValues.defaultTag),
   enabled:
     templateValues.enabled === undefined
       ? true
@@ -130,6 +155,7 @@ const buildPayloadFromRow = (
   tagCode: String(row.tagCode ?? "").trim(),
   tagName: String(row.tagName ?? "").trim(),
   tagValue: String(row.tagValue ?? "").trim(),
+  defaultTag: Boolean(row.defaultTag),
   enabled,
   priority:
     row.priority === undefined || row.priority === null
@@ -292,6 +318,8 @@ export const useTransferPage = (): { page: TagPage } => {
 
   const formatEnabled = (value: boolean | undefined) =>
     value ? "启用" : "停用";
+  const formatDefaultTag = (row?: TagViewDTO | null) =>
+    isDefaultTag(row) ? "默认标签" : "普通标签";
   const formatMatchStrategy = (value?: string) => {
     const normalized = String(value ?? "")
       .trim()
@@ -389,6 +417,10 @@ export const useTransferPage = (): { page: TagPage } => {
   };
 
   const openEditDialog = async (row: TagViewDTO) => {
+    if (isDefaultTag(row)) {
+      message.warning("默认标签不可编辑");
+      return;
+    }
     formMode.value = "edit";
     editingTagId.value = row.tagId;
     formVisible.value = true;
@@ -468,6 +500,10 @@ export const useTransferPage = (): { page: TagPage } => {
   };
 
   const confirmDelete = (row: TagViewDTO) => {
+    if (isDefaultTag(row)) {
+      message.warning("默认标签不可删除");
+      return;
+    }
     Modal.confirm({
       title: "删除标签",
       content: `确认删除标签「${row.tagName || row.tagCode || "未命名"}」吗？`,
@@ -500,6 +536,10 @@ export const useTransferPage = (): { page: TagPage } => {
   const toggleEnabled = async (row: TagViewDTO, checked: boolean) => {
     if (!row.tagId) {
       message.error("标签主键缺失，无法切换状态");
+      return;
+    }
+    if (isDefaultTag(row)) {
+      message.warning("默认标签固定为启用状态，不可切换");
       return;
     }
 
@@ -599,7 +639,9 @@ export const useTransferPage = (): { page: TagPage } => {
     submitTest,
     closeTest,
     formatEnabled,
+    formatDefaultTag,
     formatMatchStrategy,
+    isDefaultTag,
     resolveScriptEditorLanguage,
     resetScriptBody,
     handlePageChange,

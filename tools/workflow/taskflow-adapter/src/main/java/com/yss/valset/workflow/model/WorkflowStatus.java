@@ -25,8 +25,8 @@ public enum WorkflowStatus {
             case "SUBMITTED", "DISPATCHED" -> SUBMITTED;
             case "RUNNING", "EXECUTING", "STARTED" -> RUNNING;
             case "SUCCEEDED", "SUCCESS", "COMPLETED", "FINISHED" -> SUCCEEDED;
-            case "FAILED", "ERROR" -> FAILED;
-            case "STOPPED", "CANCELED", "CANCELLED" -> STOPPED;
+            case "FAILED", "FAILURE", "ERROR" -> FAILED;
+            case "STOPPED", "STOP", "PAUSE", "CANCELED", "CANCELLED", "TERMINATED" -> STOPPED;
             case "RETRYING", "RETRY" -> RETRYING;
             default -> UNKNOWN;
         };
