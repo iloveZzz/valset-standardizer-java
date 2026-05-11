@@ -28,6 +28,8 @@ public class WorkflowInstanceDTO {
 
     private EtlPlatformType platformType;
 
+    private String currentStageCode;
+
     private String businessKey;
 
     private String externalInstanceId;

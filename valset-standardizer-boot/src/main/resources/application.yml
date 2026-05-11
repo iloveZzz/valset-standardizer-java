@@ -76,7 +76,10 @@ logging:
     io.micrometer.tracing: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [traceId=%X{traceId:-},spanId=%X{spanId:-}] %logger{36} - %msg%n"
-
+valset:
+  workflow:
+    dolphinscheduler:
+      base-url: http://127.0.0.1:12345/dolphinscheduler
 subject:
   match:
     parse-queue-observer:

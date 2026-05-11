@@ -41,6 +41,8 @@ public class WorkflowPlatformCommand {
 
     private Integer stageOrder;
 
+    private WorkflowTriggerMode triggerMode;
+
     private String reason;
 
     @Builder.Default

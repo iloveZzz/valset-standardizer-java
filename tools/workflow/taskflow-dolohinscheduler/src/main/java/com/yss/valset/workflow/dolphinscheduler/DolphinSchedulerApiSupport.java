@@ -64,6 +64,16 @@ public class DolphinSchedulerApiSupport {
         return exchangeJson(HttpMethod.DELETE, path, null, null, null, uriVariables);
     }
 
+    public String getText(String path, MultiValueMap<String, String> queryParams, Object... uriVariables) {
+        if (!hasBaseUrl()) {
+            throw new IllegalStateException("未配置 DolphinScheduler 基础地址");
+        }
+        URI uri = buildUri(path, queryParams, uriVariables);
+        ResponseEntity<String> response = restTemplate.exchange(uri, HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+        String responseBody = response.getBody();
+        return responseBody == null ? "" : responseBody;
+    }
+
     private JsonNode exchangeJson(HttpMethod method,
                                   String path,
                                   MultiValueMap<String, String> queryParams,

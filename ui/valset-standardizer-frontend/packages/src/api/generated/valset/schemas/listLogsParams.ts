@@ -7,31 +7,7 @@
 
 export type ListLogsParams = {
   /**
-   * 来源主键
+   * No comments found.
    */
-  sourceId?: string;
-  /**
-   * 文件主键
-   */
-  transferId?: string;
-  /**
-   * 路由主键
-   */
-  routeId?: string;
-  /**
-   * 运行阶段
-   */
-  runStage?: string;
-  /**
-   * 运行状态
-   */
-  runStatus?: string;
-  /**
-   * 触发类型
-   */
-  triggerType?: string;
-  /**
-   * 查询上限
-   */
-  limit?: number;
+  stageCode?: string;
 };

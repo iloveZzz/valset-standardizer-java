@@ -1,33 +1,38 @@
 package com.yss.valset.workflow.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yss.cloud.dto.response.PageResult;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowDefinitionPO;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowEngineBindingPO;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowInstancePO;
-import com.yss.valset.workflow.infrastructure.entity.WorkflowStageLogPO;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowStagePO;
 import com.yss.valset.workflow.infrastructure.mapper.WorkflowDefinitionRepository;
 import com.yss.valset.workflow.infrastructure.mapper.WorkflowEngineBindingRepository;
 import com.yss.valset.workflow.infrastructure.mapper.WorkflowInstanceRepository;
-import com.yss.valset.workflow.infrastructure.mapper.WorkflowStageLogRepository;
 import com.yss.valset.workflow.infrastructure.mapper.WorkflowStageRepository;
 import com.yss.valset.workflow.infrastructure.support.WorkflowJsonCodec;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowEngineBindingDTO;
+import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
 import com.yss.valset.workflow.model.WorkflowInstanceDTO;
+import com.yss.valset.workflow.model.WorkflowInstanceViewDTO;
 import com.yss.valset.workflow.model.WorkflowStageDTO;
-import com.yss.valset.workflow.model.WorkflowStageLogDTO;
 import com.yss.valset.workflow.model.WorkflowStatus;
+import com.yss.valset.workflow.model.WorkflowSyncStatus;
 import com.yss.valset.workflow.spi.WorkflowRuntimeStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,11 +44,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
 
+    private static final String DOLPHINSCHEDULER_SYNC_KEY = "dolphinschedulerSync";
+    private static final String SYNC_STATUS_KEY = "syncStatus";
+    private static final String FIRST_SYNCED_AT_KEY = "firstSyncedAt";
+    private static final String LAST_SYNCED_AT_KEY = "lastSyncedAt";
+    private static final String SYNC_FAILURE_REASON_KEY = "syncFailureReason";
+    private static final String REMOTE_WORKFLOW_VERSION_NO_KEY = "remoteWorkflowVersionNo";
+    private static final String EXTERNAL_ONLINE_KEY = "externalOnline";
+    private static final String EXTERNAL_RELEASE_STATE_KEY = "externalReleaseState";
+
     private final WorkflowDefinitionRepository workflowDefinitionRepository;
     private final WorkflowStageRepository workflowStageRepository;
     private final WorkflowEngineBindingRepository workflowEngineBindingRepository;
     private final WorkflowInstanceRepository workflowInstanceRepository;
-    private final WorkflowStageLogRepository workflowStageLogRepository;
     private final WorkflowJsonCodec workflowJsonCodec;
 
     @Override
@@ -63,6 +76,29 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         saveStages(po.getWorkflowId(), copy.getStages());
         saveBinding(po.getWorkflowId(), copy.getEngineBinding());
         return findDefinition(copy.getWorkflowCode(), copy.getWorkflowVersionNo()).orElse(copy);
+    }
+
+    @Override
+    public boolean deleteDefinition(String workflowCode, Integer workflowVersionNo) {
+        if (!StringUtils.hasText(workflowCode) || workflowVersionNo == null) {
+            return false;
+        }
+        WorkflowDefinitionPO definition = workflowDefinitionRepository.selectOne(
+                Wrappers.lambdaQuery(WorkflowDefinitionPO.class)
+                        .eq(WorkflowDefinitionPO::getWorkflowCode, workflowCode)
+                        .eq(WorkflowDefinitionPO::getWorkflowVersionNo, workflowVersionNo)
+                        .last("limit 1"));
+        if (definition == null) {
+            return false;
+        }
+        workflowStageRepository.delete(
+                Wrappers.lambdaQuery(WorkflowStagePO.class)
+                        .eq(WorkflowStagePO::getWorkflowId, definition.getWorkflowId()));
+        workflowEngineBindingRepository.delete(
+                Wrappers.lambdaQuery(WorkflowEngineBindingPO.class)
+                        .eq(WorkflowEngineBindingPO::getWorkflowId, definition.getWorkflowId()));
+        workflowDefinitionRepository.deleteById(definition.getWorkflowId());
+        return true;
     }
 
     @Override
@@ -107,46 +143,25 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
     }
 
     @Override
+    public PageResult<WorkflowInstanceViewDTO> listInstances(WorkflowInstanceQueryRequest request) {
+        int pageIndex = normalizePageIndex(request == null ? null : request.getPageIndex());
+        int pageSize = normalizePageSize(request == null ? null : request.getPageSize());
+        Page<WorkflowInstancePO> page = workflowInstanceRepository.selectPage(
+                new Page<>(pageIndex + 1L, pageSize),
+                buildInstanceQuery(request));
+        List<WorkflowInstanceViewDTO> records = page.getRecords().stream()
+                .map(this::toInstanceViewDTO)
+                .toList();
+        return PageResult.of(records, page.getTotal(), page.getSize(), pageIndex);
+    }
+
+    @Override
     public Optional<WorkflowInstanceDTO> findInstance(String instanceId) {
         if (!StringUtils.hasText(instanceId)) {
             return Optional.empty();
         }
         WorkflowInstancePO po = workflowInstanceRepository.selectById(instanceId);
         return Optional.ofNullable(po).map(this::toInstanceDTO);
-    }
-
-    @Override
-    public WorkflowStageLogDTO saveStageLog(WorkflowStageLogDTO log) {
-        WorkflowStageLogDTO copy = requireStageLog(log);
-        WorkflowDefinitionPO definition = resolveDefinition(copy.getWorkflowCode(), copy.getWorkflowVersionNo());
-        WorkflowStageLogPO po = toStageLogPO(copy, definition);
-        WorkflowStageLogPO existing = workflowStageLogRepository.selectById(po.getLogId());
-        if (existing != null) {
-            po.setCreatedAt(existing.getCreatedAt());
-        }
-        if (existing == null) {
-            workflowStageLogRepository.insert(po);
-        } else {
-            workflowStageLogRepository.updateById(po);
-        }
-        return copy.toBuilder().build();
-    }
-
-    @Override
-    public List<WorkflowStageLogDTO> listStageLogs(String instanceId, String stageCode) {
-        if (!StringUtils.hasText(instanceId)) {
-            return List.of();
-        }
-        return workflowStageLogRepository.selectList(
-                        Wrappers.lambdaQuery(WorkflowStageLogPO.class)
-                                .eq(WorkflowStageLogPO::getInstanceId, instanceId)
-                                .eq(StringUtils.hasText(stageCode), WorkflowStageLogPO::getStageCode, stageCode)
-                                .orderByAsc(WorkflowStageLogPO::getStartTime)
-                                .orderByAsc(WorkflowStageLogPO::getCreatedAt)
-                                .orderByAsc(WorkflowStageLogPO::getLogId))
-                .stream()
-                .map(this::toStageLogDTO)
-                .toList();
     }
 
     private Optional<WorkflowInstanceDTO> loadInstance(String instanceId) {
@@ -180,16 +195,6 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         }
         return instance.toBuilder()
                 .context(instance.getContext() == null ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(instance.getContext()))
-                .stageLogs(instance.getStageLogs() == null ? new ArrayList<>() : new ArrayList<>(instance.getStageLogs()))
-                .build();
-    }
-
-    private WorkflowStageLogDTO requireStageLog(WorkflowStageLogDTO log) {
-        if (log == null) {
-            throw new IllegalArgumentException("工作流阶段日志不能为空");
-        }
-        return log.toBuilder()
-                .payload(log.getPayload() == null ? new java.util.LinkedHashMap<>() : new java.util.LinkedHashMap<>(log.getPayload()))
                 .build();
     }
 
@@ -217,7 +222,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         po.setWorkflowVersionNo(instance.getWorkflowVersionNo());
         po.setPlatformType(instance.getPlatformType());
         po.setBusinessKey(instance.getBusinessKey());
-        po.setCurrentStageCode(null);
+        po.setCurrentStageCode(instance.getCurrentStageCode());
         po.setExternalInstanceId(instance.getExternalInstanceId());
         po.setExternalWorkflowId(instance.getExternalWorkflowId());
         po.setStatus(instance.getStatus() == null ? null : instance.getStatus().name());
@@ -232,25 +237,47 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         return po;
     }
 
-    private WorkflowStageLogPO toStageLogPO(WorkflowStageLogDTO log, WorkflowDefinitionPO definition) {
-        WorkflowStageLogPO po = new WorkflowStageLogPO();
-        po.setLogId(generateId("wfl"));
-        po.setInstanceId(log.getInstanceId());
-        po.setWorkflowId(definition.getWorkflowId());
-        po.setWorkflowCode(log.getWorkflowCode());
-        po.setWorkflowVersionNo(log.getWorkflowVersionNo());
-        po.setStageCode(log.getStageCode());
-        po.setStageName(log.getStageName());
-        po.setStageOrder(log.getStageOrder());
-        po.setStatus(log.getStatus());
-        po.setRawStatus(log.getRawStatus());
-        po.setMessage(log.getMessage());
-        po.setStartTime(log.getStartTime());
-        po.setEndTime(log.getEndTime());
-        po.setPayloadJson(workflowJsonCodec.toJson(log.getPayload()));
-        po.setCreatedAt(now());
-        po.setUpdatedAt(now());
-        return po;
+    private com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<WorkflowInstancePO> buildInstanceQuery(WorkflowInstanceQueryRequest request) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<WorkflowInstancePO> query = Wrappers.lambdaQuery(WorkflowInstancePO.class)
+                .orderByDesc(WorkflowInstancePO::getTriggerTime)
+                .orderByDesc(WorkflowInstancePO::getUpdatedAt)
+                .orderByDesc(WorkflowInstancePO::getInstanceId);
+        if (request == null) {
+            return query;
+        }
+        if (StringUtils.hasText(request.getWorkflowCode())) {
+            query.eq(WorkflowInstancePO::getWorkflowCode, request.getWorkflowCode().trim());
+        }
+        if (request.getWorkflowVersionNo() != null) {
+            query.eq(WorkflowInstancePO::getWorkflowVersionNo, request.getWorkflowVersionNo());
+        }
+        if (request.getPlatformType() != null) {
+            query.eq(WorkflowInstancePO::getPlatformType, request.getPlatformType());
+        }
+        if (StringUtils.hasText(request.getStatus())) {
+            query.eq(WorkflowInstancePO::getStatus, request.getStatus().trim());
+        }
+        if (StringUtils.hasText(request.getBusinessKey())) {
+            query.like(WorkflowInstancePO::getBusinessKey, request.getBusinessKey().trim());
+        }
+        if (StringUtils.hasText(request.getInstanceId())) {
+            query.like(WorkflowInstancePO::getInstanceId, request.getInstanceId().trim());
+        }
+        if (StringUtils.hasText(request.getExternalInstanceId())) {
+            query.like(WorkflowInstancePO::getExternalInstanceId, request.getExternalInstanceId().trim());
+        }
+        if (StringUtils.hasText(request.getStageCode())) {
+            query.eq(WorkflowInstancePO::getCurrentStageCode, request.getStageCode().trim());
+        }
+        LocalDateTime from = parseBoundary(request.getTriggerTimeFrom(), false);
+        LocalDateTime to = parseBoundary(request.getTriggerTimeTo(), true);
+        if (from != null) {
+            query.ge(WorkflowInstancePO::getTriggerTime, from);
+        }
+        if (to != null) {
+            query.le(WorkflowInstancePO::getTriggerTime, to);
+        }
+        return query;
     }
 
     private void saveStages(String workflowId, List<WorkflowStageDTO> stages) {
@@ -280,11 +307,26 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
     }
 
     private void saveBinding(String workflowId, WorkflowEngineBindingDTO binding) {
+        WorkflowEngineBindingPO existing = workflowEngineBindingRepository.selectOne(
+                Wrappers.lambdaQuery(WorkflowEngineBindingPO.class)
+                        .eq(WorkflowEngineBindingPO::getWorkflowId, workflowId)
+                        .last("limit 1"));
         workflowEngineBindingRepository.delete(
                 Wrappers.lambdaQuery(WorkflowEngineBindingPO.class)
                         .eq(WorkflowEngineBindingPO::getWorkflowId, workflowId));
         if (binding == null) {
             return;
+        }
+        Map<String, Object> attributes = new LinkedHashMap<>(
+                binding.getAttributes() == null ? Map.of() : binding.getAttributes());
+        Map<String, Object> existingAttributes = existing == null
+                ? new LinkedHashMap<>()
+                : workflowJsonCodec.toMap(existing.getAttributesJson());
+        Map<String, Object> syncState = buildSyncState(binding, existingAttributes);
+        if (!syncState.isEmpty()) {
+            attributes.put(DOLPHINSCHEDULER_SYNC_KEY, syncState);
+        } else {
+            attributes.remove(DOLPHINSCHEDULER_SYNC_KEY);
         }
         WorkflowEngineBindingPO po = new WorkflowEngineBindingPO();
         po.setBindingId(generateId("wfb"));
@@ -296,7 +338,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         po.setExternalJobGroup(binding.getExternalJobGroup());
         po.setExternalJobHandler(binding.getExternalJobHandler());
         po.setConfigJson(binding.getConfigJson());
-        po.setAttributesJson(workflowJsonCodec.toJson(binding.getAttributes()));
+        po.setAttributesJson(workflowJsonCodec.toJson(attributes));
         po.setCreatedAt(now());
         po.setUpdatedAt(now());
         workflowEngineBindingRepository.insert(po);
@@ -339,6 +381,8 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
     }
 
     private WorkflowEngineBindingDTO toBindingDTO(WorkflowEngineBindingPO po) {
+        Map<String, Object> attributes = workflowJsonCodec.toMap(po.getAttributesJson());
+        Map<String, Object> syncState = asMap(attributes.get(DOLPHINSCHEDULER_SYNC_KEY));
         return WorkflowEngineBindingDTO.builder()
                 .platformType(po.getPlatformType())
                 .externalWorkflowId(po.getExternalWorkflowId())
@@ -347,25 +391,24 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                 .externalJobGroup(po.getExternalJobGroup())
                 .externalJobHandler(po.getExternalJobHandler())
                 .configJson(po.getConfigJson())
-                .attributes(workflowJsonCodec.toMap(po.getAttributesJson()))
+                .syncStatus(parseSyncStatus(syncState == null ? null : syncState.get(SYNC_STATUS_KEY)))
+                .firstSyncedAt(parseDateTime(syncState == null ? null : syncState.get(FIRST_SYNCED_AT_KEY)))
+                .lastSyncedAt(parseDateTime(syncState == null ? null : syncState.get(LAST_SYNCED_AT_KEY)))
+                .syncFailureReason(syncState == null ? null : valueOf(syncState.get(SYNC_FAILURE_REASON_KEY)))
+                .remoteWorkflowVersionNo(parseInteger(syncState == null ? null : syncState.get(REMOTE_WORKFLOW_VERSION_NO_KEY)))
+                .externalOnline(parseBoolean(syncState == null ? null : syncState.get(EXTERNAL_ONLINE_KEY)))
+                .externalReleaseState(syncState == null ? null : valueOf(syncState.get(EXTERNAL_RELEASE_STATE_KEY)))
+                .attributes(attributes)
                 .build();
     }
 
     private WorkflowInstanceDTO toInstanceDTO(WorkflowInstancePO po) {
-        List<WorkflowStageLogDTO> stageLogs = workflowStageLogRepository.selectList(
-                        Wrappers.lambdaQuery(WorkflowStageLogPO.class)
-                                .eq(WorkflowStageLogPO::getInstanceId, po.getInstanceId())
-                                .orderByAsc(WorkflowStageLogPO::getStartTime)
-                                .orderByAsc(WorkflowStageLogPO::getCreatedAt)
-                                .orderByAsc(WorkflowStageLogPO::getLogId))
-                .stream()
-                .map(this::toStageLogDTO)
-                .toList();
         return WorkflowInstanceDTO.builder()
                 .instanceId(po.getInstanceId())
                 .workflowCode(po.getWorkflowCode())
                 .workflowVersionNo(po.getWorkflowVersionNo())
                 .platformType(po.getPlatformType())
+                .currentStageCode(po.getCurrentStageCode())
                 .businessKey(po.getBusinessKey())
                 .externalInstanceId(po.getExternalInstanceId())
                 .externalWorkflowId(po.getExternalWorkflowId())
@@ -376,29 +419,176 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                 .endTime(po.getEndTime())
                 .message(po.getMessage())
                 .context(workflowJsonCodec.toMap(po.getContextJson()))
-                .stageLogs(new ArrayList<>(stageLogs))
                 .build();
     }
 
-    private WorkflowStageLogDTO toStageLogDTO(WorkflowStageLogPO po) {
-        return WorkflowStageLogDTO.builder()
+    private WorkflowInstanceViewDTO toInstanceViewDTO(WorkflowInstancePO po) {
+        WorkflowStagePO currentStage = null;
+        if (StringUtils.hasText(po.getCurrentStageCode())) {
+            currentStage = workflowStageRepository.selectOne(
+                    Wrappers.lambdaQuery(WorkflowStagePO.class)
+                            .eq(WorkflowStagePO::getWorkflowId, po.getWorkflowId())
+                            .eq(WorkflowStagePO::getStageCode, po.getCurrentStageCode())
+                            .last("limit 1"));
+        }
+        Long stageCount = workflowStageRepository.selectCount(
+                Wrappers.lambdaQuery(WorkflowStagePO.class)
+                        .eq(WorkflowStagePO::getWorkflowId, po.getWorkflowId()));
+        return WorkflowInstanceViewDTO.builder()
                 .instanceId(po.getInstanceId())
                 .workflowCode(po.getWorkflowCode())
                 .workflowVersionNo(po.getWorkflowVersionNo())
-                .stageCode(po.getStageCode())
-                .stageName(po.getStageName())
-                .stageOrder(po.getStageOrder())
-                .status(po.getStatus())
+                .platformType(po.getPlatformType())
+                .businessKey(po.getBusinessKey())
+                .externalInstanceId(po.getExternalInstanceId())
+                .externalWorkflowId(po.getExternalWorkflowId())
+                .status(po.getStatus() == null ? null : WorkflowStatus.valueOf(po.getStatus()))
                 .rawStatus(po.getRawStatus())
-                .message(po.getMessage())
+                .currentStageCode(po.getCurrentStageCode())
+                .currentStageName(currentStage == null ? null : currentStage.getStageName())
+                .triggerTime(po.getTriggerTime())
                 .startTime(po.getStartTime())
                 .endTime(po.getEndTime())
-                .payload(workflowJsonCodec.toMap(po.getPayloadJson()))
+                .message(po.getMessage())
+                .stageCount(stageCount == null ? 0 : stageCount.intValue())
                 .build();
     }
 
     private String generateId(String prefix) {
         return prefix + "_" + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private int normalizePageIndex(Integer pageIndex) {
+        return pageIndex == null || pageIndex < 0 ? 0 : pageIndex;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        return pageSize == null || pageSize < 1 ? 20 : pageSize;
+    }
+
+    private LocalDateTime parseBoundary(String value, boolean endOfDay) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String text = value.trim();
+        try {
+            if (text.length() <= 10) {
+                LocalDate date = LocalDate.parse(text);
+                return endOfDay ? date.atTime(23, 59, 59) : date.atStartOfDay();
+            }
+            return LocalDateTime.parse(text.replace(" ", "T"));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private Map<String, Object> buildSyncState(WorkflowEngineBindingDTO binding, Map<String, Object> existingAttributes) {
+        Map<String, Object> bindingAttributes = binding.getAttributes() == null
+                ? new LinkedHashMap<>()
+                : new LinkedHashMap<>(binding.getAttributes());
+        Map<String, Object> existingSyncState = asMap(existingAttributes.get(DOLPHINSCHEDULER_SYNC_KEY));
+        Map<String, Object> bindingSyncState = asMap(bindingAttributes.get(DOLPHINSCHEDULER_SYNC_KEY));
+        Map<String, Object> baseSyncState = bindingSyncState != null
+                ? bindingSyncState
+                : existingSyncState == null ? Map.of() : existingSyncState;
+        Map<String, Object> syncState = new LinkedHashMap<>(baseSyncState);
+        if (binding.getSyncStatus() != null) {
+            syncState.put(SYNC_STATUS_KEY, binding.getSyncStatus().name());
+        } else if (existingSyncState != null && existingSyncState.get(SYNC_STATUS_KEY) != null) {
+            syncState.put(SYNC_STATUS_KEY, valueOf(existingSyncState.get(SYNC_STATUS_KEY)));
+        }
+        if (binding.getFirstSyncedAt() != null) {
+            syncState.put(FIRST_SYNCED_AT_KEY, binding.getFirstSyncedAt().toString());
+        } else if (existingSyncState != null && existingSyncState.get(FIRST_SYNCED_AT_KEY) != null) {
+            syncState.put(FIRST_SYNCED_AT_KEY, valueOf(existingSyncState.get(FIRST_SYNCED_AT_KEY)));
+        }
+        if (binding.getLastSyncedAt() != null) {
+            syncState.put(LAST_SYNCED_AT_KEY, binding.getLastSyncedAt().toString());
+        } else if (existingSyncState != null && existingSyncState.get(LAST_SYNCED_AT_KEY) != null) {
+            syncState.put(LAST_SYNCED_AT_KEY, valueOf(existingSyncState.get(LAST_SYNCED_AT_KEY)));
+        }
+        if (StringUtils.hasText(binding.getSyncFailureReason())) {
+            syncState.put(SYNC_FAILURE_REASON_KEY, binding.getSyncFailureReason());
+        } else if (existingSyncState != null && existingSyncState.get(SYNC_FAILURE_REASON_KEY) != null) {
+            syncState.put(SYNC_FAILURE_REASON_KEY, valueOf(existingSyncState.get(SYNC_FAILURE_REASON_KEY)));
+        }
+        if (binding.getRemoteWorkflowVersionNo() != null) {
+            syncState.put(REMOTE_WORKFLOW_VERSION_NO_KEY, binding.getRemoteWorkflowVersionNo());
+        } else if (existingSyncState != null && existingSyncState.get(REMOTE_WORKFLOW_VERSION_NO_KEY) != null) {
+            syncState.put(REMOTE_WORKFLOW_VERSION_NO_KEY, parseInteger(existingSyncState.get(REMOTE_WORKFLOW_VERSION_NO_KEY)));
+        }
+        if (binding.getExternalOnline() != null) {
+            syncState.put(EXTERNAL_ONLINE_KEY, binding.getExternalOnline());
+        } else if (existingSyncState != null && existingSyncState.get(EXTERNAL_ONLINE_KEY) != null) {
+            syncState.put(EXTERNAL_ONLINE_KEY, parseBoolean(existingSyncState.get(EXTERNAL_ONLINE_KEY)));
+        }
+        if (StringUtils.hasText(binding.getExternalReleaseState())) {
+            syncState.put(EXTERNAL_RELEASE_STATE_KEY, binding.getExternalReleaseState());
+        } else if (existingSyncState != null && existingSyncState.get(EXTERNAL_RELEASE_STATE_KEY) != null) {
+            syncState.put(EXTERNAL_RELEASE_STATE_KEY, valueOf(existingSyncState.get(EXTERNAL_RELEASE_STATE_KEY)));
+        }
+        return syncState;
+    }
+
+    private WorkflowSyncStatus parseSyncStatus(Object value) {
+        String text = valueOf(value);
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        try {
+            return WorkflowSyncStatus.valueOf(text);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private LocalDateTime parseDateTime(Object value) {
+        String text = valueOf(value);
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        return LocalDateTime.parse(text);
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        String text = valueOf(value);
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        return Integer.valueOf(text);
+    }
+
+    private Boolean parseBoolean(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        String text = valueOf(value);
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        return Boolean.parseBoolean(text);
+    }
+
+    private String valueOf(Object value) {
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private static Map<String, Object> asMap(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            map.forEach((key, item) -> result.put(String.valueOf(key), item));
+            return result;
+        }
+        return null;
     }
 
     private LocalDateTime now() {

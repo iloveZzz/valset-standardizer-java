@@ -22,7 +22,7 @@ import java.util.List;
  * 通用 ETL 工作流调度接口。
  */
 @RestController
-@RequestMapping("/api/etl/schedules")
+@RequestMapping("/etl/schedules")
 public class WorkflowScheduleController {
 
     private final WorkflowScheduleApplicationService workflowScheduleApplicationService;

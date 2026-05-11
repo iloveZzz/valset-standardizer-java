@@ -1,12 +1,17 @@
 package com.yss.valset.workflow.spi;
 
+import com.yss.cloud.dto.response.PageResult;
 import com.yss.valset.workflow.model.WorkflowCallbackRequest;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
+import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
 import com.yss.valset.workflow.model.WorkflowInstanceDTO;
+import com.yss.valset.workflow.model.WorkflowInstanceViewDTO;
 import com.yss.valset.workflow.model.WorkflowLogQueryRequest;
+import com.yss.valset.workflow.model.WorkflowPauseRequest;
 import com.yss.valset.workflow.model.WorkflowRetryRequest;
 import com.yss.valset.workflow.model.WorkflowPlatformMetadataDTO;
 import com.yss.valset.workflow.model.WorkflowStageLogDTO;
+import com.yss.valset.workflow.model.WorkflowTaskListDTO;
 import com.yss.valset.workflow.model.WorkflowStopRequest;
 import com.yss.valset.workflow.model.WorkflowTriggerRequest;
 
@@ -20,6 +25,14 @@ public interface WorkflowApplicationService {
 
     WorkflowDefinitionDTO saveDefinition(WorkflowDefinitionDTO definition);
 
+    WorkflowDefinitionDTO syncDefinition(WorkflowDefinitionDTO definition);
+
+    WorkflowDefinitionDTO onlineDefinition(String workflowCode, Integer workflowVersionNo);
+
+    WorkflowDefinitionDTO offlineDefinition(String workflowCode, Integer workflowVersionNo);
+
+    boolean deleteDefinition(String workflowCode, Integer workflowVersionNo);
+
     WorkflowDefinitionDTO validateDefinition(WorkflowDefinitionDTO definition);
 
     List<WorkflowDefinitionDTO> listDefinitions();
@@ -32,9 +45,15 @@ public interface WorkflowApplicationService {
 
     WorkflowInstanceDTO stop(String instanceId, WorkflowStopRequest request);
 
+    WorkflowInstanceDTO pause(String instanceId, WorkflowPauseRequest request);
+
     WorkflowInstanceDTO retry(String instanceId, WorkflowRetryRequest request);
 
     Optional<WorkflowInstanceDTO> findInstance(String instanceId);
+
+    PageResult<WorkflowInstanceViewDTO> listInstances(WorkflowInstanceQueryRequest request);
+
+    WorkflowTaskListDTO listTaskInstances(String instanceId);
 
     List<WorkflowStageLogDTO> listStageLogs(WorkflowLogQueryRequest request);
 

@@ -6,6 +6,7 @@ package com.yss.valset.workflow.model;
 public enum WorkflowOperationType {
     TRIGGER,
     STOP,
+    PAUSE,
     RETRY,
     QUERY,
     QUERY_LOGS

@@ -6,6 +6,7 @@ import {
   FileSearchOutlined,
   InboxOutlined,
   ProjectOutlined,
+  SettingOutlined,
   SwapOutlined,
   ThunderboltOutlined,
   TagsOutlined,
@@ -61,6 +62,28 @@ export const workspaceNav: Array<{
       },
     ],
   },
+  {
+    title: "工作流管理",
+    path: "/workflow-management",
+    icon: SettingOutlined,
+    children: [
+      {
+        title: "工作流列表与绑定",
+        path: "/workflow-management/workflow-list",
+        icon: FileTextOutlined,
+      },
+      {
+        title: "阶段定义",
+        path: "/workflow-management/stage-definition",
+        icon: ThunderboltOutlined,
+      },
+      {
+        title: "实例运行",
+        path: "/workflow-management/workflow-instances",
+        icon: FileSearchOutlined,
+      },
+    ],
+  },
 ];
 
 const transferPageComponentMap = {
@@ -106,6 +129,41 @@ export const routes: RouteRecordRaw[] = [
       title: "任务管理",
       keepAlive: false,
     },
+  },
+  {
+    path: "/workflow-management",
+    redirect: "/workflow-management/workflow-list",
+  },
+  {
+    path: "/workflow-management/workflow-list",
+    name: "workflow-management-workflow-list",
+    component: () => import("@/views/EtlWorkflowConfig/index.vue"),
+    meta: {
+      title: "工作流列表与绑定",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/workflow-management/stage-definition",
+    name: "workflow-management-stage-definition",
+    component: () => import("@/views/EtlWorkflowConfig/StagePage.vue"),
+    meta: {
+      title: "阶段定义",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/workflow-management/workflow-instances",
+    name: "workflow-management-workflow-instances",
+    component: () => import("@/views/EtlWorkflowInstance/index.vue"),
+    meta: {
+      title: "实例运行",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/etl-workflow-config",
+    redirect: "/workflow-management/workflow-list",
   },
   {
     path: "/outsourced-data-tasks",

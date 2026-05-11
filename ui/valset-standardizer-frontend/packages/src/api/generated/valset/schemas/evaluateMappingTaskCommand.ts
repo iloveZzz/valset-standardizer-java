@@ -22,4 +22,20 @@ export interface EvaluateMappingTaskCommand {
   standardWorkbookPath: string;
   /** 在 K 顶部评估的候选人数量。 */
   topK?: number;
+  /** 工作流编码。 */
+  workflowCode?: string;
+  /** 执行平台扩展参数。 */
+  workflowEngineConfigJson?: string;
+  /** 外部执行标识。 */
+  workflowEngineExternalRef?: string;
+  /** 执行平台类型。 */
+  workflowEngineType?: string;
+  /** 工作流主键。 */
+  workflowId?: string;
+  /** 当前工作流阶段编码。 */
+  workflowStageCode?: string;
+  /** 当前工作流阶段名称。 */
+  workflowStageName?: string;
+  /** 工作流版本号。 */
+  workflowVersionNo?: number;
 }

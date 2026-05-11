@@ -5,12 +5,21 @@ import com.yss.valset.workflow.model.EtlPlatformType;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowEngineBindingDTO;
 import com.yss.valset.workflow.model.WorkflowInstanceDTO;
+import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
+import com.yss.valset.workflow.model.WorkflowInstanceViewDTO;
 import com.yss.valset.workflow.model.WorkflowPlatformCommand;
 import com.yss.valset.workflow.model.WorkflowPlatformExecutionResult;
+import com.yss.valset.workflow.model.WorkflowPauseRequest;
 import com.yss.valset.workflow.model.WorkflowStatus;
+import com.yss.valset.workflow.model.WorkflowTaskInstanceDTO;
+import com.yss.valset.workflow.model.WorkflowTaskListDTO;
+import com.yss.valset.workflow.model.WorkflowTriggerMode;
 import com.yss.valset.workflow.service.AbstractWorkflowPlatformClient;
+import com.yss.cloud.dto.response.PageResult;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -28,6 +37,7 @@ import org.springframework.util.MultiValueMap;
 public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlatformClient {
 
     private final DolphinSchedulerApiSupport apiSupport = new DolphinSchedulerApiSupport();
+    private final DolphinSchedulerWorkflowSyncSupport syncSupport = new DolphinSchedulerWorkflowSyncSupport(apiSupport);
 
     @Override
     public EtlPlatformType platformType() {
@@ -48,6 +58,57 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         }
     }
 
+    @Override
+    public WorkflowDefinitionDTO syncDefinition(WorkflowDefinitionDTO definition) {
+        if (!apiSupport.hasBaseUrl()) {
+            throw new IllegalStateException("未配置 DolphinScheduler 基础地址");
+        }
+        return syncSupport.syncDefinition(definition);
+    }
+
+    @Override
+    public WorkflowDefinitionDTO onlineDefinition(WorkflowDefinitionDTO definition) {
+        if (!apiSupport.hasBaseUrl()) {
+            return super.onlineDefinition(definition);
+        }
+        return syncSupport.onlineDefinition(definition);
+    }
+
+    @Override
+    public WorkflowDefinitionDTO offlineDefinition(WorkflowDefinitionDTO definition) {
+        if (!apiSupport.hasBaseUrl()) {
+            return super.offlineDefinition(definition);
+        }
+        return syncSupport.offlineDefinition(definition);
+    }
+
+    @Override
+    public void deleteDefinition(WorkflowDefinitionDTO definition) {
+        if (!apiSupport.hasBaseUrl()) {
+            return;
+        }
+        syncSupport.deleteDefinition(definition);
+    }
+
+    @Override
+    public PageResult<WorkflowInstanceViewDTO> listInstances(WorkflowDefinitionDTO definition,
+                                                             WorkflowInstanceQueryRequest request) {
+        if (!apiSupport.hasBaseUrl()) {
+            return super.listInstances(definition, request);
+        }
+        String projectCode = resolveProjectCode(definition);
+        String projectName = resolveProjectName(definition);
+        int pageIndex = request == null || request.getPageIndex() == null ? 0 : Math.max(request.getPageIndex(), 0);
+        int pageSize = request == null || request.getPageSize() == null ? 20 : Math.max(request.getPageSize(), 1);
+        JsonNode response = queryInstancePage(projectCode, projectName, pageIndex, pageSize);
+        List<WorkflowInstanceViewDTO> records = extractInstanceItems(response).stream()
+                .map(item -> mapInstanceView(definition, request, item))
+                .filter(item -> matchesInstance(item, request))
+                .toList();
+        long total = extractTotalCount(response, records.size());
+        return PageResult.of(records, total, pageSize, pageIndex);
+    }
+
     @Value("${valset.workflow.dolphinscheduler.base-url:}")
     public void setBaseUrl(String baseUrl) {
         apiSupport.setBaseUrl(baseUrl);
@@ -65,7 +126,13 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         if (!apiSupport.hasBaseUrl()) {
             return super.trigger(definition, instance, request);
         }
-        return remoteWorkflowOperation(definition, instance, request, "START_PROCESS", "RUNNING", "已提交到 DolphinScheduler");
+        WorkflowTriggerMode triggerMode = request == null || request.getTriggerMode() == null
+                ? WorkflowTriggerMode.START_PROCESS
+                : request.getTriggerMode();
+        String message = triggerMode == WorkflowTriggerMode.START_FAILURE_TASK_PROCESS
+                ? "已提交失败任务重跑"
+                : "已提交到 DolphinScheduler";
+        return remoteWorkflowOperation(definition, instance, request, triggerMode, "RUNNING", message);
     }
 
     @Override
@@ -76,6 +143,16 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
             return super.stop(definition, instance, request);
         }
         return remoteWorkflowControl(definition, instance, "STOP", "STOPPED", request == null ? "任务已停止" : request.getReason());
+    }
+
+    @Override
+    public WorkflowPlatformExecutionResult pause(WorkflowDefinitionDTO definition,
+                                                 WorkflowInstanceDTO instance,
+                                                 WorkflowPauseRequest request) {
+        if (!apiSupport.hasBaseUrl()) {
+            return super.pause(definition, instance, request);
+        }
+        return remoteWorkflowControl(definition, instance, "PAUSE", "STOPPED", request == null ? "任务已暂停" : request.getReason());
     }
 
     @Override
@@ -99,6 +176,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                 resolveProjectCode(definition),
                 resolveWorkflowInstanceId(instance));
         Map<String, Object> payload = buildRemotePayload(definition, instance, response);
+        payload.putAll(extractPrimaryResponseData(response));
         String rawStatus = extractString(payload, "state", "status", "workflowStatus", "rawStatus");
         String message = extractString(payload, "message", "msg", "reason");
         return WorkflowPlatformExecutionResult.builder()
@@ -151,6 +229,45 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
     }
 
     @Override
+    public WorkflowTaskListDTO queryTasks(WorkflowDefinitionDTO definition,
+                                          WorkflowInstanceDTO instance) {
+        if (!apiSupport.hasBaseUrl()) {
+            return super.queryTasks(definition, instance);
+        }
+        JsonNode response = apiSupport.getJson("/projects/{projectCode}/workflow-instances/{workflowInstanceId}/tasks",
+                null,
+                resolveProjectCode(definition),
+                resolveWorkflowInstanceId(instance));
+        List<Map<String, Object>> taskItems = extractTaskItems(response);
+        return WorkflowTaskListDTO.builder()
+                .workflowInstanceState(extractString(extractPrimaryResponseData(response), "workflowInstanceState", "state"))
+                .taskList(taskItems.stream().map(this::mapTaskInstance).toList())
+                .build();
+    }
+
+    @Override
+    public String queryTaskLog(WorkflowDefinitionDTO definition,
+                               WorkflowInstanceDTO instance,
+                               Long taskInstanceId) {
+        if (!apiSupport.hasBaseUrl()) {
+            return super.queryTaskLog(definition, instance, taskInstanceId);
+        }
+        if (taskInstanceId == null) {
+            return "";
+        }
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("taskInstanceId", String.valueOf(taskInstanceId));
+        params.add("limit", "1000");
+        params.add("skipLineNum", "0");
+        JsonNode response = apiSupport.getJson(resolveLogDetailPath(), params);
+        String message = extractTaskLogMessage(response);
+        if (StringUtils.hasText(message)) {
+            return message;
+        }
+        return "";
+    }
+
+    @Override
     protected Map<String, Object> platformSpecificPayload(WorkflowDefinitionDTO definition,
                                                           WorkflowInstanceDTO instance,
                                                           WorkflowPlatformCommand command) {
@@ -178,6 +295,11 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
     }
 
     @Override
+    protected String rawPauseStatus() {
+        return "STOPPED";
+    }
+
+    @Override
     protected String rawRetryStatus() {
         return "RUNNING";
     }
@@ -185,11 +307,11 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
     private WorkflowPlatformExecutionResult remoteWorkflowOperation(WorkflowDefinitionDTO definition,
                                                                      WorkflowInstanceDTO instance,
                                                                      com.yss.valset.workflow.model.WorkflowTriggerRequest request,
-                                                                     String execType,
+                                                                     WorkflowTriggerMode triggerMode,
                                                                      String rawStatus,
                                                                      String message) {
         MultiValueMap<String, String> params = buildCommonWorkflowParams(definition, instance);
-        params.add("execType", execType);
+        params.add("execType", triggerMode == null ? WorkflowTriggerMode.START_PROCESS.name() : triggerMode.name());
         params.add("scheduleTime", buildScheduleTime());
         params.add("failureStrategy", "CONTINUE");
         params.add("warningType", "NONE");
@@ -240,6 +362,172 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                 .build();
     }
 
+    private JsonNode queryInstancePage(String projectCode,
+                                       String projectName,
+                                       int pageIndex,
+                                       int pageSize) {
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("projectName", projectName);
+        params.add("pageNo", String.valueOf(pageIndex + 1));
+        params.add("pageSize", String.valueOf(pageSize));
+        try {
+            return apiSupport.getJson("/projects/{projectCode}/workflow/instances", params, projectCode);
+        } catch (RuntimeException firstFailure) {
+            try {
+                return apiSupport.getJson("/projects/{projectCode}/workflow-instances", params, projectCode);
+            } catch (RuntimeException ignored) {
+                throw firstFailure;
+            }
+        }
+    }
+
+    private List<Map<String, Object>> extractInstanceItems(JsonNode response) {
+        if (response == null || !response.hasNonNull("data")) {
+            return List.of();
+        }
+        JsonNode data = response.get("data");
+        if (data.isArray()) {
+            return apiSupport.getObjectMapper().convertValue(data,
+                    apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
+        }
+        for (String key : List.of("records", "dataList", "totalList", "items")) {
+            if (data.has(key) && data.get(key).isArray()) {
+                return apiSupport.getObjectMapper().convertValue(data.get(key),
+                        apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
+            }
+        }
+        return List.of();
+    }
+
+    private long extractTotalCount(JsonNode response, int fallback) {
+        if (response == null || !response.hasNonNull("data")) {
+            return fallback;
+        }
+        JsonNode data = response.get("data");
+        for (String key : List.of("totalCount", "total", "totalSize")) {
+            JsonNode node = data.get(key);
+            if (node != null && node.canConvertToLong()) {
+                return node.asLong();
+            }
+        }
+        return fallback;
+    }
+
+    private WorkflowInstanceViewDTO mapInstanceView(WorkflowDefinitionDTO definition,
+                                                    WorkflowInstanceQueryRequest request,
+                                                    Map<String, Object> payload) {
+        String workflowCode = definition == null ? null : definition.getWorkflowCode();
+        Integer workflowVersionNo = definition == null ? null : definition.getWorkflowVersionNo();
+        String stageCode = stringValue(payload.get("stageCode"), payload.get("currentStageCode"), payload.get("taskCode"));
+        String rawStatus = stringValue(payload.get("state"), payload.get("status"), payload.get("workflowStatus"), payload.get("executionStatus"));
+        String instanceId = stringValue(payload.get("id"), payload.get("workflowInstanceId"), payload.get("processInstanceId"));
+        String externalInstanceId = stringValue(payload.get("workflowInstanceId"), payload.get("processInstanceId"), instanceId);
+        String currentStageName = stringValue(payload.get("currentStageName"), payload.get("nodeName"), payload.get("taskName"));
+        String message = stringValue(payload.get("message"), payload.get("stateDesc"), payload.get("desc"), payload.get("description"));
+        return WorkflowInstanceViewDTO.builder()
+                .instanceId(instanceId)
+                .workflowCode(workflowCode)
+                .workflowVersionNo(workflowVersionNo)
+                .platformType(platformType())
+                .businessKey(stringValue(payload.get("businessKey"), payload.get("bizKey"), payload.get("runParam")))
+                .externalInstanceId(externalInstanceId)
+                .externalWorkflowId(stringValue(payload.get("workflowDefinitionCode"), payload.get("processDefinitionCode"), resolveExternalWorkflowId(definition, null)))
+                .status(WorkflowStatus.fromRawStatus(rawStatus))
+                .rawStatus(rawStatus)
+                .currentStageCode(stageCode)
+                .currentStageName(currentStageName)
+                .triggerTime(parseDateTime(payload.get("submitTime"), payload.get("startTime"), payload.get("createTime")))
+                .startTime(parseDateTime(payload.get("startTime"), payload.get("startDate")))
+                .endTime(parseDateTime(payload.get("endTime"), payload.get("finishTime")))
+                .message(message)
+                .stageCount(definition == null || definition.getStages() == null ? 0 : definition.getStages().size())
+                .build();
+    }
+
+    private boolean matchesInstance(WorkflowInstanceViewDTO row, WorkflowInstanceQueryRequest request) {
+        if (request == null) {
+            return true;
+        }
+        if (request.getWorkflowVersionNo() != null
+                && !request.getWorkflowVersionNo().equals(row.getWorkflowVersionNo())) {
+            return false;
+        }
+        if (StringUtils.hasText(request.getWorkflowCode())
+                && !request.getWorkflowCode().trim().equalsIgnoreCase(String.valueOf(row.getWorkflowCode()))) {
+            return false;
+        }
+        if (StringUtils.hasText(request.getStatus())
+                && !request.getStatus().trim().equalsIgnoreCase(String.valueOf(row.getRawStatus()))) {
+            return false;
+        }
+        if (StringUtils.hasText(request.getBusinessKey())
+                && !containsIgnoreCase(row.getBusinessKey(), request.getBusinessKey())) {
+            return false;
+        }
+        if (StringUtils.hasText(request.getInstanceId())
+                && !containsIgnoreCase(row.getInstanceId(), request.getInstanceId())) {
+            return false;
+        }
+        if (StringUtils.hasText(request.getExternalInstanceId())
+                && !containsIgnoreCase(row.getExternalInstanceId(), request.getExternalInstanceId())) {
+            return false;
+        }
+        if (StringUtils.hasText(request.getStageCode())
+                && !request.getStageCode().trim().equalsIgnoreCase(String.valueOf(row.getCurrentStageCode()))) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean containsIgnoreCase(String target, String keyword) {
+        if (!StringUtils.hasText(target) || !StringUtils.hasText(keyword)) {
+            return false;
+        }
+        return target.toLowerCase().contains(keyword.trim().toLowerCase());
+    }
+
+    private java.time.LocalDateTime parseDateTime(Object... values) {
+        for (Object value : values) {
+            String text = stringValue(value);
+            if (!StringUtils.hasText(text)) {
+                continue;
+            }
+            String normalized = text.trim().replace(" ", "T");
+            try {
+                if (normalized.length() <= 10) {
+                    return java.time.LocalDate.parse(normalized).atStartOfDay();
+                }
+                return java.time.LocalDateTime.parse(normalized);
+            } catch (Exception ignored) {
+                // 继续尝试下一个候选值
+            }
+        }
+        return null;
+    }
+
+    private String resolveProjectName(WorkflowDefinitionDTO definition) {
+        if (definition != null
+                && definition.getEngineBinding() != null
+                && definition.getEngineBinding().getAttributes() != null) {
+            Object sync = definition.getEngineBinding().getAttributes().get("dolphinschedulerSync");
+            if (sync instanceof Map<?, ?> map) {
+                Object storedProjectName = map.get("projectName");
+                String storedText = stringValue(storedProjectName);
+                if (StringUtils.hasText(storedText)) {
+                    return storedText;
+                }
+            }
+        }
+        return sanitize(definition == null ? null : definition.getWorkflowCode()) + "-project";
+    }
+
+    private String sanitize(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "workflow";
+        }
+        return value.trim().replaceAll("[^a-zA-Z0-9\\u4e00-\\u9fa5_-]", "_");
+    }
+
     private MultiValueMap<String, String> buildCommonWorkflowParams(WorkflowDefinitionDTO definition,
                                                                     WorkflowInstanceDTO instance) {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -252,7 +540,6 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         params.add("tenantCode", defaultTenantCode(definition));
         params.add("environmentCode", defaultEnvironmentCode(definition));
         params.add("workflowInstancePriority", "MEDIUM");
-        params.add("execType", "START_PROCESS");
         return params;
     }
 
@@ -264,9 +551,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
     }
 
     private String defaultWorkerGroup(WorkflowDefinitionDTO definition) {
-        return definition != null && definition.getEngineBinding() != null && StringUtils.hasText(definition.getEngineBinding().getExternalNamespace())
-                ? definition.getEngineBinding().getExternalNamespace()
-                : "default";
+        return "default";
     }
 
     private String defaultTenantCode(WorkflowDefinitionDTO definition) {
@@ -387,6 +672,9 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         if (data.isArray()) {
             return apiSupport.getObjectMapper().convertValue(data, apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
         }
+        if (data.isObject() && data.has("taskList") && data.get("taskList").isArray()) {
+            return apiSupport.getObjectMapper().convertValue(data.get("taskList"), apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
+        }
         for (String key : List.of("dataList", "totalList", "records", "items")) {
             if (data.has(key) && data.get(key).isArray()) {
                 return apiSupport.getObjectMapper().convertValue(data.get(key), apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
@@ -401,6 +689,56 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
             }
         }
         return List.of();
+    }
+
+    private WorkflowTaskInstanceDTO mapTaskInstance(Map<String, Object> item) {
+        return WorkflowTaskInstanceDTO.builder()
+                .id(longValue(item.get("id")))
+                .name(stringValue(item.get("name"), item.get("taskName")))
+                .taskType(stringValue(item.get("taskType")))
+                .workflowInstanceId(stringValue(item.get("workflowInstanceId")))
+                .workflowInstanceName(stringValue(item.get("workflowInstanceName")))
+                .projectCode(longValue(item.get("projectCode")))
+                .taskCode(longValue(item.get("taskCode")))
+                .taskDefinitionVersion(integerValue(item.get("taskDefinitionVersion")))
+                .processDefinitionName(stringValue(item.get("processDefinitionName")))
+                .taskGroupPriority(integerValue(item.get("taskGroupPriority")))
+                .state(stringValue(item.get("state"), item.get("status"), item.get("executionStatus")))
+                .firstSubmitTime(stringValue(item.get("firstSubmitTime")))
+                .submitTime(stringValue(item.get("submitTime")))
+                .startTime(stringValue(item.get("startTime")))
+                .endTime(stringValue(item.get("endTime")))
+                .host(stringValue(item.get("host")))
+                .executePath(stringValue(item.get("executePath")))
+                .logPath(stringValue(item.get("logPath")))
+                .retryTimes(integerValue(item.get("retryTimes")))
+                .alertFlag(stringValue(item.get("alertFlag")))
+                .workflowInstance(castMap(item.get("workflowInstance")))
+                .workflowDefinition(castMap(item.get("workflowDefinition")))
+                .taskDefine(castMap(item.get("taskDefine")))
+                .pid(longValue(item.get("pid")))
+                .appLink(stringValue(item.get("appLink")))
+                .flag(stringValue(item.get("flag")))
+                .duration(longValue(item.get("duration")))
+                .maxRetryTimes(integerValue(item.get("maxRetryTimes")))
+                .retryInterval(integerValue(item.get("retryInterval")))
+                .taskInstancePriority(stringValue(item.get("taskInstancePriority")))
+                .workflowInstancePriority(stringValue(item.get("workflowInstancePriority")))
+                .workerGroup(stringValue(item.get("workerGroup")))
+                .environmentCode(longValue(item.get("environmentCode")))
+                .environmentConfig(castMap(item.get("environmentConfig")))
+                .executorId(longValue(item.get("executorId")))
+                .varPool(castMap(item.get("varPool")))
+                .executorName(stringValue(item.get("executorName")))
+                .delayTime(integerValue(item.get("delayTime")))
+                .taskParams(stringValue(item.get("taskParams")))
+                .dryRun(integerValue(item.get("dryRun")))
+                .taskGroupId(longValue(item.get("taskGroupId")))
+                .cpuQuota(integerValue(item.get("cpuQuota")))
+                .memoryMax(integerValue(item.get("memoryMax")))
+                .taskExecuteType(stringValue(item.get("taskExecuteType")))
+                .taskInstanceDependentResults(castMap(item.get("taskInstanceDependentResults")))
+                .build();
     }
 
     private String extractString(Map<String, Object> payload, String... keys) {
@@ -460,5 +798,77 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
             return Map.of("data", data.asText());
         }
         return Map.of();
+    }
+
+    private String extractTaskLogMessage(JsonNode response) {
+        Map<String, Object> payload = extractPrimaryResponseData(response);
+        String message = extractString(payload, "message", "data");
+        if (StringUtils.hasText(message)) {
+            return message;
+        }
+        if (response == null) {
+            return "";
+        }
+        if (response.hasNonNull("message")) {
+            String value = response.get("message").asText();
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        if (response.hasNonNull("data") && response.get("data").isTextual()) {
+            String value = response.get("data").asText();
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private String resolveLogDetailPath() {
+        String baseUrl = apiSupport.getBaseUrl();
+        if (!StringUtils.hasText(baseUrl)) {
+            return "/dolphinscheduler/log/detail";
+        }
+        String normalized = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        if (normalized.endsWith("/dolphinscheduler")) {
+            return "/log/detail";
+        }
+        return "/dolphinscheduler/log/detail";
+    }
+
+    private Long longValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private Integer integerValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> castMap(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            return (Map<String, Object>) map;
+        }
+        return null;
     }
 }
