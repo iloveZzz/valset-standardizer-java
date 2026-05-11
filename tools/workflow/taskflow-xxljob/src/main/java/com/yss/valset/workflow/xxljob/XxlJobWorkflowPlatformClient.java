@@ -65,6 +65,16 @@ public class XxlJobWorkflowPlatformClient extends AbstractWorkflowPlatformClient
     }
 
     @Override
+    protected String rawPauseStatus() {
+        return "STOPPED";
+    }
+
+    @Override
+    protected String rawResumeStatus() {
+        return "RUNNING";
+    }
+
+    @Override
     protected String rawRetryStatus() {
         return "RUNNING";
     }

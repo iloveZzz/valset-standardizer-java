@@ -41,7 +41,7 @@ class UploadExecutor {
     });
 
     try {
-      await generatedvalsetApi.upload1(file);
+      await generatedvalsetApi.upload1({ file });
       this.callbacks?.onProgress?.(taskId, {
         uploadedBytes: file.size,
         totalBytes: file.size,

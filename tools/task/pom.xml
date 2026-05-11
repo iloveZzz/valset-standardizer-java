@@ -16,13 +16,11 @@
     <dependencies>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
-            <artifactId>valset-standardizer-core</artifactId>
-            <version>${project.version}</version>
+            <artifactId>valset-standardizer-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
             <artifactId>valset-standardizer-batch</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.yss.cloud</groupId>
@@ -52,7 +50,6 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
-            <version>${springdoc.version}</version>
         </dependency>
 
         <dependency>

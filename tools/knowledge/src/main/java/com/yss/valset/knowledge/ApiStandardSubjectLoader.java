@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.domain.knowledge.StandardSubjectLoader;
 import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.StandardSubject;
+import com.yss.valset.infra.http.FeignJsonFetcher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,11 +19,11 @@ import java.util.List;
 @Component
 public class ApiStandardSubjectLoader implements StandardSubjectLoader {
 
-    private final RestTemplate restTemplate;
+    private final FeignJsonFetcher feignJsonFetcher;
     private final ObjectMapper objectMapper;
 
-    public ApiStandardSubjectLoader(ObjectMapper objectMapper) {
-        this.restTemplate = new RestTemplate();
+    public ApiStandardSubjectLoader(FeignJsonFetcher feignJsonFetcher, ObjectMapper objectMapper) {
+        this.feignJsonFetcher = feignJsonFetcher;
         this.objectMapper = objectMapper;
     }
 
@@ -36,7 +36,7 @@ public class ApiStandardSubjectLoader implements StandardSubjectLoader {
         List<StandardSubject> subjects = new ArrayList<>();
         log.info("开始从 API 加载标准科目，apiUrl={}", apiUrl);
         try {
-            String jsonResponse = restTemplate.getForObject(apiUrl, String.class);
+            String jsonResponse = feignJsonFetcher.get(apiUrl);
             JsonNode rootNode = objectMapper.readTree(jsonResponse);
 
             JsonNode dataNode = rootNode.path("data");

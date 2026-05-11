@@ -12,26 +12,36 @@
     <packaging>pom</packaging>
 
     <name>valset-standardizer-parent</name>
-    <description>Java 外部估值表标准化工程，基于 Spring Boot 和 Quartz</description>
+    <description>Java 外部估值表标准化工程</description>
 
     <modules>
-        <module>valset-standardizer-core</module>
-        <module>valset-standardizer-infra</module>
+        <module>valset-standardizer-api</module>
         <module>tools</module>
-        <module>valset-standardizer-boot</module>
-        <module>valset-standardizer-e2e</module>
+        <module>valset-standardizer</module>
     </modules>
 
     <properties>
         <java.version>17</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
+        <yss.filesys.feignsdk.version>1.0.0-SNAPSHOT</yss.filesys.feignsdk.version>
         <poi.version>5.2.5</poi.version>
         <commons.csv.version>1.11.0</commons.csv.version>
         <duckdb.version>1.1.3</duckdb.version>
         <qlexpress.version>4.0.4</qlexpress.version>
         <spring.batch.version>5.2.5</spring.batch.version>
         <springdoc.version>2.6.0</springdoc.version>
+        <fesod.sheet.version>2.1.0-SNAPSHOT</fesod.sheet.version>
+        <mysql.connector.version>9.7.0</mysql.connector.version>
+        <jsch.version>0.2.26</jsch.version>
+        <jcraft.jsch.version>0.1.55</jcraft.jsch.version>
+        <aws.java.sdk.s3.version>1.12.450</aws.java.sdk.s3.version>
+        <db.scheduler.version>16.7.0</db.scheduler.version>
+        <javax.persistence.version>2.2</javax.persistence.version>
+        <mybatis.spring.boot.starter.test.version>3.0.3</mybatis.spring.boot.starter.test.version>
+        <testcontainers.version>1.20.4</testcontainers.version>
+        <postgresql.version>42.7.8</postgresql.version>
+        <jqwik.version>1.9.2</jqwik.version>
         <lombok.version>1.18.34</lombok.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
         <lombok.mapstruct.binding.version>0.2.0</lombok.mapstruct.binding.version>
@@ -40,11 +50,76 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-knowledge</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-file</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-parser</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-task</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-batch</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-transfer</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-extract</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-taskflow-adapter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-taskflow-springbatch</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-taskflow-dolohinscheduler</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-taskflow-xxljob</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.yss.cloud</groupId>
                 <artifactId>yss-components-bom</artifactId>
                 <version>${yss-datamiddle.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.filesys</groupId>
+                <artifactId>yss-filesys-feignsdk</artifactId>
+                <version>${yss.filesys.feignsdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.poi</groupId>
@@ -87,9 +162,90 @@
                 <version>${springdoc.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
                 <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mybatis.spring.boot</groupId>
+                <artifactId>mybatis-spring-boot-starter-test</artifactId>
+                <version>${mybatis.spring.boot.starter.test.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.kagkarlsson</groupId>
+                <artifactId>db-scheduler</artifactId>
+                <version>${db.scheduler.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.kagkarlsson</groupId>
+                <artifactId>db-scheduler-spring-boot-starter</artifactId>
+                <version>${db.scheduler.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.mwiede</groupId>
+                <artifactId>jsch</artifactId>
+                <version>${jsch.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jcraft</groupId>
+                <artifactId>jsch</artifactId>
+                <version>${jcraft.jsch.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-s3</artifactId>
+                <version>${aws.java.sdk.s3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.fesod</groupId>
+                <artifactId>fesod-sheet</artifactId>
+                <version>${fesod.sheet.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>${mysql.connector.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.persistence</groupId>
+                <artifactId>javax.persistence-api</artifactId>
+                <version>${javax.persistence.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>mysql</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${testcontainers.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>net.jqwik</groupId>
+                <artifactId>jqwik</artifactId>
+                <version>${jqwik.version}</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.mapstruct</groupId>
@@ -100,11 +256,6 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
                 <version>${mapstruct.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.fesod</groupId>
-                <artifactId>fesod-sheet</artifactId>
-                <version>2.1.0-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -1,15 +1,17 @@
 package com.yss.valset.batch.job;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.valset.analysis.application.command.ParseQueueCompleteCommand;
-import com.yss.valset.analysis.application.command.ParseQueueFailCommand;
-import com.yss.valset.analysis.application.command.ParseQueueSubscribeCommand;
-import com.yss.valset.analysis.application.service.ParseQueueManagementAppService;
+import com.yss.valset.parser.application.dto.ParseQueueObserverRunSummary;
+import com.yss.valset.parser.application.command.ParseQueueCompleteCommand;
+import com.yss.valset.parser.application.command.ParseQueueFailCommand;
+import com.yss.valset.parser.application.command.ParseQueueSubscribeCommand;
+import com.yss.valset.parser.application.service.ParseQueueManagementAppService;
+import com.yss.valset.parser.application.port.ParseQueueObservationUseCase;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
-import com.yss.valset.analysis.domain.gateway.ParseQueueGateway;
-import com.yss.valset.analysis.domain.model.ParseQueue;
+import com.yss.valset.parser.domain.gateway.ParseQueueGateway;
+import com.yss.valset.parser.domain.model.ParseQueue;
 import com.yss.valset.batch.dispatcher.TaskDispatcher;
 import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
@@ -25,6 +27,7 @@ import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -48,7 +51,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ParseQueueObserverJob {
+@ConditionalOnProperty(prefix = "valset.features.parse-queue-observer", name = "enabled", havingValue = "true", matchIfMissing = true)
+public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
 
     private static final String DEFAULT_SUBSCRIBER = "解析观察者";
 

@@ -3,17 +3,26 @@ package com.yss.valset.workflow.service;
 import com.yss.valset.workflow.model.EtlPlatformType;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowInstanceDTO;
-import com.yss.valset.workflow.model.WorkflowLogQueryRequest;
+import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
+import com.yss.valset.workflow.model.WorkflowInstanceViewDTO;
 import com.yss.valset.workflow.model.WorkflowOperationType;
+import com.yss.valset.workflow.model.WorkflowLogQueryRequest;
+import com.yss.valset.workflow.model.WorkflowPauseRequest;
 import com.yss.valset.workflow.model.WorkflowPlatformCommand;
 import com.yss.valset.workflow.model.WorkflowPlatformExecutionResult;
 import com.yss.valset.workflow.model.WorkflowRetryRequest;
+import com.yss.valset.workflow.model.WorkflowResumeRequest;
+import com.yss.valset.workflow.model.WorkflowTaskInstancePageDTO;
+import com.yss.valset.workflow.model.WorkflowTaskInstanceQueryRequest;
+import com.yss.valset.workflow.model.WorkflowTaskListDTO;
 import com.yss.valset.workflow.model.WorkflowStageDTO;
 import com.yss.valset.workflow.model.WorkflowStageLogDTO;
 import com.yss.valset.workflow.model.WorkflowStatus;
 import com.yss.valset.workflow.model.WorkflowStopRequest;
 import com.yss.valset.workflow.model.WorkflowTriggerRequest;
+import com.yss.valset.workflow.model.WorkflowTriggerMode;
 import com.yss.valset.workflow.spi.WorkflowPlatformClient;
+import com.yss.cloud.dto.response.PageResult;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,6 +34,34 @@ import java.util.Map;
  * 工作流平台客户端基类。
  */
 public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatformClient {
+
+    @Override
+    public WorkflowDefinitionDTO syncDefinition(WorkflowDefinitionDTO definition) {
+        throw new UnsupportedOperationException("当前平台不支持同步工作流");
+    }
+
+    @Override
+    public WorkflowDefinitionDTO onlineDefinition(WorkflowDefinitionDTO definition) {
+        return definition;
+    }
+
+    @Override
+    public WorkflowDefinitionDTO offlineDefinition(WorkflowDefinitionDTO definition) {
+        return definition;
+    }
+
+    @Override
+    public void deleteDefinition(WorkflowDefinitionDTO definition) {
+        // 默认平台删除为空实现。
+    }
+
+    @Override
+    public PageResult<WorkflowInstanceViewDTO> listInstances(WorkflowDefinitionDTO definition,
+                                                             WorkflowInstanceQueryRequest request) {
+        int pageIndex = request == null || request.getPageIndex() == null ? 0 : Math.max(request.getPageIndex(), 0);
+        int pageSize = request == null || request.getPageSize() == null ? 20 : Math.max(request.getPageSize(), 1);
+        return PageResult.of(List.of(), 0L, pageSize, pageIndex);
+    }
 
     @Override
     public WorkflowPlatformExecutionResult trigger(WorkflowDefinitionDTO definition,
@@ -40,6 +77,22 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
                                                 WorkflowStopRequest request) {
         return buildResult(definition, instance, buildCommand(WorkflowOperationType.STOP, definition, instance, request),
                 rawStopStatus(), request == null ? "任务已停止" : request.getReason());
+    }
+
+    @Override
+    public WorkflowPlatformExecutionResult pause(WorkflowDefinitionDTO definition,
+                                                 WorkflowInstanceDTO instance,
+                                                 WorkflowPauseRequest request) {
+        return buildResult(definition, instance, buildCommand(WorkflowOperationType.PAUSE, definition, instance, request),
+                rawPauseStatus(), request == null ? "任务已暂停" : request.getReason());
+    }
+
+    @Override
+    public WorkflowPlatformExecutionResult resume(WorkflowDefinitionDTO definition,
+                                                  WorkflowInstanceDTO instance,
+                                                  WorkflowResumeRequest request) {
+        return buildResult(definition, instance, buildCommand(WorkflowOperationType.RESUME, definition, instance, request),
+                rawResumeStatus(), request == null ? "任务已恢复运行" : request.getReason());
     }
 
     @Override
@@ -59,38 +112,49 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
                 .externalInstanceId(instance == null ? null : instance.getExternalInstanceId())
                 .rawStatus(instance == null ? null : instance.getRawStatus())
                 .message(instance == null ? null : instance.getMessage())
-                .payload(buildPayload(definition, instance, buildCommand(WorkflowOperationType.QUERY, definition, instance, (WorkflowLogQueryRequest) null)))
+                .payload(buildPayload(definition, instance, buildCommand(WorkflowOperationType.QUERY, definition, instance, (WorkflowTriggerRequest) null)))
                 .stageLogs(instance == null ? List.of() : snapshotLogs(definition, instance))
                 .build();
     }
 
     @Override
-    public List<WorkflowPlatformExecutionResult> queryLogs(WorkflowDefinitionDTO definition,
-                                                          WorkflowInstanceDTO instance,
-                                                          WorkflowLogQueryRequest request) {
-        List<WorkflowPlatformExecutionResult> results = new ArrayList<>();
-        if (definition == null || instance == null) {
-            return results;
-        }
-        for (WorkflowStageDTO stage : definition.getStages()) {
-            if (request != null && request.getStageCode() != null && !request.getStageCode().equals(stage.getStageCode())) {
-                continue;
-            }
-            WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.QUERY_LOGS, definition, instance, request);
-            command.setStageCode(stage.getStageCode());
-            command.setStageName(stage.getStageName());
-            command.setStageOrder(stage.getStageOrder());
-            results.add(WorkflowPlatformExecutionResult.builder()
-                    .platformType(platformType())
-                    .externalWorkflowId(instance.getExternalWorkflowId())
-                    .externalInstanceId(instance.getExternalInstanceId())
-                    .rawStatus(instance.getRawStatus())
-                    .message(instance.getMessage())
-                    .payload(buildPayload(definition, instance, command))
-                    .stageLogs(snapshotLogs(definition, instance))
-                    .build());
-        }
-        return results;
+    public WorkflowTaskListDTO queryTasks(WorkflowDefinitionDTO definition,
+                                          WorkflowInstanceDTO instance) {
+        return WorkflowTaskListDTO.builder().build();
+    }
+
+    @Override
+    public WorkflowTaskInstancePageDTO listTaskInstances(WorkflowDefinitionDTO definition,
+                                                         WorkflowTaskInstanceQueryRequest request) {
+        int pageIndex = request == null || request.getPageIndex() == null ? 0 : Math.max(request.getPageIndex(), 0);
+        int pageSize = request == null || request.getPageSize() == null ? 20 : Math.max(request.getPageSize(), 1);
+        return WorkflowTaskInstancePageDTO.builder()
+                .pageIndex(pageIndex)
+                .pageSize(pageSize)
+                .totalCount(0L)
+                .build();
+    }
+
+    @Override
+    public void forceTaskSuccess(WorkflowDefinitionDTO definition, Long taskInstanceId) {
+        throw new UnsupportedOperationException("当前平台不支持强制成功任务实例");
+    }
+
+    @Override
+    public String queryTaskLog(WorkflowDefinitionDTO definition,
+                               Long taskInstanceId,
+                               Integer skipLineNum,
+                               Integer limit) {
+        return "";
+    }
+
+    @Override
+    public String queryTaskLog(WorkflowDefinitionDTO definition,
+                               WorkflowInstanceDTO instance,
+                               Long taskInstanceId,
+                               Integer skipLineNum,
+                               Integer limit) {
+        return queryTaskLog(definition, taskInstanceId, skipLineNum, limit);
     }
 
     protected WorkflowPlatformExecutionResult buildResult(WorkflowDefinitionDTO definition,
@@ -153,6 +217,7 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
             payload.put("stageCode", command.getStageCode());
             payload.put("stageName", command.getStageName());
             payload.put("stageOrder", command.getStageOrder());
+            payload.put("triggerMode", command.getTriggerMode() == null ? null : command.getTriggerMode().name());
             payload.put("reason", command.getReason());
             payload.put("force", command.isForce());
             payload.put("context", command.getContext());
@@ -169,6 +234,10 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
     protected abstract String rawTriggerStatus();
 
     protected abstract String rawStopStatus();
+
+    protected abstract String rawPauseStatus();
+
+    protected abstract String rawResumeStatus();
 
     protected abstract String rawRetryStatus();
 
@@ -226,6 +295,9 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
                 .businessKey(instance == null ? null : instance.getBusinessKey())
                 .stageCode(request == null ? null : request.getStageCode())
                 .force(request != null && request.isForce())
+                .triggerMode(request == null || request.getTriggerMode() == null
+                        ? WorkflowTriggerMode.START_PROCESS
+                        : request.getTriggerMode())
                 .context(request == null || request.getContext() == null
                         ? new LinkedHashMap<>()
                         : new LinkedHashMap<>(request.getContext()))
@@ -237,6 +309,51 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
                                                    WorkflowDefinitionDTO definition,
                                                    WorkflowInstanceDTO instance,
                                                    WorkflowStopRequest request) {
+        WorkflowPlatformCommand command = WorkflowPlatformCommand.builder()
+                .operationType(operationType)
+                .platformType(platformType())
+                .workflowCode(definition == null ? null : definition.getWorkflowCode())
+                .workflowVersionNo(definition == null ? null : definition.getWorkflowVersionNo())
+                .workflowName(definition == null ? null : definition.getWorkflowName())
+                .instanceId(instance == null ? null : instance.getInstanceId())
+                .externalWorkflowId(resolveExternalWorkflowId(definition, instance))
+                .externalInstanceId(resolveExternalInstanceId(definition, instance))
+                .businessKey(instance == null ? null : instance.getBusinessKey())
+                .reason(request == null ? null : request.getReason())
+                .context(request == null || request.getContext() == null
+                        ? new LinkedHashMap<>()
+                        : new LinkedHashMap<>(request.getContext()))
+                .parameters(new LinkedHashMap<>())
+                .build();
+        return command;
+    }
+
+    protected WorkflowPlatformCommand buildCommand(WorkflowOperationType operationType,
+                                                   WorkflowDefinitionDTO definition,
+                                                   WorkflowInstanceDTO instance,
+                                                   WorkflowPauseRequest request) {
+        return WorkflowPlatformCommand.builder()
+                .operationType(operationType)
+                .platformType(platformType())
+                .workflowCode(definition == null ? null : definition.getWorkflowCode())
+                .workflowVersionNo(definition == null ? null : definition.getWorkflowVersionNo())
+                .workflowName(definition == null ? null : definition.getWorkflowName())
+                .instanceId(instance == null ? null : instance.getInstanceId())
+                .externalWorkflowId(resolveExternalWorkflowId(definition, instance))
+                .externalInstanceId(resolveExternalInstanceId(definition, instance))
+                .businessKey(instance == null ? null : instance.getBusinessKey())
+                .reason(request == null ? null : request.getReason())
+                .context(request == null || request.getContext() == null
+                        ? new LinkedHashMap<>()
+                        : new LinkedHashMap<>(request.getContext()))
+                .parameters(new LinkedHashMap<>())
+                .build();
+    }
+
+    protected WorkflowPlatformCommand buildCommand(WorkflowOperationType operationType,
+                                                   WorkflowDefinitionDTO definition,
+                                                   WorkflowInstanceDTO instance,
+                                                   WorkflowResumeRequest request) {
         WorkflowPlatformCommand command = WorkflowPlatformCommand.builder()
                 .operationType(operationType)
                 .platformType(platformType())

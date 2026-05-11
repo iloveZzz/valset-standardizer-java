@@ -86,44 +86,6 @@ const actionConfig = useTableActionConfig({
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>分拣对象</h2>
-          <p>
-            查询文件主对象清单、来源信息、文件状态和邮件元数据，便于定位文件从收取到入库的链路。
-          </p>
-          <div class="workspace-header-pills">
-            <span class="workspace-pill">支持按来源、状态、指纹和邮件筛选</span>
-            <span class="workspace-pill">详情查看完整文件元数据</span>
-            <span class="workspace-pill">只读查询，无编辑操作</span>
-          </div>
-          <div class="workspace-tag-filters">
-            <span class="workspace-tag-filters-label">快捷标签筛选</span>
-            <a-tag
-              v-for="filter in page.tagFilters"
-              :key="filter.tagId || `${filter.tagCode}-${filter.tagValue}`"
-              class="workspace-tag-filter-chip"
-              color="cyan"
-              @click="page.applyTagFilter(filter)"
-            >
-              {{ filter.tagName || filter.tagCode || filter.tagValue || "-" }}
-              <span v-if="filter.tagValue">：{{ filter.tagValue }}</span>
-              <span class="workspace-tag-filter-count"
-                >({{ filter.count }})</span
-              >
-            </a-tag>
-            <a-button
-              v-if="
-                page.query.tagCode || page.query.tagValue || page.query.tagId
-              "
-              size="small"
-              type="link"
-              class="workspace-tag-clear"
-              @click="page.clearTagFilter"
-            >
-              清除标签
-            </a-button>
-            <span v-if="!page.tagFilters.length" class="workspace-tag-empty">
-              当前页暂无标签可筛选
-            </span>
-          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">

@@ -1,0 +1,276 @@
+.etl-workflow-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.etl-workflow-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.etl-workflow-header-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.etl-workflow-header-copy {
+  min-width: 0;
+}
+
+.etl-workflow-header-copy h2 {
+  margin: 6px 0 8px;
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.etl-workflow-header-copy p {
+  max-width: 980px;
+  margin: 0;
+  color: rgba(15, 23, 42, 0.66);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.etl-workflow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.etl-workflow-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.etl-workflow-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: rgba(15, 23, 42, 0.78);
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.etl-workflow-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.etl-workflow-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.etl-workflow-summary-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(37, 99, 235, 0.06),
+    rgba(37, 99, 235, 0.03)
+  );
+  border: 1px solid rgba(37, 99, 235, 0.08);
+}
+
+.etl-workflow-summary-label {
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.etl-workflow-summary-value {
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.etl-workflow-summary-desc {
+  margin-top: 6px;
+  color: rgba(15, 23, 42, 0.64);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.etl-workflow-boundary {
+  border-radius: 16px;
+}
+
+.etl-workflow-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-height: 0;
+}
+
+.etl-workflow-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.etl-workflow-table-card {
+  min-height: 0;
+}
+
+.etl-workflow-panel-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.etl-workflow-panel-title h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.etl-workflow-panel-title p {
+  margin: 4px 0 0;
+  color: rgba(15, 23, 42, 0.56);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.etl-workflow-panel-meta {
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.etl-workflow-panel-meta strong {
+  color: #0f172a;
+}
+
+.etl-workflow-query-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.etl-workflow-query-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.etl-workflow-query-actions {
+  margin-right: 0;
+}
+
+.etl-workflow-page-actions {
+  margin-left: auto;
+}
+
+.etl-workflow-query-meta {
+  color: rgba(15, 23, 42, 0.56);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.etl-workflow-binding-form {
+  min-width: 0;
+}
+
+.etl-workflow-binding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.etl-workflow-binding-hint {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+}
+
+.etl-workflow-stage-expand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 12px 4px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.etl-workflow-stage-expand__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  color: rgba(15, 23, 42, 0.64);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.etl-workflow-stage-expand__header strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.etl-workflow-stage-table {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1280px) {
+  .etl-workflow-body {
+    grid-template-columns: 1fr;
+  }
+
+  .etl-workflow-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .etl-workflow-header-inner,
+  .etl-workflow-panel-title {
+    flex-direction: column;
+  }
+
+  .etl-workflow-header-actions {
+    justify-content: flex-start;
+  }
+
+  .etl-workflow-summary-grid,
+  .etl-workflow-binding-grid {
+    grid-template-columns: 1fr;
+  }
+}

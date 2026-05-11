@@ -39,8 +39,6 @@ public class WorkflowScheduleDTO {
 
     private String workerGroup;
 
-    private String tenantCode;
-
     private Long environmentCode;
 
     private String releaseState;

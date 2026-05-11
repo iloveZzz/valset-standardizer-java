@@ -14,8 +14,32 @@ export interface ExtractDataTaskCommand {
   fileFingerprint?: string;
   /** 文件主数据标识。 */
   fileId?: number;
+  /** 文件服务文件标识。 */
+  filesysFileId?: string;
+  /** 是否立即完成文件服务上传。 */
+  filesysInstantUpload?: boolean;
+  /** 文件服务对象键。 */
+  filesysObjectKey?: string;
+  /** 文件服务任务标识。 */
+  filesysTaskId?: string;
   /** 是否强制重新生成提取任务。 */
   forceRebuild?: boolean;
   /** 要提取的工作簿或 CSV 文件路径。 */
   workbookPath: string;
+  /** 工作流编码。 */
+  workflowCode?: string;
+  /** 执行平台扩展参数。 */
+  workflowEngineConfigJson?: string;
+  /** 外部执行标识。 */
+  workflowEngineExternalRef?: string;
+  /** 执行平台类型。 */
+  workflowEngineType?: string;
+  /** 工作流主键。 */
+  workflowId?: string;
+  /** 当前工作流阶段编码。 */
+  workflowStageCode?: string;
+  /** 当前工作流阶段名称。 */
+  workflowStageName?: string;
+  /** 工作流版本号。 */
+  workflowVersionNo?: number;
 }

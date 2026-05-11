@@ -6,6 +6,7 @@ import {
   FileSearchOutlined,
   InboxOutlined,
   ProjectOutlined,
+  SettingOutlined,
   SwapOutlined,
   ThunderboltOutlined,
   TagsOutlined,
@@ -61,6 +62,33 @@ export const workspaceNav: Array<{
       },
     ],
   },
+  {
+    title: "工作流管理",
+    path: "/workflow-management",
+    icon: SettingOutlined,
+    children: [
+      {
+        title: "工作流定义",
+        path: "/workflow-management/workflow-list",
+        icon: FileTextOutlined,
+      },
+      {
+        title: "任务阶段定义",
+        path: "/workflow-management/stage-definition",
+        icon: ThunderboltOutlined,
+      },
+      {
+        title: "工作流实例",
+        path: "/workflow-management/workflow-instances",
+        icon: FileSearchOutlined,
+      },
+      {
+        title: "任务实例",
+        path: "/workflow-management/task-instances",
+        icon: FileSearchOutlined,
+      },
+    ],
+  },
 ];
 
 const transferPageComponentMap = {
@@ -106,6 +134,50 @@ export const routes: RouteRecordRaw[] = [
       title: "任务管理",
       keepAlive: false,
     },
+  },
+  {
+    path: "/workflow-management",
+    redirect: "/workflow-management/workflow-list",
+  },
+  {
+    path: "/workflow-management/workflow-list",
+    name: "workflow-management-workflow-list",
+    component: () => import("@/views/EtlWorkflowConfig/index.vue"),
+    meta: {
+      title: "工作流定义",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/workflow-management/stage-definition",
+    name: "workflow-management-stage-definition",
+    component: () => import("@/views/EtlWorkflowConfig/StagePage.vue"),
+    meta: {
+      title: "任务阶段定义",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/workflow-management/workflow-instances",
+    name: "workflow-management-workflow-instances",
+    component: () => import("@/views/EtlWorkflowInstance/index.vue"),
+    meta: {
+      title: "工作流实例",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/workflow-management/task-instances",
+    name: "workflow-management-task-instances",
+    component: () => import("@/views/EtlWorkflowTaskInstance/index.vue"),
+    meta: {
+      title: "任务实例",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/etl-workflow-config",
+    redirect: "/workflow-management/workflow-list",
   },
   {
     path: "/outsourced-data-tasks",

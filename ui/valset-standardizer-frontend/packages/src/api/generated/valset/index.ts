@@ -8,30 +8,27 @@ import type {
   AnalyzeLogsParams,
   AnalyzeMailInboxParams,
   AnalyzeObjectsParams,
-  AnalyzeRequest,
-  EvaluateMappingTaskCommand,
-  ExtractDataTaskCommand,
   GetTemplateName2Params,
   GetTemplateNameParams,
   ImportMappingHintsRequest,
   ImportMappingSamplesRequest,
   ListCheckpointItemsParams,
   ListCheckpointsParams,
+  ListLogs1Params,
   ListLogsParams,
   ListProfilesParams,
-  ListRecordsParams,
   ListRoutes1Params,
   ListRoutesParams,
   ListRulesParams,
   ListSourcesParams,
   ListTargetsParams,
   ListTracesParams,
-  MatchRequest,
-  MatchTaskCommand,
+  MultiResultOutsourcedDataTaskActionResultDTO,
+  MultiResultOutsourcedDataTaskStepDTO,
   MultiResultParseQueueViewDTO,
   MultiResultParseRuleProfileViewDTO,
   MultiResultParseRuleTraceViewDTO,
-  MultiResultTransferDeliveryRecordViewDTO,
+  MultiResultString,
   MultiResultTransferFormTemplateGroupDTO,
   MultiResultTransferFormTemplateViewDTO,
   MultiResultTransferRouteViewDTO,
@@ -44,17 +41,23 @@ import type {
   MultiResultValsetFileInfoViewDTO,
   MultiResultValsetFileIngestLogViewDTO,
   MultiResultValuationSheetStyleViewDTO,
+  MultiResultWorkflowDefinitionDTO,
+  MultiResultWorkflowPlatformMetadataDTO,
+  MultiResultWorkflowScheduleDTO,
+  MultiResultWorkflowStageLogDTO,
+  OutsourcedDataTaskActionCommand,
+  OutsourcedDataTaskBatchCommand,
   PageLogsParams,
   PageMailInboxParams,
   PageObjectsParams,
   PageQueuesParams,
-  PageRecordsParams,
+  PageResultOutsourcedDataTaskBatchDTO,
   PageResultParseQueueViewDTO,
-  PageResultTransferDeliveryRecordViewDTO,
   PageResultTransferObjectViewDTO,
   PageResultTransferRunLogViewDTO,
   PageResultTransferTagViewDTO,
   PageTagsParams,
+  PageTasksParams,
   ParseQueueBackfillCommand,
   ParseQueueCompleteCommand,
   ParseQueueFailCommand,
@@ -64,25 +67,23 @@ import type {
   ParseRuleProfileUpsertCommand,
   ParseRulePublishCommand,
   ParseRuleRollbackCommand,
-  ParseTaskCommand,
-  QueryRawDataParams,
+  QueryFileInfoByPathParams,
+  QueryIngestLogsByPathParams,
+  QuerySchedulesParams,
+  QuerySheetStylesByPathParams,
   SearchFileInfosParams,
-  SingleResultDwdExternalValuationViewDTO,
-  SingleResultFullWorkflowResponse,
+  SingleResultBoolean,
   SingleResultKnowledgeImportResponse,
-  SingleResultMatchResultViewDTO,
+  SingleResultOutsourcedDataTaskActionResultDTO,
+  SingleResultOutsourcedDataTaskBatchDetailDTO,
+  SingleResultOutsourcedDataTaskSummaryDTO,
   SingleResultParseQueueObserverRunSummary,
   SingleResultParseQueueViewDTO,
   SingleResultParseRuleBundleViewDTO,
   SingleResultParseRuleMutationResponse,
   SingleResultParseRuleRegressionViewDTO,
   SingleResultParseRuleValidationViewDTO,
-  SingleResultRawValuationDataViewDTO,
-  SingleResultStgExternalValuationViewDTO,
   SingleResultString,
-  SingleResultTaskCreateResponse,
-  SingleResultTaskViewDTO,
-  SingleResultTransferDeliveryRecordViewDTO,
   SingleResultTransferFormTemplateViewDTO,
   SingleResultTransferMailInfoViewDTO,
   SingleResultTransferObjectAnalysisViewDTO,
@@ -106,20 +107,34 @@ import type {
   SingleResultUploadValuationFileResponse,
   SingleResultValsetFileInfoRepairResultDTO,
   SingleResultValsetFileInfoViewDTO,
+  SingleResultWorkflowDefinitionDTO,
+  SingleResultWorkflowInstanceDTO,
+  SingleResultWorkflowScheduleDTO,
   SseEmitter,
   StreamLogsParams,
+  SubscribeParams,
+  SummaryParams,
   TransferObjectRedeliverCommand,
   TransferObjectRetagCommand,
   TransferRouteUpsertCommand,
   TransferRouteViewDTO,
   TransferRuleUpsertCommand,
+  TransferRunLogCleanupCommand,
   TransferRunLogRedeliverCommand,
   TransferSourceUpsertCommand,
   TransferTagTestCommand,
   TransferTagUpsertCommand,
   TransferTargetUpsertCommand,
+  Upload1Request,
   UploadSourceFilesRequest,
   ValsetFileInfoRepairCommand,
+  WorkflowCallbackRequest,
+  WorkflowDefinitionDTO,
+  WorkflowRetryRequest,
+  WorkflowScheduleDTO,
+  WorkflowSchedulePreviewRequest,
+  WorkflowStopRequest,
+  WorkflowTriggerRequest,
 } from "./schemas";
 import { customInstance } from "../../mutator";
 
@@ -146,64 +161,13 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
-   * @summary 创建解析任务。
+   * @summary subscribe
    */
-  const createParseTask = (parseTaskCommand: ParseTaskCommand) => {
-    return customInstance<SingleResultTaskCreateResponse>({
-      url: `/tasks/parse`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: parseTaskCommand,
-    });
-  };
-
-  /**
-   * @summary 创建匹配任务。
-   */
-  const createMatchTask = (matchTaskCommand: MatchTaskCommand) => {
-    return customInstance<SingleResultTaskCreateResponse>({
-      url: `/tasks/match`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: matchTaskCommand,
-    });
-  };
-
-  /**
-   * @summary 创建评估任务。
-   */
-  const createEvaluateTask = (
-    evaluateMappingTaskCommand: EvaluateMappingTaskCommand,
-  ) => {
-    return customInstance<SingleResultTaskCreateResponse>({
-      url: `/tasks/evaluate`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: evaluateMappingTaskCommand,
-    });
-  };
-
-  /**
-   * @summary 创建文件解析任务。
-   */
-  const createExtractTask = (
-    extractDataTaskCommand: ExtractDataTaskCommand,
-  ) => {
-    return customInstance<SingleResultTaskCreateResponse>({
-      url: `/tasks/extract`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: extractDataTaskCommand,
-    });
-  };
-
-  /**
-   * @summary 通过id查询任务。
-   */
-  const queryTask = (taskId: number) => {
-    return customInstance<SingleResultTaskViewDTO>({
-      url: `/tasks/${taskId}`,
+  const subscribe = (params?: SubscribeParams) => {
+    return customInstance<SseEmitter>({
+      url: `/parse-lifecycle-events/stream`,
       method: "GET",
+      params,
     });
   };
 
@@ -599,6 +563,138 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
+   * @summary saveDefinition
+   */
+  const saveDefinition = (workflowDefinitionDTO: WorkflowDefinitionDTO) => {
+    return customInstance<SingleResultWorkflowDefinitionDTO>({
+      url: `/api/etl/workflows`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowDefinitionDTO,
+    });
+  };
+
+  /**
+   * @summary listDefinitions
+   */
+  const listDefinitions = () => {
+    return customInstance<MultiResultWorkflowDefinitionDTO>({
+      url: `/api/etl/workflows`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary validateDefinition
+   */
+  const validateDefinition = (workflowDefinitionDTO: WorkflowDefinitionDTO) => {
+    return customInstance<SingleResultWorkflowDefinitionDTO>({
+      url: `/api/etl/workflows/validate`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowDefinitionDTO,
+    });
+  };
+
+  /**
+   * @summary listPlatforms
+   */
+  const listPlatforms = () => {
+    return customInstance<MultiResultWorkflowPlatformMetadataDTO>({
+      url: `/api/etl/workflows/platforms`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary getDefinition
+   */
+  const getDefinition = (workflowCode: string, workflowVersionNo: number) => {
+    return customInstance<SingleResultWorkflowDefinitionDTO>({
+      url: `/api/etl/workflows/${workflowCode}/${workflowVersionNo}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary trigger
+   */
+  const trigger = (workflowTriggerRequest: WorkflowTriggerRequest) => {
+    return customInstance<SingleResultWorkflowInstanceDTO>({
+      url: `/api/etl/workflows/instances/trigger`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowTriggerRequest,
+    });
+  };
+
+  /**
+   * @summary stop
+   */
+  const stop = (
+    instanceId: string,
+    workflowStopRequest: WorkflowStopRequest,
+  ) => {
+    return customInstance<SingleResultWorkflowInstanceDTO>({
+      url: `/api/etl/workflows/instances/${instanceId}/stop`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowStopRequest,
+    });
+  };
+
+  /**
+   * @summary retry
+   */
+  const retry = (
+    instanceId: string,
+    workflowRetryRequest: WorkflowRetryRequest,
+  ) => {
+    return customInstance<SingleResultWorkflowInstanceDTO>({
+      url: `/api/etl/workflows/instances/${instanceId}/retry`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowRetryRequest,
+    });
+  };
+
+  /**
+   * @summary getInstance
+   */
+  const getInstance = (instanceId: string) => {
+    return customInstance<SingleResultWorkflowInstanceDTO>({
+      url: `/api/etl/workflows/instances/${instanceId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary listLogs
+   */
+  const listLogs = (instanceId: string, params?: ListLogsParams) => {
+    return customInstance<MultiResultWorkflowStageLogDTO>({
+      url: `/api/etl/workflows/instances/${instanceId}/logs`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary callback
+   */
+  const callback = (
+    instanceId: string,
+    workflowCallbackRequest: WorkflowCallbackRequest,
+  ) => {
+    return customInstance<SingleResultWorkflowInstanceDTO>({
+      url: `/api/etl/workflows/instances/${instanceId}/callbacks`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowCallbackRequest,
+    });
+  };
+
+  /**
    * @summary createTag
    */
   const createTag = (transferTagUpsertCommand: TransferTagUpsertCommand) => {
@@ -682,155 +778,20 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
-   * @summary 上传外部估值表并完成 ODS 原始提取。
-   */
-  const upload = (boolean: boolean) => {
-    const formData = new FormData();
-    formData.append("data", uploadRequest.toString());
-
-    return customInstance<SingleResultUploadValuationFileResponse>({
-      url: `/valuation-workflows/upload`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 执行 DWD 外部估值解析。
-   */
-  const analyze = (analyzeRequest: AnalyzeRequest) => {
-    const formUrlEncoded = new URLSearchParams();
-    if (analyzeRequest.dataSourceType !== undefined) {
-      formUrlEncoded.append("dataSourceType", analyzeRequest.dataSourceType);
-    }
-    if (analyzeRequest.workbookPath !== undefined) {
-      formUrlEncoded.append("workbookPath", analyzeRequest.workbookPath);
-    }
-    if (analyzeRequest.forceRebuild !== undefined) {
-      formUrlEncoded.append(
-        "forceRebuild",
-        analyzeRequest.forceRebuild.toString(),
-      );
-    }
-    if (analyzeRequest.fileId !== undefined) {
-      formUrlEncoded.append("fileId", analyzeRequest.fileId.toString());
-    }
-    if (analyzeRequest.fileNameOriginal !== undefined) {
-      formUrlEncoded.append(
-        "fileNameOriginal",
-        analyzeRequest.fileNameOriginal,
-      );
-    }
-    if (analyzeRequest.createdBy !== undefined) {
-      formUrlEncoded.append("createdBy", analyzeRequest.createdBy);
-    }
-
-    return customInstance<SingleResultTaskViewDTO>({
-      url: `/valuation-workflows/analyze`,
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      data: formUrlEncoded,
-    });
-  };
-
-  /**
-   * @summary 执行外部估值科目匹配。
-   */
-  const match = (matchRequest: MatchRequest) => {
-    const formUrlEncoded = new URLSearchParams();
-    if (matchRequest.dataSourceType !== undefined) {
-      formUrlEncoded.append("dataSourceType", matchRequest.dataSourceType);
-    }
-    if (matchRequest.workbookPath !== undefined) {
-      formUrlEncoded.append("workbookPath", matchRequest.workbookPath);
-    }
-    if (matchRequest.forceRebuild !== undefined) {
-      formUrlEncoded.append(
-        "forceRebuild",
-        matchRequest.forceRebuild.toString(),
-      );
-    }
-    if (matchRequest.fileId !== undefined) {
-      formUrlEncoded.append("fileId", matchRequest.fileId.toString());
-    }
-    if (matchRequest.topK !== undefined) {
-      formUrlEncoded.append("topK", matchRequest.topK.toString());
-    }
-    if (matchRequest.createdBy !== undefined) {
-      formUrlEncoded.append("createdBy", matchRequest.createdBy);
-    }
-
-    return customInstance<SingleResultTaskViewDTO>({
-      url: `/valuation-workflows/match`,
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      data: formUrlEncoded,
-    });
-  };
-
-  /**
-   * @summary 上传文件并串联执行提取、解析、匹配。
-   */
-  const fullProcess = (boolean: boolean) => {
-    const formData = new FormData();
-    formData.append("data", fullProcessRequest.toString());
-
-    return customInstance<SingleResultFullWorkflowResponse>({
-      url: `/valuation-workflows/full-process`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 查询 ODS 原始行数据。
-   */
-  const queryRawData = (fileId: number, params?: QueryRawDataParams) => {
-    return customInstance<SingleResultRawValuationDataViewDTO>({
-      url: `/valuation-workflows/${fileId}/raw-data`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询 STG 外部估值解析快照。
-   */
-  const queryStgData = (fileId: number) => {
-    return customInstance<SingleResultStgExternalValuationViewDTO>({
-      url: `/valuation-workflows/${fileId}/stg-data`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 查询 DWD 外部估值标准数据。
-   */
-  const queryDwdData = (fileId: number) => {
-    return customInstance<SingleResultDwdExternalValuationViewDTO>({
-      url: `/valuation-workflows/${fileId}/dwd-data`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 查询匹配结果。
-   */
-  const queryMatchResults = (fileId: number) => {
-    return customInstance<SingleResultMatchResultViewDTO>({
-      url: `/valuation-workflows/${fileId}/match-results`,
-      method: "GET",
-    });
-  };
-
-  /**
    * @summary 手动上传文件并执行 ODS 提取。
    */
-  const upload1 = (boolean: boolean) => {
+  const upload1 = (upload1Request: Upload1Request) => {
     const formData = new FormData();
-    formData.append("data", upload1Request.toString());
+    formData.append("file", upload1Request.file);
+    if (upload1Request.dataSourceType !== undefined) {
+      formData.append("dataSourceType", upload1Request.dataSourceType);
+    }
+    if (upload1Request.createdBy !== undefined) {
+      formData.append("createdBy", upload1Request.createdBy);
+    }
+    if (upload1Request.forceRebuild !== undefined) {
+      formData.append("forceRebuild", upload1Request.forceRebuild.toString());
+    }
 
     return customInstance<SingleResultUploadValuationFileResponse>({
       url: `/files/upload`,
@@ -847,6 +808,17 @@ export const getJavaSpringBootQuartzApi = () => {
     return customInstance<SingleResultValsetFileInfoViewDTO>({
       url: `/files/${fileId}`,
       method: "GET",
+    });
+  };
+
+  /**
+   * @summary 通过路径查询文件主数据。
+   */
+  const queryFileInfoByPath = (params: QueryFileInfoByPathParams) => {
+    return customInstance<SingleResultValsetFileInfoViewDTO>({
+      url: `/files/by-path`,
+      method: "GET",
+      params,
     });
   };
 
@@ -872,12 +844,34 @@ export const getJavaSpringBootQuartzApi = () => {
   };
 
   /**
+   * @summary 通过路径查询文件接入日志。
+   */
+  const queryIngestLogsByPath = (params: QueryIngestLogsByPathParams) => {
+    return customInstance<MultiResultValsetFileIngestLogViewDTO>({
+      url: `/files/by-path/ingest-logs`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
    * @summary 查询文件对应的 Excel sheet 样式快照。
    */
   const querySheetStyles = (fileId: number) => {
     return customInstance<MultiResultValuationSheetStyleViewDTO>({
       url: `/files/${fileId}/sheet-styles`,
       method: "GET",
+    });
+  };
+
+  /**
+   * @summary 通过路径查询文件对应的 Excel sheet 样式快照。
+   */
+  const querySheetStylesByPath = (params: QuerySheetStylesByPathParams) => {
+    return customInstance<MultiResultValuationSheetStyleViewDTO>({
+      url: `/files/by-path/sheet-styles`,
+      method: "GET",
+      params,
     });
   };
 
@@ -892,6 +886,88 @@ export const getJavaSpringBootQuartzApi = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: valsetFileInfoRepairCommand,
+    });
+  };
+
+  /**
+   * @summary saveSchedule
+   */
+  const saveSchedule = (workflowScheduleDTO: WorkflowScheduleDTO) => {
+    return customInstance<SingleResultWorkflowScheduleDTO>({
+      url: `/api/etl/schedules`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowScheduleDTO,
+    });
+  };
+
+  /**
+   * @summary querySchedules
+   */
+  const querySchedules = (params: QuerySchedulesParams) => {
+    return customInstance<MultiResultWorkflowScheduleDTO>({
+      url: `/api/etl/schedules`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary updateSchedule
+   */
+  const updateSchedule = (
+    scheduleId: number,
+    workflowScheduleDTO: WorkflowScheduleDTO,
+  ) => {
+    return customInstance<SingleResultWorkflowScheduleDTO>({
+      url: `/api/etl/schedules/${scheduleId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: workflowScheduleDTO,
+    });
+  };
+
+  /**
+   * @summary deleteSchedule
+   */
+  const deleteSchedule = (projectCode: number, scheduleId: number) => {
+    return customInstance<SingleResultBoolean>({
+      url: `/api/etl/schedules/${projectCode}/${scheduleId}`,
+      method: "DELETE",
+    });
+  };
+
+  /**
+   * @summary onlineSchedule
+   */
+  const onlineSchedule = (projectCode: number, scheduleId: number) => {
+    return customInstance<SingleResultBoolean>({
+      url: `/api/etl/schedules/${projectCode}/${scheduleId}/online`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary offlineSchedule
+   */
+  const offlineSchedule = (projectCode: number, scheduleId: number) => {
+    return customInstance<SingleResultBoolean>({
+      url: `/api/etl/schedules/${projectCode}/${scheduleId}/offline`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary previewSchedule
+   */
+  const previewSchedule = (
+    workflowSchedulePreviewRequest: WorkflowSchedulePreviewRequest,
+  ) => {
+    return customInstance<MultiResultString>({
+      url: `/api/etl/schedules/preview`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: workflowSchedulePreviewRequest,
     });
   };
 
@@ -1087,7 +1163,7 @@ export const getJavaSpringBootQuartzApi = () => {
   /**
    * @summary 查询文件收发运行日志列表。
    */
-  const listLogs = (params?: ListLogsParams) => {
+  const listLogs1 = (params?: ListLogs1Params) => {
     return customInstance<MultiResultTransferRunLogViewDTO>({
       url: `/transfer-run-logs`,
       method: "GET",
@@ -1128,6 +1204,20 @@ export const getJavaSpringBootQuartzApi = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferRunLogRedeliverCommand,
+    });
+  };
+
+  /**
+   * @summary 按时间区间清理文件收发运行日志。
+   */
+  const cleanupLogs = (
+    transferRunLogCleanupCommand: TransferRunLogCleanupCommand,
+  ) => {
+    return customInstance<SingleResultTransferRunLogCleanupResponse>({
+      url: `/transfer-run-logs/cleanup`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: transferRunLogCleanupCommand,
     });
   };
 
@@ -1249,6 +1339,151 @@ export const getJavaSpringBootQuartzApi = () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       data: transferObjectRetagCommand,
+    });
+  };
+
+  /**
+   * @summary summary
+   */
+  const summary = (params?: SummaryParams) => {
+    return customInstance<SingleResultOutsourcedDataTaskSummaryDTO>({
+      url: `/outsourced-data-tasks/summary`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary pageTasks
+   */
+  const pageTasks = (params?: PageTasksParams) => {
+    return customInstance<PageResultOutsourcedDataTaskBatchDTO>({
+      url: `/outsourced-data-tasks`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary getTask
+   */
+  const getTask = (batchId: string) => {
+    return customInstance<SingleResultOutsourcedDataTaskBatchDetailDTO>({
+      url: `/outsourced-data-tasks/${batchId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary listSteps
+   */
+  const listSteps = (batchId: string) => {
+    return customInstance<MultiResultOutsourcedDataTaskStepDTO>({
+      url: `/outsourced-data-tasks/${batchId}/steps`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary execute
+   */
+  const execute = (
+    batchId: string,
+    outsourcedDataTaskActionCommand: OutsourcedDataTaskActionCommand,
+  ) => {
+    return customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
+      url: `/outsourced-data-tasks/${batchId}/execute`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskActionCommand,
+    });
+  };
+
+  /**
+   * @summary retry
+   */
+  const retry1 = (
+    batchId: string,
+    outsourcedDataTaskActionCommand: OutsourcedDataTaskActionCommand,
+  ) => {
+    return customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
+      url: `/outsourced-data-tasks/${batchId}/retry`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskActionCommand,
+    });
+  };
+
+  /**
+   * @summary stop
+   */
+  const stop1 = (
+    batchId: string,
+    outsourcedDataTaskActionCommand: OutsourcedDataTaskActionCommand,
+  ) => {
+    return customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
+      url: `/outsourced-data-tasks/${batchId}/stop`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskActionCommand,
+    });
+  };
+
+  /**
+   * @summary retryStep
+   */
+  const retryStep = (
+    batchId: string,
+    stepId: string,
+    outsourcedDataTaskActionCommand: OutsourcedDataTaskActionCommand,
+  ) => {
+    return customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
+      url: `/outsourced-data-tasks/${batchId}/steps/${stepId}/retry`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskActionCommand,
+    });
+  };
+
+  /**
+   * @summary batchExecute
+   */
+  const batchExecute = (
+    outsourcedDataTaskBatchCommand: OutsourcedDataTaskBatchCommand,
+  ) => {
+    return customInstance<MultiResultOutsourcedDataTaskActionResultDTO>({
+      url: `/outsourced-data-tasks/batch-execute`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskBatchCommand,
+    });
+  };
+
+  /**
+   * @summary batchRetry
+   */
+  const batchRetry = (
+    outsourcedDataTaskBatchCommand: OutsourcedDataTaskBatchCommand,
+  ) => {
+    return customInstance<MultiResultOutsourcedDataTaskActionResultDTO>({
+      url: `/outsourced-data-tasks/batch-retry`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskBatchCommand,
+    });
+  };
+
+  /**
+   * @summary batchStop
+   */
+  const batchStop = (
+    outsourcedDataTaskBatchCommand: OutsourcedDataTaskBatchCommand,
+  ) => {
+    return customInstance<MultiResultOutsourcedDataTaskActionResultDTO>({
+      url: `/outsourced-data-tasks/batch-stop`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskBatchCommand,
     });
   };
 
@@ -1378,46 +1613,10 @@ export const getJavaSpringBootQuartzApi = () => {
     });
   };
 
-  /**
-   * @summary 查询文件投递结果列表。
-   */
-  const listRecords = (params?: ListRecordsParams) => {
-    return customInstance<MultiResultTransferDeliveryRecordViewDTO>({
-      url: `/transfer-delivery-records`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 分页查询文件投递结果列表。
-   */
-  const pageRecords = (params?: PageRecordsParams) => {
-    return customInstance<PageResultTransferDeliveryRecordViewDTO>({
-      url: `/transfer-delivery-records/page`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询文件投递结果详情。
-   */
-  const getRecord = (deliveryId: string) => {
-    return customInstance<SingleResultTransferDeliveryRecordViewDTO>({
-      url: `/transfer-delivery-records/${deliveryId}`,
-      method: "GET",
-    });
-  };
-
   return {
     listRoutes,
     getRoute,
-    createParseTask,
-    createMatchTask,
-    createEvaluateTask,
-    createExtractTask,
-    queryTask,
+    subscribe,
     listTemplates,
     listGroupedTemplates,
     getTemplate,
@@ -1450,6 +1649,17 @@ export const getJavaSpringBootQuartzApi = () => {
     importMappingHints,
     importMappingSamples,
     run,
+    saveDefinition,
+    listDefinitions,
+    validateDefinition,
+    listPlatforms,
+    getDefinition,
+    trigger,
+    stop,
+    retry,
+    getInstance,
+    listLogs,
+    callback,
     createTag,
     pageTags,
     getTag,
@@ -1457,20 +1667,22 @@ export const getJavaSpringBootQuartzApi = () => {
     updateTag,
     getTemplateName3,
     testTag,
-    upload,
-    analyze,
-    match,
-    fullProcess,
-    queryRawData,
-    queryStgData,
-    queryDwdData,
-    queryMatchResults,
     upload1,
     queryFileInfo,
+    queryFileInfoByPath,
     searchFileInfos,
     queryIngestLogs,
+    queryIngestLogsByPath,
     querySheetStyles,
+    querySheetStylesByPath,
     repairFromTransfer,
+    saveSchedule,
+    querySchedules,
+    updateSchedule,
+    deleteSchedule,
+    onlineSchedule,
+    offlineSchedule,
+    previewSchedule,
     createRoute,
     listRoutes1,
     getRoute1,
@@ -1486,10 +1698,11 @@ export const getJavaSpringBootQuartzApi = () => {
     completeQueue,
     failQueue,
     retryQueue,
-    listLogs,
+    listLogs1,
     pageLogs,
     analyzeLogs,
     redeliver,
+    cleanupLogs,
     cleanupYesterdayLogs,
     streamLogs,
     getObject,
@@ -1501,6 +1714,17 @@ export const getJavaSpringBootQuartzApi = () => {
     analyzeMailInbox,
     redeliver1,
     retag,
+    summary,
+    pageTasks,
+    getTask,
+    listSteps,
+    execute,
+    retry1,
+    stop1,
+    retryStep,
+    batchExecute,
+    batchRetry,
+    batchStop,
     createProfile,
     listProfiles,
     getProfile,
@@ -1511,9 +1735,6 @@ export const getJavaSpringBootQuartzApi = () => {
     rollbackProfile,
     importProfile,
     listTraces,
-    listRecords,
-    pageRecords,
-    getRecord,
   };
 };
 export type ListRoutesResult = NonNullable<
@@ -1524,33 +1745,9 @@ export type ListRoutesResult = NonNullable<
 export type GetRouteResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRoute"]>>
 >;
-export type CreateParseTaskResult = NonNullable<
+export type SubscribeResult = NonNullable<
   Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createParseTask"]>
-  >
->;
-export type CreateMatchTaskResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createMatchTask"]>
-  >
->;
-export type CreateEvaluateTaskResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["createEvaluateTask"]
-    >
-  >
->;
-export type CreateExtractTaskResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["createExtractTask"]
-    >
-  >
->;
-export type QueryTaskResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryTask"]>
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["subscribe"]>
   >
 >;
 export type ListTemplatesResult = NonNullable<
@@ -1729,6 +1926,53 @@ export type ImportMappingSamplesResult = NonNullable<
 export type RunResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["run"]>>
 >;
+export type SaveDefinitionResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["saveDefinition"]>
+  >
+>;
+export type ListDefinitionsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listDefinitions"]>
+  >
+>;
+export type ValidateDefinitionResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["validateDefinition"]
+    >
+  >
+>;
+export type ListPlatformsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listPlatforms"]>
+  >
+>;
+export type GetDefinitionResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getDefinition"]>
+  >
+>;
+export type TriggerResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["trigger"]>>
+>;
+export type StopResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stop"]>>
+>;
+export type RetryResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["retry"]>>
+>;
+export type GetInstanceResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getInstance"]>
+  >
+>;
+export type ListLogsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listLogs"]>>
+>;
+export type CallbackResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["callback"]>>
+>;
 export type CreateTagResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createTag"]>
@@ -1760,48 +2004,19 @@ export type GetTemplateName3Result = NonNullable<
 export type TestTagResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["testTag"]>>
 >;
-export type UploadResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["upload"]>>
->;
-export type AnalyzeResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["analyze"]>>
->;
-export type MatchResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["match"]>>
->;
-export type FullProcessResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["fullProcess"]>
-  >
->;
-export type QueryRawDataResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryRawData"]>
-  >
->;
-export type QueryStgDataResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryStgData"]>
-  >
->;
-export type QueryDwdDataResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryDwdData"]>
-  >
->;
-export type QueryMatchResultsResult = NonNullable<
-  Awaited<
-    ReturnType<
-      ReturnType<typeof getJavaSpringBootQuartzApi>["queryMatchResults"]
-    >
-  >
->;
 export type Upload1Result = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["upload1"]>>
 >;
 export type QueryFileInfoResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryFileInfo"]>
+  >
+>;
+export type QueryFileInfoByPathResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["queryFileInfoByPath"]
+    >
   >
 >;
 export type SearchFileInfosResult = NonNullable<
@@ -1814,10 +2029,24 @@ export type QueryIngestLogsResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["queryIngestLogs"]>
   >
 >;
+export type QueryIngestLogsByPathResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["queryIngestLogsByPath"]
+    >
+  >
+>;
 export type QuerySheetStylesResult = NonNullable<
   Awaited<
     ReturnType<
       ReturnType<typeof getJavaSpringBootQuartzApi>["querySheetStyles"]
+    >
+  >
+>;
+export type QuerySheetStylesByPathResult = NonNullable<
+  Awaited<
+    ReturnType<
+      ReturnType<typeof getJavaSpringBootQuartzApi>["querySheetStylesByPath"]
     >
   >
 >;
@@ -1826,6 +2055,41 @@ export type RepairFromTransferResult = NonNullable<
     ReturnType<
       ReturnType<typeof getJavaSpringBootQuartzApi>["repairFromTransfer"]
     >
+  >
+>;
+export type SaveScheduleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["saveSchedule"]>
+  >
+>;
+export type QuerySchedulesResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["querySchedules"]>
+  >
+>;
+export type UpdateScheduleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["updateSchedule"]>
+  >
+>;
+export type DeleteScheduleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["deleteSchedule"]>
+  >
+>;
+export type OnlineScheduleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["onlineSchedule"]>
+  >
+>;
+export type OfflineScheduleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["offlineSchedule"]>
+  >
+>;
+export type PreviewScheduleResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["previewSchedule"]>
   >
 >;
 export type CreateRouteResult = NonNullable<
@@ -1901,8 +2165,10 @@ export type RetryQueueResult = NonNullable<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["retryQueue"]>
   >
 >;
-export type ListLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listLogs"]>>
+export type ListLogs1Result = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listLogs1"]>
+  >
 >;
 export type PageLogsResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageLogs"]>>
@@ -1915,6 +2181,11 @@ export type AnalyzeLogsResult = NonNullable<
 export type RedeliverResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["redeliver"]>
+  >
+>;
+export type CleanupLogsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["cleanupLogs"]>
   >
 >;
 export type CleanupYesterdayLogsResult = NonNullable<
@@ -1974,6 +2245,51 @@ export type Redeliver1Result = NonNullable<
 export type RetagResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["retag"]>>
 >;
+export type SummaryResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["summary"]>>
+>;
+export type PageTasksResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageTasks"]>
+  >
+>;
+export type GetTaskResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getTask"]>>
+>;
+export type ListStepsResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listSteps"]>
+  >
+>;
+export type ExecuteResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["execute"]>>
+>;
+export type Retry1Result = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["retry1"]>>
+>;
+export type Stop1Result = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["stop1"]>>
+>;
+export type RetryStepResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["retryStep"]>
+  >
+>;
+export type BatchExecuteResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["batchExecute"]>
+  >
+>;
+export type BatchRetryResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["batchRetry"]>
+  >
+>;
+export type BatchStopResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["batchStop"]>
+  >
+>;
 export type CreateProfileResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["createProfile"]>
@@ -2022,20 +2338,5 @@ export type ImportProfileResult = NonNullable<
 export type ListTracesResult = NonNullable<
   Awaited<
     ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listTraces"]>
-  >
->;
-export type ListRecordsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["listRecords"]>
-  >
->;
-export type PageRecordsResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["pageRecords"]>
-  >
->;
-export type GetRecordResult = NonNullable<
-  Awaited<
-    ReturnType<ReturnType<typeof getJavaSpringBootQuartzApi>["getRecord"]>
   >
 >;

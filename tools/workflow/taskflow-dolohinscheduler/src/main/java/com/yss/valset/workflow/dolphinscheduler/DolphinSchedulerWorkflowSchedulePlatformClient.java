@@ -5,8 +5,8 @@ import com.yss.valset.workflow.model.EtlPlatformType;
 import com.yss.valset.workflow.model.WorkflowScheduleDTO;
 import com.yss.valset.workflow.model.WorkflowSchedulePreviewRequest;
 import com.yss.valset.workflow.service.AbstractWorkflowSchedulePlatformClient;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.lang.Nullable;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
@@ -21,7 +21,15 @@ import java.util.Map;
 @Component
 public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWorkflowSchedulePlatformClient {
 
-    private final DolphinSchedulerApiSupport apiSupport = new DolphinSchedulerApiSupport();
+    @Nullable
+    private final DolphinSchedulerRemoteApi remoteApi;
+    private final DolphinSchedulerResponseSupport responseSupport;
+
+    public DolphinSchedulerWorkflowSchedulePlatformClient(@Nullable DolphinSchedulerRemoteApi remoteApi,
+                                                          DolphinSchedulerResponseSupport responseSupport) {
+        this.remoteApi = remoteApi;
+        this.responseSupport = responseSupport;
+    }
 
     @Override
     public EtlPlatformType platformType() {
@@ -44,77 +52,61 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         }
     }
 
-    @Value("${valset.workflow.dolphinscheduler.base-url:}")
-    public void setBaseUrl(String baseUrl) {
-        apiSupport.setBaseUrl(baseUrl);
-    }
-
     @Override
     public WorkflowScheduleDTO saveSchedule(WorkflowScheduleDTO schedule) {
-        if (!apiSupport.hasBaseUrl()) {
+        if (remoteApi == null) {
             return schedule == null ? null : schedule.toBuilder().build();
         }
         MultiValueMap<String, String> params = buildScheduleParams(schedule);
-        JsonNode response = apiSupport.postFormJson("/projects/{projectCode}/schedules",
-                params,
-                schedule.getProjectCode());
+        JsonNode response = responseSupport.toJsonNode(remoteApi.createSchedule(schedule.getProjectCode(), params));
         return mergeRemoteSchedule(schedule, response);
     }
 
     @Override
     public WorkflowScheduleDTO updateSchedule(WorkflowScheduleDTO schedule) {
-        if (!apiSupport.hasBaseUrl()) {
+        if (remoteApi == null) {
             return schedule == null ? null : schedule.toBuilder().build();
         }
         MultiValueMap<String, String> params = buildScheduleParams(schedule);
         JsonNode response;
         if (schedule != null && schedule.getScheduleId() != null) {
-            response = apiSupport.putFormJson("/projects/{projectCode}/schedules/{scheduleId}",
-                    params,
-                    schedule.getProjectCode(),
-                    schedule.getScheduleId());
+            response = responseSupport.toJsonNode(remoteApi.updateSchedule(schedule.getProjectCode(), schedule.getScheduleId(), params));
         } else {
-            response = apiSupport.putFormJson("/projects/{projectCode}/schedules/update/{workflowDefinitionCode}",
-                    params,
+            response = responseSupport.toJsonNode(remoteApi.updateScheduleByWorkflowDefinitionCode(
                     schedule.getProjectCode(),
-                    schedule.getWorkflowDefinitionCode());
+                    schedule.getWorkflowDefinitionCode(),
+                    params));
         }
         return mergeRemoteSchedule(schedule, response);
     }
 
     @Override
     public void deleteSchedule(Long projectCode, Long scheduleId) {
-        if (!apiSupport.hasBaseUrl()) {
+        if (remoteApi == null) {
             return;
         }
-        apiSupport.deleteJson("/projects/{projectCode}/schedules/{scheduleId}", projectCode, scheduleId);
+        responseSupport.toJsonNode(remoteApi.deleteSchedule(projectCode, scheduleId));
     }
 
     @Override
     public void onlineSchedule(Long projectCode, Long scheduleId) {
-        if (!apiSupport.hasBaseUrl()) {
+        if (remoteApi == null) {
             return;
         }
-        apiSupport.postFormJson("/projects/{projectCode}/schedules/{scheduleId}/online",
-                new LinkedMultiValueMap<>(),
-                projectCode,
-                scheduleId);
+        responseSupport.toJsonNode(remoteApi.onlineSchedule(projectCode, scheduleId));
     }
 
     @Override
     public void offlineSchedule(Long projectCode, Long scheduleId) {
-        if (!apiSupport.hasBaseUrl()) {
+        if (remoteApi == null) {
             return;
         }
-        apiSupport.postFormJson("/projects/{projectCode}/schedules/{scheduleId}/offline",
-                new LinkedMultiValueMap<>(),
-                projectCode,
-                scheduleId);
+        responseSupport.toJsonNode(remoteApi.offlineSchedule(projectCode, scheduleId));
     }
 
     @Override
     public List<WorkflowScheduleDTO> querySchedules(WorkflowScheduleDTO schedule) {
-        if (!apiSupport.hasBaseUrl()) {
+        if (remoteApi == null) {
             return List.of();
         }
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -126,8 +118,9 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         }
         params.add("pageNo", "1");
         params.add("pageSize", "100");
-        JsonNode response = apiSupport.getJson("/projects/{projectCode}/schedules", params,
-                schedule == null ? 0L : schedule.getProjectCode());
+        JsonNode response = responseSupport.toJsonNode(remoteApi.listSchedules(
+                schedule == null ? 0L : schedule.getProjectCode(),
+                normalizeQueryParams(params)));
         List<Map<String, Object>> items = extractScheduleItems(response);
         return items.stream()
                 .map(item -> mapSchedule(schedule, item))
@@ -136,7 +129,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
 
     @Override
     public List<String> previewSchedule(WorkflowSchedulePreviewRequest request) {
-        if (!apiSupport.hasBaseUrl()) {
+        if (remoteApi == null) {
             return List.of();
         }
         if (request == null || request.getProjectCode() == null) {
@@ -144,7 +137,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         }
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("schedule", request.getScheduleJson());
-        JsonNode response = apiSupport.postFormJson("/projects/{projectCode}/schedules/preview", params, request.getProjectCode());
+        JsonNode response = responseSupport.toJsonNode(remoteApi.previewSchedule(request.getProjectCode(), params));
         List<String> items = extractPreviewItems(response);
         return items.isEmpty() ? List.of() : items;
     }
@@ -160,7 +153,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         params.add("warningGroupId", valueOf(schedule.getWarningGroupId(), 1));
         params.add("failureStrategy", valueOf(schedule.getFailureStrategy(), "CONTINUE"));
         params.add("workerGroup", valueOf(schedule.getWorkerGroup(), "default"));
-        params.add("tenantCode", valueOf(schedule.getTenantCode(), "default"));
+        params.add("tenantCode", "default");
         params.add("environmentCode", valueOf(schedule.getEnvironmentCode(), -1L));
         params.add("workflowInstancePriority", valueOf(schedule.getWorkflowInstancePriority(), "MEDIUM"));
         return params;
@@ -169,7 +162,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
     private WorkflowScheduleDTO mergeRemoteSchedule(WorkflowScheduleDTO request, JsonNode response) {
         Map<String, Object> payload = response == null || !response.hasNonNull("data")
                 ? Map.of()
-                : apiSupport.getObjectMapper().convertValue(response.get("data"), Map.class);
+                : responseSupport.getObjectMapper().convertValue(response.get("data"), Map.class);
         return mapSchedule(request, payload).toBuilder()
                 .message(stringValue(payload.get("message"), payload.get("msg"), request == null ? null : request.getMessage()))
                 .attributes(payload)
@@ -190,7 +183,6 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         builder.failureStrategy(stringValue(payload.get("failureStrategy")));
         builder.workflowInstancePriority(stringValue(payload.get("workflowInstancePriority")));
         builder.workerGroup(stringValue(payload.get("workerGroup")));
-        builder.tenantCode(stringValue(payload.get("tenantCode")));
         builder.environmentCode(longValue(payload.get("environmentCode")));
         builder.releaseState(stringValue(payload.get("releaseState")));
         builder.online(booleanValue(payload.get("online"), payload.get("releaseState")));
@@ -205,13 +197,13 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         }
         JsonNode data = response.get("data");
         if (data.isArray()) {
-            return apiSupport.getObjectMapper().convertValue(data,
-                    apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
+            return responseSupport.getObjectMapper().convertValue(data,
+                    responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
         }
         for (String key : List.of("dataList", "totalList", "records", "items")) {
             if (data.has(key) && data.get(key).isArray()) {
-                return apiSupport.getObjectMapper().convertValue(data.get(key),
-                        apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
+                return responseSupport.getObjectMapper().convertValue(data.get(key),
+                        responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
             }
         }
         return List.of();
@@ -223,18 +215,31 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         }
         JsonNode data = response.get("data");
         if (data.isArray()) {
-            return apiSupport.getObjectMapper().convertValue(data,
-                    apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, String.class));
+            return responseSupport.getObjectMapper().convertValue(data,
+                    responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, String.class));
         }
         if (data.isObject()) {
             for (String key : List.of("dataList", "totalList", "records", "items")) {
                 if (data.has(key) && data.get(key).isArray()) {
-                    return apiSupport.getObjectMapper().convertValue(data.get(key),
-                            apiSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, String.class));
+                    return responseSupport.getObjectMapper().convertValue(data.get(key),
+                            responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, String.class));
                 }
             }
         }
         return List.of();
+    }
+
+    private Map<String, String> normalizeQueryParams(MultiValueMap<String, String> queryParams) {
+        Map<String, String> result = new LinkedHashMap<>();
+        if (queryParams == null || queryParams.isEmpty()) {
+            return result;
+        }
+        queryParams.forEach((key, values) -> {
+            if (values != null && !values.isEmpty()) {
+                result.put(key, values.get(0));
+            }
+        });
+        return result;
     }
 
     private String valueOf(Object primary, Object fallback) {

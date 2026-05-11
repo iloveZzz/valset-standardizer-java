@@ -1,8 +1,10 @@
 package com.yss.valset.workflow.spi;
 
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
+import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
 import com.yss.valset.workflow.model.WorkflowInstanceDTO;
-import com.yss.valset.workflow.model.WorkflowStageLogDTO;
+import com.yss.valset.workflow.model.WorkflowInstanceViewDTO;
+import com.yss.cloud.dto.response.PageResult;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,6 +16,8 @@ public interface WorkflowRuntimeStore {
 
     WorkflowDefinitionDTO saveDefinition(WorkflowDefinitionDTO definition);
 
+    boolean deleteDefinition(String workflowCode, Integer workflowVersionNo);
+
     Optional<WorkflowDefinitionDTO> findDefinition(String workflowCode, Integer workflowVersionNo);
 
     List<WorkflowDefinitionDTO> listDefinitions();
@@ -22,7 +26,5 @@ public interface WorkflowRuntimeStore {
 
     Optional<WorkflowInstanceDTO> findInstance(String instanceId);
 
-    WorkflowStageLogDTO saveStageLog(WorkflowStageLogDTO log);
-
-    List<WorkflowStageLogDTO> listStageLogs(String instanceId, String stageCode);
+    PageResult<WorkflowInstanceViewDTO> listInstances(WorkflowInstanceQueryRequest request);
 }

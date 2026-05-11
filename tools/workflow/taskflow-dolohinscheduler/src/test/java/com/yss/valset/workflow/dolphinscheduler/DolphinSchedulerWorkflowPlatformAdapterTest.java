@@ -14,7 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DolphinSchedulerWorkflowPlatformAdapterTest {
 
-    private final DolphinSchedulerWorkflowPlatformAdapter adapter = new DolphinSchedulerWorkflowPlatformAdapter(new DolphinSchedulerWorkflowPlatformClient());
+    private final DolphinSchedulerWorkflowPlatformAdapter adapter =
+            new DolphinSchedulerWorkflowPlatformAdapter(new DolphinSchedulerWorkflowPlatformClient(null, new DolphinSchedulerResponseSupport()));
 
     @Test
     void shouldMapDolphinSchedulerPayloadAndLogs() {
@@ -35,7 +36,7 @@ class DolphinSchedulerWorkflowPlatformAdapterTest {
                 .containsEntry("workflowName", "ds-flow")
                 .containsEntry("namespace", "default")
                 .containsEntry("operationType", "TRIGGER");
-        assertThat(adapter.queryLogs(definition, instance, null)).hasSize(2);
+        assertThat(adapter.queryLogs(definition, instance, null)).isEmpty();
     }
 
     private WorkflowDefinitionDTO definition() {

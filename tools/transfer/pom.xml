@@ -16,8 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
-            <artifactId>valset-standardizer-core</artifactId>
-            <version>${project.version}</version>
+            <artifactId>valset-standardizer-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.yss.cloud</groupId>
@@ -50,17 +49,14 @@
         <dependency>
             <groupId>com.github.mwiede</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.2.26</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
-            <version>1.12.450</version>
         </dependency>
         <dependency>
             <groupId>com.yss.filesys</groupId>
             <artifactId>yss-filesys-feignsdk</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.alibaba</groupId>
@@ -81,7 +77,6 @@
         <dependency>
             <groupId>com.github.kagkarlsson</groupId>
             <artifactId>db-scheduler</artifactId>
-            <version>16.7.0</version>
         </dependency>
         <dependency>
             <groupId>org.mapstruct</groupId>
@@ -104,7 +99,6 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
-            <version>${springdoc.version}</version>
         </dependency>
     </dependencies>
 </project>

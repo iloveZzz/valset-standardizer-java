@@ -1,1 +1,0 @@
-./mvnw -q -pl subject-match-boot,subject-match-e2e -am test -DskipITs

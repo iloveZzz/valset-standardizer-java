@@ -28,6 +28,8 @@ public class WorkflowInstanceDTO {
 
     private EtlPlatformType platformType;
 
+    private String currentStageCode;
+
     private String businessKey;
 
     private String externalInstanceId;
@@ -41,6 +43,8 @@ public class WorkflowInstanceDTO {
     private LocalDateTime triggerTime;
 
     private LocalDateTime startTime;
+
+    private String duration;
 
     private LocalDateTime endTime;
 

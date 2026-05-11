@@ -187,6 +187,16 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
     }
 
     @Override
+    protected String rawPauseStatus() {
+        return BatchStatus.STOPPED.name();
+    }
+
+    @Override
+    protected String rawResumeStatus() {
+        return BatchStatus.STARTED.name();
+    }
+
+    @Override
     protected String rawRetryStatus() {
         return BatchStatus.STARTED.name();
     }

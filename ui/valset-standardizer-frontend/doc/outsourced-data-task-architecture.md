@@ -11,7 +11,7 @@
 | 模块             | 现有职责                                 | 与任务模块关系                                   |
 | ---------------- | ---------------------------------------- | ------------------------------------------------ |
 | `tools/transfer` | 文件来源、规则、路由、投递               | 不作为本页面主链路；仅作为文件来源事实的可选输入 |
-| `tools/analysis` | 解析队列、解析生命周期、ODS/CSV 解析事件 | 向任务模块提供解析阶段事实                       |
+| `tools/parser` | 解析队列、解析生命周期、ODS/CSV 解析事件 | 向任务模块提供解析阶段事实                       |
 | `tools/extract`  | 结构标准化、标准化落地能力               | 向任务模块提供标准化和落地阶段事实               |
 | `tools/batch`    | 调度和任务派发                           | 触发任务阶段执行，后续写入阶段事件               |
 | `tools/task`     | 批次聚合、阶段链路、任务控制、页面接口   | 新增独立任务管理中枢                             |
@@ -114,7 +114,7 @@ Controller 根路径不带 `/api` 前缀，继续遵守当前工程策略，由�
 
 - 新增 `tools/task` Maven 模块。
 - 将 `tools/task` 加入 `tools/pom.xml`。
-- 将 `valset-standardizer-task` 加入 `valset-standardizer-boot` 依赖。
+- 将 `valset-standardizer-task` 加入 `yss-valset-standardizer` 依赖。
 - 新增阶段枚举、状态枚举、查询/操作命令、DTO、应用服务接口、默认应用服务、Controller。
 - 新增持久化端口、批次/阶段/日志 PO、Repository、MyBatis Gateway。
 - 新增 Liquibase `task.sql`，包含 `t_outsourced_data_task_batch`、`t_outsourced_data_task_step`、`t_outsourced_data_task_log`。

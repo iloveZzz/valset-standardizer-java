@@ -16,7 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
-            <artifactId>valset-standardizer-core</artifactId>
+            <artifactId>valset-standardizer-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

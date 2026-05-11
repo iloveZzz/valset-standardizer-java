@@ -10,10 +10,9 @@
 
 目录说明：
 
-- `valset-standardizer-core`：领域模型、解析/标准化抽象、任务模型
 - `valset-standardizer-tools`：非 DDD 的通用工具库聚合模块
   - `valset-standardizer-extract`：Excel / CSV 文件解析与 `t_ods_valuation_filedata` 持久化
-  - `valset-standardizer-analysis`：基于 ODS 原始行数据的估值分析
+  - `valset-standardizer-parser`：基于 ODS 原始行数据的估值分析
 - `valset-standardizer-knowledge`：标准科目、历史映射提示和评估样本加载
 - `valset-standardizer-task`：估值内部流程的任务适配、阶段分发与状态查询
 - `valset-standardizer-batch`：基于 db-scheduler 的任务调度与分发
@@ -23,8 +22,7 @@
   - `valset-standardizer-taskflow-springbatch`：Spring Batch 适配实现
   - `valset-standardizer-taskflow-dolohinscheduler`：DolphinScheduler 适配实现
   - `valset-standardizer-taskflow-xxljob`：XXL-JOB 适配实现
-- `valset-standardizer-infra`：通用基础设施支持代码
-- `valset-standardizer-boot`：启动类、应用服务、控制器
+- `yss-valset-standardizer`：整合应用，承载启动类、应用服务、控制器、运行配置以及原 `core` / `infra` 代码
 
 ## 当前链路
 
@@ -53,7 +51,7 @@
 
 项目已补充 Liquibase changelog 入口：
 
-- `valset-standardizer-boot/src/main/resources/db/changelog/db.changelog-master.xml`
+- `yss-valset-standardizer/src/main/resources/db/changelog/db.changelog-master.xml`
 
 启动配置默认关闭 Liquibase，需要显式开启：
 

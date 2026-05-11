@@ -1,16 +1,16 @@
 package com.yss.valset.batch.job;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.valset.analysis.application.command.ParseQueueCompleteCommand;
-import com.yss.valset.analysis.application.command.ParseQueueSubscribeCommand;
-import com.yss.valset.analysis.application.dto.ParseQueueViewDTO;
-import com.yss.valset.analysis.application.service.ParseQueueManagementAppService;
+import com.yss.valset.parser.application.command.ParseQueueCompleteCommand;
+import com.yss.valset.parser.application.command.ParseQueueSubscribeCommand;
+import com.yss.valset.parser.application.dto.ParseQueueViewDTO;
+import com.yss.valset.parser.application.service.ParseQueueManagementAppService;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
 import com.yss.valset.application.service.ValsetFileInfoRepairAppService;
-import com.yss.valset.analysis.domain.gateway.ParseQueueGateway;
-import com.yss.valset.analysis.domain.model.ParseQueue;
-import com.yss.valset.analysis.domain.model.ParseStatus;
-import com.yss.valset.analysis.domain.model.ParseTriggerMode;
+import com.yss.valset.parser.domain.gateway.ParseQueueGateway;
+import com.yss.valset.parser.domain.model.ParseQueue;
+import com.yss.valset.parser.domain.model.ParseStatus;
+import com.yss.valset.parser.domain.model.ParseTriggerMode;
 import com.yss.valset.batch.dispatcher.TaskDispatcher;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;

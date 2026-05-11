@@ -22,11 +22,11 @@ public enum WorkflowStatus {
         return switch (normalized) {
             case "DRAFT" -> DRAFT;
             case "READY", "ONLINE", "ENABLED" -> READY;
-            case "SUBMITTED", "DISPATCHED" -> SUBMITTED;
-            case "RUNNING", "EXECUTING", "STARTED" -> RUNNING;
+            case "SUBMITTED", "SUBMITTED_SUCCESS", "DISPATCHED" -> SUBMITTED;
+            case "RUNNING", "EXECUTING", "STARTED", "RUNNING_EXECUTION" -> RUNNING;
             case "SUCCEEDED", "SUCCESS", "COMPLETED", "FINISHED" -> SUCCEEDED;
             case "FAILED", "FAILURE", "ERROR" -> FAILED;
-            case "STOPPED", "STOP", "PAUSE", "CANCELED", "CANCELLED", "TERMINATED" -> STOPPED;
+            case "STOPPED", "STOP", "PAUSE", "READY_PAUSE", "READY_STOP", "CANCELED", "CANCELLED", "TERMINATED" -> STOPPED;
             case "RETRYING", "RETRY" -> RETRYING;
             default -> UNKNOWN;
         };

@@ -7,8 +7,8 @@ import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
 import com.yss.valset.domain.parser.ValuationDataParser;
+import com.yss.valset.infra.http.FeignJsonFetcher;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,11 +19,11 @@ import java.util.List;
 @Component
 public class ApiValuationDataParser implements ValuationDataParser {
 
-    private final RestTemplate restTemplate;
+    private final FeignJsonFetcher feignJsonFetcher;
     private final ObjectMapper objectMapper;
 
-    public ApiValuationDataParser(ObjectMapper objectMapper) {
-        this.restTemplate = new RestTemplate();
+    public ApiValuationDataParser(FeignJsonFetcher feignJsonFetcher, ObjectMapper objectMapper) {
+        this.feignJsonFetcher = feignJsonFetcher;
         this.objectMapper = objectMapper;
     }
 
@@ -34,7 +34,7 @@ public class ApiValuationDataParser implements ValuationDataParser {
         List<MetricRecord> metrics = new ArrayList<>();
 
         try {
-            String jsonResponse = restTemplate.getForObject(apiUrl, String.class);
+            String jsonResponse = feignJsonFetcher.get(apiUrl);
             JsonNode rootNode = objectMapper.readTree(jsonResponse);
 
             JsonNode dataNode = rootNode.path("data");

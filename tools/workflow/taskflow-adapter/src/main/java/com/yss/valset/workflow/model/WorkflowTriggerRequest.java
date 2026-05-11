@@ -32,5 +32,8 @@ public class WorkflowTriggerRequest {
     private boolean force;
 
     @Builder.Default
+    private WorkflowTriggerMode triggerMode = WorkflowTriggerMode.START_PROCESS;
+
+    @Builder.Default
     private Map<String, Object> context = new LinkedHashMap<>();
 }

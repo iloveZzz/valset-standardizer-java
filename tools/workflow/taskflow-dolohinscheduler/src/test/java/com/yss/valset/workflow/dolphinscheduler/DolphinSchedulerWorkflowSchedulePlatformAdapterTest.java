@@ -12,7 +12,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class DolphinSchedulerWorkflowSchedulePlatformAdapterTest {
 
     private final DolphinSchedulerWorkflowSchedulePlatformAdapter adapter =
-            new DolphinSchedulerWorkflowSchedulePlatformAdapter(new DolphinSchedulerWorkflowSchedulePlatformClient());
+            new DolphinSchedulerWorkflowSchedulePlatformAdapter(
+                    new DolphinSchedulerWorkflowSchedulePlatformClient(null, new DolphinSchedulerResponseSupport()));
 
     @Test
     void shouldValidateAndFallbackWithoutRemoteAddress() {
