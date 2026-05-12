@@ -101,11 +101,11 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
                     .build();
             try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
                 ParseTaskCommand command = null;
+                ParseLifecycleStage currentStage = ParseLifecycleStage.FILE_PARSE;
                 try {
                     long startedAt = System.currentTimeMillis();
                     log.info("开始执行估值数据解析任务，taskId={}", taskId);
                     command = objectMapper.readValue(workflowTask.getInputPayload(), ParseTaskCommand.class);
-                    publishLifecycleEvent(ParseLifecycleStage.TASK_EXECUTION_STARTED, taskId, command, "开始执行解析任务");
 
                     String sourceTypeStr = command.getDataSourceType();
                     DataSourceType type = DataSourceType.EXCEL;
@@ -126,7 +126,6 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
                     long parseStartedAt = System.currentTimeMillis();
                     ParsedValuationData parsedValuationData = traceSpan("workflow.parse.raw_parse", () -> parser.parse(config));
                     long parseFinishedAt = System.currentTimeMillis();
-                    publishLifecycleEvent(ParseLifecycleStage.TASK_RAW_PARSED, taskId, command, "原始数据解析完成");
                     validateParsedValuationData(parsedValuationData, command);
                     String fileNameOriginal = resolveFileNameOriginal(workflowTask);
                     parsedValuationData = parsedValuationData.toBuilder()
@@ -136,35 +135,34 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
 
                     traceSpan("workflow.parse.persist_raw_dwd", () ->
                             dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), parsedValuationDataFinal));
+                    publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
 
                     long standardizeStartedAt = System.currentTimeMillis();
+                    currentStage = ParseLifecycleStage.STRUCTURE_STANDARDIZE;
                     ParsedValuationData standardizedValuationData = traceSpan("workflow.parse.standardize",
                             () -> standardizationService.standardize(parsedValuationDataFinal));
                     long standardizeFinishedAt = System.currentTimeMillis();
-                    publishLifecycleEvent(ParseLifecycleStage.TASK_STANDARDIZED, taskId, command, "标准化完成");
                     standardizedValuationData = standardizedValuationData == null ? null : standardizedValuationData.toBuilder()
                             .fileNameOriginal(fileNameOriginal)
                             .build();
+                    publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
 
                     String sourceSign = fileNameOriginal;
                     String sourceTypeName = type.name();
                     ParsedValuationData finalStandardizedValuationData = standardizedValuationData;
+                    currentStage = ParseLifecycleStage.STANDARD_LANDING;
                     traceSpan("workflow.parse.persist_standardized", () -> {
                         standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), finalStandardizedValuationData);
                         dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
                         trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
                     });
                     long persistFinishedAt = System.currentTimeMillis();
-                    publishLifecycleEvent(ParseLifecycleStage.TASK_PERSISTED, taskId, command, "标准化结果已落库");
+                    publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
 
                     long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
                     taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
                     String resultPayload = buildResultPayload(parsedValuationDataFinal);
                     taskGateway.markSuccess(taskId, resultPayload);
-                    publishLifecycleEvent(ParseLifecycleStage.TASK_SUCCEEDED, taskId, command, "解析任务执行成功", Map.of(
-                            "subjectCount", parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
-                            "metricCount", parsedValuationDataFinal.getMetrics() == null ? 0 : parsedValuationDataFinal.getMetrics().size()
-                    ));
                     log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
                             taskId,
                             parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
@@ -177,11 +175,10 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
                             persistFinishedAt - standardizeFinishedAt);
                 } catch (Exception e) {
                     rootSpan.error(e);
-                    Map<String, Object> failedAttributes = new LinkedHashMap<>();
-                    if (e.getMessage() != null) {
-                        failedAttributes.put("errorMessage", e.getMessage());
-                    }
-                    publishLifecycleEvent(ParseLifecycleStage.TASK_FAILED, taskId, command, "解析任务执行失败", failedAttributes);
+                    publishLifecycleEvent(currentStage, taskId, command, "解析任务执行失败", Map.of(
+                            "errorMessage", e.getMessage() == null ? e.getClass().getName() : e.getMessage(),
+                            "errorType", e.getClass().getName()
+                    ));
                     log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
                     throw new IllegalStateException("Failed to execute parse task " + taskId, e);
                 }

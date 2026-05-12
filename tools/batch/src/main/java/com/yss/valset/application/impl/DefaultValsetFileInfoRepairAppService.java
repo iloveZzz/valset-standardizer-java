@@ -3,9 +3,6 @@ package com.yss.valset.application.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.ValsetFileInfoRepairCommand;
 import com.yss.valset.application.dto.ValsetFileInfoRepairResultDTO;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.application.service.ValsetFileInfoRepairAppService;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.model.ValsetFileInfo;
@@ -39,7 +36,6 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
 
     private final TransferObjectGateway transferObjectGateway;
     private final ValsetFileInfoGateway valsetFileInfoGateway;
-    private final ParseLifecycleEventPublisher parseLifecycleEventPublisher;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -47,11 +43,13 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
         if (transferObject == null || !StringUtils.hasText(transferObject.fingerprint())) {
             return null;
         }
-        publishRepairEvent(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_STARTED, transferObject, "开始根据 TransferObject 回填文件主数据");
+        log.info("开始根据 TransferObject 回填文件主数据，transferId={}, fingerprint={}",
+                transferObject.transferId(), transferObject.fingerprint());
         ValsetFileInfo existing = valsetFileInfoGateway.findByFingerprint(transferObject.fingerprint());
         ValsetFileInfo snapshot = buildSnapshot(existing, transferObject);
         if (snapshot == null) {
-            publishRepairEvent(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_FAILED, transferObject, "文件主数据回填快照为空");
+            log.warn("文件主数据回填快照为空，transferId={}, fingerprint={}",
+                    transferObject.transferId(), transferObject.fingerprint());
             return existing;
         }
         if (existing == null || existing.getFileId() == null) {
@@ -59,13 +57,11 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
             snapshot.setFileId(fileId);
             log.info("已根据 TransferObject 创建文件主数据，transferId={}, fileId={}, fingerprint={}",
                     transferObject.transferId(), fileId, transferObject.fingerprint());
-            publishRepairEvent(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_COMPLETED, snapshot, "已根据 TransferObject 创建文件主数据");
             return snapshot;
         }
         valsetFileInfoGateway.updateFromTransferObject(snapshot);
         log.info("已根据 TransferObject 回填文件主数据，transferId={}, fileId={}, fingerprint={}",
                 transferObject.transferId(), snapshot.getFileId(), transferObject.fingerprint());
-        publishRepairEvent(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_COMPLETED, snapshot, "已根据 TransferObject 回填文件主数据");
         return snapshot;
     }
 
@@ -418,66 +414,6 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
                 .skippedCount(skippedCount)
                 .failedCount(failedCount)
                 .build();
-    }
-
-    private void publishRepairEvent(ParseLifecycleStage stage, TransferObject transferObject, String message) {
-        if (parseLifecycleEventPublisher == null || stage == null) {
-            return;
-        }
-        ParseLifecycleEvent.ParseLifecycleEventBuilder builder = ParseLifecycleEvent.builder()
-                .stage(stage)
-                .source("file-info-repair")
-                .message(message);
-        if (transferObject != null) {
-            builder.transferId(transferObject.transferId())
-                    .businessKey(transferObject.fingerprint());
-        }
-        if (stage == ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_COMPLETED && transferObject != null) {
-            Map<String, Object> attributes = new LinkedHashMap<>();
-            if (transferObject.originalName() != null) {
-                attributes.put("fileNameOriginal", transferObject.originalName());
-            }
-            if (transferObject.realStoragePath() != null) {
-                attributes.put("storagePath", transferObject.realStoragePath());
-            }
-            if (transferObject.localTempPath() != null) {
-                attributes.put("tempPath", transferObject.localTempPath());
-            }
-            if (!attributes.isEmpty()) {
-                builder.attributes(attributes);
-            }
-        }
-        parseLifecycleEventPublisher.publish(builder.build());
-    }
-
-    private void publishRepairEvent(ParseLifecycleStage stage, ValsetFileInfo fileInfo, String message) {
-        if (parseLifecycleEventPublisher == null || stage == null) {
-            return;
-        }
-        ParseLifecycleEvent.ParseLifecycleEventBuilder builder = ParseLifecycleEvent.builder()
-                .stage(stage)
-                .source("file-info-repair")
-                .message(message);
-        if (fileInfo != null) {
-            builder.fileId(fileInfo.getFileId())
-                    .businessKey(fileInfo.getFileFingerprint());
-        }
-        if (stage == ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_COMPLETED && fileInfo != null) {
-            Map<String, Object> attributes = new LinkedHashMap<>();
-            if (fileInfo.getFileNameOriginal() != null) {
-                attributes.put("fileNameOriginal", fileInfo.getFileNameOriginal());
-            }
-            if (fileInfo.getStorageUri() != null) {
-                attributes.put("storagePath", fileInfo.getStorageUri());
-            }
-            if (fileInfo.getLocalTempPath() != null) {
-                attributes.put("tempPath", fileInfo.getLocalTempPath());
-            }
-            if (!attributes.isEmpty()) {
-                builder.attributes(attributes);
-            }
-        }
-        parseLifecycleEventPublisher.publish(builder.build());
     }
 
     private enum RepairOutcome {

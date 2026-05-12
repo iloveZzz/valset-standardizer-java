@@ -1,6 +1,5 @@
 package com.yss.valset.task.application.service.workflow;
 
-import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
@@ -58,10 +57,6 @@ public class WorkflowRuntimeCatalog {
 
     public List<StatusDefinition> getStatuses() {
         return defaultStatuses();
-    }
-
-    public List<String> getIgnoredParseLifecycleStages() {
-        return defaultIgnoredParseLifecycleStages();
     }
 
     public List<String> getIgnoredWorkflowTaskTypes() {
@@ -124,39 +119,45 @@ public class WorkflowRuntimeCatalog {
             return firstStage();
         }
         String normalized = stage.trim();
-        if (Objects.equals(OutsourcedDataTaskStage.RAW_DATA_EXTRACT.name(), normalized)) {
+        if (Objects.equals(OutsourcedDataTaskStage.RAW_DATA_EXTRACT.name(), normalized)
+                || Objects.equals("TASK_RAW_PARSED", normalized)
+                || Objects.equals("TASK_CREATED", normalized)
+                || Objects.equals("TASK_DISPATCHED", normalized)
+                || Objects.equals("TASK_EXECUTION_STARTED", normalized)
+                || Objects.equals("TASK_REUSED", normalized)
+                || Objects.equals("QUEUE_DISCOVERED", normalized)
+                || Objects.equals("QUEUE_GENERATED", normalized)
+                || Objects.equals("QUEUE_BACKFILLED", normalized)
+                || Objects.equals("QUEUE_REUSED", normalized)
+                || Objects.equals("QUEUE_UPDATED", normalized)
+                || Objects.equals("QUEUE_RETRIED", normalized)
+                || Objects.equals("QUEUE_SUBSCRIBED", normalized)
+                || Objects.equals("QUEUE_SUBSCRIBE_ATTEMPTED", normalized)
+                || Objects.equals("QUEUE_SUBSCRIBE_CONFLICT", normalized)
+                || Objects.equals("QUEUE_SUBSCRIBE_SKIPPED", normalized)
+                || Objects.equals("QUEUE_FILE_INFO_REPAIR_STARTED", normalized)
+                || Objects.equals("QUEUE_FILE_INFO_REPAIR_COMPLETED", normalized)
+                || Objects.equals("QUEUE_FILE_INFO_REPAIR_FAILED", normalized)) {
             return OutsourcedDataTaskStage.FILE_PARSE;
+        }
+        if (Objects.equals("TASK_STANDARDIZED", normalized)) {
+            return OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE;
+        }
+        if (Objects.equals("TASK_PERSISTED", normalized)
+                || Objects.equals("TASK_SUCCEEDED", normalized)
+                || Objects.equals("QUEUE_COMPLETED", normalized)) {
+            return OutsourcedDataTaskStage.STANDARD_LANDING;
         }
         try {
             OutsourcedDataTaskStage parsed = OutsourcedDataTaskStage.valueOf(normalized);
-            if (parsed == OutsourcedDataTaskStage.SUBJECT_RECOGNIZE
-                    || parsed == OutsourcedDataTaskStage.VERIFY_ARCHIVE
-                    || parsed == OutsourcedDataTaskStage.DATA_PROCESSING) {
-                return OutsourcedDataTaskStage.STANDARD_LANDING;
-            }
-            return parsed == OutsourcedDataTaskStage.RAW_DATA_EXTRACT
-                    ? OutsourcedDataTaskStage.FILE_PARSE
-                    : parsed;
+            return switch (parsed) {
+                case RAW_DATA_EXTRACT -> OutsourcedDataTaskStage.FILE_PARSE;
+                case SUBJECT_RECOGNIZE, VERIFY_ARCHIVE, DATA_PROCESSING -> OutsourcedDataTaskStage.STANDARD_LANDING;
+                default -> parsed;
+            };
         } catch (Exception ignored) {
             return firstStage();
         }
-    }
-
-    public OutsourcedDataTaskStage resolveParseLifecycleStage(ParseLifecycleStage stage) {
-        if (stage == null) {
-            return null;
-        }
-        if (getIgnoredParseLifecycleStages().stream().anyMatch(item -> matches(item, stage.name()))) {
-            return null;
-        }
-        return switch (stage) {
-            case TASK_STANDARDIZED -> OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE;
-            case TASK_PERSISTED, TASK_SUCCEEDED, QUEUE_COMPLETED -> OutsourcedDataTaskStage.STANDARD_LANDING;
-            case TASK_RAW_PARSED, TASK_CREATED, TASK_DISPATCHED, TASK_EXECUTION_STARTED, QUEUE_SUBSCRIBED,
-                    TASK_REUSED ->
-                OutsourcedDataTaskStage.FILE_PARSE;
-            default -> parseFallbackStage();
-        };
     }
 
     public OutsourcedDataTaskStage resolveWorkflowStage(TaskType taskType, TaskStage taskStage) {
@@ -188,43 +189,6 @@ public class WorkflowRuntimeCatalog {
             return OutsourcedDataTaskStatus.SUCCESS;
         }
         return OutsourcedDataTaskStatus.PENDING;
-    }
-
-    public OutsourcedDataTaskStatus resolveParseStepStatus(ParseLifecycleStage stage) {
-        if (stage == null) {
-            return OutsourcedDataTaskStatus.PENDING;
-        }
-        String value = stage.name();
-        if (contains(defaultFailedParseLifecycleStages(), value)) {
-            return OutsourcedDataTaskStatus.FAILED;
-        }
-        if (contains(defaultParseRunningLifecycleStages(), value)) {
-            return OutsourcedDataTaskStatus.RUNNING;
-        }
-        if (contains(defaultParseSuccessLifecycleStages(), value)) {
-            return OutsourcedDataTaskStatus.SUCCESS;
-        }
-        if (contains(defaultParseStoppedLifecycleStages(), value)) {
-            return OutsourcedDataTaskStatus.STOPPED;
-        }
-        return OutsourcedDataTaskStatus.PENDING;
-    }
-
-    public OutsourcedDataTaskStatus resolveParseBatchStatus(ParseLifecycleStage stage) {
-        if (stage == null) {
-            return OutsourcedDataTaskStatus.PENDING;
-        }
-        String value = stage.name();
-        if (contains(defaultFailedParseLifecycleStages(), value)) {
-            return OutsourcedDataTaskStatus.FAILED;
-        }
-        if (contains(defaultParseSuccessLifecycleStages(), value)) {
-            return OutsourcedDataTaskStatus.SUCCESS;
-        }
-        if (contains(defaultParseStoppedLifecycleStages(), value)) {
-            return OutsourcedDataTaskStatus.STOPPED;
-        }
-        return OutsourcedDataTaskStatus.RUNNING;
     }
 
     public StageDefinition findDefinition(String stage) {
@@ -388,15 +352,6 @@ public class WorkflowRuntimeCatalog {
         return definition;
     }
 
-    private static List<String> defaultIgnoredParseLifecycleStages() {
-        return List.of(
-                ParseLifecycleStage.CYCLE_STARTED.name(),
-                ParseLifecycleStage.CYCLE_FINISHED.name(),
-                ParseLifecycleStage.BATCH_STARTED.name(),
-                ParseLifecycleStage.BATCH_EMPTY.name(),
-                ParseLifecycleStage.BATCH_FINISHED.name());
-    }
-
     private static List<String> defaultIgnoredWorkflowTaskTypes() {
         return List.of(TaskType.PARSE_WORKBOOK.name());
     }
@@ -415,42 +370,6 @@ public class WorkflowRuntimeCatalog {
 
     private static List<String> defaultRunningTaskStatuses() {
         return List.of(TaskStatus.RUNNING.name(), TaskStatus.RETRYING.name());
-    }
-
-    private static List<String> defaultParseRunningLifecycleStages() {
-        return List.of(
-                ParseLifecycleStage.TASK_EXECUTION_STARTED.name(),
-                ParseLifecycleStage.TASK_CREATED.name(),
-                ParseLifecycleStage.TASK_DISPATCHED.name(),
-                ParseLifecycleStage.QUEUE_SUBSCRIBED.name());
-    }
-
-    private static List<String> defaultParseSuccessLifecycleStages() {
-        return List.of(
-                ParseLifecycleStage.TASK_RAW_PARSED.name(),
-                ParseLifecycleStage.TASK_STANDARDIZED.name(),
-                ParseLifecycleStage.TASK_PERSISTED.name(),
-                ParseLifecycleStage.TASK_SUCCEEDED.name(),
-                ParseLifecycleStage.QUEUE_COMPLETED.name(),
-                ParseLifecycleStage.TASK_REUSED.name());
-    }
-
-    private static List<String> defaultParseStoppedLifecycleStages() {
-        return List.of(
-                ParseLifecycleStage.QUEUE_SKIPPED.name(),
-                ParseLifecycleStage.QUEUE_SUBSCRIBE_CONFLICT.name(),
-                ParseLifecycleStage.QUEUE_SUBSCRIBE_SKIPPED.name());
-    }
-
-    private static List<String> defaultFailedParseLifecycleStages() {
-        return List.of(
-                ParseLifecycleStage.TASK_FAILED.name(),
-                ParseLifecycleStage.QUEUE_FAILED.name(),
-                ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_FAILED.name());
-    }
-
-    private static boolean matches(String expected, String actual) {
-        return StringUtils.hasText(expected) && StringUtils.hasText(actual) && expected.trim().equals(actual.trim());
     }
 
     private static boolean contains(List<String> values, String value) {

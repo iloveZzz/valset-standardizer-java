@@ -9,9 +9,6 @@ import com.yss.valset.parser.application.command.ParseQueueQueryCommand;
 import com.yss.valset.parser.application.command.ParseQueueRetryCommand;
 import com.yss.valset.parser.application.command.ParseQueueSubscribeCommand;
 import com.yss.valset.parser.application.dto.ParseQueueViewDTO;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.parser.application.service.ParseQueueManagementAppService;
 import com.yss.valset.parser.domain.gateway.ParseQueueGateway;
 import com.yss.valset.parser.domain.model.ParseQueue;
@@ -61,8 +58,6 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
     private final TransferObjectTagGateway transferObjectTagGateway;
     private final TransferDeliveryGateway transferDeliveryGateway;
     private final TransferJsonMapper transferJsonMapper;
-    private final ParseLifecycleEventPublisher parseLifecycleEventPublisher;
-
     @Override
     public PageResult<ParseQueueViewDTO> pageQueues(ParseQueueQueryCommand query) {
         ParseQueuePage page = transferParseQueueGateway.pageQueues(
@@ -165,17 +160,16 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
     @Transactional(rollbackFor = Exception.class)
     public ParseQueueViewDTO subscribeQueue(String queueId, ParseQueueSubscribeCommand command) {
         ParseQueue queue = loadQueue(queueId);
-        publishLifecycleEvent(ParseLifecycleStage.QUEUE_SUBSCRIBE_ATTEMPTED, queue, null, "订阅待解析事件");
         if (queue.parseStatus() != ParseStatus.PENDING) {
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_SUBSCRIBE_CONFLICT, queue, null, "待解析事件当前状态不允许接管");
+            log.info("待解析事件当前状态不允许接管，queueId={}, status={}", queue.queueId(), queue.parseStatus());
             throw new ResponseStatusException(HttpStatus.CONFLICT, "只有待订阅事件才能接管，queueId=" + queueId + "，当前状态=" + queue.parseStatus());
         }
         String subscribedBy = subscribeName(command);
         if (!transferParseQueueGateway.subscribeIfPending(queueId, subscribedBy, Instant.now())) {
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_SUBSCRIBE_CONFLICT, queue, null, "待解析事件已被其他观察者接管", Map.of("subscribedBy", subscribedBy));
+            log.info("待解析事件已被其他观察者接管，queueId={}, subscribedBy={}", queueId, subscribedBy);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "待订阅事件已被其他观察者接管，queueId=" + queueId);
         }
-        publishLifecycleEvent(ParseLifecycleStage.QUEUE_SUBSCRIBED, queue, null, "待解析事件接管成功", Map.of("subscribedBy", subscribedBy));
+        log.info("待解析事件接管成功，queueId={}, subscribedBy={}", queueId, subscribedBy);
         return getQueue(queueId);
     }
 
@@ -200,7 +194,7 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
                 queue.parseRequestJson(),
                 parseResultJson);
         ParseQueue saved = transferParseQueueGateway.save(next);
-        publishLifecycleEvent(ParseLifecycleStage.QUEUE_COMPLETED, saved, null, "待解析事件完成");
+        log.info("待解析事件完成，queueId={}", queueId);
         return toView(saved);
     }
 
@@ -225,7 +219,7 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
                 queue.parseRequestJson(),
                 queue.parseResultJson());
         ParseQueue saved = transferParseQueueGateway.save(next);
-        publishLifecycleEvent(ParseLifecycleStage.QUEUE_FAILED, saved, null, safeText(command == null ? null : command.getErrorMessage(), "结构化解析失败"));
+        log.warn("待解析事件失败，queueId={}, errorMessage={}", queueId, safeText(command == null ? null : command.getErrorMessage(), "结构化解析失败"));
         return toView(saved);
     }
 
@@ -250,7 +244,7 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
                 queue.parseRequestJson(),
                 queue.parseResultJson());
         ParseQueue saved = transferParseQueueGateway.save(next);
-        publishLifecycleEvent(ParseLifecycleStage.QUEUE_RETRIED, saved, null, "待解析事件重新回到待订阅状态", Map.of("forceRebuild", forceRebuild));
+        log.info("待解析事件重新回到待订阅状态，queueId={}, forceRebuild={}", queueId, forceRebuild);
         return toView(saved);
     }
 
@@ -311,10 +305,8 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         String normalizedBusinessKey = StringUtils.hasText(businessKey) ? businessKey.trim() : normalizeBusinessKey(null, transferObject.transferId(), valuationTag);
         ParseQueue existing = transferParseQueueGateway.findByBusinessKey(normalizedBusinessKey).orElse(null);
         if (existing != null && !forceRebuild) {
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_REUSED, existing, transferObject, "待解析事件已存在，直接复用", Map.of(
-                    "operation", operationName,
-                    "forceRebuild", false
-            ));
+            log.info("待解析事件已存在，直接复用，transferId={}, businessKey={}, operation={}",
+                    transferObject.transferId(), normalizedBusinessKey, operationName);
             return existing;
         }
         Instant now = Instant.now();
@@ -348,14 +340,8 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
                 now
         );
         ParseQueue saved = transferParseQueueGateway.save(next);
-        ParseLifecycleStage stage = existing == null
-                ? ("manual-backfill".equalsIgnoreCase(operationName) ? ParseLifecycleStage.QUEUE_BACKFILLED : ParseLifecycleStage.QUEUE_GENERATED)
-                : ParseLifecycleStage.QUEUE_UPDATED;
-        publishLifecycleEvent(stage, saved, transferObject, "待解析事件已写入", Map.of(
-                "operation", operationName,
-                "forceRebuild", forceRebuild,
-                "autoTrigger", autoTrigger
-        ));
+        log.info("待解析事件已写入，queueId={}, operation={}, forceRebuild={}, autoTrigger={}",
+                saved.queueId(), operationName, forceRebuild, autoTrigger);
         return saved;
     }
 
@@ -462,33 +448,6 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         }
         String suffix = valuationTag == null ? VALUATION_TAG_CODE : safeText(valuationTag.tagCode(), VALUATION_TAG_CODE);
         return transferId + ":" + suffix;
-    }
-
-    private void publishLifecycleEvent(ParseLifecycleStage stage, ParseQueue queue, TransferObject transferObject, String message) {
-        publishLifecycleEvent(stage, queue, transferObject, message, Map.of());
-    }
-
-    private void publishLifecycleEvent(ParseLifecycleStage stage, ParseQueue queue, TransferObject transferObject, String message, Map<String, Object> attributes) {
-        if (parseLifecycleEventPublisher == null || stage == null) {
-            return;
-        }
-        ParseLifecycleEvent.ParseLifecycleEventBuilder builder = ParseLifecycleEvent.builder()
-                .stage(stage)
-                .source("parse-queue-management")
-                .message(message);
-        if (queue != null) {
-            builder.queueId(queue.queueId())
-                    .transferId(queue.transferId())
-                    .businessKey(queue.businessKey())
-                    .triggerMode(enumName(queue.triggerMode()))
-                    .subscribedBy(queue.subscribedBy());
-        } else if (transferObject != null) {
-            builder.transferId(transferObject.transferId());
-        }
-        if (attributes != null && !attributes.isEmpty()) {
-            builder.attributes(new LinkedHashMap<>(attributes));
-        }
-        parseLifecycleEventPublisher.publish(builder.build());
     }
 
     private ParseQueue queueWith(ParseQueue queue,

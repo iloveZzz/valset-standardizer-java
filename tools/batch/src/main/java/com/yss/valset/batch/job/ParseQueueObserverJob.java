@@ -7,9 +7,6 @@ import com.yss.valset.parser.application.command.ParseQueueFailCommand;
 import com.yss.valset.parser.application.command.ParseQueueSubscribeCommand;
 import com.yss.valset.parser.application.service.ParseQueueManagementAppService;
 import com.yss.valset.parser.application.port.ParseQueueObservationUseCase;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.parser.domain.gateway.ParseQueueGateway;
 import com.yss.valset.parser.domain.model.ParseQueue;
 import com.yss.valset.batch.dispatcher.TaskDispatcher;
@@ -70,8 +67,6 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
     private final WorkflowTaskGateway taskGateway;
     private final TaskDispatcher taskDispatcher;
     private final ObjectMapper objectMapper;
-    private final ParseLifecycleEventPublisher parseLifecycleEventPublisher;
-
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     @Value("${subject.match.parse-queue-observer.enabled:true}")
@@ -95,7 +90,7 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
     @Scheduled(fixedDelayString = "${subject.match.parse-queue-observer.fixed-delay-ms:3000}")
     public void observePendingQueues() {
         sleepRandomStartupJitter();
-        publishLifecycleEvent(ParseLifecycleStage.CYCLE_STARTED, null, null, "待解析观察者开始执行");
+        log.info("待解析观察者开始执行");
         runObservation();
     }
 
@@ -115,19 +110,11 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
         try {
             int effectiveBatchSize = Math.max(1, batchSize);
             while (true) {
-                publishLifecycleEvent(ParseLifecycleStage.BATCH_STARTED, null, null, "开始处理待解析批次", Map.of("batchSize", effectiveBatchSize));
+                log.info("开始处理待解析批次，batchSize={}", effectiveBatchSize);
                 List<ParseQueue> pendingQueues = loadPendingQueues(effectiveBatchSize);
                 if (pendingQueues.isEmpty()) {
-                    publishLifecycleEvent(ParseLifecycleStage.BATCH_EMPTY, null, null, "本轮没有待处理事件", Map.of(
-                            "success", totalSuccess,
-                            "failed", totalFailed,
-                            "skipped", totalSkipped
-                    ));
-                    publishLifecycleEvent(ParseLifecycleStage.CYCLE_FINISHED, null, null, "待解析观察者执行结束", Map.of(
-                            "success", totalSuccess,
-                            "failed", totalFailed,
-                            "skipped", totalSkipped
-                    ));
+                    log.info("本轮没有待处理事件，success={}, failed={}, skipped={}", totalSuccess, totalFailed, totalSkipped);
+                    log.info("待解析观察者执行结束，success={}, failed={}, skipped={}", totalSuccess, totalFailed, totalSkipped);
                     return new ParseQueueObserverRunSummary(effectiveBatchSize, totalSuccess, totalFailed, totalSkipped, totalSuccess, totalFailed, totalSkipped);
                 }
                 long batchSuccess = 0;
@@ -148,15 +135,8 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
                 }
                 log.info("待解析观察者批次处理完成，batchSize={}, success={}, failed={}, skipped={}, totalSuccess={}, totalFailed={}, totalSkipped={}",
                         pendingQueues.size(), batchSuccess, batchFailed, batchSkipped, totalSuccess, totalFailed, totalSkipped);
-                publishLifecycleEvent(ParseLifecycleStage.BATCH_FINISHED, null, null, "待解析批次处理完成", Map.of(
-                        "batchSize", pendingQueues.size(),
-                        "batchSuccess", batchSuccess,
-                        "batchFailed", batchFailed,
-                        "batchSkipped", batchSkipped,
-                        "totalSuccess", totalSuccess,
-                        "totalFailed", totalFailed,
-                        "totalSkipped", totalSkipped
-                ));
+                log.info("待解析批次处理完成，batchSize={}, batchSuccess={}, batchFailed={}, batchSkipped={}, totalSuccess={}, totalFailed={}, totalSkipped={}",
+                        pendingQueues.size(), batchSuccess, batchFailed, batchSkipped, totalSuccess, totalFailed, totalSkipped);
                 sleepBatchPause();
             }
         } finally {
@@ -206,33 +186,31 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
         ParseTaskCommand parseTaskCommand = null;
         try {
             log.info("开始观察并处理待解析事件，queueId={}, businessKey={}", queueId, queue.businessKey());
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_DISCOVERED, queue, null, "观察到待解析事件");
+            log.info("观察到待解析事件，queueId={}, businessKey={}", queueId, queue.businessKey());
             try {
                 parseQueueManagementAppService.subscribeQueue(queueId, buildSubscribeCommand());
             } catch (ResponseStatusException exception) {
                 if (exception.getStatusCode().value() == HttpStatus.CONFLICT.value()) {
                     log.info("待解析事件已被其他观察者接管，queueId={}", queueId);
-                    publishLifecycleEvent(ParseLifecycleStage.QUEUE_SKIPPED, queue, null, "待解析事件已被其他观察者接管");
                     return ProcessOutcome.SKIPPED;
                 }
                 throw exception;
             }
             subscribed = true;
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_SUBSCRIBED, queue, null, "待解析事件接管成功");
+            log.info("待解析事件接管成功，queueId={}", queueId);
             parseTaskCommand = buildParseTaskCommand(queue);
-            publishLifecycleEvent(ParseLifecycleStage.TASK_REQUEST_BUILT, queue, null, "已构建解析任务命令", buildParseTaskAttributes(parseTaskCommand));
+            log.info("已构建解析任务命令，queueId={}, attributes={}", queueId, buildParseTaskAttributes(parseTaskCommand));
             Long taskId = createAndDispatchParseTask(parseTaskCommand, queue);
             if (taskId == null) {
                 return ProcessOutcome.FAILED;
             }
             WorkflowTask workflowTask = taskGateway.findById(taskId);
             if (workflowTask == null || workflowTask.getTaskStatus() != TaskStatus.SUCCESS) {
-                publishLifecycleEvent(ParseLifecycleStage.TASK_FAILED, queue, taskId, "解析任务未成功完成", buildParseTaskAttributes(parseTaskCommand));
+                log.warn("解析任务未成功完成，queueId={}, taskId={}, attributes={}", queueId, taskId, buildParseTaskAttributes(parseTaskCommand));
                 failQueue(queueId, "解析任务未成功完成，taskId=" + taskId);
                 return ProcessOutcome.FAILED;
             }
             parseQueueManagementAppService.completeQueue(queueId, buildCompleteCommand(workflowTask.getResultPayload()));
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_COMPLETED, queue, taskId, "待解析事件处理完成", buildParseTaskAttributes(parseTaskCommand));
             log.info("待解析事件处理完成，queueId={}, taskId={}", queueId, taskId);
             return ProcessOutcome.SUCCESS;
         } catch (Exception exception) {
@@ -242,7 +220,7 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
             }
             Map<String, Object> failedAttributes = new LinkedHashMap<>(buildParseTaskAttributes(parseTaskCommand));
             failedAttributes.put("errorMessage", exception.getMessage());
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_FAILED, queue, null, "待解析事件处理失败", failedAttributes);
+            log.warn("待解析事件处理失败，queueId={}, attributes={}", queueId, failedAttributes);
             return ProcessOutcome.FAILED;
         }
     }
@@ -256,7 +234,6 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
         WorkflowTask reusableTask = forceRebuild ? null : taskGateway.findLatestSuccessfulTask(TaskType.PARSE_WORKBOOK, businessKey);
         if (reusableTask != null && reusableTask.getTaskId() != null) {
             log.info("复用已有的成功解析任务，queueId={}, taskId={}, businessKey={}", queue.queueId(), reusableTask.getTaskId(), businessKey);
-            publishLifecycleEvent(ParseLifecycleStage.TASK_REUSED, queue, reusableTask.getTaskId(), "复用已有成功解析任务", buildParseTaskAttributes(parseTaskCommand));
             return reusableTask.getTaskId();
         }
         WorkflowTask workflowTask = WorkflowTask.builder()
@@ -268,9 +245,8 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
                 .inputPayload(writeValueAsString(parseTaskCommand))
                 .build();
         Long taskId = taskGateway.save(workflowTask);
-        publishLifecycleEvent(ParseLifecycleStage.TASK_CREATED, queue, taskId, "已创建解析任务", buildParseTaskAttributes(parseTaskCommand));
         taskDispatcher.dispatchTask(taskId);
-        publishLifecycleEvent(ParseLifecycleStage.TASK_DISPATCHED, queue, taskId, "已派发解析任务", buildParseTaskAttributes(parseTaskCommand));
+        log.info("已创建并派发解析任务，queueId={}, taskId={}", queue.queueId(), taskId);
         return taskId;
     }
 
@@ -288,16 +264,12 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
         }
         ValsetFileInfo fileInfo = valsetFileInfoGateway.findByFingerprint(transferObject.fingerprint());
         if (fileInfo == null || fileInfo.getFileId() == null) {
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_STARTED, queue, null, "文件主数据缺失，开始自动修复");
+            log.info("文件主数据缺失，开始自动修复，queueId={}, transferId={}", queue.queueId(), queue.transferId());
             fileInfo = valsetFileInfoRepairAppService.ensureFromTransferObject(transferObject);
-            Map<String, Object> attributes = new LinkedHashMap<>();
-            if (fileInfo != null && fileInfo.getFileId() != null) {
-                attributes.put("fileId", fileInfo.getFileId());
-            }
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_COMPLETED, queue, null, "文件主数据自动修复完成", attributes);
+            log.info("文件主数据自动修复完成，queueId={}, fileId={}", queue.queueId(), fileInfo == null ? null : fileInfo.getFileId());
         }
         if (fileInfo == null || fileInfo.getFileId() == null) {
-            publishLifecycleEvent(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_FAILED, queue, null, "文件主数据自动修复失败");
+            log.warn("文件主数据自动修复失败，queueId={}, transferId={}", queue.queueId(), queue.transferId());
             throw new IllegalStateException("未找到由 TransferObject 回写的文件主数据，且无法自动修复，无法继续订阅解析，transferId=" + queue.transferId());
         }
         ParseTaskCommand command = new ParseTaskCommand();
@@ -426,38 +398,6 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
             attributes.put("forceRebuild", command.getForceRebuild());
         }
         return attributes;
-    }
-
-    private void publishLifecycleEvent(ParseLifecycleStage stage, ParseQueue queue, String message) {
-        publishLifecycleEvent(stage, queue, null, message, Map.of());
-    }
-
-    private void publishLifecycleEvent(ParseLifecycleStage stage, ParseQueue queue, Long taskId, String message) {
-        publishLifecycleEvent(stage, queue, taskId, message, Map.of());
-    }
-
-    private void publishLifecycleEvent(ParseLifecycleStage stage, ParseQueue queue, Long taskId, String message, Map<String, Object> attributes) {
-        if (parseLifecycleEventPublisher == null || stage == null) {
-            return;
-        }
-        ParseLifecycleEvent.ParseLifecycleEventBuilder builder = ParseLifecycleEvent.builder()
-                .stage(stage)
-                .source("parse-queue-observer")
-                .message(message);
-        if (queue != null) {
-            builder.queueId(queue.queueId())
-                    .transferId(queue.transferId())
-                    .businessKey(queue.businessKey())
-                    .triggerMode(queue.triggerMode() == null ? null : queue.triggerMode().name())
-                    .subscribedBy(queue.subscribedBy());
-        }
-        if (taskId != null) {
-            builder.taskId(taskId);
-        }
-        if (attributes != null && !attributes.isEmpty()) {
-            builder.attributes(new LinkedHashMap<>(attributes));
-        }
-        parseLifecycleEventPublisher.publish(builder.build());
     }
 
     private String buildParseBusinessKey(ParseTaskCommand command) {

@@ -4,35 +4,46 @@ package com.yss.valset.application.event.lifecycle;
  * 解析生命周期阶段。
  */
 public enum ParseLifecycleStage {
-    CYCLE_STARTED,
-    CYCLE_FINISHED,
-    BATCH_STARTED,
-    BATCH_EMPTY,
-    BATCH_FINISHED,
-    QUEUE_DISCOVERED,
-    QUEUE_GENERATED,
-    QUEUE_BACKFILLED,
-    QUEUE_REUSED,
-    QUEUE_UPDATED,
-    QUEUE_RETRIED,
-    QUEUE_SUBSCRIBE_ATTEMPTED,
-    QUEUE_SUBSCRIBED,
-    QUEUE_SUBSCRIBE_CONFLICT,
-    QUEUE_SUBSCRIBE_SKIPPED,
-    QUEUE_FILE_INFO_REPAIR_STARTED,
-    QUEUE_FILE_INFO_REPAIR_COMPLETED,
-    QUEUE_FILE_INFO_REPAIR_FAILED,
-    TASK_REQUEST_BUILT,
-    TASK_CREATED,
-    TASK_REUSED,
-    TASK_DISPATCHED,
-    TASK_EXECUTION_STARTED,
-    TASK_RAW_PARSED,
-    TASK_STANDARDIZED,
-    TASK_PERSISTED,
-    TASK_SUCCEEDED,
-    TASK_FAILED,
-    QUEUE_COMPLETED,
-    QUEUE_FAILED,
-    QUEUE_SKIPPED
+
+    /**
+     * 文件解析。
+     */
+    FILE_PARSE("文件解析", "完成文件读取、原始数据抽取与解析结果生成"),
+
+    /**
+     * 结构标准化。
+     */
+    STRUCTURE_STANDARDIZE("结构标准化", "完成字段标准化、规则清洗与结构转换"),
+
+    /**
+     * 标准数据落地。
+     */
+    STANDARD_LANDING("标准数据落地", "完成标准化结果持久化与结果落库"),
+
+    /**
+     * 解析失败。
+     */
+    FAILED("失败", "解析流程发生失败"),
+
+    /**
+     * 解析跳过。
+     */
+    SKIPPED("跳过", "解析流程被跳过或复用");
+
+    private final String label;
+
+    private final String description;
+
+    ParseLifecycleStage(String label, String description) {
+        this.label = label;
+        this.description = description;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public String getDescription() {
+        return description;
+    }
 }

@@ -32,8 +32,11 @@ export interface WorkflowInstanceDTO {
   stageLogs?: WorkflowStageLogDTO[];
   /** No comments found. */
   startTime?: string;
+<<<<<<< HEAD
   /** No comments found. */
   duration?: string;
+=======
+>>>>>>> d38395567a6faab532b7d49f40dab41f6f7d787d
   /** No comments found.<br/>(See: 通用工作流状态。) */
   status?: WorkflowInstanceDTOStatus;
   /** No comments found. */
