@@ -37,6 +37,22 @@ const axiosInstance = axios.create({
   },
 });
 
+/**
+ * 为下载类接口补齐 Blob 响应类型，便于直接复用生成客户端方法。
+ * 当前 OpenAPI 生成代码未为下载接口显式传入 responseType，因此在这里统一兜底。
+ */
+const applyGeneratedApiCompatibility = (config: AxiosRequestConfig) => {
+  const requestUrl = String(config.url ?? "");
+  const requestMethod = String(config.method ?? "GET").toUpperCase();
+  if (
+    requestMethod === "GET" &&
+    requestUrl.includes("/download") &&
+    config.responseType === undefined
+  ) {
+    config.responseType = "blob";
+  }
+};
+
 // 全局配置 transformResponse 处理大数字
 const originalTransformResponse = axiosInstance.defaults.transformResponse;
 axiosInstance.defaults.transformResponse = [
@@ -126,6 +142,8 @@ axiosInstance.interceptors.response.use(
 export const customInstance = <T = any>(
   config: AxiosRequestConfig,
 ): Promise<T> => {
+  applyGeneratedApiCompatibility(config);
+
   // 处理 DELETE 请求的 params
   // DELETE 请求默认会将 params 放到 URL query 中，但后端期望在 request body 中
   if (config.method?.toUpperCase() === "DELETE" && config.params) {

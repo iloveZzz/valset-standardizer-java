@@ -1,4 +1,4 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
 export type TransferDeliveryRecordSummaryDTO = {
   todayDeliveryCount?: number;
@@ -11,8 +11,7 @@ export type SingleResultTransferDeliveryRecordSummaryDTO = {
   data?: TransferDeliveryRecordSummaryDTO;
 };
 
+const generatedApi = getJavaApi();
+
 export const getTransferDeliveryRecordSummary = () =>
-  customInstance<SingleResultTransferDeliveryRecordSummaryDTO>({
-    url: "/transfer-delivery-records/summary",
-    method: "GET",
-  });
+  generatedApi.summarizeToday() as Promise<SingleResultTransferDeliveryRecordSummaryDTO>;

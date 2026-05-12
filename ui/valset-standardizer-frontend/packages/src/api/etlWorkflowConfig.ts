@@ -1,4 +1,4 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 import type { WorkflowInstanceDTO } from "./etlWorkflowInstance";
 
 export type EtlPlatformType = "SPRING_BATCH" | "DOLPHIN_SCHEDULER" | "XXL_JOB";
@@ -62,86 +62,74 @@ export type MultiResult<T> = {
   message?: string;
 };
 
+const generatedApi = getJavaApi();
+
 export const listEtlWorkflowDefinitions = () =>
-  customInstance<MultiResult<WorkflowDefinitionDTO>>({
-    url: "/etl/workflows",
-    method: "GET",
-  });
+  generatedApi.listDefinitions() as Promise<MultiResult<WorkflowDefinitionDTO>>;
 
 export const listEtlWorkflowPlatforms = () =>
-  customInstance<MultiResult<WorkflowPlatformMetadataDTO>>({
-    url: "/etl/workflows/platforms",
-    method: "GET",
-  });
+  generatedApi.listPlatforms() as Promise<MultiResult<WorkflowPlatformMetadataDTO>>;
 
 export const getEtlWorkflowDefinition = (
   workflowCode: string,
   workflowVersionNo: number,
 ) =>
-  customInstance<SingleResult<WorkflowDefinitionDTO>>({
-    url: `/etl/workflows/${workflowCode}/${workflowVersionNo}`,
-    method: "GET",
-  });
+  generatedApi.getDefinition(
+    workflowCode,
+    workflowVersionNo,
+  ) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const validateEtlWorkflowDefinition = (
   definition: WorkflowDefinitionDTO,
 ) =>
-  customInstance<SingleResult<WorkflowDefinitionDTO>>({
-    url: "/etl/workflows/validate",
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: definition,
-  });
+  generatedApi.validateDefinition(
+    definition,
+  ) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const saveEtlWorkflowDefinition = (definition: WorkflowDefinitionDTO) =>
-  customInstance<SingleResult<WorkflowDefinitionDTO>>({
-    url: "/etl/workflows",
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: definition,
-  });
+  generatedApi.saveDefinition(definition) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const syncEtlWorkflowDefinition = (
   workflowCode: string,
   workflowVersionNo: number,
 ) =>
-  customInstance<SingleResult<WorkflowDefinitionDTO>>({
-    url: `/etl/workflows/${encodeURIComponent(workflowCode)}/${workflowVersionNo}/sync`,
-    method: "POST",
-  });
+  generatedApi.syncDefinition(
+    workflowCode,
+    workflowVersionNo,
+  ) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const onlineEtlWorkflowDefinition = (
   workflowCode: string,
   workflowVersionNo: number,
 ) =>
-  customInstance<SingleResult<WorkflowDefinitionDTO>>({
-    url: `/etl/workflows/${encodeURIComponent(workflowCode)}/${workflowVersionNo}/online`,
-    method: "POST",
-  });
+  generatedApi.onlineDefinition(
+    workflowCode,
+    workflowVersionNo,
+  ) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const offlineEtlWorkflowDefinition = (
   workflowCode: string,
   workflowVersionNo: number,
 ) =>
-  customInstance<SingleResult<WorkflowDefinitionDTO>>({
-    url: `/etl/workflows/${encodeURIComponent(workflowCode)}/${workflowVersionNo}/offline`,
-    method: "POST",
-  });
+  generatedApi.offlineDefinition(
+    workflowCode,
+    workflowVersionNo,
+  ) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const deleteEtlWorkflowDefinition = (
   workflowCode: string,
   workflowVersionNo: number,
 ) =>
-  customInstance<SingleResult<boolean>>({
-    url: `/etl/workflows/${encodeURIComponent(workflowCode)}/${workflowVersionNo}`,
-    method: "DELETE",
-  });
+  generatedApi.deleteDefinition(
+    workflowCode,
+    workflowVersionNo,
+  ) as Promise<SingleResult<boolean>>;
 
 export const runEtlWorkflowDefinition = (
   workflowCode: string,
   workflowVersionNo: number,
 ) =>
-  customInstance<SingleResult<WorkflowInstanceDTO>>({
-    url: `/etl/workflows/${encodeURIComponent(workflowCode)}/${workflowVersionNo}/run`,
-    method: "POST",
-  });
+  generatedApi.runDefinition(
+    workflowCode,
+    workflowVersionNo,
+  ) as Promise<SingleResult<WorkflowInstanceDTO>>;

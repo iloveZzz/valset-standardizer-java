@@ -1,4 +1,5 @@
 export * from "./generated/valset";
+export { getJavaApi as getJavaSpringBootQuartzApi } from "./generated/valset";
 export {
   deleteEtlWorkflowDefinition,
   getEtlWorkflowDefinition,

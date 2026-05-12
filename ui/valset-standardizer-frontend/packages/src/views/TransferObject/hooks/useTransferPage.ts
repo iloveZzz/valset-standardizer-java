@@ -12,7 +12,6 @@ import type {
   TransferObjectSizeAnalysisViewDTO,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
-import { customInstance } from "@/api/mutator";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
   ObjectAnalysis,
@@ -485,12 +484,8 @@ export const useTransferPage = () => {
 
     redeliverLoading.value = true;
     try {
-      const res = await customInstance<any>({
-        url: "/transfer-objects/redeliver",
-        method: "POST",
-        data: {
-          transferIds: [transferId],
-        },
+      const res = await api.redeliver1({
+        transferIds: [transferId],
       });
       const result = unwrapSingleResult(res);
       const successCount = Number(result?.successCount ?? 0);
@@ -528,14 +523,10 @@ export const useTransferPage = () => {
 
     downloadLoading.value = true;
     try {
-      const response = await customInstance<{
+      const response = (await api.downloadObject(transferId)) as {
         data: Blob;
         headers?: Record<string, string>;
-      }>({
-        url: `/transfer-objects/${transferId}/download`,
-        method: "GET",
-        responseType: "blob",
-      });
+      };
       const blob = response.data;
       const contentDisposition =
         response.headers?.["content-disposition"] ||
@@ -561,22 +552,18 @@ export const useTransferPage = () => {
 
     retagLoading.value = true;
     try {
-      const res = await customInstance<TransferObjectRetagResponse>({
-        url: "/transfer-objects/retag",
-        method: "POST",
-        data: {
-          sourceId: query.sourceId || undefined,
-          sourceType: query.sourceType || undefined,
-          sourceCode: query.sourceCode || undefined,
-          status: query.status || undefined,
-          mailId: query.mailId || undefined,
-          fingerprint: query.fingerprint || undefined,
-          routeId: query.routeId || undefined,
-          tagId: query.tagId || undefined,
-          tagCode: query.tagCode || undefined,
-          tagValue: query.tagValue || undefined,
-        },
-      });
+      const res = (await api.retag({
+        sourceId: query.sourceId || undefined,
+        sourceType: query.sourceType || undefined,
+        sourceCode: query.sourceCode || undefined,
+        status: query.status || undefined,
+        mailId: query.mailId || undefined,
+        fingerprint: query.fingerprint || undefined,
+        routeId: query.routeId || undefined,
+        tagId: query.tagId || undefined,
+        tagCode: query.tagCode || undefined,
+        tagValue: query.tagValue || undefined,
+      })) as TransferObjectRetagResponse;
       const result = unwrapSingleResult(res);
       const requestedCount = Number(result?.requestedCount ?? 0);
       const successCount = Number(result?.successCount ?? 0);

@@ -10,7 +10,6 @@ import type {
   TransferRunLogViewDTO,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
-import { customInstance } from "@/api/mutator";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
   RunLogAnalysis,
@@ -357,14 +356,9 @@ export const useTransferPage = (): { page: RunLogPage } => {
 
     cleanupLoading.value = true;
     try {
-      const res = await customInstance<any>({
-        url: "/transfer-run-logs/cleanup",
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        data: {
-          startInclusive: command.startInclusive,
-          endExclusive: command.endExclusive,
-        },
+      const res = await api.cleanupLogs({
+        startInclusive: command.startInclusive,
+        endExclusive: command.endExclusive,
       });
       const result = unwrapSingleResult(res);
       const deletedCount = Number(result?.deletedCount ?? 0);

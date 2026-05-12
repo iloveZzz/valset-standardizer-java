@@ -1,3 +1,4 @@
+import { getJavaApi } from "./generated/valset";
 import { customInstance } from "./mutator";
 import type { EtlPlatformType } from "./etlWorkflowConfig";
 
@@ -200,33 +201,24 @@ type WorkflowPageResult<T> = {
   pageSize?: number;
 };
 
+const generatedApi = getJavaApi();
+
 export const listEtlWorkflowInstances = (params?: WorkflowInstanceQueryParams) =>
-  customInstance<WorkflowPageResult<WorkflowInstanceViewDTO>>({
-    url: "/etl/workflows/instances",
-    method: "GET",
-    params,
-  });
+  generatedApi.listInstances(params) as Promise<WorkflowPageResult<WorkflowInstanceViewDTO>>;
 
 export const getEtlWorkflowInstanceStateCount = (
   params: WorkflowInstanceStateCountQueryParams,
 ) =>
-  customInstance<{
+  generatedApi.countWorkflowState(params) as Promise<{
     code?: number;
     msg?: string;
     data?: WorkflowInstanceStateCountPageDTO;
     failed?: boolean;
     success?: boolean;
-  }>({
-    url: "/dolphinscheduler/projects/analysis/workflow-state-count",
-    method: "GET",
-    params,
-  });
+  }>;
 
 export const getEtlWorkflowInstance = (instanceId: string) =>
-  customInstance<WorkflowSingleResult<WorkflowInstanceDTO>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}`,
-    method: "GET",
-  });
+  generatedApi.getInstance(instanceId) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const listEtlWorkflowInstanceLogs = (
   instanceId: string,
@@ -239,81 +231,65 @@ export const listEtlWorkflowInstanceLogs = (
   });
 
 export const listEtlWorkflowInstanceTasks = (instanceId: string) =>
-  customInstance<WorkflowSingleResult<WorkflowTaskListDTO>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}/tasks`,
-    method: "GET",
-  });
+  generatedApi.listTasks(
+    instanceId,
+  ) as Promise<WorkflowSingleResult<WorkflowTaskListDTO>>;
 
 export const getEtlWorkflowInstanceTaskLog = (
   instanceId: string,
   taskInstanceId: number | string,
 ) =>
-  customInstance<WorkflowSingleResult<string>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}/tasks/${encodeURIComponent(
-      String(taskInstanceId),
-    )}/log`,
-    method: "GET",
-  });
+  generatedApi.getTaskLog(
+    instanceId,
+    Number(taskInstanceId),
+  ) as Promise<WorkflowSingleResult<string>>;
 
 export const triggerEtlWorkflowInstance = (request: WorkflowTriggerRequest) =>
-  customInstance<WorkflowSingleResult<WorkflowInstanceDTO>>({
-    url: "/etl/workflows/instances/trigger",
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: request,
-  });
+  generatedApi.trigger(
+    request,
+  ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const stopEtlWorkflowInstance = (
   instanceId: string,
   request?: WorkflowStopRequest,
 ) =>
-  customInstance<WorkflowSingleResult<WorkflowInstanceDTO>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}/stop`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: request ?? {},
-  });
+  generatedApi.stop(
+    instanceId,
+    request ?? {},
+  ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const pauseEtlWorkflowInstance = (
   instanceId: string,
   request?: WorkflowPauseRequest,
 ) =>
-  customInstance<WorkflowSingleResult<WorkflowInstanceDTO>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}/pause`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: request ?? {},
-  });
+  generatedApi.pause(
+    instanceId,
+    request ?? {},
+  ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const resumeEtlWorkflowInstance = (
   instanceId: string,
   request?: WorkflowResumeRequest,
 ) =>
-  customInstance<WorkflowSingleResult<WorkflowInstanceDTO>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}/resume`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: request ?? {},
-  });
+  generatedApi.resume(
+    instanceId,
+    request ?? {},
+  ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const retryEtlWorkflowInstance = (
   instanceId: string,
   request?: WorkflowRetryRequest,
 ) =>
-  customInstance<WorkflowSingleResult<WorkflowInstanceDTO>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}/retry`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: request ?? {},
-  });
+  generatedApi.retry(
+    instanceId,
+    request ?? {},
+  ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const callbackEtlWorkflowInstance = (
   instanceId: string,
   request: WorkflowCallbackRequest,
 ) =>
-  customInstance<WorkflowSingleResult<WorkflowInstanceDTO>>({
-    url: `/etl/workflows/instances/${encodeURIComponent(instanceId)}/callbacks`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: request,
-  });
+  generatedApi.callback(
+    instanceId,
+    request,
+  ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;

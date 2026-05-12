@@ -12,7 +12,7 @@ import {
   type OutsourcedDataTaskSummaryDTO,
 } from "@/api/outsourcedDataTask";
 import { unwrapMultiResult, unwrapSingleResult } from "@/utils/api-response";
-import { outsourcedDataTaskStageCatalog } from "../OutsourcedDataTask/constants";
+import { outsourcedDataTaskStageCatalog } from "../../OutsourcedDataTask/constants";
 import { transferSectionOptions } from "../schemas/transferSchemas";
 import type {
   PageLogsParams,

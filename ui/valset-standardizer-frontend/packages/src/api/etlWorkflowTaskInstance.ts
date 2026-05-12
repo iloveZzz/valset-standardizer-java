@@ -1,4 +1,4 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
 export type WorkflowTaskInstanceStatus =
   | "SUBMITTED_SUCCESS"
@@ -104,54 +104,48 @@ export type SingleResult<T> = {
   message?: string;
 };
 
+const generatedApi = getJavaApi();
+
 export const listEtlWorkflowTaskInstances = (
   params?: WorkflowTaskInstanceQueryParams,
 ) =>
-  customInstance<SingleResult<WorkflowTaskInstancePageDTO>>({
-    url: "/etl/workflows/task-instances",
-    method: "GET",
+  generatedApi.listTaskInstances(
     params,
-  });
+  ) as Promise<SingleResult<WorkflowTaskInstancePageDTO>>;
 
 export const forceSuccessEtlWorkflowTaskInstance = (
   taskInstanceId: number | string,
   params: WorkflowTaskInstanceLogQueryParams,
 ) =>
-  customInstance<SingleResult<boolean>>({
-    url: `/etl/workflows/task-instances/${encodeURIComponent(String(taskInstanceId))}/force-success`,
-    method: "POST",
-    params: {
+  generatedApi.forceTaskSuccess(
+    Number(taskInstanceId),
+    {
       workflowCode: params.workflowCode,
       workflowVersionNo: params.workflowVersionNo,
     },
-  });
+  ) as Promise<SingleResult<boolean>>;
 
 export const getEtlWorkflowTaskInstanceLog = (
   taskInstanceId: number | string,
   params: WorkflowTaskInstanceLogQueryParams,
 ) =>
-  customInstance<SingleResult<string>>({
-    url: `/etl/workflows/task-instances/${encodeURIComponent(String(taskInstanceId))}/log`,
-    method: "GET",
-    params: {
+  generatedApi.getTaskLog1(
+    Number(taskInstanceId),
+    {
       workflowCode: params.workflowCode,
       workflowVersionNo: params.workflowVersionNo,
       skipLineNum: params.skipLineNum ?? 0,
       limit: params.limit ?? 1000,
     },
-  });
+  ) as Promise<SingleResult<string>>;
 
 export const getEtlWorkflowTaskInstanceStateCount = (
   params: WorkflowTaskInstanceStateCountQueryParams,
 ) =>
-  customInstance<{
+  generatedApi.countTaskState(params) as Promise<{
     code?: number;
     msg?: string;
     data?: WorkflowTaskInstanceStateCountPageDTO;
     failed?: boolean;
     success?: boolean;
-  }>({
-    url: "/dolphinscheduler/projects/analysis/task-state-count",
-    method: "GET",
-    params,
-  });
+  }>;

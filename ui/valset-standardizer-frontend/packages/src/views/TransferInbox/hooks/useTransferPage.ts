@@ -7,7 +7,6 @@ import type {
   TransferObjectViewDTO,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
-import { customInstance } from "@/api/mutator";
 import { formatBytes, formatDateTime } from "@/utils/format";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
@@ -39,10 +38,7 @@ const LIST_PAGE_SIZE = 15;
 const LIST_PREFETCH_THRESHOLD = 160;
 
 const loadMailInfo = async (transferId: string) => {
-  const response = await customInstance<{ data?: InboxMailInfoViewDTO }>({
-    url: `/transfer-objects/${transferId}/mail-info`,
-    method: "GET",
-  });
+  const response = await api.getMailInfo(transferId);
   return unwrapSingleResult(response) as InboxMailInfoViewDTO | null;
 };
 
@@ -441,15 +437,10 @@ export const useTransferPage = (): { page: InboxPage } => {
     const requestId = ++analysisRequestId;
     analysisLoading.value = true;
     try {
-      const res = await customInstance<{
-        data?: TransferObjectAnalysisViewDTO;
-      }>({
-        url: buildInboxQueryUrl("/transfer-objects/mail-inbox/analysis", {
-          sourceCode: query.sourceCode || undefined,
-          mailId: query.mailId || undefined,
-          deliveryStatus: query.deliveryStatus || undefined,
-        }),
-        method: "GET",
+      const res = await api.analyzeMailInbox({
+        sourceCode: query.sourceCode || undefined,
+        mailId: query.mailId || undefined,
+        deliveryStatus: query.deliveryStatus || undefined,
       });
       if (requestId !== analysisRequestId) {
         return;
@@ -492,21 +483,6 @@ export const useTransferPage = (): { page: InboxPage } => {
     }
   };
 
-  const buildInboxQueryUrl = (
-    path: string,
-    params: Record<string, string | number | undefined>,
-  ) => {
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === "") {
-        return;
-      }
-      searchParams.set(key, String(value));
-    });
-    const query = searchParams.toString();
-    return query ? `${path}?${query}` : path;
-  };
-
   const loadRows = async (options: { append?: boolean } = {}) => {
     const append = options.append === true;
     const requestId = ++listRequestId;
@@ -517,23 +493,17 @@ export const useTransferPage = (): { page: InboxPage } => {
       resetListState();
     }
     try {
-      const page = await customInstance<{
-        data?: InboxMailViewDTO[];
-        totalCount?: number;
-      }>({
-        url: buildInboxQueryUrl("/transfer-objects/mail-inbox", {
-          sourceCode: query.sourceCode || undefined,
-          mailId: query.mailId || undefined,
-          deliveryStatus: query.deliveryStatus || undefined,
-          pageIndex: append ? Math.floor(rows.value.length / LIST_PAGE_SIZE) : 0,
-          pageSize: LIST_PAGE_SIZE,
-        }),
-        method: "GET",
+      const page = await api.pageMailInbox({
+        sourceCode: query.sourceCode || undefined,
+        mailId: query.mailId || undefined,
+        deliveryStatus: query.deliveryStatus || undefined,
+        pageIndex: append ? Math.floor(rows.value.length / LIST_PAGE_SIZE) : 0,
+        pageSize: LIST_PAGE_SIZE,
       });
       if (requestId !== listRequestId) {
         return;
       }
-      const nextRows = page.data ?? [];
+      const nextRows = (page.data ?? []) as InboxMailViewDTO[];
       rows.value = append ? [...rows.value, ...nextRows] : nextRows;
       sourceTotal.value = Number(page.totalCount ?? 0);
       total.value = sourceTotal.value;
@@ -653,14 +623,10 @@ export const useTransferPage = (): { page: InboxPage } => {
     }
     downloadLoading.value = true;
     try {
-      const response = await customInstance<{
+      const response = (await api.downloadObject(transferId)) as {
         data: Blob;
         headers?: Record<string, string>;
-      }>({
-        url: `/transfer-objects/${transferId}/download`,
-        method: "GET",
-        responseType: "blob",
-      });
+      };
       const blob = response.data;
       const contentDisposition =
         response.headers?.["content-disposition"] ||

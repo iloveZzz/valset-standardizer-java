@@ -1,7 +1,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import { message, Modal } from "ant-design-vue";
 import type { ISchema, YTablePagination } from "@yss-ui/components";
-import { getJavaSpringBootQuartzApi } from "@/api/generated/valset";
+import { getJavaSpringBootQuartzApi } from "@/api";
 import { unwrapSingleResult } from "@/utils/api-response";
 import {
   normalizeFormilySchema,

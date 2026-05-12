@@ -1,4 +1,4 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
 export type OutsourcedDataTaskQueryParams = {
   batchId?: string;
@@ -144,100 +144,64 @@ export type SingleResultOutsourcedDataTaskActionResultDTO = {
   data?: OutsourcedDataTaskActionResultDTO;
 };
 
+const generatedApi = getJavaApi();
+
 export const getOutsourcedDataTaskSummary = (
   params?: OutsourcedDataTaskQueryParams,
 ) =>
-  customInstance<SingleResultOutsourcedDataTaskSummaryDTO>({
-    url: "/outsourced-data-tasks/summary",
-    method: "GET",
-    params,
-  });
+  generatedApi.summary(params) as Promise<SingleResultOutsourcedDataTaskSummaryDTO>;
 
 export const pageOutsourcedDataTasks = (
   params?: OutsourcedDataTaskQueryParams,
 ) =>
-  customInstance<PageResultOutsourcedDataTaskBatchDTO>({
-    url: "/outsourced-data-tasks",
-    method: "GET",
-    params,
-  });
+  generatedApi.pageTasks(params) as Promise<PageResultOutsourcedDataTaskBatchDTO>;
 
 export const getOutsourcedDataTask = (batchId: string) =>
-  customInstance<SingleResultOutsourcedDataTaskBatchDetailDTO>({
-    url: `/outsourced-data-tasks/${batchId}`,
-    method: "GET",
-  });
+  generatedApi.getTask(batchId) as Promise<SingleResultOutsourcedDataTaskBatchDetailDTO>;
 
 export const listOutsourcedDataTaskSteps = (batchId: string) =>
-  customInstance<MultiResultOutsourcedDataTaskStepDTO>({
-    url: `/outsourced-data-tasks/${batchId}/steps`,
-    method: "GET",
-  });
+  generatedApi.listSteps(batchId) as Promise<MultiResultOutsourcedDataTaskStepDTO>;
 
 export const executeOutsourcedDataTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
 ) =>
-  customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
-    url: `/outsourced-data-tasks/${batchId}/execute`,
-    method: "POST",
-    data: command ?? {},
-  });
+  generatedApi.execute(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
 export const retryOutsourcedDataTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
 ) =>
-  customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
-    url: `/outsourced-data-tasks/${batchId}/retry`,
-    method: "POST",
-    data: command ?? {},
-  });
+  generatedApi.retry1(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
 export const stopOutsourcedDataTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
 ) =>
-  customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
-    url: `/outsourced-data-tasks/${batchId}/stop`,
-    method: "POST",
-    data: command ?? {},
-  });
+  generatedApi.stop1(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
 export const retryOutsourcedDataTaskStep = (
   batchId: string,
   stepId: string,
   command?: OutsourcedDataTaskActionCommand,
 ) =>
-  customInstance<SingleResultOutsourcedDataTaskActionResultDTO>({
-    url: `/outsourced-data-tasks/${batchId}/steps/${stepId}/retry`,
-    method: "POST",
-    data: command ?? {},
-  });
+  generatedApi.retryStep(
+    batchId,
+    stepId,
+    command ?? {},
+  ) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
 export const batchExecuteOutsourcedDataTasks = (
   command: OutsourcedDataTaskBatchCommand,
 ) =>
-  customInstance<MultiResultOutsourcedDataTaskActionResultDTO>({
-    url: "/outsourced-data-tasks/batch-execute",
-    method: "POST",
-    data: command,
-  });
+  generatedApi.batchExecute(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
 
 export const batchRetryOutsourcedDataTasks = (
   command: OutsourcedDataTaskBatchCommand,
 ) =>
-  customInstance<MultiResultOutsourcedDataTaskActionResultDTO>({
-    url: "/outsourced-data-tasks/batch-retry",
-    method: "POST",
-    data: command,
-  });
+  generatedApi.batchRetry(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
 
 export const batchStopOutsourcedDataTasks = (
   command: OutsourcedDataTaskBatchCommand,
 ) =>
-  customInstance<MultiResultOutsourcedDataTaskActionResultDTO>({
-    url: "/outsourced-data-tasks/batch-stop",
-    method: "POST",
-    data: command,
-  });
+  generatedApi.batchStop(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
