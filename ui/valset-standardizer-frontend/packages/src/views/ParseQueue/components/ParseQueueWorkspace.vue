@@ -89,14 +89,6 @@ const summaryDescription = computed(
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>待解析任务</h2>
-          <p>
-            目标投递成功后自动生成待解析任务，支持补漏、重试和结构化结果回查。
-          </p>
-          <div class="workspace-header-pills">
-            <span class="workspace-pill">自动生成于投递成功之后</span>
-            <span class="workspace-pill">支持手工补漏和强制重建</span>
-            <span class="workspace-pill">解析状态独立管理</span>
-          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">

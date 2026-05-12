@@ -100,8 +100,6 @@ export const outsourcedDataTaskPreviewText = {
 
 export const outsourcedDataTaskActionTexts = {
   pageHeaderTitle: "估值表解析任务管理",
-  pageHeaderDescription:
-    "覆盖文件解析、结构标准化、标准表落地，支持手动执行、失败续跑与重跑。",
   retryBatchConfirmTitle: "重跑估值表解析任务",
   retryBatchConfirmContent: "将从流程起点重新执行该批次，是否继续？",
   executeBatchConfirmTitle: "手动执行估值表解析任务",

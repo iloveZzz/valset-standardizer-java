@@ -74,15 +74,6 @@ const columns: YTableColumn[] = [
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>标签管理</h2>
-          <p>
-            配置业务日期提取标签的名称、标签值与正则表达式，并在对象收集完成后自动打标。
-          </p>
-          <div class="workspace-header-pills">
-            <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
-            <span class="workspace-pill">模板名固定 transfer_tag</span>
-            <span class="workspace-pill">支持试跑验证</span>
-            <span class="workspace-pill">默认标签固定启用且不可编辑</span>
-          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">

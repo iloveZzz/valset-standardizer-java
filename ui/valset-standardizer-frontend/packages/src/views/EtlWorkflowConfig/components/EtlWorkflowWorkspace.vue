@@ -180,12 +180,6 @@ const pageTitle = computed(() =>
   isDefinitionMode.value ? "工作流定义" : "任务阶段定义",
 );
 
-const pageDescription = computed(() =>
-  isDefinitionMode.value
-    ? "点击“编辑”打开工作流定义表单，保存会写入当前工作流定义。"
-    : "点击“新增阶段”打开任务阶段定义窗体，保存会把阶段追加到当前工作流版本。",
-);
-
 const workflowModalTitle = computed(() =>
   workflowModalMode.value === "create"
     ? "新增工作流"
@@ -740,7 +734,6 @@ const submitStageDialog = async () => {
       <div class="etl-workflow-panel-title">
         <div>
           <h3>{{ pageTitle }}</h3>
-          <p>{{ pageDescription }}</p>
         </div>
       </div>
 

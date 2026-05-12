@@ -9,7 +9,6 @@ import { GetTemplateName1SourceType } from "@/api/generated/valset/schemas/getTe
 import { GetTemplateName2TargetType } from "@/api/generated/valset/schemas/getTemplateName2TargetType";
 import type {
   ListRulesParams,
-  ListLogsParams,
   ListRoutes1Params,
   ListSourcesParams,
   ListTargetsParams,
@@ -654,14 +653,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     ].slice(-20);
   };
 
-  const updateRouteFlowFactsForRoute = (routeId: string) => {
-    const row = rows.value.find((item) => item.routeId === routeId);
-    if (!row?.sourceId) {
-      return;
-    }
-    updateRouteFlowFactsForSource(row.sourceId);
-  };
-
   const upsertSourceIngestState = (
     sourceId: string,
     nextState: SourceIngestState,
@@ -678,23 +669,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     upsertSourceIngestState(sourceId, {
       ...current,
       ...patch,
-    });
-  };
-
-  const upsertRouteExecutionState = (
-    routeId: string,
-    nextState: RouteExecutionState,
-  ) => {
-    routeExecutionStates[routeId] = nextState;
-    updateRouteFlowFactsForRoute(routeId);
-  };
-
-  const clearRouteExecutionStates = (routeIds: string[]) => {
-    const nextRouteIdSet = new Set(routeIds);
-    Object.keys(routeExecutionStates).forEach((routeId) => {
-      if (!nextRouteIdSet.has(routeId)) {
-        delete routeExecutionStates[routeId];
-      }
     });
   };
 
@@ -984,13 +958,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
             .filter((value): value is string => Boolean(value)),
         ),
       );
-      const routeIds = Array.from(
-        new Set(
-          records
-            .map((row) => row.routeId?.trim())
-            .filter((value): value is string => Boolean(value)),
-        ),
-      );
       const entries = await Promise.all(
         sourceIds.map(async (sourceId) => {
           try {
@@ -1028,36 +995,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
           }
         }),
       );
-      const routeExecutionEntries = await Promise.all(
-        routeIds.map(async (routeId) => {
-          try {
-            const logs = unwrapMultiResult(
-              await api.listLogs({
-                routeId,
-                runStatus: "FAILED",
-                limit: 5,
-              } as ListLogsParams),
-            );
-            const latest = logs[0];
-            if (!latest) {
-              return null;
-            }
-            return [
-              routeId,
-              {
-                createdAt: latest.createdAt,
-                errorMessage: latest.errorMessage,
-                logMessage: latest.logMessage,
-                runStage: latest.runStage,
-                runStatus: latest.runStatus,
-              } satisfies RouteExecutionState,
-            ] as const;
-          } catch (error) {
-            console.error("加载路由运行日志失败:", error);
-            return null;
-          }
-        }),
-      );
 
       if (requestId !== listRequestId) {
         return;
@@ -1084,7 +1021,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
           delete routeFlowFactMessages[key];
         }
       });
-      clearRouteExecutionStates(routeIds);
       entries.forEach((entry) => {
         if (!entry) {
           return;
@@ -1094,16 +1030,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
           ...sourceIngestStates[sourceId],
           ...state,
         };
-      });
-      routeExecutionEntries.forEach((entry) => {
-        if (!entry) {
-          return;
-        }
-        const [routeId, state] = entry;
-        upsertRouteExecutionState(routeId, {
-          ...routeExecutionStates[routeId],
-          ...state,
-        });
       });
 
       records.forEach((row) => {

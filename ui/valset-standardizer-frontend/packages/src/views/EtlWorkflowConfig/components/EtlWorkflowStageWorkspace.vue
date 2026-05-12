@@ -215,9 +215,6 @@ const stageColumnsWithAction = computed<YTableColumn[]>(() => [
 ]);
 
 const pageTitle = computed(() => "任务阶段定义");
-const pageDescription = computed(
-  () => "按工作流分组展示任务阶段定义，展开分组后可以查看阶段明细并新增阶段。",
-);
 
 const workflowGroupCount = computed(() => workflowRows.value.length);
 const stageTotalCount = computed(() =>
@@ -416,7 +413,6 @@ const handleDragEnd = (rows: any[]) => {
       <div class="etl-workflow-panel-title">
         <div>
           <h3>{{ pageTitle }}</h3>
-          <p>{{ pageDescription }}</p>
         </div>
       </div>
 

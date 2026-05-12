@@ -12,6 +12,7 @@ import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectPage;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
 import com.yss.valset.transfer.domain.model.TransferTagDefinition;
+import com.yss.valset.transfer.domain.model.TransferStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -146,5 +147,74 @@ class DefaultTransferObjectManagementAppServiceTest {
         assertThat(response.getItems().get(0).getMessage()).contains("重新打标成功");
         verify(transferTaggingUseCase).retag("transfer-1", true);
         verify(transferTaggingUseCase).retag("transfer-2", true);
+    }
+
+    @Test
+    void redeliverIdentifiedUndeliveredShouldScanAndRedeliverMatchedObjects() {
+        TransferObjectGateway transferObjectGateway = mock(TransferObjectGateway.class);
+        TransferDeliveryGateway transferDeliveryGateway = mock(TransferDeliveryGateway.class);
+        TransferProcessUseCase transferProcessUseCase = mock(TransferProcessUseCase.class);
+        TransferTaggingUseCase transferTaggingUseCase = mock(TransferTaggingUseCase.class);
+        TransferTagGateway transferTagGateway = mock(TransferTagGateway.class);
+
+        DefaultTransferObjectManagementAppService service = new DefaultTransferObjectManagementAppService(
+                transferObjectGateway,
+                transferDeliveryGateway,
+                transferProcessUseCase,
+                transferTaggingUseCase,
+                transferTagGateway
+        );
+
+        TransferObject first = buildTransferObject("transfer-1", "route-1");
+        TransferObject second = buildTransferObject("transfer-2", "route-2");
+
+        when(transferObjectGateway.pageObjects(null, null, null, TransferStatus.IDENTIFIED.name(), "UNDELIVERED", null, null, null, null, null, null, 0, 200))
+                .thenReturn(new TransferObjectPage(List.of(first, second), 2L, 0L, 200L));
+        when(transferObjectGateway.pageObjects(null, null, null, TransferStatus.IDENTIFIED.name(), "UNDELIVERED", null, null, null, null, null, null, 1, 200))
+                .thenReturn(new TransferObjectPage(List.of(), 2L, 1L, 200L));
+        when(transferDeliveryGateway.listRecordsByTransferIds(any(), eq("SUCCESS"))).thenReturn(List.of());
+        when(transferObjectGateway.findById("transfer-1")).thenReturn(java.util.Optional.of(first));
+        when(transferObjectGateway.findById("transfer-2")).thenReturn(java.util.Optional.of(second));
+
+        var response = service.redeliverIdentifiedUndelivered();
+
+        assertThat(response.getRequestedCount()).isEqualTo(2);
+        assertThat(response.getSuccessCount()).isEqualTo(2);
+        assertThat(response.getFailureCount()).isEqualTo(0);
+        assertThat(response.getSkippedCount()).isEqualTo(0);
+        verify(transferProcessUseCase).deliver("route-1", "transfer-1");
+        verify(transferProcessUseCase).deliver("route-2", "transfer-2");
+    }
+
+    private TransferObject buildTransferObject(String transferId, String routeId) {
+        return new TransferObject(
+                transferId,
+                "source-1",
+                "EMAIL",
+                "source-code",
+                transferId + ".xls",
+                "xls",
+                "application/vnd.ms-excel",
+                123L,
+                "fingerprint-" + transferId,
+                "source-ref-" + transferId,
+                "mail-id-" + transferId,
+                "sender@example.com",
+                "to@example.com",
+                null,
+                null,
+                "subject",
+                "body",
+                "imap",
+                "INBOX",
+                "/tmp/" + transferId + ".xls",
+                TransferStatus.IDENTIFIED,
+                Instant.now(),
+                Instant.now(),
+                null,
+                null,
+                new ProbeResult(false, null, Map.of()),
+                Map.of()
+        ).withRouteId(routeId);
     }
 }

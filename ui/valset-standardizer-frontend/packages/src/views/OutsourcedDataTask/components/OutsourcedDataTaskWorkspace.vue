@@ -301,7 +301,6 @@ const taskMetricCards = computed(() => [
       <div v-if="showSceneHeader" class="outsourced-task-header__top">
         <div>
           <h2>{{ outsourcedDataTaskActionTexts.pageHeaderTitle }}</h2>
-          <p>{{ outsourcedDataTaskActionTexts.pageHeaderDescription }}</p>
         </div>
       </div>
 

@@ -15,6 +15,7 @@ import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectPage;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
+import com.yss.valset.transfer.domain.model.TransferStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 public class DefaultTransferObjectManagementAppService implements TransferObjectManagementAppService {
 
     private static final int RETAG_PAGE_SIZE = 200;
+    private static final int AUTO_REDELIVER_PAGE_SIZE = 200;
 
     private final TransferObjectGateway transferObjectGateway;
     private final TransferDeliveryGateway transferDeliveryGateway;
@@ -97,6 +99,23 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                 .skippedCount(skippedCount)
                 .items(items)
                 .build();
+    }
+
+    @Override
+    public TransferObjectRedeliverResponse redeliverIdentifiedUndelivered() {
+        List<String> transferIds = loadIdentifiedUndeliveredTransferIds();
+        if (transferIds.isEmpty()) {
+            return TransferObjectRedeliverResponse.builder()
+                    .requestedCount(0)
+                    .successCount(0)
+                    .failureCount(0)
+                    .skippedCount(0)
+                    .items(List.of())
+                    .build();
+        }
+        TransferObjectRedeliverCommand command = new TransferObjectRedeliverCommand();
+        command.setTransferIds(transferIds);
+        return redeliver(command);
     }
 
     @Override
@@ -214,6 +233,44 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
             pageIndex++;
         }
         return results;
+    }
+
+    private List<String> loadIdentifiedUndeliveredTransferIds() {
+        List<String> results = new ArrayList<>();
+        int pageIndex = 0;
+        while (true) {
+            TransferObjectPage page = transferObjectGateway.pageObjects(
+                    null,
+                    null,
+                    null,
+                    TransferStatus.IDENTIFIED.name(),
+                    "UNDELIVERED",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    pageIndex,
+                    AUTO_REDELIVER_PAGE_SIZE
+            );
+            List<TransferObject> records = page == null || page.records() == null ? List.of() : page.records();
+            if (records.isEmpty()) {
+                break;
+            }
+            for (TransferObject record : records) {
+                String transferId = trimToEmpty(record == null ? null : record.transferId());
+                if (StringUtils.hasText(transferId)) {
+                    results.add(transferId);
+                }
+            }
+            long total = page.total();
+            if (results.size() >= total) {
+                break;
+            }
+            pageIndex++;
+        }
+        return results.stream().distinct().toList();
     }
 
     private String buildFailureMessage(RuntimeException exception) {

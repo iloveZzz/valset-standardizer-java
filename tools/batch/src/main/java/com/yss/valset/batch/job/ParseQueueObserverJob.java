@@ -90,7 +90,6 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
     @Scheduled(fixedDelayString = "${subject.match.parse-queue-observer.fixed-delay-ms:3000}")
     public void observePendingQueues() {
         sleepRandomStartupJitter();
-        log.info("待解析观察者开始执行");
         runObservation();
     }
 
@@ -110,11 +109,11 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
         try {
             int effectiveBatchSize = Math.max(1, batchSize);
             while (true) {
-                log.info("开始处理待解析批次，batchSize={}", effectiveBatchSize);
+                log.debug("开始处理待解析批次，batchSize={}", effectiveBatchSize);
                 List<ParseQueue> pendingQueues = loadPendingQueues(effectiveBatchSize);
                 if (pendingQueues.isEmpty()) {
-                    log.info("本轮没有待处理事件，success={}, failed={}, skipped={}", totalSuccess, totalFailed, totalSkipped);
-                    log.info("待解析观察者执行结束，success={}, failed={}, skipped={}", totalSuccess, totalFailed, totalSkipped);
+                    log.debug("本轮没有待处理事件，success={}, failed={}, skipped={}", totalSuccess, totalFailed, totalSkipped);
+                    log.debug("待解析观察者执行结束，success={}, failed={}, skipped={}", totalSuccess, totalFailed, totalSkipped);
                     return new ParseQueueObserverRunSummary(effectiveBatchSize, totalSuccess, totalFailed, totalSkipped, totalSuccess, totalFailed, totalSkipped);
                 }
                 long batchSuccess = 0;

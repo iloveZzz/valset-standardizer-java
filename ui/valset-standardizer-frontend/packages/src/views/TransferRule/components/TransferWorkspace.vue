@@ -51,15 +51,6 @@ const actionConfig = useTableActionConfig({
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>分拣规则</h2>
-          <p>
-            统一维护分拣规则编码、名称、版本、脚本与路由扩展信息，模板固定加载
-            transfer_rule。
-          </p>
-          <div class="workspace-header-pills">
-            <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
-            <span class="workspace-pill">模板名固定 transfer_rule</span>
-            <span class="workspace-pill">详情抽屉展示脚本与 JSON</span>
-          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">

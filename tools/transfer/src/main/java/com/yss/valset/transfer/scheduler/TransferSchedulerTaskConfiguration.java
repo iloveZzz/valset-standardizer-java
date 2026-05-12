@@ -4,10 +4,13 @@ import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.RecurringTaskWithPersistentSchedule;
 import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import com.yss.valset.transfer.application.port.TransferProcessUseCase;
+import com.yss.valset.transfer.application.service.TransferObjectManagementAppService;
 import com.yss.valset.transfer.application.port.TransferRunLogMaintenanceUseCase;
 import com.yss.valset.transfer.scheduler.task.TransferDeliverTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferIngestScheduledTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferIngestTaskData;
+import com.yss.valset.transfer.scheduler.task.TransferObjectRedeliverScheduledTaskData;
+import com.yss.valset.transfer.scheduler.task.TransferObjectRedeliverTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferRouteTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferRunLogCleanupScheduledTaskData;
 import org.slf4j.Logger;
@@ -57,6 +60,25 @@ public class TransferSchedulerTaskConfiguration {
                         taskInstance.getData().routeId(),
                         taskInstance.getData().transferId()
                 ));
+    }
+
+    @Bean
+    public RecurringTaskWithPersistentSchedule<TransferObjectRedeliverScheduledTaskData> transferObjectRedeliverTask(
+            TransferObjectManagementAppService transferObjectManagementAppService) {
+        return Tasks.recurringWithPersistentSchedule(TransferSchedulerTasks.OBJECT_REDELIVER_TASK)
+                .onDeadExecutionRevive()
+                .execute((taskInstance, executionContext) -> {
+                    try {
+                        var response = transferObjectManagementAppService.redeliverIdentifiedUndelivered();
+                        log.info("分拣对象定时重投递完成，requestedCount={}，successCount={}，failureCount={}，skippedCount={}",
+                                response.getRequestedCount(),
+                                response.getSuccessCount(),
+                                response.getFailureCount(),
+                                response.getSkippedCount());
+                    } catch (RuntimeException exception) {
+                        log.warn("分拣对象定时重投递失败", exception);
+                    }
+                });
     }
 
     @Bean

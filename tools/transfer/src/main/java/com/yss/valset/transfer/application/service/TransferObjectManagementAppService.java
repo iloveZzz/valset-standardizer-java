@@ -19,6 +19,13 @@ public interface TransferObjectManagementAppService {
     TransferObjectRedeliverResponse redeliver(TransferObjectRedeliverCommand command);
 
     /**
+     * 自动重新投递已识别但未投递完成的文件主对象。
+     *
+     * @return 重新投递结果
+     */
+    TransferObjectRedeliverResponse redeliverIdentifiedUndelivered();
+
+    /**
      * 重新打标文件主对象。
      *
      * @param command 重新打标命令

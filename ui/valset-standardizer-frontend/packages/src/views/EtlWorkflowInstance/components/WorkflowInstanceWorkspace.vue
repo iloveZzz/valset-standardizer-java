@@ -297,9 +297,6 @@ const stageFilterOptions = computed(() => [
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>工作流实例</h2>
-          <p>
-            这里展示工作流运行态、当前阶段和阶段日志，支持按工作流名称、状态、阶段和开始结束时间查询。
-          </p>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-controls">

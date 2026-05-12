@@ -48,14 +48,6 @@ const actionConfig = useTableActionConfig({
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>文件投递目标配置</h2>
-          <p>
-            统一维护投递目标编码、名称、类型、目录根路径、子路径模板与扩展配置，面向收发分拣的出站投递管理。
-          </p>
-          <div class="workspace-header-pills">
-            <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
-            <span class="workspace-pill">类型预览随表单同步刷新</span>
-            <span class="workspace-pill">详情抽屉展示完整 JSON</span>
-          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">

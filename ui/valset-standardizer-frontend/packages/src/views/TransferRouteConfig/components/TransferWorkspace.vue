@@ -61,16 +61,6 @@ watch(
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>分拣路由</h2>
-          <p>
-            统一维护来源、规则、目标与轮询任务之间的路由映射，并在映射页直接发起来源收取、
-            停止收取和配置维护。
-          </p>
-          <div class="workspace-header-pills">
-            <span class="workspace-pill">来源 → 路由映射 → 目标</span>
-            <span class="workspace-pill"
-              >支持手动收取 / 停止收取 / 轮询配置</span
-            >
-          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">

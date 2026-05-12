@@ -111,14 +111,6 @@ const actionConfig = useTableActionConfig({
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>文件来源接口配置</h2>
-          <p>
-            统一维护来源编码、名称、类型与扩展配置，适用于收发分拣的来源接入管理。
-          </p>
-          <div class="workspace-header-pills">
-            <span class="workspace-pill">支持查询 / 新建 / 修改 / 删除</span>
-            <span class="workspace-pill">类型预览随表单同步刷新</span>
-            <span class="workspace-pill">详情抽屉展示完整 JSON</span>
-          </div>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-buttons">
