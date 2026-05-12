@@ -33,6 +33,7 @@ class TransferDeliveryGatewayImplTest {
         TransferRouteGateway routeGateway = mock(TransferRouteGateway.class);
         TransferJsonMapper transferJsonMapper = mock(TransferJsonMapper.class);
         TransferDeliveryRecordMapper transferDeliveryRecordMapper = mock(TransferDeliveryRecordMapper.class);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
 
         when(transferJsonMapper.toJson(any())).thenReturn("{}");
         when(routeGateway.findById("route-1")).thenReturn(Optional.of(new TransferRoute(
@@ -55,7 +56,8 @@ class TransferDeliveryGatewayImplTest {
                 repository,
                 routeGateway,
                 transferJsonMapper,
-                transferDeliveryRecordMapper
+                transferDeliveryRecordMapper,
+                databaseDialectSupport
         );
 
         TransferResult result = new TransferResult(false, null, List.of("message-1", "message-2", "message-3", "message-4"));

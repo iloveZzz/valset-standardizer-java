@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.transfer.domain.gateway.TransferTargetGateway;
 import com.yss.valset.transfer.domain.model.TransferTarget;
 import com.yss.valset.transfer.infrastructure.convertor.TransferTargetMapper;
@@ -24,6 +25,7 @@ public class TransferTargetGatewayImpl implements TransferTargetGateway {
 
     private final TransferTargetRepository transferTargetRepository;
     private final TransferTargetMapper transferTargetMapper;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public Optional<TransferTarget> findById(Long targetId) {
@@ -35,7 +37,7 @@ public class TransferTargetGatewayImpl implements TransferTargetGateway {
         TransferTargetPO po = transferTargetRepository.selectOne(
                 Wrappers.lambdaQuery(TransferTargetPO.class)
                         .eq(TransferTargetPO::getTargetCode, targetCode)
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         return Optional.ofNullable(po).map(this::toDomain);
     }
@@ -54,7 +56,7 @@ public class TransferTargetGatewayImpl implements TransferTargetGateway {
                 .orderByAsc(TransferTargetPO::getTargetType)
                 .orderByAsc(TransferTargetPO::getTargetCode);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferTargetRepository.selectList(query)
                 .stream()

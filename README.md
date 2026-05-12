@@ -64,3 +64,13 @@
 
 - 它可以作为新环境建库的基线入口，但不应直接覆盖已经运行中的存量库。
 - 如果目标环境已经按历史初始化脚本或人工变更建库，建议先对比字段差异，再拆分增量 changeSet 执行迁移。
+
+## 数据源切换
+
+当前主应用支持通过 Spring profile 切换数据库类型：
+
+- 默认启动使用 `mysql` profile，并自动带上 `nacos`
+- 切到 PostgreSQL 时把 `SPRING_PROFILES_ACTIVE` 设置为 `postgresql`
+- MySQL 与 PostgreSQL 的连接参数分别放在 `valset-standardizer/src/main/resources/application-mysql.yml` 和 `valset-standardizer/src/main/resources/application-postgresql.yml`
+
+数据库账号密码可以通过 `VALSET_DATASOURCE_USERNAME` 和 `VALSET_DATASOURCE_PASSWORD` 覆盖。

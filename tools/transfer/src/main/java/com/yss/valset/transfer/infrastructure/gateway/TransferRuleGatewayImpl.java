@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.transfer.domain.gateway.TransferRuleGateway;
 import com.yss.valset.transfer.domain.model.RuleDefinition;
 import com.yss.valset.transfer.infrastructure.convertor.TransferRuleMapper;
@@ -23,6 +24,7 @@ import java.util.Optional;
 public class TransferRuleGatewayImpl implements TransferRuleGateway {
 
     private final TransferRuleRepository transferRuleRepository;
+    private final DatabaseDialectSupport databaseDialectSupport;
     private final TransferRuleMapper transferRuleMapper;
 
     @Override
@@ -34,7 +36,7 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
                 .orderByAsc(TransferRulePO::getPriority)
                 .orderByAsc(TransferRulePO::getRuleId);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferRuleRepository.selectList(query)
                 .stream()
@@ -72,7 +74,7 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
         TransferRulePO po = transferRuleRepository.selectOne(
                 Wrappers.lambdaQuery(TransferRulePO.class)
                         .eq(TransferRulePO::getRuleCode, ruleCode)
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         return Optional.ofNullable(po).map(this::toDomain);
     }

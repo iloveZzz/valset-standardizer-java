@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yss.valset.transfer.domain.gateway.TransferRunLogGateway;
 import com.yss.valset.transfer.domain.model.TransferRunLogAnalysis;
@@ -39,6 +40,7 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
 
     private final TransferRunLogRepository transferRunLogRepository;
     private final TransferRunLogMapper transferRunLogMapper;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public TransferRunLog save(TransferRunLog transferRunLog) {
@@ -236,7 +238,7 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                 .orderByDesc(TransferRunLogPO::getRunLogId);
         if (useLimit) {
             int maxSize = limit == null || limit <= 0 ? DEFAULT_LIMIT : limit;
-            query.last("limit " + maxSize);
+            query.last(databaseDialectSupport.limitClause(maxSize));
         }
         return transferRunLogRepository.selectList(query)
                 .stream()

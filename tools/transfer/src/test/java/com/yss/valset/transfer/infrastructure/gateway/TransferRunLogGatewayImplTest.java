@@ -28,7 +28,8 @@ class TransferRunLogGatewayImplTest {
         TransferRunLogRepository repository = mock(TransferRunLogRepository.class);
         TransferRunLogMapper mapper = new TransferRunLogMapper() {
         };
-        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
+        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper, databaseDialectSupport);
 
         when(repository.selectList(any())).thenReturn(List.of(
                 buildPo("3", "10", "2026-04-24T10:00:00"),
@@ -49,7 +50,8 @@ class TransferRunLogGatewayImplTest {
         TransferRunLogRepository repository = mock(TransferRunLogRepository.class);
         TransferRunLogMapper mapper = new TransferRunLogMapper() {
         };
-        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
+        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper, databaseDialectSupport);
 
         when(repository.selectList(any())).thenReturn(List.of(
                 buildPo("4", "10", "2026-04-24T11:00:00", "SUCCESS"),
@@ -78,7 +80,8 @@ class TransferRunLogGatewayImplTest {
         TransferRunLogRepository repository = mock(TransferRunLogRepository.class);
         TransferRunLogMapper mapper = new TransferRunLogMapper() {
         };
-        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
+        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper, databaseDialectSupport);
 
         when(repository.delete(any())).thenReturn(2);
 
@@ -93,7 +96,8 @@ class TransferRunLogGatewayImplTest {
         TransferRunLogRepository repository = mock(TransferRunLogRepository.class);
         TransferRunLogMapper mapper = new TransferRunLogMapper() {
         };
-        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
+        TransferRunLogGatewayImpl gateway = new TransferRunLogGatewayImpl(repository, mapper, databaseDialectSupport);
 
         when(repository.delete(any())).thenReturn(3);
 

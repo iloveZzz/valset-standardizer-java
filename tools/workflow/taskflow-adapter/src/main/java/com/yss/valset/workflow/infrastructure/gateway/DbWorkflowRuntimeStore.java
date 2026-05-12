@@ -3,6 +3,7 @@ package com.yss.valset.workflow.infrastructure.gateway;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yss.cloud.dto.response.PageResult;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowDefinitionPO;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowEngineBindingPO;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowInstancePO;
@@ -59,6 +60,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
     private final WorkflowEngineBindingRepository workflowEngineBindingRepository;
     private final WorkflowInstanceRepository workflowInstanceRepository;
     private final WorkflowJsonCodec workflowJsonCodec;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public WorkflowDefinitionDTO saveDefinition(WorkflowDefinitionDTO definition) {
@@ -67,7 +69,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                 Wrappers.lambdaQuery(WorkflowDefinitionPO.class)
                         .eq(WorkflowDefinitionPO::getWorkflowCode, copy.getWorkflowCode())
                         .eq(WorkflowDefinitionPO::getWorkflowVersionNo, copy.getWorkflowVersionNo())
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         WorkflowDefinitionPO po = toDefinitionPO(copy, existing);
         if (existing == null) {
             workflowDefinitionRepository.insert(po);
@@ -88,7 +90,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                 Wrappers.lambdaQuery(WorkflowDefinitionPO.class)
                         .eq(WorkflowDefinitionPO::getWorkflowCode, workflowCode)
                         .eq(WorkflowDefinitionPO::getWorkflowVersionNo, workflowVersionNo)
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         if (definition == null) {
             return false;
         }
@@ -111,7 +113,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                 Wrappers.lambdaQuery(WorkflowDefinitionPO.class)
                         .eq(WorkflowDefinitionPO::getWorkflowCode, workflowCode)
                         .eq(WorkflowDefinitionPO::getWorkflowVersionNo, workflowVersionNo)
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         return Optional.ofNullable(po).map(this::toDefinitionDTO);
     }
 
@@ -174,7 +176,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                 Wrappers.lambdaQuery(WorkflowDefinitionPO.class)
                         .eq(WorkflowDefinitionPO::getWorkflowCode, workflowCode)
                         .eq(WorkflowDefinitionPO::getWorkflowVersionNo, workflowVersionNo)
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         if (definition == null) {
             throw new IllegalStateException("未找到工作流定义");
         }
@@ -325,7 +327,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         WorkflowEngineBindingPO existing = workflowEngineBindingRepository.selectOne(
                 Wrappers.lambdaQuery(WorkflowEngineBindingPO.class)
                         .eq(WorkflowEngineBindingPO::getWorkflowId, workflowId)
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         workflowEngineBindingRepository.delete(
                 Wrappers.lambdaQuery(WorkflowEngineBindingPO.class)
                         .eq(WorkflowEngineBindingPO::getWorkflowId, workflowId));
@@ -371,7 +373,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         WorkflowEngineBindingPO bindingPO = workflowEngineBindingRepository.selectOne(
                 Wrappers.lambdaQuery(WorkflowEngineBindingPO.class)
                         .eq(WorkflowEngineBindingPO::getWorkflowId, po.getWorkflowId())
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         return WorkflowDefinitionDTO.builder()
                 .workflowCode(po.getWorkflowCode())
                 .workflowName(po.getWorkflowName())
@@ -444,7 +446,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                     Wrappers.lambdaQuery(WorkflowStagePO.class)
                             .eq(WorkflowStagePO::getWorkflowId, po.getWorkflowId())
                             .eq(WorkflowStagePO::getStageCode, po.getCurrentStageCode())
-                            .last("limit 1"));
+                            .last(databaseDialectSupport.limitClause(1)));
         }
         Long stageCount = workflowStageRepository.selectCount(
                 Wrappers.lambdaQuery(WorkflowStagePO.class)
@@ -452,7 +454,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         WorkflowDefinitionPO definition = workflowDefinitionRepository.selectOne(
                 Wrappers.lambdaQuery(WorkflowDefinitionPO.class)
                         .eq(WorkflowDefinitionPO::getWorkflowId, po.getWorkflowId())
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         return WorkflowInstanceViewDTO.builder()
                 .instanceId(po.getInstanceId())
                 .workflowCode(po.getWorkflowCode())

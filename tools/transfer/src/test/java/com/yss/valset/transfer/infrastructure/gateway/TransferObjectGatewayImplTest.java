@@ -38,6 +38,7 @@ class TransferObjectGatewayImplTest {
         TransferJsonMapper transferJsonMapper = mock(TransferJsonMapper.class);
         TransferObjectMapper transferObjectMapper = mock(TransferObjectMapper.class);
         TransferObjectMybatisMapper transferObjectMybatisMapper = mock(TransferObjectMybatisMapper.class);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
 
         TransferObjectGatewayImpl gateway = new TransferObjectGatewayImpl(
                 transferObjectRepository,
@@ -46,7 +47,8 @@ class TransferObjectGatewayImplTest {
                 transferDeliveryGateway,
                 transferJsonMapper,
                 transferObjectMapper,
-                transferObjectMybatisMapper
+                transferObjectMybatisMapper,
+                databaseDialectSupport
         );
 
         TransferObject transferObject = new TransferObject(
@@ -107,6 +109,7 @@ class TransferObjectGatewayImplTest {
         TransferJsonMapper transferJsonMapper = mock(TransferJsonMapper.class);
         TransferObjectMapper transferObjectMapper = mock(TransferObjectMapper.class);
         TransferObjectMybatisMapper transferObjectMybatisMapper = mock(TransferObjectMybatisMapper.class);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
 
         TransferObjectGatewayImpl gateway = new TransferObjectGatewayImpl(
                 transferObjectRepository,
@@ -115,7 +118,8 @@ class TransferObjectGatewayImplTest {
                 transferDeliveryGateway,
                 transferJsonMapper,
                 transferObjectMapper,
-                transferObjectMybatisMapper
+                transferObjectMybatisMapper,
+                databaseDialectSupport
         );
 
         TransferObjectPO firstPo = new TransferObjectPO();
@@ -206,6 +210,7 @@ class TransferObjectGatewayImplTest {
         TransferJsonMapper transferJsonMapper = mock(TransferJsonMapper.class);
         TransferObjectMapper transferObjectMapper = mock(TransferObjectMapper.class);
         TransferObjectMybatisMapper transferObjectMybatisMapper = mock(TransferObjectMybatisMapper.class);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
 
         TransferObjectGatewayImpl gateway = new TransferObjectGatewayImpl(
                 transferObjectRepository,
@@ -214,7 +219,8 @@ class TransferObjectGatewayImplTest {
                 transferDeliveryGateway,
                 transferJsonMapper,
                 transferObjectMapper,
-                transferObjectMybatisMapper
+                transferObjectMybatisMapper,
+                databaseDialectSupport
         );
 
         MailInboxGroupDTO firstAttachment = createMailInboxGroupDto("transfer-1", "mail-1", "mail-key-1", "a.xlsx", 1L, 1, 1);

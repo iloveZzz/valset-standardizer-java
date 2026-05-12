@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
 import com.yss.valset.transfer.domain.model.TransferSource;
 import com.yss.valset.transfer.infrastructure.convertor.TransferSourceMapper;
@@ -25,6 +26,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
 
     private final TransferSourceRepository transferSourceRepository;
     private final TransferSourceMapper transferSourceMapper;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public Optional<TransferSource> findById(String sourceId) {
@@ -36,7 +38,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
         TransferSourcePO po = transferSourceRepository.selectOne(
                 Wrappers.lambdaQuery(TransferSourcePO.class)
                         .eq(TransferSourcePO::getSourceCode, sourceCode)
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         return Optional.ofNullable(po).map(this::toDomain);
     }
@@ -56,7 +58,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
                 .orderByAsc(TransferSourcePO::getSourceType)
                 .orderByAsc(TransferSourcePO::getSourceCode);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferSourceRepository.selectList(query)
                 .stream()

@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.transfer.domain.gateway.TransferSourceCheckpointGateway;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpoint;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpointItem;
@@ -32,6 +33,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
     private final TransferSourceCheckpointRepository transferSourceCheckpointRepository;
     private final TransferSourceCheckpointItemRepository transferSourceCheckpointItemRepository;
     private final TransferJsonMapper transferJsonMapper;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public boolean existsProcessedItem(String sourceId, String itemKey) {
@@ -54,7 +56,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                         Wrappers.lambdaQuery(TransferSourceCheckpointItemPO.class)
                                 .eq(TransferSourceCheckpointItemPO::getSourceId, sourceId)
                                 .eq(TransferSourceCheckpointItemPO::getItemKey, itemKey)
-                                .last("limit 1")
+                                .last(databaseDialectSupport.limitClause(1))
                 ))
                 .map(this::toDomain);
     }
@@ -74,7 +76,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                 Wrappers.lambdaQuery(TransferSourceCheckpointItemPO.class)
                         .eq(TransferSourceCheckpointItemPO::getSourceId, po.getSourceId())
                         .eq(TransferSourceCheckpointItemPO::getItemKey, po.getItemKey())
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         try {
             if (existing == null) {
@@ -89,7 +91,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                     Wrappers.lambdaQuery(TransferSourceCheckpointItemPO.class)
                             .eq(TransferSourceCheckpointItemPO::getSourceId, po.getSourceId())
                             .eq(TransferSourceCheckpointItemPO::getItemKey, po.getItemKey())
-                            .last("limit 1")
+                            .last(databaseDialectSupport.limitClause(1))
             );
             if (conflict != null) {
                 return toDomain(conflict);
@@ -130,7 +132,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                         Wrappers.lambdaQuery(TransferSourceCheckpointPO.class)
                                 .eq(TransferSourceCheckpointPO::getSourceId, sourceId)
                                 .eq(TransferSourceCheckpointPO::getCheckpointKey, checkpointKey)
-                                .last("limit 1")
+                                .last(databaseDialectSupport.limitClause(1))
                 ))
                 .map(this::toDomain);
     }
@@ -147,7 +149,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                 Wrappers.lambdaQuery(TransferSourceCheckpointPO.class)
                         .eq(TransferSourceCheckpointPO::getSourceId, po.getSourceId())
                         .eq(TransferSourceCheckpointPO::getCheckpointKey, po.getCheckpointKey())
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         try {
             if (existing == null) {
@@ -162,7 +164,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                     Wrappers.lambdaQuery(TransferSourceCheckpointPO.class)
                             .eq(TransferSourceCheckpointPO::getSourceId, po.getSourceId())
                             .eq(TransferSourceCheckpointPO::getCheckpointKey, po.getCheckpointKey())
-                            .last("limit 1")
+                            .last(databaseDialectSupport.limitClause(1))
             );
             if (conflict != null) {
                 return toDomain(conflict);
@@ -181,7 +183,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                 .eq(TransferSourceCheckpointPO::getSourceId, sourceId)
                 .orderByDesc(TransferSourceCheckpointPO::getUpdatedAt);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferSourceCheckpointRepository.selectList(query).stream()
                 .map(this::toDomain)

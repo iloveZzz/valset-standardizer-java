@@ -21,6 +21,7 @@ class TransferRuleGatewayImplTest {
     void shouldAlwaysPersistScriptBodyWhenSavingRule() {
         TransferRuleRepository repository = mock(TransferRuleRepository.class);
         TransferRuleMapper mapper = mock(TransferRuleMapper.class);
+        var databaseDialectSupport = DatabaseDialectSupportTestSupport.mysql();
 
         TransferRulePO po = new TransferRulePO();
         po.setRuleId("2047251487037984770");
@@ -54,7 +55,7 @@ class TransferRuleGatewayImplTest {
         when(mapper.toPO(definition)).thenReturn(po);
         when(mapper.toDomain(po)).thenReturn(definition);
 
-        TransferRuleGatewayImpl gateway = new TransferRuleGatewayImpl(repository, mapper);
+        TransferRuleGatewayImpl gateway = new TransferRuleGatewayImpl(repository, databaseDialectSupport, mapper);
         gateway.save(definition);
 
         ArgumentCaptor<TransferRulePO> poCaptor = ArgumentCaptor.forClass(TransferRulePO.class);

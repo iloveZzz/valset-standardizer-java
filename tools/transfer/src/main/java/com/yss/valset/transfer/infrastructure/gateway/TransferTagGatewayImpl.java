@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
 import com.yss.valset.transfer.domain.model.TransferTagDefinition;
@@ -24,6 +25,7 @@ import java.util.Optional;
 public class TransferTagGatewayImpl implements TransferTagGateway {
 
     private final TransferTagRepository transferTagRepository;
+    private final DatabaseDialectSupport databaseDialectSupport;
     private final TransferTagMapper transferTagMapper;
 
     @Override
@@ -36,7 +38,7 @@ public class TransferTagGatewayImpl implements TransferTagGateway {
         TransferTagPO po = transferTagRepository.selectOne(
                 Wrappers.lambdaQuery(TransferTagPO.class)
                         .eq(TransferTagPO::getTagCode, tagCode)
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         return Optional.ofNullable(po).map(this::toDomain);
     }

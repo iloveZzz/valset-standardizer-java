@@ -21,8 +21,12 @@ import com.yss.valset.workflow.model.WorkflowStatus;
 import com.yss.valset.workflow.model.WorkflowSyncStatus;
 import com.yss.cloud.dto.response.PageResult;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import org.junit.jupiter.api.Test;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -33,6 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -45,12 +50,14 @@ class DbWorkflowRuntimeStoreTest {
         WorkflowEngineBindingRepository bindingRepository = mock(WorkflowEngineBindingRepository.class);
         WorkflowInstanceRepository instanceRepository = mock(WorkflowInstanceRepository.class);
         WorkflowJsonCodec codec = new WorkflowJsonCodec(new ObjectMapper());
+        DatabaseDialectSupport databaseDialectSupport = databaseDialectSupport();
         DbWorkflowRuntimeStore store = new DbWorkflowRuntimeStore(
                 definitionRepository,
                 stageRepository,
                 bindingRepository,
                 instanceRepository,
-                codec);
+                codec,
+                databaseDialectSupport);
 
         AtomicReference<WorkflowDefinitionPO> definitionState = new AtomicReference<>();
         AtomicReference<WorkflowEngineBindingPO> bindingState = new AtomicReference<>();
@@ -211,5 +218,20 @@ class DbWorkflowRuntimeStoreTest {
         assertThat(store.findDefinition("valset-etl", 1)).isPresent();
         assertThat(store.listDefinitions()).hasSize(1);
         assertThat(store.findInstance("missing")).isEmpty();
+    }
+
+    private DatabaseDialectSupport databaseDialectSupport() {
+        try {
+            DataSource dataSource = mock(DataSource.class);
+            Connection connection = mock(Connection.class);
+            DatabaseMetaData databaseMetaData = mock(DatabaseMetaData.class);
+            when(dataSource.getConnection()).thenReturn(connection);
+            when(connection.getMetaData()).thenReturn(databaseMetaData);
+            when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+            doNothing().when(connection).close();
+            return new DatabaseDialectSupport(dataSource);
+        } catch (Exception exception) {
+            throw new IllegalStateException("构造测试数据源失败", exception);
+        }
     }
 }

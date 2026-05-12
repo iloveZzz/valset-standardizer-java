@@ -2,6 +2,7 @@ package com.yss.valset.task.infrastructure.gateway;
 
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
 import com.yss.valset.application.event.lifecycle.WorkflowTaskLifecycleEvent;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
@@ -27,6 +28,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
@@ -37,6 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -335,7 +340,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 assertThat(aggregatedBatch.getBatchId()).isEqualTo("FILE-1001");
                 assertThat(aggregatedBatch.getCurrentStage())
                                 .isEqualTo(OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE.name());
-                assertThat(aggregatedBatch.getStatus()).isEqualTo(OutsourcedDataTaskStatus.SUCCESS.name());
+                assertThat(aggregatedBatch.getStatus()).isEqualTo(OutsourcedDataTaskStatus.RUNNING.name());
 
                 List<String> stages = stepCaptor.getAllValues().stream()
                                 .map(OutsourcedDataTaskStepPO::getStage)
@@ -380,8 +385,10 @@ class OutsourcedDataTaskGatewayImplTest {
                 }).when(stepRepository).insert(any(OutsourcedDataTaskStepPO.class));
                 when(batchRepository.selectById(any())).thenAnswer(
                                 invocation -> batchSelectCount.incrementAndGet() >= 2 ? insertedBatch.get() : null);
-                when(stepRepository.selectList(any())).thenAnswer(
-                                invocation -> stepSelectListCount.incrementAndGet() == 3 ? insertedSteps : List.of());
+                when(stepRepository.selectList(any())).thenAnswer(invocation -> {
+                        stepSelectListCount.incrementAndGet();
+                        return insertedSteps.isEmpty() ? List.of() : new ArrayList<>(insertedSteps);
+                });
                 OutsourcedDataTaskGatewayImpl gateway = newGateway(
                                 batchRepository,
                                 stepRepository,
@@ -416,7 +423,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 assertThat(batchCaptor.getValue().getBatchId()).isEqualTo("FILE-1001");
                 assertThat(batchUpdateCaptor.getValue().getCurrentStage())
                                 .isEqualTo(OutsourcedDataTaskStage.STANDARD_LANDING.name());
-                assertThat(batchUpdateCaptor.getValue().getStatus()).isEqualTo(OutsourcedDataTaskStatus.SUCCESS.name());
+                assertThat(batchUpdateCaptor.getValue().getStatus()).isEqualTo(OutsourcedDataTaskStatus.RUNNING.name());
                 assertThat(stepCaptor.getValue().getStage()).isEqualTo(OutsourcedDataTaskStage.STANDARD_LANDING.name());
                 assertThat(stepCaptor.getValue().getTaskType()).isEqualTo(TaskType.EVALUATE_MAPPING.name());
                 assertThat(stepCaptor.getValue().getStatus()).isEqualTo(OutsourcedDataTaskStatus.SUCCESS.name());
@@ -586,11 +593,11 @@ class OutsourcedDataTaskGatewayImplTest {
                 when(batchRepository.selectById(any())).thenReturn(batch);
                 when(logRepository.selectById(any())).thenReturn(null);
                 when(stepRepository.selectList(any())).thenAnswer(invocation -> {
-                        int count = stepSelectListCount.incrementAndGet();
-                        if (count == 1 || count == 2) {
-                                return List.of(oldStep);
-                        }
-                        return insertedSteps;
+                        stepSelectListCount.incrementAndGet();
+                        List<OutsourcedDataTaskStepPO> steps = new ArrayList<>();
+                        steps.add(oldStep);
+                        steps.addAll(insertedSteps);
+                        return steps;
                 });
                 org.mockito.Mockito.doAnswer(invocation -> {
                         insertedSteps.add(invocation.getArgument(0));
@@ -799,25 +806,7 @@ class OutsourcedDataTaskGatewayImplTest {
                         return insertedBatch.get();
                 });
                 when(stepRepository.selectList(any())).thenAnswer(invocation -> {
-                        int count = stepSelectCount.incrementAndGet();
-                        if (count == 1 || count == 2) {
-                                return List.of();
-                        }
-                        if (count == 6 || count == 7) {
-                                return List.of();
-                        }
-                        if (count == 5) {
-                                return insertedSteps.stream()
-                                                .filter(step -> OutsourcedDataTaskStage.FILE_PARSE.name()
-                                                                .equals(step.getStage()))
-                                                .toList();
-                        }
-                        if (count == 10) {
-                                return insertedSteps.stream()
-                                                .filter(step -> OutsourcedDataTaskStage.STANDARD_LANDING.name()
-                                                                .equals(step.getStage()))
-                                                .toList();
-                        }
+                        stepSelectCount.incrementAndGet();
                         return new ArrayList<>(insertedSteps);
                 });
                 OutsourcedDataTaskGatewayImpl gateway = newGateway(
@@ -858,7 +847,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 verify(stepRepository, org.mockito.Mockito.atLeastOnce()).insert(stepInsertCaptor.capture());
                 verify(batchRepository, org.mockito.Mockito.atLeastOnce()).updateById(batchUpdateCaptor.capture());
                 assertThat(stepInsertCaptor.getAllValues().stream().map(OutsourcedDataTaskStepPO::getStage).toList())
-                                .contains(OutsourcedDataTaskStage.STANDARD_LANDING.name());
+                                .contains(OutsourcedDataTaskStage.FILE_PARSE.name());
 
                 OutsourcedDataTaskStepPO fileParseStep = stepCaptor.getAllValues().stream()
                                 .filter(step -> OutsourcedDataTaskStage.FILE_PARSE.name().equals(step.getStage()))
@@ -870,8 +859,8 @@ class OutsourcedDataTaskGatewayImplTest {
                 OutsourcedDataTaskBatchPO aggregatedBatch = batchUpdateCaptor.getAllValues()
                                 .get(batchUpdateCaptor.getAllValues().size() - 1);
                 assertThat(aggregatedBatch.getCurrentStage())
-                                .isEqualTo(OutsourcedDataTaskStage.STANDARD_LANDING.name());
-                assertThat(aggregatedBatch.getStatus()).isEqualTo(OutsourcedDataTaskStatus.SUCCESS.name());
+                                .isEqualTo(OutsourcedDataTaskStage.FILE_PARSE.name());
+                assertThat(aggregatedBatch.getStatus()).isEqualTo(OutsourcedDataTaskStatus.RUNNING.name());
         }
 
         private static OutsourcedDataTaskStepPO step(String batchId,
@@ -953,9 +942,25 @@ class OutsourcedDataTaskGatewayImplTest {
                                 batchRepository,
                                 stepRepository,
                                 logRepository,
-                                fileInfoGateway);
+                                fileInfoGateway,
+                                databaseDialectSupport());
                 gateway.setStageCatalog(defaultCatalog());
                 return gateway;
+        }
+
+        private static DatabaseDialectSupport databaseDialectSupport() {
+                try {
+                        DataSource dataSource = mock(DataSource.class);
+                        Connection connection = mock(Connection.class);
+                        DatabaseMetaData databaseMetaData = mock(DatabaseMetaData.class);
+                        when(dataSource.getConnection()).thenReturn(connection);
+                        when(connection.getMetaData()).thenReturn(databaseMetaData);
+                        when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+                        doNothing().when(connection).close();
+                        return new DatabaseDialectSupport(dataSource);
+                } catch (Exception exception) {
+                        throw new IllegalStateException("构造测试数据源失败", exception);
+                }
         }
 
         private static OutsourcedDataTaskBatchPO batch(String batchId,

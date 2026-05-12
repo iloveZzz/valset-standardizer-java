@@ -3,6 +3,7 @@ package com.yss.valset.task.application.service.workflow;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStage;
 import com.yss.valset.task.infrastructure.entity.workflow.OutsourcedWorkflowDefinitionPO;
@@ -30,6 +31,7 @@ public class WorkflowRuntimeCatalog {
 
     private OutsourcedWorkflowDefinitionRepository definitionRepository;
     private OutsourcedWorkflowStageRepository stageRepository;
+    private DatabaseDialectSupport databaseDialectSupport;
 
     private final AtomicReference<ActiveWorkflowDefinition> activeWorkflowDefinitionCache = new AtomicReference<>();
 
@@ -43,6 +45,18 @@ public class WorkflowRuntimeCatalog {
     @Autowired(required = false)
     public void setStageRepository(OutsourcedWorkflowStageRepository stageRepository) {
         this.stageRepository = stageRepository;
+    }
+
+    @Autowired(required = false)
+    public void setDatabaseDialectSupport(DatabaseDialectSupport databaseDialectSupport) {
+        this.databaseDialectSupport = databaseDialectSupport;
+    }
+
+    private String limitClause(Integer limit) {
+        if (limit == null || limit <= 0) {
+            return null;
+        }
+        return databaseDialectSupport == null ? "limit " + limit : databaseDialectSupport.limitClause(limit);
     }
 
     public List<StageDefinition> getStages() {
@@ -278,7 +292,7 @@ public class WorkflowRuntimeCatalog {
                         .eq(OutsourcedWorkflowDefinitionPO::getWorkflowCode, workflowCode.trim())
                         .eq(OutsourcedWorkflowDefinitionPO::getEnabled, true)
                         .orderByDesc(OutsourcedWorkflowDefinitionPO::getVersionNo)
-                        .last("limit 1"));
+                        .last(limitClause(1)));
         if (definitionPO == null) {
             return null;
         }

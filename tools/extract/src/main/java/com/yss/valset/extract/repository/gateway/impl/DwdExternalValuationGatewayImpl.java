@@ -3,6 +3,7 @@ package com.yss.valset.extract.repository.gateway.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
 import com.yss.valset.domain.model.HeaderColumnMeta;
 import com.yss.valset.domain.model.MetricRecord;
@@ -46,6 +47,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
     private final DwdExternalValuationSubjectRepository subjectRepository;
     private final DwdExternalValuationMetricRepository metricRepository;
     private final ObjectMapper objectMapper;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public void saveDwdExternalValuation(Long taskId, Long fileId, ParsedValuationData parsedValuationData) {
@@ -86,7 +88,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 Wrappers.lambdaQuery(DwdExternalValuationPO.class)
                         .eq(DwdExternalValuationPO::getFileId, fileId)
                         .orderByDesc(DwdExternalValuationPO::getId)
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         if (valuationPO == null) {
             return null;

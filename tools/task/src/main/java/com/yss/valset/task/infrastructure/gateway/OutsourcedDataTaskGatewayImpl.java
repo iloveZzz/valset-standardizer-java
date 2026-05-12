@@ -15,6 +15,7 @@ import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
 import com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStageSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
@@ -71,6 +72,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     private final OutsourcedDataTaskLogRepository logRepository;
 
     private final ValsetFileInfoGateway valsetFileInfoGateway;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     private WorkflowRuntimeCatalog stageCatalog;
 
@@ -714,7 +716,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                         .eq(OutsourcedDataTaskStepPO::getBatchId, batchId)
                         .eq(OutsourcedDataTaskStepPO::getStage, stage.name())
                         .orderByDesc(OutsourcedDataTaskStepPO::getRunNo)
-                        .last("limit 1"));
+                        .last(databaseDialectSupport.limitClause(1)));
         if (steps == null || steps.isEmpty() || steps.get(0).getRunNo() == null) {
             return 1;
         }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.parser.application.command.ParseRuleCaseUpsertCommand;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.parser.application.command.ParseRuleDefinitionUpsertCommand;
 import com.yss.valset.parser.application.command.ParseRuleProfileUpsertCommand;
 import com.yss.valset.parser.application.command.ParseRulePublishCommand;
@@ -90,6 +91,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
     private final ExternalValuationStandardizationService standardizationService;
     private final ValsetFileInfoGateway fileInfoGateway;
     private final ValuationDataParserProvider parserProvider;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     public DefaultParseRuleManagementAppService(ParseRuleProfileRepository profileRepository,
                                                 ParseRuleDefinitionRepository definitionRepository,
@@ -100,7 +102,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                                                 ParseRuleEngine parseRuleEngine,
                                                 ExternalValuationStandardizationService standardizationService,
                                                 ValsetFileInfoGateway fileInfoGateway,
-                                                ValuationDataParserProvider parserProvider) {
+                                                ValuationDataParserProvider parserProvider,
+                                                DatabaseDialectSupport databaseDialectSupport) {
         this.profileRepository = profileRepository;
         this.definitionRepository = definitionRepository;
         this.caseRepository = caseRepository;
@@ -111,6 +114,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         this.standardizationService = standardizationService;
         this.fileInfoGateway = fileInfoGateway;
         this.parserProvider = parserProvider;
+        this.databaseDialectSupport = databaseDialectSupport;
     }
 
     @Override
@@ -315,7 +319,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                         .eq(traceType != null && !traceType.isBlank(), ParseRuleTracePO::getTraceType, traceType.trim())
                         .orderByDesc(ParseRuleTracePO::getTraceTime)
                         .orderByDesc(ParseRuleTracePO::getId)
-                        .last("limit " + safeLimit))
+                        .last(databaseDialectSupport.limitClause(safeLimit)))
                 .stream()
                 .filter(Objects::nonNull)
                 .toList();

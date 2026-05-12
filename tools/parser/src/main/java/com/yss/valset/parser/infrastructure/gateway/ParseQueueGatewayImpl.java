@@ -2,6 +2,7 @@ package com.yss.valset.parser.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.parser.domain.gateway.ParseQueueGateway;
 import com.yss.valset.parser.domain.model.ParseQueue;
 import com.yss.valset.parser.domain.model.ParseQueuePage;
@@ -31,6 +32,7 @@ public class ParseQueueGatewayImpl implements ParseQueueGateway {
     private static final int DEFAULT_PAGE_SIZE = 10;
 
     private final ParseQueueRepository transferParseQueueRepository;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public Optional<ParseQueue> findById(String queueId) {
@@ -45,7 +47,7 @@ public class ParseQueueGatewayImpl implements ParseQueueGateway {
         return Optional.ofNullable(transferParseQueueRepository.selectOne(
                 Wrappers.lambdaQuery(ParseQueuePO.class)
                         .eq(ParseQueuePO::getBusinessKey, businessKey.trim())
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         )).map(this::toDomain);
     }
 
@@ -88,7 +90,7 @@ public class ParseQueueGatewayImpl implements ParseQueueGateway {
                 .orderByDesc(ParseQueuePO::getCreatedAt)
                 .orderByDesc(ParseQueuePO::getQueueId);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferParseQueueRepository.selectList(query).stream().map(this::toDomain).toList();
     }
@@ -100,7 +102,7 @@ public class ParseQueueGatewayImpl implements ParseQueueGateway {
                 .orderByAsc(ParseQueuePO::getCreatedAt)
                 .orderByAsc(ParseQueuePO::getQueueId);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferParseQueueRepository.selectList(query).stream().map(this::toDomain).toList();
     }

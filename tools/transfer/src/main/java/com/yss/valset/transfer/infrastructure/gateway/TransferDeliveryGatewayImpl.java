@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.transfer.domain.gateway.TransferDeliveryGateway;
 import com.yss.valset.transfer.domain.gateway.TransferRouteGateway;
 import com.yss.valset.transfer.domain.model.TransferDeliveryRecord;
@@ -30,6 +31,7 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
     private final TransferRouteGateway transferRouteGateway;
     private final TransferJsonMapper transferJsonMapper;
     private final TransferDeliveryRecordMapper transferDeliveryRecordMapper;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public TransferDeliveryRecord recordResult(String routeId, String transferId, TransferResult transferResult) {
@@ -98,7 +100,7 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
                 .orderByDesc(TransferDeliveryRecordPO::getDeliveredAt)
                 .orderByDesc(TransferDeliveryRecordPO::getDeliveryId);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferDeliveryRecordRepository.selectList(query)
                 .stream()

@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yss.valset.transfer.application.impl.query.DefaultTransferObjectQueryService;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
@@ -60,6 +61,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     private final TransferJsonMapper transferJsonMapper;
     private final TransferObjectMapper transferObjectMapper;
     private final TransferObjectMybatisMapper transferObjectMybatisMapper;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public Optional<TransferObject> findById(String transferId) {
@@ -72,7 +74,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         TransferObjectPO po = transferObjectRepository.selectOne(
                 Wrappers.lambdaQuery(TransferObjectPO.class)
                         .eq(TransferObjectPO::getFingerprint, fingerprint)
-                        .last("limit 1")
+                        .last(databaseDialectSupport.limitClause(1))
         );
         return Optional.ofNullable(po).map(this::toDomain).map(this::hydrateMailInfo);
     }
@@ -185,7 +187,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 .orderByDesc(TransferObjectPO::getReceivedAt)
                 .orderByDesc(TransferObjectPO::getTransferId);
         if (limit != null && limit > 0) {
-            query.last("limit " + limit);
+            query.last(databaseDialectSupport.limitClause(limit));
         }
         return transferObjectRepository.selectList(query)
                 .stream()
