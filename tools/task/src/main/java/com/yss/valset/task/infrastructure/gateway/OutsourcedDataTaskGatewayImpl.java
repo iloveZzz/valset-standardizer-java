@@ -212,14 +212,13 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         }
         LocalDateTime occurredAt = toLocalDateTime(event.getOccurredAt());
         OutsourcedDataTaskStage stage = mapStage(event.getStage());
-        OutsourcedDataTaskStatus stepStatus = mapStepStatus(event.getStage());
-        OutsourcedDataTaskStatus batchStatus = mapBatchStatus(event.getStage());
-        upsertBatch(event, batchId, stage, batchStatus, occurredAt);
+        OutsourcedDataTaskStatus status = mapParseStatus(event);
+        upsertBatch(event, batchId, stage, status, occurredAt);
         if (stage != null) {
-            upsertStep(event, batchId, stage, stepStatus, occurredAt);
+            upsertStep(event, batchId, stage, status, occurredAt);
         }
         refreshBatchAggregation(batchId, occurredAt);
-        insertLog(event, batchId, stage, occurredAt);
+        insertLog(event, batchId, stage, status, occurredAt);
     }
 
     @Override
@@ -568,15 +567,14 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     private void insertLog(ParseLifecycleEvent event,
             String batchId,
             OutsourcedDataTaskStage stage,
+            OutsourcedDataTaskStatus status,
             LocalDateTime occurredAt) {
         OutsourcedDataTaskLogPO po = new OutsourcedDataTaskLogPO();
         po.setLogId(firstText(event.getEventId(), batchId + "-" + event.getStage().name() + "-" + occurredAt));
         po.setBatchId(batchId);
         po.setStepId(stage == null ? null : currentStepId(batchId, stage));
         po.setStage(stage == null ? null : stage.name());
-        po.setLogLevel(
-                stageCatalog().resolveParseStepStatus(event.getStage()) == OutsourcedDataTaskStatus.FAILED ? "ERROR"
-                        : "INFO");
+        po.setLogLevel(status == OutsourcedDataTaskStatus.FAILED ? "ERROR" : "INFO");
         po.setMessage(firstText(event.getMessage(), event.getErrorMessage(), event.getStage().name()));
         po.setOccurredAt(occurredAt);
         po.setCreatedAt(occurredAt);
@@ -775,7 +773,8 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         }
         reconcileSequentialStepStates(steps, occurredAt);
         OutsourcedDataTaskStepPO currentStep = resolveCurrentStageStep(steps);
-        String status = aggregateBatchStatus(steps);
+        int expectedStageCount = Math.max(1, stageCatalog().stageSequence().size());
+        String status = aggregateBatchStatus(steps, expectedStageCount);
         batch.setCurrentStage(currentStep == null ? batch.getCurrentStage() : currentStep.getStage());
         batch.setStatus(status);
         batch.setProgress(resolveBatchProgress(
@@ -857,21 +856,22 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 .orElse(null);
     }
 
-    private static String aggregateBatchStatus(List<OutsourcedDataTaskStepPO> steps) {
+    private static String aggregateBatchStatus(List<OutsourcedDataTaskStepPO> steps, int expectedStageCount) {
         if (steps.stream().anyMatch(step -> OutsourcedDataTaskStatus.FAILED.name().equals(step.getStatus()))) {
             return OutsourcedDataTaskStatus.FAILED.name();
         }
         if (steps.stream().anyMatch(step -> OutsourcedDataTaskStatus.BLOCKED.name().equals(step.getStatus()))) {
             return OutsourcedDataTaskStatus.BLOCKED.name();
         }
-        if (steps.stream().anyMatch(step -> OutsourcedDataTaskStatus.RUNNING.name().equals(step.getStatus()))) {
-            return OutsourcedDataTaskStatus.RUNNING.name();
-        }
         if (steps.stream().allMatch(step -> OutsourcedDataTaskStatus.STOPPED.name().equals(step.getStatus()))) {
             return OutsourcedDataTaskStatus.STOPPED.name();
         }
-        if (steps.stream().allMatch(step -> OutsourcedDataTaskStatus.SUCCESS.name().equals(step.getStatus()))) {
+        long successCount = steps.stream().filter(step -> OutsourcedDataTaskStatus.SUCCESS.name().equals(step.getStatus())).count();
+        if (successCount >= expectedStageCount && steps.size() >= expectedStageCount) {
             return OutsourcedDataTaskStatus.SUCCESS.name();
+        }
+        if (successCount > 0) {
+            return OutsourcedDataTaskStatus.RUNNING.name();
         }
         return OutsourcedDataTaskStatus.PENDING.name();
     }
@@ -967,15 +967,29 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     }
 
     private OutsourcedDataTaskStage mapStage(ParseLifecycleStage stage) {
-        return stageCatalog().resolveParseLifecycleStage(stage);
+        if (stage == null) {
+            return null;
+        }
+        return switch (stage) {
+            case FILE_PARSE -> OutsourcedDataTaskStage.FILE_PARSE;
+            case STRUCTURE_STANDARDIZE -> OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE;
+            case STANDARD_LANDING -> OutsourcedDataTaskStage.STANDARD_LANDING;
+            case FAILED, SKIPPED -> null;
+        };
     }
 
-    private OutsourcedDataTaskStatus mapStepStatus(ParseLifecycleStage stage) {
-        return stageCatalog().resolveParseStepStatus(stage);
-    }
-
-    private OutsourcedDataTaskStatus mapBatchStatus(ParseLifecycleStage stage) {
-        return stageCatalog().resolveParseBatchStatus(stage);
+    private OutsourcedDataTaskStatus mapParseStatus(ParseLifecycleEvent event) {
+        if (event == null) {
+            return OutsourcedDataTaskStatus.PENDING;
+        }
+        if (StringUtils.hasText(event.getErrorMessage())) {
+            return OutsourcedDataTaskStatus.FAILED;
+        }
+        String skipped = attributeText(event.getAttributes(), "skipped");
+        if (StringUtils.hasText(skipped) && Boolean.parseBoolean(skipped.trim())) {
+            return OutsourcedDataTaskStatus.STOPPED;
+        }
+        return OutsourcedDataTaskStatus.SUCCESS;
     }
 
     private OutsourcedDataTaskStage mapWorkflowStage(WorkflowTaskLifecycleEvent event) {
@@ -996,9 +1010,6 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         if (status == OutsourcedDataTaskStatus.FAILED || status == OutsourcedDataTaskStatus.BLOCKED) {
             return 66;
         }
-        if (status == OutsourcedDataTaskStatus.RUNNING) {
-            return 50;
-        }
         return 0;
     }
 
@@ -1007,21 +1018,22 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             return null;
         }
         try {
-            return OutsourcedDataTaskStage.valueOf(stage.trim());
+            String normalized = stage.trim();
+            if (Objects.equals("RAW_DATA_EXTRACT", normalized)) {
+                return OutsourcedDataTaskStage.FILE_PARSE;
+            }
+            if (Objects.equals("SUBJECT_RECOGNIZE", normalized)
+                    || Objects.equals("VERIFY_ARCHIVE", normalized)
+                    || Objects.equals("DATA_PROCESSING", normalized)) {
+                return OutsourcedDataTaskStage.STANDARD_LANDING;
+            }
+            return OutsourcedDataTaskStage.valueOf(normalized);
         } catch (IllegalArgumentException ignored) {
             return null;
         }
     }
 
     private static OutsourcedDataTaskStage displayStage(OutsourcedDataTaskStage stage) {
-        if (stage == OutsourcedDataTaskStage.RAW_DATA_EXTRACT) {
-            return OutsourcedDataTaskStage.FILE_PARSE;
-        }
-        if (stage == OutsourcedDataTaskStage.SUBJECT_RECOGNIZE
-                || stage == OutsourcedDataTaskStage.VERIFY_ARCHIVE
-                || stage == OutsourcedDataTaskStage.DATA_PROCESSING) {
-            return OutsourcedDataTaskStage.STANDARD_LANDING;
-        }
         return stage;
     }
 

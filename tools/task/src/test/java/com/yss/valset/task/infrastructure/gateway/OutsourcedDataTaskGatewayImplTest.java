@@ -1,7 +1,6 @@
 package com.yss.valset.task.infrastructure.gateway;
 
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.application.event.lifecycle.WorkflowTaskLifecycleEvent;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.model.TaskStage;
@@ -81,7 +80,7 @@ class OutsourcedDataTaskGatewayImplTest {
                                 logRepository,
                                 fileInfoGateway);
                 WorkflowRuntimeCatalog stageCatalog = defaultCatalog();
-                assertThat(stageCatalog.resolveParseLifecycleStage(ParseLifecycleStage.TASK_SUCCEEDED))
+                assertThat(stageCatalog.normalizeStage("TASK_SUCCEEDED"))
                                 .isEqualTo(OutsourcedDataTaskStage.STANDARD_LANDING);
                 gateway.setStageCatalog(stageCatalog);
 
@@ -303,7 +302,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 gateway.recordParseLifecycleEvent(ParseLifecycleEvent.builder()
                                 .eventId("event-standardized")
                                 .occurredAt(Instant.parse("2026-04-30T10:00:00Z"))
-                                .stage(ParseLifecycleStage.TASK_STANDARDIZED)
+                                .stage(com.yss.valset.application.event.lifecycle.ParseLifecycleStage.STRUCTURE_STANDARDIZE)
                                 .source("parse-execution")
                                 .taskId(11L)
                                 .fileId(1001L)
@@ -550,7 +549,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 gateway.recordParseLifecycleEvent(ParseLifecycleEvent.builder()
                                 .eventId("event-file-info-repaired")
                                 .occurredAt(Instant.parse("2026-04-30T10:20:00Z"))
-                                .stage(ParseLifecycleStage.QUEUE_FILE_INFO_REPAIR_COMPLETED)
+                                .stage(com.yss.valset.application.event.lifecycle.ParseLifecycleStage.FILE_PARSE)
                                 .queueId("3001")
                                 .businessKey("transfer-3001:VALUATION_TABLE")
                                 .attributes(Map.of("fileId", 1001L))
@@ -681,7 +680,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 gateway.recordParseLifecycleEvent(ParseLifecycleEvent.builder()
                                 .eventId("event-structure-rerun")
                                 .occurredAt(Instant.parse("2026-04-30T10:30:00Z"))
-                                .stage(ParseLifecycleStage.TASK_STANDARDIZED)
+                                .stage(com.yss.valset.application.event.lifecycle.ParseLifecycleStage.STRUCTURE_STANDARDIZE)
                                 .source("parse-execution")
                                 .taskId(32L)
                                 .fileId(1002L)
@@ -830,7 +829,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 gateway.recordParseLifecycleEvent(ParseLifecycleEvent.builder()
                                 .eventId("event-started")
                                 .occurredAt(Instant.parse("2026-04-30T10:00:00Z"))
-                                .stage(ParseLifecycleStage.TASK_EXECUTION_STARTED)
+                                .stage(com.yss.valset.application.event.lifecycle.ParseLifecycleStage.FILE_PARSE)
                                 .source("parse-execution")
                                 .taskId(31L)
                                 .fileId(1001L)
@@ -841,7 +840,7 @@ class OutsourcedDataTaskGatewayImplTest {
                 gateway.recordParseLifecycleEvent(ParseLifecycleEvent.builder()
                                 .eventId("event-succeeded")
                                 .occurredAt(Instant.parse("2026-04-30T10:05:00Z"))
-                                .stage(ParseLifecycleStage.TASK_SUCCEEDED)
+                                .stage(com.yss.valset.application.event.lifecycle.ParseLifecycleStage.STANDARD_LANDING)
                                 .source("parse-execution")
                                 .taskId(31L)
                                 .fileId(1001L)

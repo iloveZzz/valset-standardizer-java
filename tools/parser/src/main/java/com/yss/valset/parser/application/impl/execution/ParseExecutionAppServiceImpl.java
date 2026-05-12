@@ -157,12 +157,12 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
                         trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
                     });
                     long persistFinishedAt = System.currentTimeMillis();
-                    publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
 
                     long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
                     taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
                     String resultPayload = buildResultPayload(parsedValuationDataFinal);
                     taskGateway.markSuccess(taskId, resultPayload);
+                    publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
                     log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
                             taskId,
                             parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),

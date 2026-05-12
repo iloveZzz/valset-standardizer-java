@@ -1,6 +1,5 @@
 package com.yss.valset.task.application.service.workflow;
 
-import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
@@ -30,8 +29,6 @@ class WorkflowRuntimeCatalogTest {
 
         assertThat(catalog.resolveWorkflowStatus(TaskStatus.SUCCESS)).isEqualTo(OutsourcedDataTaskStatus.SUCCESS);
         assertThat(catalog.resolveWorkflowStatus(TaskStatus.RUNNING)).isEqualTo(OutsourcedDataTaskStatus.RUNNING);
-        assertThat(catalog.resolveParseStepStatus(ParseLifecycleStage.TASK_STANDARDIZED))
-                .isEqualTo(OutsourcedDataTaskStatus.SUCCESS);
         assertThat(catalog.statusLabel("SUCCESS")).isEqualTo("已完成");
         assertThatThrownBy(catalog::getStages)
                 .isInstanceOf(IllegalStateException.class)
@@ -66,7 +63,7 @@ class WorkflowRuntimeCatalogTest {
         assertThat(catalog.resolveWorkflowStatus(TaskStatus.RETRYING)).isEqualTo(OutsourcedDataTaskStatus.RUNNING);
         assertThat(catalog.resolveWorkflowStage(TaskType.EXTRACT_DATA, TaskStage.EXTRACT))
                 .isEqualTo(OutsourcedDataTaskStage.FILE_PARSE);
-        assertThat(catalog.resolveParseLifecycleStage(ParseLifecycleStage.TASK_PERSISTED))
+        assertThat(catalog.normalizeStage("TASK_PERSISTED"))
                 .isEqualTo(OutsourcedDataTaskStage.STANDARD_LANDING);
         assertThat(catalog.activeWorkflowId()).isEqualTo("wf-test");
         assertThat(catalog.activeWorkflowVersionNo()).isEqualTo(2);

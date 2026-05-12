@@ -43,9 +43,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * 默认待解析任务管理服务。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DefaultParseQueueManagementAppService implements ParseQueueManagementAppService, TransferParseQueueProvisionUseCase {
