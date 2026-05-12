@@ -17,7 +17,7 @@
 - 负责将每一行原始数据落到 `t_ods_valuation_filedata`。
 - 提供 `ValuationFileDataMapper` 和原始数据查询能力。
 
-### `valset-standardizer-analysis`
+### `valset-standardizer-parser`
 
 - 负责基于 ODS 原始行数据进行估值分析。
 - 通过 `fileId` 查询 `t_ods_valuation_filedata`。
@@ -32,18 +32,13 @@
 
 ### `valset-standardizer-tools`
 
-- 作为非 DDD 通用工具库的聚合模块，统一承载 `knowledge`、`extract`、`analysis` 和 `batch` 四个子模块。
+- 作为非 DDD 通用工具库的聚合模块，统一承载 `knowledge`、`extract`、`parser` 和 `batch` 四个子模块。
 
-### `valset-standardizer-boot`
+### `yss-valset-standardizer`
 
 - 负责任务创建、任务调度和 API 编排。
 - 在解析 / 匹配任务中传递 `fileId`。
 - 将分析结果和任务状态写回任务表。
-
-### `valset-standardizer-core`
-
-- 负责领域模型、分析抽象、匹配抽象和结果对象。
-- 不直接依赖 Excel / CSV 文件读取实现。
 
 ## 核心链路
 
@@ -52,9 +47,9 @@ flowchart LR
     A["外部 Excel / CSV 文件"] --> B["文件解析任务"]
     B --> C["valset-standardizer-extract"]
     C --> D["t_ods_valuation_filedata"]
-    D --> E["valset-standardizer-analysis"]
+    D --> E["valset-standardizer-parser"]
     E --> F["ParsedValuationData"]
-    F --> G["valset-standardizer-boot 匹配任务"]
+    F --> G["yss-valset-standardizer 匹配任务"]
     G --> H["valset-standardizer-knowledge"]
     H --> I["标准科目 / 历史映射 / 匹配结果"]
 ```
@@ -64,10 +59,10 @@ flowchart LR
 ```mermaid
 sequenceDiagram
     participant U as 用户
-    participant B as valset-standardizer-boot
+    participant B as yss-valset-standardizer
     participant X as valset-standardizer-extract
     participant O as t_ods_valuation_filedata
-    participant A as valset-standardizer-analysis
+    participant A as valset-standardizer-parser
     participant K as valset-standardizer-knowledge
 
     U->>B: 创建文件解析任务
@@ -95,14 +90,29 @@ sequenceDiagram
 
 - Excel / CSV 解析逻辑不得再进入分析模块。
 - 分析模块不得直接打开外部文件。
-- 知识加载能力不得再留在 `valset-standardizer-infra`，必须由独立模块提供。
+- 知识加载能力由 `yss-valset-standardizer` 统一承载，不再拆成独立基础设施模块。
 - 原始数据表必须保留任务关联和文件关联信息。
 - 任务执行日志需要覆盖开始、选择分析器、完成、异常这几个关键节点。
 
 ## 现状
 
 - 原始提取链路已迁移至 `valset-standardizer-tools/extract`。
-- 原始数据分析链路已迁移至 `valset-standardizer-tools/analysis`。
+- 原始数据分析链路已迁移至 `valset-standardizer-tools/parser`。
 - 标准科目与映射知识加载链路已迁移至 `valset-standardizer-tools/knowledge`。
 - 批处理调度链路已迁移至 `valset-standardizer-tools/batch`。
-- `valset-standardizer-boot` 仅保留任务编排和接口层。
+- `yss-valset-standardizer` 负责任务编排、接口层和整合应用入口。
+
+## 装配模式
+
+`yss-valset-standardizer` 通过 Maven profile 生成运行时 feature 配置文件，控制解析域的装配范围：
+
+- `full`：启用解析规则管理、解析生命周期和待解析观察器。
+- `parser`：启用解析规则管理和解析生命周期，关闭待解析观察器。
+- `workflow`：关闭解析规则管理和解析生命周期，仅保留待解析观察器。
+
+示例：
+
+```bash
+./mvnw -Pparser -pl yss-valset-standardizer -am -DskipTests compile
+./mvnw -Pworkflow -pl yss-valset-standardizer -am -DskipTests compile
+```

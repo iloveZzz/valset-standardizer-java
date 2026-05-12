@@ -6,7 +6,7 @@
 
 项目已提供一套独立的 Liquibase changelog 入口：
 
-- `valset-standardizer-boot/src/main/resources/db/changelog/db.changelog-master.xml`
+- `yss-valset-standardizer/src/main/resources/db/changelog/db.changelog-master.xml`
 
 默认不自动执行，需要在启动时显式开启：
 
@@ -67,7 +67,7 @@ SQL 文件：
 
 SQL 文件：
 
-- `valset-standardizer-infra/src/main/resources/db/migration/t_dwd_external_valuation.sql`
+- `yss-valset-standardizer/src/main/resources/db/migration/t_dwd_external_valuation.sql`
 
 用途：
 
@@ -83,7 +83,7 @@ SQL 文件：
 
 SQL 文件：
 
-- `valset-standardizer-infra/src/main/resources/db/migration/t_dwd_external_valuation.sql`
+- `yss-valset-standardizer/src/main/resources/db/migration/t_dwd_external_valuation.sql`
 
 用途：
 

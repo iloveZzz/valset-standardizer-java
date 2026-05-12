@@ -30,7 +30,7 @@ docker compose -f docker/observability/docker-compose.yml ps
 
 ## 2. 启动应用并开启 tracing
 
-本项目已在 `valset-standardizer-boot` 接入 OTEL（Micrometer tracing bridge）。
+本项目已在 `yss-valset-standardizer` 接入 OTEL（Micrometer tracing bridge）。
 
 启动前建议显式设置：
 
@@ -43,7 +43,7 @@ export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://127.0.0.1:4318/v1/traces
 启动应用（示例）：
 
 ```bash
-./mvnw -pl valset-standardizer-boot spring-boot:run
+./mvnw -pl yss-valset-standardizer spring-boot:run
 ```
 
 ## 3. 触发链路
@@ -66,7 +66,7 @@ curl -s http://127.0.0.1:30066/actuator/health
 
 1. 打开 `http://127.0.0.1:3000`，登录 `admin/admin`
 2. 进入 `Explore`，数据源选择 `Tempo`
-3. 按 service name 检索：`valset-standardizer-boot`
+3. 按 service name 检索：`valset-standardizer`
 4. 查看 span 名称，确认包含：
    - `workflow.full.execute`
    - `workflow.full.extract`

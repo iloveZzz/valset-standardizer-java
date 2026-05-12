@@ -62,8 +62,8 @@
 ## 相关模块
 
 - `tools/task`：内部流程适配、分发和状态查询
-- `valset-standardizer-boot`：任务创建与应用编排
-- `valset-standardizer-core`：上下文 DTO 和任务模型
+- `yss-valset-standardizer`：任务创建与应用编排
+- `yss-valset-standardizer`：上下文 DTO、任务模型和整合应用入口
 
 ## 维护原则
 

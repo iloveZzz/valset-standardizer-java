@@ -40,7 +40,7 @@
 
 - `knowledge`
 - `extract`
-- `analysis`
+- `parser`
 - `task`
 - `batch`
 
@@ -48,7 +48,7 @@
 
 - `knowledge`：标准科目、历史映射、评估样本等知识加载
 - `extract`：原始数据抽取、标准化辅助、匹配引擎
-- `analysis`：待解析事件订阅、队列状态管理、结构化解析执行
+- `parser`：待解析事件订阅、队列状态管理、结构化解析执行
 - `task`：估值内部流程的引擎适配、阶段分发、状态查询
 - `batch`：任务调度、任务路由、执行器分派，主要支撑内部流程触发
 - `workflow`：通用 ETL 平台适配层，负责统一工作流定义、实例、状态和阶段日志，并对接 Spring Batch、DolphinScheduler、XXL-JOB 等底层实现
