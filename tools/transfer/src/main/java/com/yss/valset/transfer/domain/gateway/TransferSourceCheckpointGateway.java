@@ -26,6 +26,4 @@ public interface TransferSourceCheckpointGateway {
     TransferSourceCheckpoint saveCheckpoint(TransferSourceCheckpoint checkpoint);
 
     List<TransferSourceCheckpoint> listCheckpointsBySourceId(String sourceId, Integer limit);
-
-    List<TransferSourceCheckpointItem> listProcessedItemsBySourceId(String sourceId, Integer limit);
 }

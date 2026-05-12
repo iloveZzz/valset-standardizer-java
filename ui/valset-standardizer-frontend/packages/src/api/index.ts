@@ -21,5 +21,5 @@ export {
   triggerEtlWorkflowInstance,
 } from "./etlWorkflowInstance";
 export * from "./etlWorkflowTaskInstance";
+export * from "./transferDeliveryRecord";
 export * from "./outsourcedDataTask";
-export * from "./parseQueue";

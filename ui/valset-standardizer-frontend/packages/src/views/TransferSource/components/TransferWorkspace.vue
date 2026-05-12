@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons-vue";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
 import { YButton, YCard, YssFormily, YTable } from "@yss-ui/components";
 import TransferTypeSelector from "../../TransferShared/components/TransferTypeSelector.vue";
 import MailConditionBuilder from "../../TransferShared/components/MailConditionBuilder.vue";
@@ -38,41 +42,6 @@ const checkpointColumns = [
     title: "修改时间",
     dataIndex: "updatedAt",
     key: "updatedAt",
-    width: 170,
-  },
-];
-const checkpointItemColumns = [
-  {
-    title: "去重键",
-    dataIndex: "itemKey",
-    key: "itemKey",
-    width: 220,
-    ellipsis: true,
-  },
-  {
-    title: "名称",
-    dataIndex: "itemName",
-    key: "itemName",
-    width: 180,
-    ellipsis: true,
-  },
-  {
-    title: "引用",
-    dataIndex: "itemRef",
-    key: "itemRef",
-    width: 220,
-    ellipsis: true,
-  },
-  {
-    title: "触发",
-    dataIndex: "triggerType",
-    key: "triggerType",
-    width: 90,
-  },
-  {
-    title: "处理时间",
-    dataIndex: "processedAt",
-    key: "processedAt",
     width: 170,
   },
 ];
@@ -127,6 +96,67 @@ const actionConfig = useTableActionConfig({
       </div>
     </YCard>
 
+    <YCard class="workspace-query-card" :bordered="false" :padding="12">
+      <div class="workspace-query-bar">
+        <a-form layout="inline" class="workspace-query-form">
+          <a-form-item label="来源编码">
+            <a-input
+              v-model:value="page.query.sourceCode"
+              style="width: 240px"
+              placeholder="输入来源编码"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="来源名称">
+            <a-input
+              v-model:value="page.query.sourceName"
+              style="width: 240px"
+              placeholder="输入来源名称"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="来源类型">
+            <a-select
+              v-model:value="page.query.sourceType"
+              allow-clear
+              style="width: 168px"
+              placeholder="全部"
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option
+                v-for="item in page.sourceTypeOptions"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="启用状态">
+            <a-select
+              v-model:value="page.query.enabled"
+              style="width: 132px"
+              placeholder="全部"
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option value="true">启用</a-select-option>
+              <a-select-option value="false">停用</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item class="workspace-query-actions">
+            <YButton type="primary" @click="page.runQuery">
+              <template #icon><SearchOutlined /></template>
+              查询
+            </YButton>
+            <YButton @click="page.resetQuery">
+              <template #icon><ReloadOutlined /></template>
+              重置
+            </YButton>
+          </a-form-item>
+        </a-form>
+      </div>
+    </YCard>
+
     <div class="workspace-body">
       <YTable
         :columns="columns"
@@ -145,58 +175,7 @@ const actionConfig = useTableActionConfig({
             title="来源列表"
             :description="`总数 ${page.total} 条，点击操作按钮查看详情或维护配置。`"
             :meta="`已启用 ${page.enabledCount} 条，覆盖 ${page.sourceTypeCount} 种类型`"
-          >
-            <a-form layout="inline">
-              <a-form-item label="来源类型">
-                <a-select
-                  v-model:value="page.query.sourceType"
-                  allow-clear
-                  style="width: 168px"
-                  placeholder="全部"
-                >
-                  <a-select-option value="">全部</a-select-option>
-                  <a-select-option
-                    v-for="item in page.sourceTypeOptions"
-                    :key="item.value"
-                    :value="item.value"
-                  >
-                    {{ item.label }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item label="来源编码">
-                <a-input
-                  v-model:value="page.query.sourceCode"
-                  style="width: 190px"
-                  placeholder="输入来源编码"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="来源名称">
-                <a-input
-                  v-model:value="page.query.sourceName"
-                  style="width: 190px"
-                  placeholder="输入来源名称"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="启用状态">
-                <a-select
-                  v-model:value="page.query.enabled"
-                  style="width: 132px"
-                  placeholder="全部"
-                >
-                  <a-select-option value="">全部</a-select-option>
-                  <a-select-option value="true">启用</a-select-option>
-                  <a-select-option value="false">停用</a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item class="workspace-table-toolbar-actions">
-                <YButton type="primary" @click="page.runQuery">查询</YButton>
-                <YButton @click="page.resetQuery">重置</YButton>
-              </a-form-item>
-            </a-form>
-          </WorkspaceTableToolbar>
+          />
         </template>
 
         <template #enabled="{ row }">
@@ -330,29 +309,12 @@ const actionConfig = useTableActionConfig({
               bordered
             />
           </div>
-          <div class="detail-json-block">
-            <h4>最近处理记录</h4>
-            <a-table
-              :columns="checkpointItemColumns"
-              :data-source="page.checkpointItemRows"
-              :pagination="false"
-              size="small"
-              row-key="checkpointItemId"
-              bordered
-            />
-          </div>
         </a-spin>
 
         <div class="detail-json-block">
           <h4>连接配置</h4>
           <pre>{{
             JSON.stringify(page.selectedRow.connectionConfig || {}, null, 2)
-          }}</pre>
-        </div>
-        <div class="detail-json-block">
-          <h4>扩展信息</h4>
-          <pre>{{
-            JSON.stringify(page.selectedRow.sourceMeta || {}, null, 2)
           }}</pre>
         </div>
       </template>

@@ -42,13 +42,14 @@ public class TransferTagGatewayImpl implements TransferTagGateway {
     }
 
     @Override
-    public TransferTagPage pageTags(String tagCode, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize) {
+    public TransferTagPage pageTags(String tagCode, String tagName, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize) {
         int current = pageIndex == null || pageIndex < 0 ? 1 : pageIndex + 1;
         int size = pageSize == null || pageSize <= 0 ? 10 : pageSize;
         Page<TransferTagPO> page = transferTagRepository.selectPage(
                 new Page<>(current, size),
                 Wrappers.lambdaQuery(TransferTagPO.class)
                         .like(tagCode != null && !tagCode.isBlank(), TransferTagPO::getTagCode, tagCode)
+                        .like(tagName != null && !tagName.isBlank(), TransferTagPO::getTagName, tagName)
                         .eq(matchStrategy != null && !matchStrategy.isBlank(), TransferTagPO::getMatchStrategy, matchStrategy)
                         .eq(enabled != null, TransferTagPO::getEnabled, enabled)
                         .orderByAsc(TransferTagPO::getPriority)

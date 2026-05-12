@@ -26,7 +26,6 @@ const transferSectionIconMap: Record<string, Component> = {
   "route-config": ApartmentOutlined,
   log: SwapOutlined,
   "run-log": SwapOutlined,
-  "parse-queue": FileSearchOutlined,
   guide: FileTextOutlined,
 };
 
@@ -100,7 +99,6 @@ const transferPageComponentMap = {
   tag: () => import("@/views/TransferTag/index.vue"),
   "route-config": () => import("@/views/TransferRouteConfig/index.vue"),
   "run-log": () => import("@/views/TransferRunLog/index.vue"),
-  "parse-queue": () => import("@/views/ParseQueue/index.vue"),
   guide: () => import("@/views/TransferGuide/index.vue"),
   object: () => import("@/views/TransferObject/index.vue"),
 } as const;

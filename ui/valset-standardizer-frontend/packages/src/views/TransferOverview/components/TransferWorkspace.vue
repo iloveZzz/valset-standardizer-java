@@ -288,27 +288,53 @@ onBeforeUnmount(() => {
               <div class="overview-hero-columns">
                 <div class="overview-hero-charts-grid">
                   <YCard
-                    class="overview-mini-chart-card overview-mini-chart-card--status"
+                    class="overview-status-card"
                     :bordered="false"
-                    :padding="14"
+                    :padding="18"
                   >
-                    <div class="section-title section-title-inline">
+                    <div class="overview-status-head">
                       <div>
-                        <h3>结果分布</h3>
-                        <p>投递成功、失败与处理中占比。</p>
+                        <h3>来源统计</h3>
+                        <p>按来源类型展示已识别、已收取与已跳过统计。</p>
                       </div>
+                      <a-tag color="blue">
+                        {{ page.overviewStatusTotal }} 条
+                      </a-tag>
                     </div>
-                    <div ref="statusChartRef" class="overview-mini-chart"></div>
-                    <div class="overview-mini-summary-grid">
-                      <div
-                        v-for="item in page.overviewStatusHighlights"
-                        :key="item.key"
-                        class="overview-mini-summary-card"
-                      >
-                        <span>{{ item.label }}</span>
-                        <strong :style="{ color: item.color }">{{
-                          item.value
-                        }}</strong>
+                    <div class="overview-status-body">
+                      <div class="overview-status-source-grid">
+                        <div
+                          v-for="item in page.sourceAnalysisCards"
+                          :key="item.key"
+                          class="overview-status-source-card"
+                        >
+                          <div class="overview-status-source-head">
+                            <span class="overview-status-source-label">
+                              {{ item.sourceLabel }}
+                            </span>
+                            <a-tag color="blue">{{ item.totalCount }} 条</a-tag>
+                          </div>
+                          <div class="overview-status-chip-grid">
+                            <div
+                              v-for="statusItem in item.statusItems"
+                              :key="statusItem.key"
+                              class="overview-status-chip"
+                            >
+                              <span class="overview-status-chip-label">
+                                {{ statusItem.label }}
+                              </span>
+                              <strong :style="{ color: statusItem.color }">{{
+                                statusItem.value
+                              }}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="overview-status-chart-shell">
+                        <div
+                          ref="statusChartRef"
+                          class="overview-status-chart"
+                        ></div>
                       </div>
                     </div>
                   </YCard>
@@ -319,8 +345,8 @@ onBeforeUnmount(() => {
                   >
                     <div class="section-title section-title-inline">
                       <div>
-                        <h3>阶段态势</h3>
-                        <p>收取、识别、路由、投递阶段数量。</p>
+                        <h3>估值表解析阶段态势</h3>
+                        <p>文件解析、结构标准化、标准表落地的成功、失败与待处理统计。</p>
                       </div>
                     </div>
                     <div ref="stageChartRef" class="overview-mini-chart"></div>
@@ -333,7 +359,8 @@ onBeforeUnmount(() => {
                         class="overview-mini-summary-card"
                       >
                         <span>{{ item.label }}</span>
-                        <strong>{{ item.value }}</strong>
+                        <strong>{{ item.totalCount }}</strong>
+                        <em>成功 {{ item.successCount }} · 失败 {{ item.failedCount }} · 待处理 {{ item.pendingCount }}</em>
                       </div>
                     </div>
                   </YCard>
@@ -378,8 +405,9 @@ onBeforeUnmount(() => {
               <div class="section-title">
                 <div>
                   <h3>异常聚焦</h3>
-                  <p>优先展示最近失败的文件，便于快速定位问题。</p>
+                  <p>优先展示估值表解析任务中的异常批次，便于快速定位问题。</p>
                 </div>
+                <a-tag color="red">{{ page.anomalyCount }} 条</a-tag>
               </div>
               <div
                 v-if="page.anomalyItems.length"
@@ -391,21 +419,27 @@ onBeforeUnmount(() => {
                   class="overview-anomaly-card"
                 >
                   <div class="overview-anomaly-title">
-                    <strong>{{
-                      item.targetCode || item.transferId || item.deliveryId
-                    }}</strong>
-                    <a-tag color="red">失败</a-tag>
+                    <strong>{{ item.batchName || item.batchId }}</strong>
+                    <a-tag color="red">{{ item.statusName }}</a-tag>
                   </div>
                   <div class="overview-anomaly-meta">
-                    <span>投递：{{ item.deliveryId || "-" }}</span>
-                    <span>分拣：{{ item.transferId || "-" }}</span>
+                    <span>批次：{{ item.batchId || "-" }}</span>
+                    <span
+                      >产品：{{
+                        item.productName || item.productCode || "-"
+                      }}</span
+                    >
                   </div>
                   <div class="overview-anomaly-meta">
-                    <span>目标类型：{{ item.targetType || "-" }}</span>
-                    <span>时间：{{ item.deliveredAt }}</span>
+                    <span>责任人：{{ item.managerName || "-" }}</span>
+                    <span
+                      >阶段：{{
+                        item.currentStageName || item.currentStepName || "-"
+                      }}</span
+                    >
                   </div>
                   <div class="overview-anomaly-desc">
-                    {{ item.errorMessage || "未提供错误信息" }}
+                    {{ item.lastErrorMessage || "未提供错误信息" }}
                   </div>
                 </div>
               </div>

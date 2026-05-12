@@ -6,7 +6,6 @@ export const transferSectionOptions = [
   { label: "标签管理", value: "tag" },
   { label: "分拣路由", value: "route-config" },
   { label: "分拣对象", value: "object" },
-  { label: "待解析任务", value: "parse-queue" },
   { label: "邮件收件箱", value: "inbox" },
   { label: "运行日志", value: "run-log" },
 ] as const;

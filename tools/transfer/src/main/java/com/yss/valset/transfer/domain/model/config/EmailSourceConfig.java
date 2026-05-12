@@ -15,6 +15,8 @@ public record EmailSourceConfig(
         String password,
         String folder,
         int mailTimeRangeDays,
+        int scanBatchSize,
+        int pop3LargeMailboxThreshold,
         boolean ssl,
         boolean startTls,
         int limit,
@@ -31,20 +33,33 @@ public record EmailSourceConfig(
         String password = requiredString(config, TransferConfigKeys.PASSWORD);
         String folder = stringValue(config, TransferConfigKeys.FOLDER, "INBOX");
         int mailTimeRangeDays = Math.max(0, intValue(config, TransferConfigKeys.MAIL_TIME_RANGE_DAYS, 0));
+        int scanBatchSize = Math.max(1, intValue(config, TransferConfigKeys.MAIL_SCAN_BATCH_SIZE, 100));
+        int pop3LargeMailboxThreshold = Math.max(0, intValue(config, TransferConfigKeys.POP3_LARGE_MAILBOX_THRESHOLD, 2000));
         boolean ssl = booleanValue(config, TransferConfigKeys.SSL, protocol.endsWith("s"));
         boolean startTls = booleanValue(config, TransferConfigKeys.START_TLS, false);
         int limit = intValue(config, TransferConfigKeys.LIMIT, 0);
         int timeoutMillis = intValue(config, TransferConfigKeys.TIMEOUT_MILLIS, 30000);
         String sourceCode = source.sourceCode() == null || source.sourceCode().isBlank() ? username : source.sourceCode();
-        return new EmailSourceConfig(protocol, host, port, username, password, folder, mailTimeRangeDays, ssl, startTls, limit, timeoutMillis, sourceCode);
+        return new EmailSourceConfig(protocol, host, port, username, password, folder, mailTimeRangeDays, scanBatchSize, pop3LargeMailboxThreshold, ssl, startTls, limit, timeoutMillis, sourceCode);
     }
 
     public int effectiveLimit() {
         return limit <= 0 ? 50 : Math.min(limit, 50);
     }
 
+    public int effectiveScanBatchSize() {
+        return Math.min(Math.max(scanBatchSize, 1), 500);
+    }
+
     public boolean shouldApplyMailTimeRange() {
         return mailTimeRangeDays > 0;
+    }
+
+    public boolean isPop3LargeMailbox(int messageCount) {
+        return protocol != null
+                && protocol.startsWith("pop3")
+                && pop3LargeMailboxThreshold > 0
+                && messageCount >= pop3LargeMailboxThreshold;
     }
 
     private static String normalizeProtocol(String protocol) {

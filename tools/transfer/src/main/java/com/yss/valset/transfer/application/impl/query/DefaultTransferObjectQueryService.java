@@ -116,6 +116,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     public PageResult<TransferObjectViewDTO> pageObjects(String sourceId,
                                                          String sourceType,
                                                          String sourceCode,
+                                                         String originalName,
                                                          String status,
                                                          String deliveryStatus,
                                                          String mailId,
@@ -131,6 +132,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 sourceId,
                 sourceType,
                 sourceCode,
+                originalName,
                 normalizedStatus,
                 normalizeDeliveryStatus(deliveryStatus),
                 mailId,
@@ -183,10 +185,11 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
 
     @Override
     public TransferObjectAnalysisViewDTO analyzeObjects(String sourceId,
-                                                        String sourceType,
-                                                        String sourceCode,
-                                                        String status,
-                                                        String deliveryStatus,
+                                                         String sourceType,
+                                                         String sourceCode,
+                                                         String originalName,
+                                                         String status,
+                                                         String deliveryStatus,
                                                         String mailId,
                                                         String fingerprint,
                                                         String routeId,
@@ -194,7 +197,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                                                         String tagCode,
                                                         String tagValue) {
         String normalizedStatus = normalizeStatus(status);
-        TransferObjectAnalysis analysis = transferObjectGateway.analyzeObjects(sourceId, sourceType, sourceCode, normalizedStatus, normalizeDeliveryStatus(deliveryStatus), mailId, fingerprint, routeId, tagId, tagCode, tagValue);
+        TransferObjectAnalysis analysis = transferObjectGateway.analyzeObjects(sourceId, sourceType, sourceCode, originalName, normalizedStatus, normalizeDeliveryStatus(deliveryStatus), mailId, fingerprint, routeId, tagId, tagCode, tagValue);
         return TransferObjectAnalysisViewDTO.builder()
                 .totalCount(analysis.totalCount())
                 .taggedCount(analysis.taggedCount())

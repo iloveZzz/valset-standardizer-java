@@ -63,7 +63,7 @@ public class EmailAttachmentProcessor {
     /**
      * 将单封邮件转换成识别上下文集合。
      */
-    AttachmentExtractionResult extract(TransferSource source, EmailSourceConfig config, Message message, String mailId, int emailSequence) throws Exception {
+    AttachmentExtractionResult extract(TransferSource source, EmailSourceConfig config, Message message, String mailId, Long mailUid, Integer messageNumber, int emailSequence) throws Exception {
         MailMessageSnapshot mailSnapshot = buildMailMessageSnapshot(source, message);
         List<RecognitionContext> contexts = new ArrayList<>();
         int attachmentCount = 0;
@@ -81,6 +81,8 @@ public class EmailAttachmentProcessor {
                         mailSnapshot,
                         source == null ? null : source.sourceId(),
                         mailId,
+                        mailUid,
+                        messageNumber,
                         attachmentCount,
                         attachmentNames,
                         attachmentEntry
@@ -144,6 +146,8 @@ public class EmailAttachmentProcessor {
             MailMessageSnapshot mailSnapshot,
             String sourceId,
             String mailId,
+            Long mailUid,
+            Integer messageNumber,
             int attachmentCount,
             List<String> attachmentNames,
             AttachmentPartEntry attachmentEntry) throws Exception {
@@ -160,6 +164,8 @@ public class EmailAttachmentProcessor {
                 config,
                 mailSnapshot,
                 mailId,
+                mailUid,
+                messageNumber,
                 attachmentCount,
                 attachmentEntry,
                 fileName,
@@ -226,6 +232,8 @@ public class EmailAttachmentProcessor {
             EmailSourceConfig config,
             MailMessageSnapshot mailSnapshot,
             String mailId,
+            Long mailUid,
+            Integer messageNumber,
             int attachmentCount,
             AttachmentPartEntry attachmentEntry,
             String fileName,
@@ -236,6 +244,8 @@ public class EmailAttachmentProcessor {
             List<String> attachmentNames) {
         Map<String, Object> attrs = new LinkedHashMap<>();
         attrs.put(TransferConfigKeys.MAIL_ID, mailId);
+        attrs.put(TransferConfigKeys.MAIL_UID, mailUid);
+        attrs.put(TransferConfigKeys.MAIL_MESSAGE_NUMBER, messageNumber);
         attrs.put("messageId", mailId);
         attrs.put(TransferConfigKeys.MAIL_FROM, mailSnapshot.sender());
         attrs.put(TransferConfigKeys.MAIL_TO, mailSnapshot.recipientsTo());
@@ -302,11 +312,11 @@ public class EmailAttachmentProcessor {
             try (Folder folder = store.getFolder(config.folder())) {
                 folder.open(Folder.READ_ONLY);
                 UIDFolder uidFolder = folder instanceof UIDFolder ? (UIDFolder) folder : null;
-                Message message = resolveMessage(folder, uidFolder, transferObject.mailId(), config);
+                Map<String, Object> fileMeta = transferObject.fileMeta() == null ? Map.of() : transferObject.fileMeta();
+                Message message = resolveMessage(folder, uidFolder, transferObject.mailId(), fileMeta, config);
                 if (message == null) {
                     throw new IllegalStateException("未找到对应邮件，mailId=" + transferObject.mailId());
                 }
-                Map<String, Object> fileMeta = transferObject.fileMeta() == null ? Map.of() : transferObject.fileMeta();
                 int attachmentIndex = resolveAttachmentIndex(fileMeta);
                 String attachmentName = resolveAttachmentName(fileMeta, transferObject.originalName());
                 ResolvedAttachment resolvedAttachment = resolveTargetAttachment(message, transferObject.mailId(), attachmentIndex, attachmentName);
@@ -333,9 +343,29 @@ public class EmailAttachmentProcessor {
         return new ResolvedAttachment(bodyPart, resolvedAttachmentName);
     }
 
-    private Message resolveMessage(Folder folder, UIDFolder uidFolder, String mailId, EmailSourceConfig config) throws Exception {
+    Message resolveMessage(Folder folder, UIDFolder uidFolder, String mailId, Map<String, Object> fileMeta, EmailSourceConfig config) throws Exception {
         if (mailId == null || mailId.isBlank()) {
             return null;
+        }
+        Long mailUid = resolveMailUid(fileMeta);
+        if (uidFolder != null && mailUid != null && mailUid > 0) {
+            Message message = uidFolder.getMessageByUID(mailUid);
+            if (message != null) {
+                return message;
+            }
+        }
+        Integer messageNumber = resolveMessageNumber(fileMeta);
+        if (messageNumber != null && messageNumber > 0) {
+            Message message = folder.getMessage(messageNumber);
+            if (message != null) {
+                try {
+                    if (mailId.equals(resolveMailId(message, config, uidFolder))) {
+                        return message;
+                    }
+                } catch (Exception ignored) {
+                    // 继续退回到全量查找。
+                }
+            }
         }
         if (uidFolder != null) {
             String prefix = config.protocol() + ":" + config.folder() + ":";
@@ -379,6 +409,36 @@ public class EmailAttachmentProcessor {
             return normalizeAttachmentName(fallback);
         }
         return normalizeAttachmentName(String.valueOf(raw));
+    }
+
+    private Long resolveMailUid(Map<String, Object> fileMeta) {
+        return parseLongValue(fileMeta == null ? null : fileMeta.get(TransferConfigKeys.MAIL_UID));
+    }
+
+    private Integer resolveMessageNumber(Map<String, Object> fileMeta) {
+        return parseIntegerValue(fileMeta == null ? null : fileMeta.get(TransferConfigKeys.MAIL_MESSAGE_NUMBER));
+    }
+
+    private Long parseLongValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private Integer parseIntegerValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private String normalizeMimeType(String contentType) {

@@ -297,6 +297,7 @@ const stageFilterOptions = computed(() => [
       <div class="workspace-header-inner">
         <div class="workspace-header-copy">
           <h2>工作流实例</h2>
+          <p>查看工作流实例的运行状态、任务实例、日志等信息。</p>
         </div>
         <div class="workspace-header-actions">
           <div class="workspace-header-controls">
@@ -336,20 +337,38 @@ const stageFilterOptions = computed(() => [
                 `workflow-instance-stat-card--${card.tone}`,
                 {
                   'is-active':
-                    (card.statKey === 'TOTAL' && !String(page.query.status ?? '').trim()) ||
-                    String(page.query.status ?? '').trim().toUpperCase() === card.statKey,
+                    (card.statKey === 'TOTAL' &&
+                      !String(page.query.status ?? '').trim()) ||
+                    String(page.query.status ?? '')
+                      .trim()
+                      .toUpperCase() === card.statKey,
                 },
               ]"
               role="button"
               tabindex="0"
               :aria-pressed="
-                (card.statKey === 'TOTAL' && !String(page.query.status ?? '').trim()) ||
-                String(page.query.status ?? '').trim().toUpperCase() === card.statKey
+                (card.statKey === 'TOTAL' &&
+                  !String(page.query.status ?? '').trim()) ||
+                String(page.query.status ?? '')
+                  .trim()
+                  .toUpperCase() === card.statKey
               "
               :aria-label="`按${card.label}筛选工作流实例`"
-              @click="page.handleStatusSelect(card.statKey === 'TOTAL' ? '' : card.statKey)"
-              @keydown.enter.prevent="page.handleStatusSelect(card.statKey === 'TOTAL' ? '' : card.statKey)"
-              @keydown.space.prevent="page.handleStatusSelect(card.statKey === 'TOTAL' ? '' : card.statKey)"
+              @click="
+                page.handleStatusSelect(
+                  card.statKey === 'TOTAL' ? '' : card.statKey,
+                )
+              "
+              @keydown.enter.prevent="
+                page.handleStatusSelect(
+                  card.statKey === 'TOTAL' ? '' : card.statKey,
+                )
+              "
+              @keydown.space.prevent="
+                page.handleStatusSelect(
+                  card.statKey === 'TOTAL' ? '' : card.statKey,
+                )
+              "
             >
               <div class="workflow-instance-stat-card__head">
                 <div class="workflow-instance-stat-label">

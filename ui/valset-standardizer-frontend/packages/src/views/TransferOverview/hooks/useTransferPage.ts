@@ -1,13 +1,24 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { getJavaSpringBootQuartzApi } from "@/api";
+import {
+  getTransferDeliveryRecordSummary,
+  type TransferDeliveryRecordSummaryDTO,
+} from "@/api/transferDeliveryRecord";
+import {
+  getOutsourcedDataTaskSummary,
+  pageOutsourcedDataTasks,
+  type OutsourcedDataTaskBatchDTO,
+  type OutsourcedDataTaskStageSummaryDTO,
+  type OutsourcedDataTaskSummaryDTO,
+} from "@/api/outsourcedDataTask";
 import { unwrapMultiResult, unwrapSingleResult } from "@/utils/api-response";
+import { outsourcedDataTaskStageCatalog } from "../OutsourcedDataTask/constants";
 import { transferSectionOptions } from "../schemas/transferSchemas";
 import type {
   PageLogsParams,
   TransferObjectAnalysisViewDTO,
   TransferRuleViewDTO,
   TransferRunLogAnalysisViewDTO,
-  TransferRunLogStageAnalysisViewDTO,
   TransferRunLogViewDTO,
   TransferSourceViewDTO,
   TransferTargetViewDTO,
@@ -16,118 +27,39 @@ import type {
 const api = getJavaSpringBootQuartzApi();
 
 export const useTransferPage = () => {
-  const buildRecentDeliveries = () => [
-    {
-      id: 1,
-      fileName: "2026-04-22_资金清单.xlsx",
-      source: "本地目录",
-      target: "财务中心",
-      route: "规则-001",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-22 09:18:12",
-      snapshot: { request: { sourceType: "LOCAL_DIR" } },
-    },
-    {
-      id: 2,
-      fileName: "2026-04-22_回单.pdf",
-      source: "邮件来源",
-      target: "业务归档",
-      route: "规则-002",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-22 08:52:36",
-      snapshot: { request: { sourceType: "EMAIL" } },
-    },
-    {
-      id: 3,
-      fileName: "2026-04-21_对账单.csv",
-      source: "本地目录",
-      target: "对账平台",
-      route: "规则-001",
-      status: "FAILED",
-      deliveredAt: "2026-04-21 22:11:45",
-      snapshot: { request: { sourceType: "LOCAL_DIR" } },
-    },
-    {
-      id: 4,
-      fileName: "2026-04-21_资产明细.xlsx",
-      source: "邮件来源",
-      target: "档案中心",
-      route: "规则-003",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-21 18:03:21",
-      snapshot: { request: { sourceType: "EMAIL" } },
-    },
-    {
-      id: 5,
-      fileName: "2026-04-21_结算结果.xlsx",
-      source: "本地目录",
-      target: "财务中心",
-      route: "规则-001",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-21 15:41:09",
-      snapshot: { request: { sourceType: "LOCAL_DIR" } },
-    },
-    {
-      id: 6,
-      fileName: "2026-04-20_费用单.pdf",
-      source: "邮件来源",
-      target: "业务归档",
-      route: "规则-002",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-20 11:28:57",
-      snapshot: { request: { sourceType: "EMAIL" } },
-    },
-    {
-      id: 7,
-      fileName: "2026-04-20_销账清单.xlsx",
-      source: "本地目录",
-      target: "对账平台",
-      route: "规则-001",
-      status: "FAILED",
-      deliveredAt: "2026-04-20 09:05:34",
-      snapshot: { request: { sourceType: "LOCAL_DIR" } },
-    },
-    {
-      id: 8,
-      fileName: "2026-04-19_审批附件.zip",
-      source: "邮件来源",
-      target: "档案中心",
-      route: "规则-003",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-19 19:25:02",
-      snapshot: { request: { sourceType: "EMAIL" } },
-    },
-    {
-      id: 9,
-      fileName: "2026-04-19_明细回传.xlsx",
-      source: "本地目录",
-      target: "财务中心",
-      route: "规则-002",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-19 13:54:44",
-      snapshot: { request: { sourceType: "LOCAL_DIR" } },
-    },
-    {
-      id: 10,
-      fileName: "2026-04-18_合同扫描件.pdf",
-      source: "邮件来源",
-      target: "业务归档",
-      route: "规则-003",
-      status: "SUCCESS",
-      deliveredAt: "2026-04-18 10:07:18",
-      snapshot: { request: { sourceType: "EMAIL" } },
-    },
-  ];
-
+  const shanghaiDateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+  });
+  const formatShanghaiDateKey = (value: Date) =>
+    shanghaiDateFormatter.format(value);
+  const parseShanghaiDateKey = (value?: string) => {
+    if (!value) {
+      return "";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return String(value).slice(0, 10);
+    }
+    return formatShanghaiDateKey(date);
+  };
   const buildTrendSeries = () => {
+    const deliveryCounts = new Map<string, number>();
+    runLogRows.value.forEach((item) => {
+      const dateKey = parseShanghaiDateKey(item.createdAt);
+      if (!dateKey) {
+        return;
+      }
+      deliveryCounts.set(dateKey, (deliveryCounts.get(dateKey) ?? 0) + 1);
+    });
+
+    const today = new Date();
     const series = Array.from({ length: 30 }, (_, index) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (29 - index));
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
+      const date = new Date(today);
+      date.setDate(today.getDate() - (29 - index));
+      const label = formatShanghaiDateKey(date);
       return {
-        label: `${month}-${day}`,
-        value: 8 + ((index * 7 + 11) % 19),
+        label,
+        value: deliveryCounts.get(label) ?? 0,
       };
     });
     return series;
@@ -153,13 +85,16 @@ export const useTransferPage = () => {
   const ruleRows = ref<TransferRuleViewDTO[]>([]);
   const targets = targetRows;
   const rules = ruleRows;
-  const logs = ref<any[]>(buildRecentDeliveries());
-  const deliveryTotal = ref(logs.value.length);
+  const logs = ref<any[]>([]);
   const trendWindow = ref<3 | 7 | 30>(3);
-  const trendSeries = ref(buildTrendSeries());
   const runLogAnalysis = ref<TransferRunLogAnalysisViewDTO | null>(null);
   const objectAnalysis = ref<TransferObjectAnalysisViewDTO | null>(null);
   const runLogRows = ref<TransferRunLogViewDTO[]>([]);
+  const deliveryRecordSummary = ref<TransferDeliveryRecordSummaryDTO | null>(
+    null,
+  );
+  const outsourcedTaskSummary = ref<OutsourcedDataTaskSummaryDTO | null>(null);
+  const outsourcedTaskRows = ref<OutsourcedDataTaskBatchDTO[]>([]);
   const searchModel = reactive({
     keyword: "",
     enabledStatus: "all",
@@ -169,7 +104,21 @@ export const useTransferPage = () => {
   const targetDraft = reactive({ targetType: "EMAIL" });
   const ruleDraft = reactive({ matchStrategy: "SCRIPT" });
 
-  const deliveryCount = computed(() => deliveryTotal.value);
+  const deliveryCount = computed(() =>
+    Number(deliveryRecordSummary.value?.todayDeliveryCount ?? 0),
+  );
+  const successCount = computed(() =>
+    Number(deliveryRecordSummary.value?.todaySuccessCount ?? 0),
+  );
+  const successRate = computed(() => {
+    const rawRate = deliveryRecordSummary.value?.successRate;
+    if (rawRate !== undefined && rawRate !== null) {
+      return Number(rawRate);
+    }
+    return deliveryCount.value === 0
+      ? 0
+      : Math.round((successCount.value / deliveryCount.value) * 1000) / 10;
+  });
   const sourceCount = computed(
     () =>
       sourceRows.value.filter((item) => item.enabled !== false).length ||
@@ -187,136 +136,211 @@ export const useTransferPage = () => {
       ruleRows.value.length ||
       0,
   );
-
-  const getDeliverStage = () =>
-    runLogAnalysis.value?.stageAnalyses?.find(
-      (stage) =>
-        String(stage.runStage ?? "")
-          .trim()
-          .toUpperCase() === "DELIVER",
-    ) || null;
-
-  const getStageCount = (
-    stage: TransferRunLogStageAnalysisViewDTO | null | undefined,
-    keys: string[],
-  ) =>
-    Number(
-      (stage?.statusCounts ?? [])
-        .filter((item) =>
-          keys.includes(
-            String(item.runStatus ?? "")
-              .trim()
-              .toUpperCase(),
-          ),
-        )
-        .reduce((sum, item) => sum + Number(item.count ?? 0), 0),
-    );
-
-  const getStageAnalysis = (stageName: string) =>
-    runLogAnalysis.value?.stageAnalyses?.find(
-      (stage) =>
-        String(stage.runStage ?? "")
-          .trim()
-          .toUpperCase() === stageName,
-    ) || null;
-
-  const stageAxisNames = computed(() => [
-    "RECEIVE",
-    "INGEST",
-    "ROUTE",
-    "DELIVER",
-  ]);
-  const resolveStageAxisLabel = (stageName: string) => {
-    switch (stageName) {
-      case "RECEIVE":
-        return "收取";
-      case "INGEST":
-        return "识别";
-      case "ROUTE":
-        return "路由";
-      case "DELIVER":
-        return "投递";
-      default:
-        return stageName;
+  const formatBytes = (value: number | undefined) => {
+    const size = Number(value ?? 0);
+    if (!Number.isFinite(size) || size <= 0) {
+      return "0 B";
     }
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let current = size;
+    let unitIndex = 0;
+    while (current >= 1024 && unitIndex < units.length - 1) {
+      current /= 1024;
+      unitIndex += 1;
+    }
+    const precision = unitIndex === 0 ? 0 : current >= 10 ? 1 : 2;
+    return `${current.toFixed(precision)} ${units[unitIndex]}`;
   };
-  const stageChartRows = computed(() =>
-    stageAxisNames.value.map((stageName) => {
-      if (stageName === "RECEIVE") {
-        const total = Number(
-          runLogAnalysis.value?.totalCount ??
-            deliveryTotal.value ??
-            logs.value.length,
-        );
-        return {
-          stageName,
-          label: resolveStageAxisLabel(stageName),
-          total,
-          success: total,
-          failed: 0,
-          pending: 0,
-          processing: 0,
-        };
-      }
 
-      const stage = getStageAnalysis(stageName);
-      const statusCounts = stage?.statusCounts ?? [];
-      const countOf = (keys: string[]) =>
-        Number(
-          statusCounts
-            .filter((item) =>
-              keys.includes(
-                String(item.runStatus ?? "")
-                  .trim()
-                  .toUpperCase(),
-              ),
-            )
-            .reduce((sum, item) => sum + Number(item.count ?? 0), 0),
-        );
-
-      return {
-        stageName,
-        label: stage?.stageLabel ?? resolveStageAxisLabel(stageName),
-        total: Number(stage?.totalCount ?? 0),
-        success: countOf(["SUCCESS", "SUCCEEDED", "DONE", "COMPLETED"]),
-        failed: countOf(["FAILED", "FAIL", "ERROR"]),
-        pending: countOf(["PENDING"]),
-        processing: countOf(["RUNNING", "PROCESSING", "RETRYING"]),
-      };
-    }),
+  const parseTaskStageOrder = outsourcedDataTaskStageCatalog.map(
+    (item) => item.stage,
   );
+  const normalizeSummaryStage = (
+    item: OutsourcedDataTaskStageSummaryDTO,
+    fallbackStage: string,
+  ) => {
+    const stage = String(item.stage ?? item.step ?? fallbackStage)
+      .trim()
+      .toUpperCase();
+    const stageMeta = outsourcedDataTaskStageCatalog.find(
+      (catalogItem) =>
+        catalogItem.stage === stage ||
+        catalogItem.step === stage ||
+        catalogItem.stageName === item.stageName ||
+        catalogItem.stepName === item.stepName,
+    );
+    const totalCount = Number(item.totalCount ?? 0);
+    const runningCount = Number(item.runningCount ?? 0);
+    const failedCount = Number(item.failedCount ?? 0);
+    const pendingCount = Number(item.pendingCount ?? 0);
+    const successCount = Math.max(
+      0,
+      totalCount - runningCount - failedCount - pendingCount,
+    );
+    return {
+      key: stage || fallbackStage,
+      stage,
+      label:
+        stageMeta?.stageName ||
+        stageMeta?.stepName ||
+        item.stageName ||
+        item.stepName ||
+        fallbackStage,
+      description:
+        stageMeta?.stageDescription ||
+        stageMeta?.stepDescription ||
+        item.stageDescription ||
+        item.stepDescription ||
+        "",
+      totalCount,
+      successCount,
+      failedCount,
+      pendingCount,
+    };
+  };
+  const stageChartRows = computed(() => {
+    const sourceSummaries =
+      outsourcedTaskSummary.value?.stageCatalog?.length
+        ? outsourcedTaskSummary.value.stageCatalog
+        : outsourcedTaskSummary.value?.stepSummaries ?? [];
+    return parseTaskStageOrder.map((stage, index) => {
+      const matched = sourceSummaries.find((item) => {
+        const normalizedStage = String(item.stage ?? item.step ?? "")
+          .trim()
+          .toUpperCase();
+        return (
+          normalizedStage === stage ||
+          String(item.stageName ?? "").trim() ===
+            outsourcedDataTaskStageCatalog[index]?.stageName ||
+          String(item.stepName ?? "").trim() ===
+            outsourcedDataTaskStageCatalog[index]?.stepName
+        );
+      });
+      return normalizeSummaryStage(
+        matched ?? {
+          stage,
+          step: stage,
+          stageName: outsourcedDataTaskStageCatalog[index]?.stageName,
+          stepName: outsourcedDataTaskStageCatalog[index]?.stepName,
+          stageDescription: outsourcedDataTaskStageCatalog[index]?.stageDescription,
+          stepDescription: outsourcedDataTaskStageCatalog[index]?.stepDescription,
+        },
+        stage,
+      );
+    });
+  });
   const stageChartMax = computed(() =>
-    Math.max(...stageChartRows.value.map((item) => item.total), 1),
+    Math.max(
+      ...stageChartRows.value.map(
+        (item) => item.successCount + item.failedCount + item.pendingCount,
+      ),
+      1,
+    ),
   );
   const hasStageChartData = computed(() =>
-    stageChartRows.value.some((item) => item.total > 0),
+    stageChartRows.value.some(
+      (item) =>
+        item.totalCount > 0 ||
+        item.successCount > 0 ||
+        item.failedCount > 0 ||
+        item.pendingCount > 0,
+    ),
   );
 
-  const successCount = computed(() =>
-    getStageCount(getDeliverStage(), [
-      "SUCCESS",
-      "SUCCEEDED",
-      "DONE",
-      "COMPLETED",
-    ]),
+  const sourceAnalysisCards = computed(() =>
+    (() => {
+      const analyses = objectAnalysis.value?.sourceAnalyses ?? [];
+      const findAnalysis = (matcher: (sourceType: string) => boolean) =>
+        analyses.find((item) => matcher(String(item.sourceType ?? "")));
+      const createCard = (
+        sourceLabel: string,
+        analysis?: (typeof analyses)[number] | null,
+      ) => {
+        const statusCounts = analysis?.statusCounts ?? [];
+        const mailFolderCounts = analysis?.mailFolderCounts ?? [];
+        const countStatus = (status: string) =>
+          Number(
+            statusCounts.find(
+              (item) =>
+                String(item.status ?? "")
+                  .trim()
+                  .toUpperCase() === status,
+            )?.count ?? 0,
+          );
+        const countMailFolder = (mailFolder: string) =>
+          Number(
+            mailFolderCounts.find(
+              (item) =>
+                String(item.mailFolder ?? "")
+                  .trim()
+                  .toUpperCase() === mailFolder,
+            )?.count ?? 0,
+          );
+        return {
+          key: sourceLabel,
+          sourceLabel,
+          totalCount: Number(analysis?.totalCount ?? 0),
+          statusItems: [
+            {
+              key: `${sourceLabel}-identified`,
+              label: "已识别",
+              value: countStatus("IDENTIFIED"),
+              color: "#1677ff",
+            },
+            {
+              key: `${sourceLabel}-inbox`,
+              label: "已收取",
+              value: countMailFolder("INBOX"),
+              color: "#52c41a",
+            },
+            {
+              key: `${sourceLabel}-skipped`,
+              label: "已跳过",
+              value: countStatus("SKIPPED"),
+              color: "#ff4d4f",
+            },
+          ],
+        };
+      };
+      const emailAnalysis = findAnalysis(
+        (sourceType) => sourceType.trim().toUpperCase() === "EMAIL",
+      );
+      const httpAnalysis =
+        findAnalysis((sourceType) => {
+          const normalized = sourceType.trim().toUpperCase();
+          return normalized === "HTTP" || normalized.includes("HTTP");
+        }) ?? null;
+      return [
+        createCard("EMAIL", emailAnalysis ?? null),
+        createCard("transfer_source_http", httpAnalysis),
+      ];
+    })(),
   );
-  const failureCount = computed(() =>
-    getStageCount(getDeliverStage(), ["FAILED", "FAIL", "ERROR"]),
-  );
-  const pendingCount = computed(() =>
-    getStageCount(getDeliverStage(), ["PENDING"]),
-  );
-  const processingCount = computed(() =>
-    getStageCount(getDeliverStage(), ["RUNNING", "PROCESSING", "RETRYING"]),
-  );
-  const successRate = computed(() =>
-    deliveryCount.value === 0
-      ? 0
-      : Math.round((successCount.value / deliveryCount.value) * 1000) / 10,
-  );
-  const abnormalCount = computed(
-    () => failureCount.value + pendingCount.value + processingCount.value,
-  );
+  const overviewStatusChartItems = computed(() => {
+    const totals = sourceAnalysisCards.value.reduce(
+      (acc, card) => {
+        card.statusItems.forEach((item) => {
+          if (item.label === "已识别") {
+            acc.identified += Number(item.value ?? 0);
+          } else if (item.label === "已收取") {
+            acc.inbox += Number(item.value ?? 0);
+          } else if (item.label === "已跳过") {
+            acc.skipped += Number(item.value ?? 0);
+          }
+        });
+        return acc;
+      },
+      { identified: 0, inbox: 0, skipped: 0 },
+    );
+    const values = [
+      { name: "已识别", value: totals.identified, color: "#1677ff" },
+      { name: "已收取", value: totals.inbox, color: "#52c41a" },
+      { name: "已跳过", value: totals.skipped, color: "#ff4d4f" },
+    ];
+    return values.some((item) => item.value > 0)
+      ? values
+      : [{ name: "暂无数据", value: 1, color: "rgba(15, 23, 42, 0.12)" }];
+  });
 
   const overviewHero = computed(() => ({
     title: "分拣总览",
@@ -333,30 +357,23 @@ export const useTransferPage = () => {
       key: "delivery-total",
       label: "今日投递",
       value: deliveryCount.value,
-      description: "当前统计周期内累计投递的文件数量",
+      description: "今日统计的文件投递数量",
       tone: "primary",
     },
     {
       key: "success-rate",
       label: "成功率",
       value: `${successRate.value.toFixed(1)}%`,
-      description: "成功投递占总投递比例",
+      description: "今日成功投递占总投递比例",
       tone: "success",
     },
     {
-      key: "processing",
-      label: "处理中",
-      value: processingCount.value,
-      description: "当前仍在识别或路由中的对象",
-      tone: "warning",
-    },
-    {
-      key: "abnormal",
-      label: "异常",
-      value: abnormalCount.value,
-      description: "失败、待处理和重试中的对象数",
-      tone: "danger",
-    },
+      key: "receive-size",
+      label: "收取文件大小统计",
+      value: formatBytes(page.objectSizeAnalysis.totalSizeBytes)+"",
+      description: `共 ${page.objectSizeAnalysis.totalCount} 个文件， 按后缀统计展示`,
+      tone: "success",
+    }
   ]);
 
   const pipelineCards = computed(() => [
@@ -385,35 +402,46 @@ export const useTransferPage = () => {
       key: "delivery",
       label: "投递健康",
       value: `${successCount.value}/${deliveryCount.value}`,
-      description: "成功投递与总投递的比例关系",
+      description: "今日成功投递与总投递的比例关系",
       tone: successRate.value >= 95 ? "success" : "warning",
     },
   ]);
 
+  const isAbnormalOutsourcedTask = (status?: string) => {
+    const normalizedStatus = String(status ?? "")
+      .trim()
+      .toUpperCase();
+    return ["FAILED", "BLOCKED"].includes(normalizedStatus);
+  };
   const anomalyItems = computed(() =>
-    logs.value
-      .filter((item) => {
-        const status = String(item.executeStatus ?? "")
-          .trim()
-          .toUpperCase();
-        return (
-          status === "FAILED" ||
-          status === "FAIL" ||
-          status === "ERROR" ||
-          Boolean(item.errorMessage)
-        );
-      })
+    outsourcedTaskRows.value
+      .filter((item) => isAbnormalOutsourcedTask(item.status))
       .slice(0, 4)
       .map((item, index) => ({
-        key: `${item.deliveryId ?? item.transferId ?? index}`,
-        title: item.executeStatusLabel || item.executeStatus || "失败",
-        deliveryId: item.deliveryId,
-        transferId: item.transferId,
-        targetCode: item.targetCode,
-        targetType: item.targetType,
-        errorMessage: item.errorMessage,
-        deliveredAt: item.deliveredAt,
+        key: `${item.batchId ?? index}`,
+        batchId: item.batchId,
+        batchName: item.batchName || item.originalFileName || item.batchId,
+        productCode: item.productCode,
+        productName: item.productName,
+        managerName: item.managerName,
+        status: item.status,
+        statusName: item.statusName || item.status || "异常",
+        currentStageName: item.currentStageName || item.currentStepName,
+        currentStepName: item.currentStepName || item.currentStageName,
+        originalFileName: item.originalFileName,
+        startedAt: item.startedAt,
+        lastErrorMessage: item.lastErrorMessage || "未提供错误信息",
       })),
+  );
+  const anomalyCount = computed(
+    () =>
+      Number(
+        outsourcedTaskSummary.value?.failedCount ??
+          outsourcedTaskRows.value.filter((item) =>
+            isAbnormalOutsourcedTask(item.status),
+          ).length ??
+          0,
+      ),
   );
 
   const overviewMetrics = computed(() => [
@@ -421,7 +449,7 @@ export const useTransferPage = () => {
       key: "delivery",
       label: "文件投递个数",
       value: deliveryCount.value,
-      description: "当前统计周期内累计投递的文件数量",
+      description: "今日统计的文件投递数量",
     },
     {
       key: "source",
@@ -442,6 +470,23 @@ export const useTransferPage = () => {
       description: "已启用并参与匹配的分拣规则数量",
     },
   ]);
+
+  const overviewStatusTotal = computed(() =>
+    Number(
+      sourceAnalysisCards.value.reduce(
+        (sum, item) => sum + Number(item.totalCount ?? 0),
+        0,
+      ),
+    ),
+  );
+
+  const objectSizeAnalysis = computed(() => ({
+    totalCount: Number(objectAnalysis.value?.sizeAnalysis?.totalCount ?? 0),
+    totalSizeBytes: Number(
+      objectAnalysis.value?.sizeAnalysis?.totalSizeBytes ?? 0,
+    ),
+    extensionCounts: objectAnalysis.value?.sizeAnalysis?.extensionCounts ?? [],
+  }));
 
   const objectSummaryCards = computed(() => [
     {
@@ -467,6 +512,7 @@ export const useTransferPage = () => {
     },
   ]);
 
+  const trendSeries = computed(() => buildTrendSeries());
   const trendData = computed(() => {
     const startIndex = Math.max(
       0,
@@ -578,46 +624,6 @@ export const useTransferPage = () => {
         ],
   }));
 
-  const deliveryStatusItems = computed(() => {
-    const counts = new Map<string, number>();
-    logs.value.forEach((item) => {
-      const status = String(item.executeStatus ?? "")
-        .trim()
-        .toUpperCase();
-      if (!status) {
-        return;
-      }
-      counts.set(status, (counts.get(status) ?? 0) + 1);
-    });
-    const resolveCount = (keys: string[]) =>
-      keys.reduce((sum, key) => sum + Number(counts.get(key) ?? 0), 0);
-    return [
-      {
-        name: "成功",
-        value: resolveCount(["SUCCESS", "SUCCEEDED", "DONE", "COMPLETED"]),
-        color: "#52c41a",
-      },
-      {
-        name: "失败",
-        value: resolveCount(["FAILED", "FAIL", "ERROR"]),
-        color: "#ff4d4f",
-      },
-      {
-        name: "待处理",
-        value: resolveCount(["PENDING"]),
-        color: "#faad14",
-      },
-      {
-        name: "处理中",
-        value: resolveCount(["RUNNING", "PROCESSING", "RETRYING"]),
-        color: "#1677ff",
-      },
-    ];
-  });
-  const hasDeliveryStatusData = computed(() =>
-    deliveryStatusItems.value.some((item) => item.value > 0),
-  );
-
   const overviewStatusChartOption = computed(() => ({
     tooltip: {
       trigger: "item",
@@ -637,7 +643,7 @@ export const useTransferPage = () => {
     },
     series: [
       {
-        name: "投递结果",
+        name: "来源状态",
         type: "pie",
         radius: ["62%", "78%"],
         center: ["50%", "43%"],
@@ -653,23 +659,13 @@ export const useTransferPage = () => {
           borderColor: "#fff",
           borderWidth: 2,
         },
-        data: hasDeliveryStatusData.value
-          ? deliveryStatusItems.value.map((item) => ({
-              name: item.name,
-              value: item.value,
-              itemStyle: {
-                color: item.color,
-              },
-            }))
-          : [
-              {
-                name: "暂无数据",
-                value: 1,
-                itemStyle: {
-                  color: "rgba(15, 23, 42, 0.12)",
-                },
-              },
-            ],
+        data: overviewStatusChartItems.value.map((item) => ({
+          name: item.name,
+          value: item.value,
+          itemStyle: {
+            color: item.color,
+          },
+        })),
       },
     ],
     graphic: [
@@ -681,7 +677,7 @@ export const useTransferPage = () => {
           {
             type: "text",
             style: {
-              text: "总投递",
+              text: "总计",
               x: 0,
               y: -16,
               fill: "rgba(15, 23, 42, 0.68)",
@@ -692,7 +688,7 @@ export const useTransferPage = () => {
           {
             type: "text",
             style: {
-              text: String(deliveryCount.value),
+              text: String(overviewStatusTotal.value),
               x: 0,
               y: 16,
               fill: "#0f172a",
@@ -705,20 +701,15 @@ export const useTransferPage = () => {
       },
     ],
   }));
-  const overviewStatusHighlights = computed(() =>
-    deliveryStatusItems.value.map((item) => ({
-      key: item.name,
-      label: item.name,
-      value: item.value,
-      color: item.color,
-    })),
-  );
-
   const overviewStageHighlights = computed(() =>
     stageChartRows.value.map((item) => ({
-      key: item.stageName,
+      key: item.key,
       label: item.label,
-      value: item.total,
+      description: item.description,
+      totalCount: item.totalCount,
+      successCount: item.successCount,
+      failedCount: item.failedCount,
+      pendingCount: item.pendingCount,
     })),
   );
 
@@ -801,9 +792,11 @@ export const useTransferPage = () => {
           color: "#0f172a",
           fontWeight: 700,
           formatter: (params: { dataIndex: number }) =>
-            String(stageChartRows.value[params.dataIndex]?.total ?? ""),
+            String(
+              stageChartRows.value[params.dataIndex]?.successCount ?? "",
+            ),
         },
-        data: stageChartRows.value.map((item) => item.success),
+        data: stageChartRows.value.map((item) => item.successCount),
       },
       {
         name: "失败",
@@ -814,7 +807,7 @@ export const useTransferPage = () => {
           borderRadius: [0, 6, 6, 0],
           color: "#ff4d4f",
         },
-        data: stageChartRows.value.map((item) => item.failed),
+        data: stageChartRows.value.map((item) => item.failedCount),
       },
       {
         name: "待处理",
@@ -825,25 +818,7 @@ export const useTransferPage = () => {
           borderRadius: [0, 6, 6, 0],
           color: "#faad14",
         },
-        data: stageChartRows.value.map((item) => item.pending),
-      },
-      {
-        name: "处理中",
-        type: "bar",
-        stack: "total",
-        barWidth: 14,
-        itemStyle: {
-          borderRadius: [0, 6, 6, 0],
-          color: "#1677ff",
-        },
-        label: {
-          show: false,
-          position: "right",
-          color: "rgba(15, 23, 42, 0.56)",
-          formatter: (params: { dataIndex: number }) =>
-            String(stageChartRows.value[params.dataIndex]?.total ?? ""),
-        },
-        data: stageChartRows.value.map((item) => item.processing),
+        data: stageChartRows.value.map((item) => item.pendingCount),
       },
     ],
     graphic: hasStageChartData.value
@@ -854,7 +829,7 @@ export const useTransferPage = () => {
             left: "center",
             top: "middle",
             style: {
-              text: "暂无阶段日志",
+              text: "暂无解析任务统计",
               fill: "rgba(15, 23, 42, 0.46)",
               fontSize: 13,
               textAlign: "center",
@@ -900,16 +875,47 @@ export const useTransferPage = () => {
 
   const mapRunLogPageQuery = (): PageLogsParams => ({
     pageIndex: 0,
-    pageSize: 6,
+    pageSize: 1000,
+    runStage: "DELIVER",
   });
 
   const loadOverviewRunLogs = async () => {
     try {
       const res = await api.pageLogs(mapRunLogPageQuery());
       runLogRows.value = res?.data ?? [];
+      logs.value = runLogRows.value.map((item, index) => ({
+        id: item.runLogId || `${index}`,
+        fileName: item.originalName || item.transferId || item.runLogId || "-",
+        source: item.sourceName || item.sourceCode || item.sourceType || "-",
+        target: item.targetName || item.routeName || "-",
+        route: item.routeName || item.routeId || "-",
+        status: item.runStatus || "UNKNOWN",
+        deliveredAt: item.createdAt || "",
+        snapshot: {
+          request: {
+            sourceId: item.sourceId,
+            sourceCode: item.sourceCode,
+            sourceName: item.sourceName,
+            sourceType: item.sourceType,
+            transferId: item.transferId,
+            routeId: item.routeId,
+            triggerType: item.triggerType,
+          },
+        },
+        deliveryId: item.runLogId,
+        transferId: item.transferId,
+        routeId: item.routeId,
+        targetCode: item.routeName || item.routeId,
+        targetType: item.sourceType,
+        executeStatus: item.runStatus,
+        executeStatusLabel: item.runStatusLabel || item.runStatus || "未知",
+        errorMessage: item.errorMessage,
+        createdAt: item.createdAt,
+      }));
     } catch (error) {
       console.error("加载总览运行日志失败:", error);
       runLogRows.value = [];
+      logs.value = [];
     }
   };
 
@@ -922,6 +928,10 @@ export const useTransferPage = () => {
         analysisResult,
         objectAnalysisResult,
         runLogsPage,
+        outsourcedTaskSummaryResult,
+        outsourcedTaskFailedPageResult,
+        outsourcedTaskBlockedPageResult,
+        deliverySummaryResult,
       ] = await Promise.all([
         api.listSources(),
         api.listTargets(),
@@ -929,25 +939,78 @@ export const useTransferPage = () => {
         api.analyzeLogs(),
         api.analyzeObjects(),
         api.pageLogs(mapRunLogPageQuery()),
+        getOutsourcedDataTaskSummary(),
+        pageOutsourcedDataTasks({
+          status: "FAILED",
+          pageIndex: 1,
+          pageSize: 10,
+        }),
+        pageOutsourcedDataTasks({
+          status: "BLOCKED",
+          pageIndex: 1,
+          pageSize: 10,
+        }),
+        getTransferDeliveryRecordSummary().catch(() => null),
       ]);
 
       sourceRows.value = unwrapMultiResult(sources);
       targetRows.value = unwrapMultiResult(targets);
       ruleRows.value = unwrapMultiResult(rules);
-      logs.value = buildRecentDeliveries();
-      deliveryTotal.value = logs.value.length;
-      trendSeries.value = buildTrendSeries();
 
       const analysis = unwrapSingleResult(analysisResult);
       runLogAnalysis.value = analysis ?? null;
       objectAnalysis.value = unwrapSingleResult(objectAnalysisResult) ?? null;
       runLogRows.value = runLogsPage?.data ?? [];
+      outsourcedTaskSummary.value =
+        unwrapSingleResult(outsourcedTaskSummaryResult) ?? null;
+      outsourcedTaskRows.value = [
+        ...(outsourcedTaskFailedPageResult?.data ?? []),
+        ...(outsourcedTaskBlockedPageResult?.data ?? []),
+      ].sort((left, right) => {
+        const leftTime = new Date(left.startedAt ?? "").getTime();
+        const rightTime = new Date(right.startedAt ?? "").getTime();
+        return (Number.isNaN(rightTime) ? 0 : rightTime) -
+          (Number.isNaN(leftTime) ? 0 : leftTime);
+      });
+      deliveryRecordSummary.value =
+        unwrapSingleResult(deliverySummaryResult) ?? null;
+      logs.value = runLogRows.value.map((item, index) => ({
+        id: item.runLogId || `${index}`,
+        fileName: item.originalName || item.transferId || item.runLogId || "-",
+        source: item.sourceName || item.sourceCode || item.sourceType || "-",
+        target: item.targetName || item.routeName || "-",
+        route: item.routeName || item.routeId || "-",
+        status: item.runStatus || "UNKNOWN",
+        deliveredAt: item.createdAt || "",
+        snapshot: {
+          request: {
+            sourceId: item.sourceId,
+            sourceCode: item.sourceCode,
+            sourceName: item.sourceName,
+            sourceType: item.sourceType,
+            transferId: item.transferId,
+            routeId: item.routeId,
+            triggerType: item.triggerType,
+          },
+        },
+        deliveryId: item.runLogId,
+        transferId: item.transferId,
+        routeId: item.routeId,
+        targetCode: item.routeName || item.routeId,
+        targetType: item.sourceType,
+        executeStatus: item.runStatus,
+        executeStatusLabel: item.runStatusLabel || item.runStatus || "未知",
+        errorMessage: item.errorMessage,
+        createdAt: item.createdAt,
+      }));
     } catch (error) {
       console.error("加载分拣总览数据失败:", error);
-      logs.value = buildRecentDeliveries();
-      trendSeries.value = buildTrendSeries();
+      logs.value = [];
       runLogAnalysis.value = null;
       objectAnalysis.value = null;
+      deliveryRecordSummary.value = null;
+      outsourcedTaskSummary.value = null;
+      outsourcedTaskRows.value = [];
       await loadOverviewRunLogs();
     } finally {
       loading.value = false;
@@ -977,8 +1040,12 @@ export const useTransferPage = () => {
     trendChartOption,
     overviewStatusChartOption,
     overviewStageChartOption,
-    overviewStatusHighlights,
+    overviewStatusTotal,
+    sourceAnalysisCards,
     overviewStageHighlights,
+    anomalyCount,
+    objectSizeAnalysis,
+    formatBytes,
     setTrendWindow,
     searchModel,
     targetDraft,

@@ -1,7 +1,6 @@
 package com.yss.valset.transfer.application.impl.management;
 
 import com.yss.valset.transfer.application.command.TransferSourceUpsertCommand;
-import com.yss.valset.transfer.application.dto.TransferSourceCheckpointItemViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceCheckpointViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceMutationResponse;
 import com.yss.valset.transfer.application.dto.TransferSourceViewDTO;
@@ -13,7 +12,6 @@ import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
 import com.yss.valset.transfer.domain.model.SourceType;
 import com.yss.valset.transfer.domain.model.TransferSource;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpoint;
-import com.yss.valset.transfer.domain.model.TransferSourceCheckpointItem;
 import com.yss.valset.transfer.domain.model.TransferTriggerType;
 import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
 import com.yss.valset.transfer.application.port.TransferJobScheduler;
@@ -291,14 +289,6 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 .toList();
     }
 
-    @Override
-    public List<TransferSourceCheckpointItemViewDTO> listCheckpointItems(String sourceId, Integer limit) {
-        return transferSourceCheckpointGateway.listProcessedItemsBySourceId(sourceId, limit)
-                .stream()
-                .map(this::toCheckpointItemView)
-                .toList();
-    }
-
     private List<MultipartFile> normalizeUploadFiles(List<MultipartFile> files) {
         if (files == null) {
             return List.of();
@@ -514,28 +504,6 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
                 .checkpointMeta(checkpoint.checkpointMeta())
                 .createdAt(toLocalDateTime(checkpoint.createdAt()))
                 .updatedAt(toLocalDateTime(checkpoint.updatedAt()))
-                .build();
-    }
-
-    private TransferSourceCheckpointItemViewDTO toCheckpointItemView(TransferSourceCheckpointItem item) {
-        if (item == null) {
-            return null;
-        }
-        return TransferSourceCheckpointItemViewDTO.builder()
-                .checkpointItemId(item.checkpointItemId())
-                .sourceId(item.sourceId())
-                .sourceType(item.sourceType())
-                .itemKey(item.itemKey())
-                .itemRef(item.itemRef())
-                .itemName(item.itemName())
-                .itemSize(item.itemSize())
-                .itemMimeType(item.itemMimeType())
-                .itemFingerprint(item.itemFingerprint())
-                .itemMeta(item.itemMeta())
-                .triggerType(item.triggerType())
-                .processedAt(toLocalDateTime(item.processedAt()))
-                .createdAt(toLocalDateTime(item.createdAt()))
-                .updatedAt(toLocalDateTime(item.updatedAt()))
                 .build();
     }
 

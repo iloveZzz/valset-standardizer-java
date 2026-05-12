@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { YButton, YCard, YTable, YssFormily } from "@yss-ui/components";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons-vue";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
 import TransferTypeSelector from "../../TransferShared/components/TransferTypeSelector.vue";
 import TransferTemplateDialog from "../../TransferShared/components/TransferTemplateDialog.vue";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
@@ -64,6 +68,71 @@ const actionConfig = useTableActionConfig({
       </div>
     </YCard>
 
+    <YCard class="workspace-query-card" :bordered="false" :padding="12">
+      <div class="workspace-query-bar">
+        <a-form layout="inline" class="workspace-query-form">
+          <a-form-item label="目标编码">
+            <a-input
+              v-model:value="page.query.targetCode"
+              style="width: 240px"
+              size="small"
+              placeholder="输入目标编码"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="目标名称">
+            <a-input
+              v-model:value="page.query.targetName"
+              style="width: 240px"
+              size="small"
+              placeholder="输入目标名称"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="目标类型">
+            <a-select
+              v-model:value="page.query.targetType"
+              allow-clear
+              style="width: 168px"
+              size="small"
+              placeholder="全部"
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option
+                v-for="item in page.targetTypeOptions"
+                :key="item.value"
+                :value="item.value"
+              >
+                {{ item.label }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="启用状态">
+            <a-select
+              v-model:value="page.query.enabled"
+              style="width: 132px"
+              size="small"
+              placeholder="全部"
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option value="true">启用</a-select-option>
+              <a-select-option value="false">停用</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item class="workspace-query-actions">
+            <YButton size="small" type="primary" @click="page.runQuery">
+              <template #icon><SearchOutlined /></template>
+              查询
+            </YButton>
+            <YButton size="small" @click="page.resetQuery">
+              <template #icon><ReloadOutlined /></template>
+              重置
+            </YButton>
+          </a-form-item>
+        </a-form>
+      </div>
+    </YCard>
+
     <div class="workspace-body">
       <YTable
         :columns="columns"
@@ -82,50 +151,7 @@ const actionConfig = useTableActionConfig({
             title="目标列表"
             :description="`总数 ${page.total} 条，点击操作按钮查看详情或维护配置。`"
             :meta="`已启用 ${page.enabledCount} 条，覆盖 ${page.targetTypeCount} 种类型`"
-          >
-            <a-form layout="inline" class="workspace-table-toolbar-form">
-              <a-form-item label="目标类型">
-                <a-select
-                  v-model:value="page.query.targetType"
-                  allow-clear
-                  style="width: 168px"
-                  placeholder="全部"
-                >
-                  <a-select-option value="">全部</a-select-option>
-                  <a-select-option
-                    v-for="item in page.targetTypeOptions"
-                    :key="item.value"
-                    :value="item.value"
-                  >
-                    {{ item.label }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item label="目标编码">
-                <a-input
-                  v-model:value="page.query.targetCode"
-                  style="width: 190px"
-                  placeholder="输入目标编码"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="启用状态">
-                <a-select
-                  v-model:value="page.query.enabled"
-                  style="width: 132px"
-                  placeholder="全部"
-                >
-                  <a-select-option value="">全部</a-select-option>
-                  <a-select-option value="true">启用</a-select-option>
-                  <a-select-option value="false">停用</a-select-option>
-                </a-select>
-              </a-form-item>
-              <a-form-item class="workspace-table-toolbar-actions">
-                <YButton type="primary" @click="page.runQuery">查询</YButton>
-                <YButton @click="page.resetQuery">重置</YButton>
-              </a-form-item>
-            </a-form>
-          </WorkspaceTableToolbar>
+          />
         </template>
 
         <template #enabled="{ row }">

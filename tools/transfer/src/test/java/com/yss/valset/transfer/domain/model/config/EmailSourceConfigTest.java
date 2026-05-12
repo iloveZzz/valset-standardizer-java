@@ -33,6 +33,8 @@ class EmailSourceConfigTest {
         assertThat(config.protocol()).isEqualTo("pop3");
         assertThat(config.port()).isEqualTo(110);
         assertThat(config.mailTimeRangeDays()).isZero();
+        assertThat(config.effectiveScanBatchSize()).isEqualTo(100);
+        assertThat(config.pop3LargeMailboxThreshold()).isEqualTo(2000);
         assertThat(config.ssl()).isFalse();
         assertThat(config.effectiveLimit()).isEqualTo(50);
     }
@@ -59,6 +61,7 @@ class EmailSourceConfigTest {
         assertThat(config.protocol()).isEqualTo("pop3s");
         assertThat(config.port()).isEqualTo(995);
         assertThat(config.mailTimeRangeDays()).isZero();
+        assertThat(config.effectiveScanBatchSize()).isEqualTo(100);
         assertThat(config.ssl()).isTrue();
     }
 

@@ -187,61 +187,56 @@ const actionConfig = useTableActionConfig({
                   </div>
                 </YCard>
               </div>
-              <div class="analysis-card-shell analysis-card-shell--static">
-                <YCard
-                  class="analysis-card workspace-size-card"
-                  :bordered="false"
-                  :padding="18"
-                >
-                  <div class="analysis-card-header">
-                    <div>
-                      <div class="analysis-card-label">
-                        收取文件大小统计：{{
-                          page.formatBytes(
-                            page.analysis.sizeAnalysis.totalSizeBytes,
-                          )
-                        }}
-                      </div>
-                      <div class="analysis-card-desc">
-                        共
-                        {{ page.analysis.sizeAnalysis.totalCount }}
-                        个文件，按后缀统计展示
-                      </div>
-                    </div>
-                    <a-tag color="blue"
-                      >{{ page.analysis.sizeAnalysis.totalCount }} 条</a-tag
-                    >
-                  </div>
-                  <div
-                    class="analysis-card-status-list analysis-card-status-list--nowrap"
-                  >
-                    <span
-                      v-for="extensionItem in page.analysis.sizeAnalysis
-                        .extensionCounts"
-                      :key="
-                        extensionItem.extension || extensionItem.extensionLabel
-                      "
-                      class="analysis-status-chip analysis-status-chip--default"
-                    >
-                      <span class="analysis-status-chip-label">
-                        {{ extensionItem.extensionLabel }}
-                      </span>
-                      <span class="analysis-status-chip-value">
-                        {{ extensionItem.count }}
-                      </span>
-                    </span>
-                    <div
-                      v-if="!page.analysis.sizeAnalysis.extensionCounts.length"
-                      class="analysis-card-empty"
-                    >
-                      当前筛选下暂无后缀统计
-                    </div>
-                  </div>
-                </YCard>
-              </div>
             </div>
           </div>
         </a-spin>
+      </div>
+    </YCard>
+
+    <YCard class="workspace-query-card" :bordered="false" :padding="12">
+      <div class="workspace-query-bar">
+        <a-form layout="inline" class="workspace-query-form">
+          <a-form-item label="文件状态">
+            <a-select
+              v-model:value="page.query.status"
+              style="width: 180px"
+              size="small"
+              placeholder="全部"
+              allow-clear
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option value="PENDING">待处理</a-select-option>
+              <a-select-option value="RECEIVED">已收取</a-select-option>
+              <a-select-option value="IDENTIFIED">已识别</a-select-option>
+              <a-select-option value="ROUTED">已路由</a-select-option>
+              <a-select-option value="DELIVERING">投递中</a-select-option>
+              <a-select-option value="DELIVERED">已投递</a-select-option>
+              <a-select-option value="ARCHIVED">已归档</a-select-option>
+              <a-select-option value="SKIPPED">已跳过</a-select-option>
+              <a-select-option value="QUARANTINED">已隔离</a-select-option>
+              <a-select-option value="FAILED">失败</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="附件名称">
+            <a-input
+              v-model:value="page.query.originalName"
+              style="width: 260px"
+              size="small"
+              placeholder="输入附件名称"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item class="workspace-query-actions">
+            <YButton size="small" type="primary" @click="page.runQuery">
+              <template #icon><SearchOutlined /></template>
+              查询
+            </YButton>
+            <YButton size="small" @click="page.resetQuery">
+              <template #icon><ReloadOutlined /></template>
+              重置
+            </YButton>
+          </a-form-item>
+        </a-form>
       </div>
     </YCard>
 
@@ -311,14 +306,6 @@ const actionConfig = useTableActionConfig({
                   v-model:value="page.query.sourceCode"
                   style="width: 180px"
                   placeholder="来源编码"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="文件状态">
-                <a-input
-                  v-model:value="page.query.status"
-                  style="width: 160px"
-                  placeholder="例如 SUCCESS"
                   allow-clear
                 />
               </a-form-item>

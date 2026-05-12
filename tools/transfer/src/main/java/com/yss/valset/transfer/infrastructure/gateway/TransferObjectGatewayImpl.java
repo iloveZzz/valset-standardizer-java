@@ -81,6 +81,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     public TransferObjectPage pageObjects(String sourceId,
                                           String sourceType,
                                           String sourceCode,
+                                          String originalName,
                                           String status,
                                           String deliveryStatus,
                                           String mailId,
@@ -104,6 +105,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                         .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
                         .eq(sourceType != null && !sourceType.isBlank(), TransferObjectPO::getSourceType, sourceType)
                         .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
+                        .like(originalName != null && !originalName.isBlank(), TransferObjectPO::getOriginalName, originalName)
                         .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
                         .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                         .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
@@ -196,6 +198,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     public TransferObjectAnalysis analyzeObjects(String sourceId,
                                                  String sourceType,
                                                  String sourceCode,
+                                                 String originalName,
                                                  String status,
                                                  String deliveryStatus,
                                                  String mailId,
@@ -211,10 +214,11 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         String deliveryFilterSql = buildDeliveryFilterSql(deliveryStatus);
         List<TransferObject> objects = transferObjectRepository.selectList(
                         Wrappers.lambdaQuery(TransferObjectPO.class)
-                                .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
-                                .eq(sourceType != null && !sourceType.isBlank(), TransferObjectPO::getSourceType, sourceType)
-                                .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
-                                .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
+                        .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
+                        .eq(sourceType != null && !sourceType.isBlank(), TransferObjectPO::getSourceType, sourceType)
+                        .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
+                        .like(originalName != null && !originalName.isBlank(), TransferObjectPO::getOriginalName, originalName)
+                        .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
                                 .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                                 .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                                 .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)

@@ -26,9 +26,10 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
     private final TransferRuleMapper transferRuleMapper;
 
     @Override
-    public List<RuleDefinition> listRules(String ruleCode, Boolean enabled, Integer limit) {
+    public List<RuleDefinition> listRules(String ruleCode, String ruleName, Boolean enabled, Integer limit) {
         var query = Wrappers.lambdaQuery(TransferRulePO.class)
                 .like(ruleCode != null && !ruleCode.isBlank(), TransferRulePO::getRuleCode, ruleCode)
+                .like(ruleName != null && !ruleName.isBlank(), TransferRulePO::getRuleName, ruleName)
                 .eq(enabled != null, TransferRulePO::getEnabled, enabled)
                 .orderByAsc(TransferRulePO::getPriority)
                 .orderByAsc(TransferRulePO::getRuleId);

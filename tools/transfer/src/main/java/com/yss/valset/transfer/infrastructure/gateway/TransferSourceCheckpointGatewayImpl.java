@@ -188,22 +188,6 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
                 .toList();
     }
 
-    @Override
-    public List<TransferSourceCheckpointItem> listProcessedItemsBySourceId(String sourceId, Integer limit) {
-        if (sourceId == null || sourceId.isBlank()) {
-            return List.of();
-        }
-        var query = Wrappers.lambdaQuery(TransferSourceCheckpointItemPO.class)
-                .eq(TransferSourceCheckpointItemPO::getSourceId, sourceId)
-                .orderByDesc(TransferSourceCheckpointItemPO::getProcessedAt);
-        if (limit != null && limit > 0) {
-            query.last("limit " + limit);
-        }
-        return transferSourceCheckpointItemRepository.selectList(query).stream()
-                .map(this::toDomain)
-                .toList();
-    }
-
     private TransferSourceCheckpointItemPO toPO(TransferSourceCheckpointItem item) {
         if (item == null) {
             return null;

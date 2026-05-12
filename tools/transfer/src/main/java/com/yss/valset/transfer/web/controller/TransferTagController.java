@@ -37,13 +37,14 @@ public class TransferTagController {
     }
 
     @GetMapping
-    @Operation(summary = "分页查询标签列表", description = "按标签编码、匹配策略和启用状态分页查询标签配置。")
+    @Operation(summary = "分页查询标签列表", description = "按标签编码、标签名称、匹配策略和启用状态分页查询标签配置。")
     public PageResult<TransferTagViewDTO> pageTags(@RequestParam(value = "tagCode", required = false) String tagCode,
+                                                   @RequestParam(value = "tagName", required = false) String tagName,
                                                    @RequestParam(value = "matchStrategy", required = false) String matchStrategy,
                                                    @RequestParam(value = "enabled", required = false) Boolean enabled,
                                                    @RequestParam(value = "pageIndex", required = false) Integer pageIndex,
                                                    @RequestParam(value = "pageSize", required = false) Integer pageSize) {
-        return transferTagManagementAppService.pageTags(tagCode, matchStrategy, enabled, pageIndex, pageSize);
+        return transferTagManagementAppService.pageTags(tagCode, tagName, matchStrategy, enabled, pageIndex, pageSize);
     }
 
     @GetMapping("/{tagId}")

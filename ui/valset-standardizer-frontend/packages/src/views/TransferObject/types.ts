@@ -78,6 +78,7 @@ export type ObjectQueryState = {
   sourceId: string;
   sourceType: string;
   sourceCode: string;
+  originalName: string;
   status: string;
   deliveryStatus: string;
   mailId: string;

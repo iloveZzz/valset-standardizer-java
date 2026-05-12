@@ -5,7 +5,6 @@ import { GetTemplateName1SourceType } from "@/api/generated/valset/schemas/getTe
 import type {
   GetTemplateName2Params,
   ListSourcesParams,
-  TransferSourceCheckpointItemViewDTO,
   TransferSourceCheckpointViewDTO,
   TransferFormTemplateViewDTO,
   TransferSourceUpsertCommand,
@@ -138,7 +137,6 @@ export const useTransferPage = (): { page: SourcePage } => {
   const selectedRow = ref<TransferSourceViewDTO | null>(null);
   const detailVisible = ref(false);
   const checkpointRows = ref<TransferSourceCheckpointViewDTO[]>([]);
-  const checkpointItemRows = ref<TransferSourceCheckpointItemViewDTO[]>([]);
   const checkpointLoading = ref(false);
   const formVisible = ref(false);
   const formMode = ref<"create" | "edit">("create");
@@ -450,17 +448,14 @@ export const useTransferPage = (): { page: SourcePage } => {
         return;
       }
       checkpointRows.value = [];
-      checkpointItemRows.value = [];
       if (selectedRow.value?.sourceId) {
-        const [checkpoints, checkpointItems] = await Promise.all([
-          api.listCheckpoints(selectedRow.value.sourceId, { limit: 20 }),
-          api.listCheckpointItems(selectedRow.value.sourceId, { limit: 20 }),
-        ]);
+        const checkpoints = await api.listCheckpoints(selectedRow.value.sourceId, {
+          limit: 20,
+        });
         if (requestId !== detailRequestId) {
           return;
         }
         checkpointRows.value = unwrapMultiResult(checkpoints);
-        checkpointItemRows.value = unwrapMultiResult(checkpointItems);
       }
       detailVisible.value = true;
     } catch (error) {
@@ -854,7 +849,6 @@ export const useTransferPage = (): { page: SourcePage } => {
     selectedRow,
     detailVisible,
     checkpointRows,
-    checkpointItemRows,
     checkpointLoading,
     formSubmitting,
     handlePageChange,
@@ -872,7 +866,6 @@ export const useTransferPage = (): { page: SourcePage } => {
     closeDetail: () => {
       detailVisible.value = false;
       checkpointRows.value = [];
-      checkpointItemRows.value = [];
     },
     formatEnabled,
   }) as SourcePage;

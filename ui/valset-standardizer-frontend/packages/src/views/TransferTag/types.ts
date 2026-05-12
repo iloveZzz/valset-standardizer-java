@@ -47,6 +47,7 @@ export interface TagPage {
   pagination: YTablePagination;
   query: {
     tagCode: string;
+    tagName: string;
     enabled: string;
     matchStrategy: string;
   };

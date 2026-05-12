@@ -3,7 +3,6 @@ package com.yss.valset.transfer.web.controller;
 import com.yss.cloud.dto.response.MultiResult;
 import com.yss.cloud.dto.response.SingleResult;
 import com.yss.valset.transfer.application.command.TransferSourceUpsertCommand;
-import com.yss.valset.transfer.application.dto.TransferSourceCheckpointItemViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceCheckpointViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceMutationResponse;
 import com.yss.valset.transfer.application.dto.TransferSourceViewDTO;
@@ -211,20 +210,6 @@ public class TransferSourceController {
     public MultiResult<TransferSourceCheckpointViewDTO> listCheckpoints(@PathVariable String sourceId,
                                                                         @RequestParam(value = "limit", required = false) Integer limit) {
         return MultiResult.of(transferSourceManagementAppService.listCheckpoints(sourceId, limit));
-    }
-
-    /**
-     * 查询来源检查点去重记录。
-     *
-     * @param sourceId 来源主键
-     * @param limit 查询上限
-     * @return 来源检查点去重记录列表
-     */
-    @GetMapping("/{sourceId}/checkpoint-items")
-    @Operation(summary = "查询来源检查点去重记录", description = "查询该来源已经处理过的条目记录。")
-    public MultiResult<TransferSourceCheckpointItemViewDTO> listCheckpointItems(@PathVariable String sourceId,
-                                                                                @RequestParam(value = "limit", required = false) Integer limit) {
-        return MultiResult.of(transferSourceManagementAppService.listCheckpointItems(sourceId, limit));
     }
 
     /**

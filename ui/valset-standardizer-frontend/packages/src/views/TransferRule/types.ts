@@ -9,6 +9,7 @@ export interface RulePage {
   pagination: YTablePagination;
   query: {
     ruleCode: string;
+    ruleName: string;
     enabled: string;
     limit: number;
   };

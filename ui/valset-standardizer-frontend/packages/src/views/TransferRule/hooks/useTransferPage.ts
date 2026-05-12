@@ -22,6 +22,7 @@ import type { RulePage } from "../types";
 
 type QueryState = {
   ruleCode: string;
+  ruleName: string;
   enabled: string;
   limit: number;
 };
@@ -63,6 +64,7 @@ const api = getJavaSpringBootQuartzApi();
 
 const defaultQuery = (): QueryState => ({
   ruleCode: "",
+  ruleName: "",
   enabled: "",
   limit: 100,
 });
@@ -296,6 +298,7 @@ export const useTransferPage = (): { page: RulePage } => {
 
   const mapQuery = (): ListRulesParams => ({
     ruleCode: query.ruleCode || undefined,
+    ruleName: query.ruleName || undefined,
     enabled:
       query.enabled === "true"
         ? true

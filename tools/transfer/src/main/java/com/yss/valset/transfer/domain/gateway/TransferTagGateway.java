@@ -14,7 +14,7 @@ public interface TransferTagGateway {
 
     Optional<TransferTagDefinition> findByTagCode(String tagCode);
 
-    TransferTagPage pageTags(String tagCode, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize);
+    TransferTagPage pageTags(String tagCode, String tagName, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize);
 
     java.util.List<TransferTagDefinition> listEnabledTags();
 

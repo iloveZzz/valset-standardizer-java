@@ -24,6 +24,7 @@ import type { TargetPage } from "../types";
 type QueryState = {
   targetType: string;
   targetCode: string;
+  targetName: string;
   enabled: string;
   limit: number;
 };
@@ -66,6 +67,7 @@ const targetTypeOptions = Object.values(GetTemplateName2TargetType).map(
 const defaultQuery = (): QueryState => ({
   targetType: "",
   targetCode: "",
+  targetName: "",
   enabled: "",
   limit: 100,
 });
@@ -310,6 +312,7 @@ export const useTransferPage = (): { page: TargetPage } => {
   const mapQuery = (): ListTargetsParams => ({
     targetType: query.targetType || undefined,
     targetCode: query.targetCode || undefined,
+    targetName: query.targetName || undefined,
     enabled:
       query.enabled === "true"
         ? true

@@ -65,7 +65,6 @@ export interface SourcePage {
   detailVisible: boolean;
   selectedRow: any | null;
   checkpointRows: any[];
-  checkpointItemRows: any[];
   checkpointLoading: boolean;
   formSubmitting: boolean;
   openCreateDialog: () => void;

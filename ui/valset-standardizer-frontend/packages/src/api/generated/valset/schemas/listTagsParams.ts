@@ -7,9 +7,13 @@
 
 export type ListTagsParams = {
   /**
-   * No comments found.
+   * 标签编码
    */
   tagCode?: string;
+  /**
+   * 标签名称
+   */
+  tagName?: string;
   /**
    * No comments found.
    */

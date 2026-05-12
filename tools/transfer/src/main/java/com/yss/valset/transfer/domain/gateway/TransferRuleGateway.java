@@ -10,7 +10,7 @@ import java.util.Optional;
  */
 public interface TransferRuleGateway {
 
-    List<RuleDefinition> listRules(String ruleCode, Boolean enabled, Integer limit);
+    List<RuleDefinition> listRules(String ruleCode, String ruleName, Boolean enabled, Integer limit);
 
     List<RuleDefinition> listEnabledRules();
 

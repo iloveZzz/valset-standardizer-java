@@ -1,7 +1,6 @@
 package com.yss.valset.transfer.application.service;
 
 import com.yss.valset.transfer.application.command.TransferSourceUpsertCommand;
-import com.yss.valset.transfer.application.dto.TransferSourceCheckpointItemViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceCheckpointViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceMutationResponse;
 import com.yss.valset.transfer.application.dto.TransferSourceViewDTO;
@@ -32,6 +31,4 @@ public interface TransferSourceManagementAppService {
     TransferSourceMutationResponse clearProcessedMailIds(String sourceId);
 
     List<TransferSourceCheckpointViewDTO> listCheckpoints(String sourceId, Integer limit);
-
-    List<TransferSourceCheckpointItemViewDTO> listCheckpointItems(String sourceId, Integer limit);
 }

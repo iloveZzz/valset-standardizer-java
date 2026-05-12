@@ -38,16 +38,18 @@ public class TransferRuleController {
      * 查询路由规则列表。
      *
      * @param ruleCode 规则编码
+     * @param ruleName 规则名称
      * @param enabled 是否启用
      * @param limit 查询上限
      * @return 路由规则列表
      */
     @GetMapping
-    @Operation(summary = "查询路由规则列表", description = "按规则编码和启用状态查询路由规则。")
+    @Operation(summary = "查询路由规则列表", description = "按规则编码、规则名称和启用状态查询路由规则。")
     public MultiResult<TransferRuleViewDTO> listRules(@RequestParam(value = "ruleCode", required = false) String ruleCode,
+                                                      @RequestParam(value = "ruleName", required = false) String ruleName,
                                                       @RequestParam(value = "enabled", required = false) Boolean enabled,
                                                       @RequestParam(value = "limit", required = false) Integer limit) {
-        return MultiResult.of(transferRuleManagementAppService.listRules(ruleCode, enabled, limit));
+        return MultiResult.of(transferRuleManagementAppService.listRules(ruleCode, ruleName, enabled, limit));
     }
 
     /**

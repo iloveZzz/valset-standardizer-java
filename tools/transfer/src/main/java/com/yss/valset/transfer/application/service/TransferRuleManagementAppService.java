@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface TransferRuleManagementAppService {
 
-    List<TransferRuleViewDTO> listRules(String ruleCode, Boolean enabled, Integer limit);
+    List<TransferRuleViewDTO> listRules(String ruleCode, String ruleName, Boolean enabled, Integer limit);
 
     TransferRuleViewDTO getRule(String ruleId);
 

@@ -6,7 +6,11 @@ import {
   YssFormily,
   YTable,
 } from "@yss-ui/components";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons-vue";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
 import TransferTemplateDialog from "../../TransferShared/components/TransferTemplateDialog.vue";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
@@ -67,6 +71,41 @@ const actionConfig = useTableActionConfig({
       </div>
     </YCard>
 
+    <YCard class="workspace-query-card" :bordered="false" :padding="12">
+      <div class="workspace-query-bar">
+        <a-form layout="inline" class="workspace-query-form">
+          <a-form-item label="规则编码">
+            <a-input
+              v-model:value="page.query.ruleCode"
+              style="width: 240px"
+              size="small"
+              placeholder="输入规则编码"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="规则名称">
+            <a-input
+              v-model:value="page.query.ruleName"
+              style="width: 240px"
+              size="small"
+              placeholder="输入规则名称"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item class="workspace-query-actions">
+            <YButton size="small" type="primary" @click="page.runQuery">
+              <template #icon><SearchOutlined /></template>
+              查询
+            </YButton>
+            <YButton size="small" @click="page.resetQuery">
+              <template #icon><ReloadOutlined /></template>
+              重置
+            </YButton>
+          </a-form-item>
+        </a-form>
+      </div>
+    </YCard>
+
     <div class="workspace-body">
       <YTable
         :columns="columns"
@@ -87,14 +126,6 @@ const actionConfig = useTableActionConfig({
             :meta="`已启用 ${page.enabledCount} 条，覆盖 ${page.strategyCount} 种策略`"
           >
             <a-form layout="inline" class="workspace-table-toolbar-form">
-              <a-form-item label="规则编码">
-                <a-input
-                  v-model:value="page.query.ruleCode"
-                  style="width: 220px"
-                  placeholder="输入规则编码"
-                  allow-clear
-                />
-              </a-form-item>
               <a-form-item label="启用状态">
                 <a-select
                   v-model:value="page.query.enabled"
@@ -105,10 +136,6 @@ const actionConfig = useTableActionConfig({
                   <a-select-option value="true">启用</a-select-option>
                   <a-select-option value="false">停用</a-select-option>
                 </a-select>
-              </a-form-item>
-              <a-form-item class="workspace-table-toolbar-actions">
-                <YButton type="primary" @click="page.runQuery">查询</YButton>
-                <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
           </WorkspaceTableToolbar>

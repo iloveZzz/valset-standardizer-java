@@ -12,7 +12,7 @@ import com.yss.valset.transfer.application.dto.TransferTagViewDTO;
  */
 public interface TransferTagManagementAppService {
 
-    PageResult<TransferTagViewDTO> pageTags(String tagCode, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize);
+    PageResult<TransferTagViewDTO> pageTags(String tagCode, String tagName, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize);
 
     TransferTagViewDTO getTag(String tagId);
 

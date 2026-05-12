@@ -6,7 +6,11 @@ import {
   YssFormily,
   YTable,
 } from "@yss-ui/components";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons-vue";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
 import TransferTemplateDialog from "../../TransferShared/components/TransferTemplateDialog.vue";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
@@ -90,6 +94,41 @@ const columns: YTableColumn[] = [
       </div>
     </YCard>
 
+    <YCard class="workspace-query-card" :bordered="false" :padding="12">
+      <div class="workspace-query-bar">
+        <a-form layout="inline" class="workspace-query-form">
+          <a-form-item label="标签编码">
+            <a-input
+              v-model:value="page.query.tagCode"
+              style="width: 240px"
+              size="small"
+              placeholder="输入标签编码"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="标签名称">
+            <a-input
+              v-model:value="page.query.tagName"
+              style="width: 240px"
+              size="small"
+              placeholder="输入标签名称"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item class="workspace-query-actions">
+            <YButton size="small" type="primary" @click="page.runQuery">
+              <template #icon><SearchOutlined /></template>
+              查询
+            </YButton>
+            <YButton size="small" @click="page.resetQuery">
+              <template #icon><ReloadOutlined /></template>
+              重置
+            </YButton>
+          </a-form-item>
+        </a-form>
+      </div>
+    </YCard>
+
     <div class="workspace-body">
       <YTable
         :columns="columns"
@@ -126,14 +165,6 @@ const columns: YTableColumn[] = [
             :meta="`当前模板 ${page.templateNamePreview || 'transfer_tag'}`"
           >
             <a-form layout="inline" class="workspace-table-toolbar-form">
-              <a-form-item label="标签编码">
-                <a-input
-                  v-model:value="page.query.tagCode"
-                  style="width: 220px"
-                  placeholder="输入标签编码"
-                  allow-clear
-                />
-              </a-form-item>
               <a-form-item label="匹配策略">
                 <a-select
                   v-model:value="page.query.matchStrategy"
@@ -163,10 +194,6 @@ const columns: YTableColumn[] = [
                   <a-select-option value="true">启用</a-select-option>
                   <a-select-option value="false">停用</a-select-option>
                 </a-select>
-              </a-form-item>
-              <a-form-item class="workspace-table-toolbar-actions">
-                <YButton type="primary" @click="page.runQuery">查询</YButton>
-                <YButton @click="page.resetQuery">重置</YButton>
               </a-form-item>
             </a-form>
           </WorkspaceTableToolbar>

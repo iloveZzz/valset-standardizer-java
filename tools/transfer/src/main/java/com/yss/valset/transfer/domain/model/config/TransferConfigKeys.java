@@ -33,6 +33,10 @@ public final class TransferConfigKeys {
     public static final String FOLDER = "folder";
     /** 邮件收取时间范围，单位天，0 表示全部。 */
     public static final String MAIL_TIME_RANGE_DAYS = "mailTimeRangeDays";
+    /** 邮件扫描批次大小。 */
+    public static final String MAIL_SCAN_BATCH_SIZE = "mailScanBatchSize";
+    /** POP3 大邮箱保护阈值。 */
+    public static final String POP3_LARGE_MAILBOX_THRESHOLD = "pop3LargeMailboxThreshold";
     /** 是否启用 SSL。 */
     public static final String SSL = "ssl";
     /** 是否启用 STARTTLS。 */
@@ -138,6 +142,10 @@ public final class TransferConfigKeys {
 
     /** 邮件ID。 */
     public static final String MAIL_ID = "mailId";
+    /** 邮件 UID。 */
+    public static final String MAIL_UID = "mailUid";
+    /** 邮件序号。 */
+    public static final String MAIL_MESSAGE_NUMBER = "mailMessageNumber";
     /** 邮件发件人地址。 */
     public static final String MAIL_FROM = "mailFrom";
     /** 邮件收件人地址。 */

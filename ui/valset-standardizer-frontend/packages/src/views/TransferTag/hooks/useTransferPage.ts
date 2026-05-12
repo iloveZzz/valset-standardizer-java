@@ -16,6 +16,7 @@ import type { TagPage, TagTestResultDTO, TagViewDTO } from "../types";
 
 type QueryState = {
   tagCode: string;
+  tagName: string;
   enabled: string;
   matchStrategy: string;
 };
@@ -36,6 +37,7 @@ const api = getJavaSpringBootQuartzApi();
 const DEFAULT_TAG_CODE = "BUSINESS_DATE";
 const defaultQuery = (): QueryState => ({
   tagCode: "",
+  tagName: "",
   enabled: "",
   matchStrategy: "",
 });
@@ -349,6 +351,7 @@ export const useTransferPage = (): { page: TagPage } => {
     pageSizeValue = pagination.value.pageSize || 10,
   ) => ({
     tagCode: query.tagCode || undefined,
+    tagName: query.tagName || undefined,
     matchStrategy: query.matchStrategy || undefined,
     enabled:
       query.enabled === "true"

@@ -10,6 +10,7 @@ export interface TargetPage {
   query: {
     targetType: string;
     targetCode: string;
+    targetName: string;
     enabled: string;
     limit: number;
   };

@@ -31,8 +31,8 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
     private final TransferTaggingUseCase transferTaggingUseCase;
 
     @Override
-    public PageResult<TransferTagViewDTO> pageTags(String tagCode, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize) {
-        TransferTagPage page = transferTagGateway.pageTags(tagCode, matchStrategy, enabled, pageIndex, pageSize);
+    public PageResult<TransferTagViewDTO> pageTags(String tagCode, String tagName, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize) {
+        TransferTagPage page = transferTagGateway.pageTags(tagCode, tagName, matchStrategy, enabled, pageIndex, pageSize);
         return PageResult.of(page.records().stream().map(this::toView).toList(),
                 page.total(),
                 page.pageSize(),

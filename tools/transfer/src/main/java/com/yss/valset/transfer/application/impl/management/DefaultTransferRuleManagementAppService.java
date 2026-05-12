@@ -28,8 +28,8 @@ public class DefaultTransferRuleManagementAppService implements TransferRuleMana
     private final TransferRuleGateway transferRuleGateway;
 
     @Override
-    public List<TransferRuleViewDTO> listRules(String ruleCode, Boolean enabled, Integer limit) {
-        return transferRuleGateway.listRules(ruleCode, enabled, limit)
+    public List<TransferRuleViewDTO> listRules(String ruleCode, String ruleName, Boolean enabled, Integer limit) {
+        return transferRuleGateway.listRules(ruleCode, ruleName, enabled, limit)
                 .stream()
                 .map(this::toView)
                 .toList();

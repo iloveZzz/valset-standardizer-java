@@ -210,6 +210,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                     trimToNull(command == null ? null : command.getSourceId()),
                     trimToNull(command == null ? null : command.getSourceType()),
                     trimToNull(command == null ? null : command.getSourceCode()),
+                    null,
                     trimToNull(command == null ? null : command.getStatus()),
                     null,
                     trimToNull(command == null ? null : command.getMailId()),
@@ -240,6 +241,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
         int pageIndex = 0;
         while (true) {
             TransferObjectPage page = transferObjectGateway.pageObjects(
+                    null,
                     null,
                     null,
                     null,
