@@ -74,29 +74,13 @@ const columns: YTableColumn[] = [
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="12">
-      <div class="workspace-header-inner">
-        <div class="workspace-header-copy">
-          <h2>标签管理</h2>
-        </div>
-        <div class="workspace-header-actions">
-          <div class="workspace-header-buttons">
-            <YButton type="primary" @click="page.openCreateDialog">
-              <template #icon><PlusOutlined /></template>
-              新建标签
-            </YButton>
-            <YButton @click="page.runQuery">
-              <template #icon><ReloadOutlined /></template>
-              刷新列表
-            </YButton>
-          </div>
-        </div>
-      </div>
-    </YCard>
-
     <YCard class="workspace-query-card" :bordered="false" :padding="12">
       <div class="workspace-query-bar">
-        <a-form layout="inline" class="workspace-query-form">
+        <a-form
+          layout="inline"
+          class="workspace-query-form"
+          @submit.prevent="page.runQuery"
+        >
           <a-form-item label="标签编码">
             <a-input
               v-model:value="page.query.tagCode"
@@ -115,8 +99,14 @@ const columns: YTableColumn[] = [
               allow-clear
             />
           </a-form-item>
-          <a-form-item class="workspace-query-actions">
-            <YButton size="small" type="primary" @click="page.runQuery">
+        </a-form>
+        <div class="workspace-query-actions">
+          <a-space>
+            <YButton type="primary" size="small" @click="page.openCreateDialog">
+              <template #icon><PlusOutlined /></template>
+              新建标签
+            </YButton>
+            <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询
             </YButton>
@@ -124,8 +114,8 @@ const columns: YTableColumn[] = [
               <template #icon><ReloadOutlined /></template>
               重置
             </YButton>
-          </a-form-item>
-        </a-form>
+          </a-space>
+        </div>
       </div>
     </YCard>
 
@@ -164,7 +154,11 @@ const columns: YTableColumn[] = [
             :description="`总数 ${page.total} 条，默认标签固定启用且不可编辑、删除。`"
             :meta="`当前模板 ${page.templateNamePreview || 'transfer_tag'}`"
           >
-            <a-form layout="inline" class="workspace-table-toolbar-form">
+            <a-form
+              layout="inline"
+              class="workspace-table-toolbar-form"
+              @submit.prevent="page.runQuery"
+            >
               <a-form-item label="匹配策略">
                 <a-select
                   v-model:value="page.query.matchStrategy"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import dayjs, { type Dayjs } from "dayjs";
 import { message } from "ant-design-vue";
 import { YButton, YCard } from "@yss-ui/components";
@@ -18,7 +18,7 @@ type CleanupMode = "1" | "3" | "5" | "15" | "30" | "custom";
 
 const cleanupModalVisible = ref(false);
 const cleanupMode = ref<CleanupMode>("1");
-const cleanupRange = ref<[Dayjs, Dayjs] | null>(null);
+const cleanupRange = ref<[Dayjs, Dayjs] | undefined>(undefined);
 
 const cleanupModeOptions = [
   { label: "近1天", value: "1" },
@@ -102,35 +102,38 @@ watch(cleanupMode, handleCleanupModeChange);
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="12">
-      <div class="workspace-header-inner">
-        <div class="workspace-header-copy">
+    <YCard class="workspace-query-card" :bordered="false" :padding="12">
+      <div class="workspace-query-bar">
+        <div class="workspace-query-banner">
           <h2>运行日志</h2>
+          <p>按执行阶段查看日志，支持筛选和清理历史记录。</p>
         </div>
-        <div class="workspace-header-actions">
-          <div class="workspace-header-buttons">
-            <YButton type="primary" @click="page.runQuery">
+        <div class="workspace-query-actions">
+          <a-space>
+            <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询日志
             </YButton>
-            <YButton @click="page.resetQuery">
+            <YButton size="small" @click="page.resetQuery">
               <template #icon><ReloadOutlined /></template>
               重置条件
             </YButton>
             <YButton
               danger
+              size="small"
               :loading="page.cleanupLoading"
               @click="openCleanupDialog"
             >
               清理日志
             </YButton>
-          </div>
+          </a-space>
         </div>
       </div>
+    </YCard>
 
-      <div class="workspace-summary">
-        <a-spin :spinning="page.analysisLoading">
-          <div class="workspace-analysis-grid">
+    <div class="workspace-summary">
+      <a-spin :spinning="page.analysisLoading">
+        <div class="workspace-analysis-grid">
             <div
               v-for="stageItem in page.analysis.stageAnalyses"
               :key="stageItem.runStage"
@@ -183,8 +186,7 @@ watch(cleanupMode, handleCleanupModeChange);
             </div>
           </div>
         </a-spin>
-      </div>
-    </YCard>
+    </div>
 
     <div class="workspace-body">
       <div class="run-log-console-slot">

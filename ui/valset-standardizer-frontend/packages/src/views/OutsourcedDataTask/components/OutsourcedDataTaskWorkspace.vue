@@ -129,12 +129,6 @@ const stepColumns = computed<YTableColumn[]>(() => [
     minWidth: 240,
     ellipsis: true,
   },
-  {
-    field: "action",
-    title: outsourcedDataTaskTableTexts.stepColumns.action,
-    width: 110,
-    fixed: "right" as const,
-  },
 ]);
 
 const detailActiveKey = ref("overview");
@@ -549,16 +543,6 @@ const taskMetricCards = computed(() => [
                   {{ stepRow.errorMessage || "-" }}
                 </span>
               </template>
-              <template #action="{ row: stepRow }">
-                <a-space>
-                  <a
-                    :class="{ 'is-disabled': stepRow.status === 'PENDING' }"
-                    @click="confirmRetryStep(stepRow)"
-                  >
-                    {{ outsourcedDataTaskActionTexts.stepRetryButtonText }}
-                  </a>
-                </a-space>
-              </template>
             </YTable>
           </div>
         </template>
@@ -689,16 +673,6 @@ const taskMetricCards = computed(() => [
                   >
                     {{ row.errorMessage || "-" }}
                   </span>
-                </template>
-                <template #action="{ row }">
-                  <a-space>
-                    <a
-                      :class="{ 'is-disabled': row.status === 'PENDING' }"
-                      @click="confirmRetryStep(row)"
-                    >
-                      {{ outsourcedDataTaskActionTexts.stepRetryButtonText }}
-                    </a>
-                  </a-space>
                 </template>
               </YTable>
             </div>

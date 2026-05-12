@@ -48,29 +48,13 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="12">
-      <div class="workspace-header-inner">
-        <div class="workspace-header-copy">
-          <h2>文件投递目标配置</h2>
-        </div>
-        <div class="workspace-header-actions">
-          <div class="workspace-header-buttons">
-            <YButton type="primary" @click="page.openCreateDialog">
-              <template #icon><PlusOutlined /></template>
-              新建目标
-            </YButton>
-            <YButton @click="page.runQuery">
-              <template #icon><ReloadOutlined /></template>
-              刷新列表
-            </YButton>
-          </div>
-        </div>
-      </div>
-    </YCard>
-
     <YCard class="workspace-query-card" :bordered="false" :padding="12">
       <div class="workspace-query-bar">
-        <a-form layout="inline" class="workspace-query-form">
+        <a-form
+          layout="inline"
+          class="workspace-query-form"
+          @submit.prevent="page.runQuery"
+        >
           <a-form-item label="目标编码">
             <a-input
               v-model:value="page.query.targetCode"
@@ -119,8 +103,14 @@ const actionConfig = useTableActionConfig({
               <a-select-option value="false">停用</a-select-option>
             </a-select>
           </a-form-item>
-          <a-form-item class="workspace-query-actions">
-            <YButton size="small" type="primary" @click="page.runQuery">
+        </a-form>
+        <div class="workspace-query-actions">
+          <a-space>
+            <YButton type="primary" size="small" @click="page.openCreateDialog">
+              <template #icon><PlusOutlined /></template>
+              新建目标
+            </YButton>
+            <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询
             </YButton>
@@ -128,8 +118,8 @@ const actionConfig = useTableActionConfig({
               <template #icon><ReloadOutlined /></template>
               重置
             </YButton>
-          </a-form-item>
-        </a-form>
+          </a-space>
+        </div>
       </div>
     </YCard>
 

@@ -114,7 +114,7 @@ export const outsourcedDataTaskActionTexts = {
   viewButtonText: "查看",
   executeButtonText: "手动执行",
   executeContinueButtonText: "继续执行",
-  retryButtonText: "重跑",
+  retryButtonText: "重新解析",
   stopButtonText: "停止",
   retryStepConfirmTitle: "重跑任务步骤",
   detailHeaderTitle: "估值表解析任务详情",

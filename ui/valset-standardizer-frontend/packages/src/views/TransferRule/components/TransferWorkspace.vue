@@ -51,29 +51,13 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="12">
-      <div class="workspace-header-inner">
-        <div class="workspace-header-copy">
-          <h2>分拣规则</h2>
-        </div>
-        <div class="workspace-header-actions">
-          <div class="workspace-header-buttons">
-            <YButton type="primary" @click="page.openCreateDialog">
-              <template #icon><PlusOutlined /></template>
-              新建规则
-            </YButton>
-            <YButton @click="page.runQuery">
-              <template #icon><ReloadOutlined /></template>
-              刷新列表
-            </YButton>
-          </div>
-        </div>
-      </div>
-    </YCard>
-
     <YCard class="workspace-query-card" :bordered="false" :padding="12">
       <div class="workspace-query-bar">
-        <a-form layout="inline" class="workspace-query-form">
+        <a-form
+          layout="inline"
+          class="workspace-query-form"
+          @submit.prevent="page.runQuery"
+        >
           <a-form-item label="规则编码">
             <a-input
               v-model:value="page.query.ruleCode"
@@ -92,8 +76,14 @@ const actionConfig = useTableActionConfig({
               allow-clear
             />
           </a-form-item>
-          <a-form-item class="workspace-query-actions">
-            <YButton size="small" type="primary" @click="page.runQuery">
+        </a-form>
+        <div class="workspace-query-actions">
+          <a-space>
+            <YButton type="primary" size="small" @click="page.openCreateDialog">
+              <template #icon><PlusOutlined /></template>
+              新建规则
+            </YButton>
+            <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询
             </YButton>
@@ -101,8 +91,8 @@ const actionConfig = useTableActionConfig({
               <template #icon><ReloadOutlined /></template>
               重置
             </YButton>
-          </a-form-item>
-        </a-form>
+          </a-space>
+        </div>
       </div>
     </YCard>
 
@@ -125,7 +115,11 @@ const actionConfig = useTableActionConfig({
             :description="`总数 ${page.total} 条，点击操作按钮查看详情或维护配置。`"
             :meta="`已启用 ${page.enabledCount} 条，覆盖 ${page.strategyCount} 种策略`"
           >
-            <a-form layout="inline" class="workspace-table-toolbar-form">
+            <a-form
+              layout="inline"
+              class="workspace-table-toolbar-form"
+              @submit.prevent="page.runQuery"
+            >
               <a-form-item label="启用状态">
                 <a-select
                   v-model:value="page.query.enabled"

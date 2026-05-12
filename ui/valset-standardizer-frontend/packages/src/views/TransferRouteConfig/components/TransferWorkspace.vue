@@ -57,29 +57,13 @@ watch(
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="12">
-      <div class="workspace-header-inner">
-        <div class="workspace-header-copy">
-          <h2>分拣路由</h2>
-        </div>
-        <div class="workspace-header-actions">
-          <div class="workspace-header-buttons">
-            <YButton type="primary" @click="page.openCreateDialog">
-              <template #icon><PlusOutlined /></template>
-              新建路由
-            </YButton>
-            <YButton @click="page.runQuery">
-              <template #icon><ReloadOutlined /></template>
-              刷新列表
-            </YButton>
-          </div>
-        </div>
-      </div>
-    </YCard>
-
-    <div class="workspace-body">
-      <YCard class="route-query-card" :bordered="false" :padding="18">
-        <a-form layout="inline">
+    <YCard class="route-query-card" :bordered="false" :padding="18">
+      <div class="workspace-query-bar">
+        <a-form
+          size="small"
+          layout="inline"
+          @submit.prevent="page.runQuery"
+        >
           <a-form-item label="来源类型">
             <a-select
               v-model:value="page.query.sourceType"
@@ -97,15 +81,6 @@ watch(
                 {{ item.label }}
               </a-select-option>
             </a-select>
-          </a-form-item>
-          <a-form-item label="来源编码">
-            <a-input
-              size="small"
-              v-model:value="page.query.sourceCode"
-              style="width: 220px"
-              placeholder="输入来源编码"
-              allow-clear
-            />
           </a-form-item>
           <a-form-item label="目标类型">
             <a-select
@@ -125,15 +100,6 @@ watch(
               </a-select-option>
             </a-select>
           </a-form-item>
-          <a-form-item label="目标编码">
-            <a-input
-              v-model:value="page.query.targetCode"
-              size="small"
-              style="width: 220px"
-              placeholder="输入目标编码"
-              allow-clear
-            />
-          </a-form-item>
           <a-form-item label="启用状态">
             <a-select
               v-model:value="page.query.enabled"
@@ -147,17 +113,26 @@ watch(
               <a-select-option value="false">停用</a-select-option>
             </a-select>
           </a-form-item>
-          <a-form-item class="workspace-table-toolbar-actions">
-            <a-button type="primary" size="small" @click="page.runQuery">
+        </a-form>
+        <div class="workspace-query-actions route-query-actions">
+          <a-space>
+            <YButton type="primary" size="small" @click="page.openCreateDialog">
+              <template #icon><PlusOutlined /></template>
+              新建路由
+            </YButton>
+            <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询
-            </a-button>
-            <a-button size="small" @click="page.resetQuery">
+            </YButton>
+            <YButton size="small" @click="page.resetQuery">
               <template #icon><ReloadOutlined /></template>
               重置
-            </a-button>
-          </a-form-item>
-        </a-form>
+            </YButton>
+          </a-space>
+        </div>
+      </div>
+
+      <div class="workspace-body">
         <a-list
           class="route-config-list"
           :data-source="page.tableData"
@@ -339,8 +314,8 @@ watch(
             "
           />
         </div>
-      </YCard>
-    </div>
+      </div>
+    </YCard>
 
     <a-modal
       class="source-modal"
@@ -525,13 +500,6 @@ watch(
                 disabled
               />
             </a-form-item>
-            <a-form-item label="重命名模板">
-              <a-input
-                v-model:value="page.formState.renamePattern"
-                placeholder="请输入重命名模板"
-                allow-clear
-              />
-            </a-form-item>
           </div>
         </div>
       </a-form>
@@ -714,9 +682,6 @@ watch(
               </a-descriptions-item>
               <a-descriptions-item label="目标路径">
                 {{ page.selectedRow.targetPath || "-" }}
-              </a-descriptions-item>
-              <a-descriptions-item label="重命名模板">
-                {{ page.selectedRow.renamePattern || "-" }}
               </a-descriptions-item>
             </a-descriptions>
           </section>

@@ -7,13 +7,6 @@
   min-width: 0;
 }
 
-.transfer-workspace .workspace-header-inner {
-  display: grid;
-  grid-template-columns: minmax(340px, 0.78fr) minmax(560px, 1.36fr) auto;
-  align-items: start;
-  gap: 18px;
-}
-
 .route-header-filter {
   display: flex;
   align-items: flex-start;
@@ -875,44 +868,22 @@
 .route-query-card {
   margin-bottom: 14px;
   border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
+  border-radius: 6px;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.98));
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
 }
 
-.route-query-form {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(160px, 1fr)) auto;
-  gap: 14px 16px;
-  align-items: end;
-  width: 100%;
-}
 
-.route-query-form .ant-form-item {
-  margin-bottom: 0;
-}
-
-.route-query-form .ant-form-item-label > label {
-  color: rgba(15, 23, 42, 0.72);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.route-query-form .ant-input,
-.route-query-form .ant-select-selector {
-  border-radius: 10px !important;
-  min-height: 40px;
-  background: rgba(255, 255, 255, 0.96);
-}
-
-.route-query-form .ant-select-selector {
+.route-query-actions {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
+  justify-content: flex-end;
 }
 
-.route-query-form .workspace-table-toolbar-actions {
-  justify-self: end;
-  white-space: nowrap;
+.route-query-actions .ant-space {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .route-config-section {
@@ -1050,7 +1021,6 @@
 }
 
 @media (max-width: 960px) {
-  .transfer-workspace .workspace-header-inner,
   .route-list-head {
     grid-template-columns: 1fr;
   }
@@ -1068,9 +1038,6 @@
   .route-detail-flow,
   .route-detail-panels,
   .route-config-list-card,
-  .route-query-form {
-    grid-template-columns: 1fr;
-  }
 
   .route-list-actions {
     flex-direction: row;
@@ -1083,8 +1050,12 @@
     width: auto;
   }
 
-  .route-query-form .workspace-table-toolbar-actions {
-    justify-self: start;
+  .route-query-actions {
+    justify-content: flex-start;
+  }
+
+  .route-query-actions .ant-space {
+    justify-content: flex-start;
   }
 
 

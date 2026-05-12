@@ -76,29 +76,14 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="12">
-      <div class="workspace-header-inner">
-        <div class="workspace-header-copy">
-          <h2>文件来源接口配置</h2>
-        </div>
-        <div class="workspace-header-actions">
-          <div class="workspace-header-buttons">
-            <YButton type="primary" @click="page.openCreateDialog">
-              <template #icon><PlusOutlined /></template>
-              新建来源
-            </YButton>
-            <YButton @click="page.runQuery">
-              <template #icon><ReloadOutlined /></template>
-              刷新列表
-            </YButton>
-          </div>
-        </div>
-      </div>
-    </YCard>
-
     <YCard class="workspace-query-card" :bordered="false" :padding="12">
       <div class="workspace-query-bar">
-        <a-form layout="inline" class="workspace-query-form">
+        <a-form
+          layout="inline"
+          size="small"
+          class="workspace-query-form"
+          @submit.prevent="page.runQuery"
+        >
           <a-form-item label="来源编码">
             <a-input
               v-model:value="page.query.sourceCode"
@@ -143,17 +128,23 @@ const actionConfig = useTableActionConfig({
               <a-select-option value="false">停用</a-select-option>
             </a-select>
           </a-form-item>
-          <a-form-item class="workspace-query-actions">
-            <YButton type="primary" @click="page.runQuery">
+        </a-form>
+        <div class="workspace-query-actions">
+          <a-space>
+            <YButton type="primary" size="small" @click="page.openCreateDialog">
+              <template #icon><PlusOutlined /></template>
+              新建来源
+            </YButton>
+            <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
               查询
             </YButton>
-            <YButton @click="page.resetQuery">
+            <YButton size="small" @click="page.resetQuery">
               <template #icon><ReloadOutlined /></template>
               重置
             </YButton>
-          </a-form-item>
-        </a-form>
+          </a-space>
+        </div>
       </div>
     </YCard>
 
@@ -182,7 +173,9 @@ const actionConfig = useTableActionConfig({
           <a-switch
             :checked="Boolean(row.enabled)"
             :loading="page.isEnabledUpdating(row.sourceId)"
-            :disabled="page.isEnabledUpdating(row.sourceId) || page.hasEnabledRoutes(row)"
+            :disabled="
+              page.isEnabledUpdating(row.sourceId) || page.hasEnabledRoutes(row)
+            "
             checked-children="启用"
             un-checked-children="停用"
             @change="(checked) => page.toggleEnabled(row, checked === true)"
@@ -204,7 +197,11 @@ const actionConfig = useTableActionConfig({
       @ok="page.submitForm"
       @cancel="page.closeForm"
     >
-      <template v-if="page.formMode === 'edit' && page.editingRow?.enabledRouteCount > 0">
+      <template
+        v-if="
+          page.formMode === 'edit' && page.editingRow?.enabledRouteCount > 0
+        "
+      >
         <a-alert
           type="warning"
           show-icon

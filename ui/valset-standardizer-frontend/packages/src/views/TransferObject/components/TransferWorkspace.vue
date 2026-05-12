@@ -82,120 +82,13 @@ const actionConfig = useTableActionConfig({
 
 <template>
   <div class="transfer-workspace">
-    <YCard class="workspace-header" :bordered="false" :padding="12">
-      <div class="workspace-header-inner">
-        <div class="workspace-header-copy">
-          <h2>分拣对象</h2>
-        </div>
-        <div class="workspace-header-actions">
-          <div class="workspace-header-buttons">
-            <YButton type="primary" @click="page.runQuery">
-              <template #icon><SearchOutlined /></template>
-              查询对象
-            </YButton>
-            <YButton @click="page.resetQuery">
-              <template #icon><ReloadOutlined /></template>
-              重置条件
-            </YButton>
-            <YButton :loading="page.retagLoading" @click="confirmRetag">
-              <template #icon><TagOutlined /></template>
-              重新打标
-            </YButton>
-          </div>
-        </div>
-      </div>
-      <div class="workspace-summary">
-        <div class="workspace-summary-title"></div>
-        <a-spin :spinning="page.analysisLoading">
-          <div class="workspace-analysis-layout">
-            <div class="workspace-analysis-grid workspace-analysis-grid--fill">
-              <div
-                v-for="sourceItem in page.analysis.sourceAnalyses"
-                :key="sourceItem.sourceType"
-                class="analysis-card-shell"
-                @click="page.applySourceFilter(sourceItem.sourceType)"
-              >
-                <YCard class="analysis-card" :bordered="false" :padding="18">
-                  <div class="analysis-card-header">
-                    <div>
-                      <div class="analysis-card-label">
-                        {{ page.formatSourceTypeLabel(sourceItem.sourceType) }}
-                      </div>
-                      <div class="analysis-card-desc">来源类型文件状态统计</div>
-                    </div>
-                    <a-tag color="blue">{{ sourceItem.totalCount }} 条</a-tag>
-                  </div>
-                  <div
-                    class="analysis-card-status-list analysis-card-status-list--nowrap"
-                  >
-                    <button
-                      v-for="statusItem in sourceItem.statusCounts"
-                      :key="`${sourceItem.sourceType}-${statusItem.status}`"
-                      type="button"
-                      class="analysis-status-chip"
-                      @click.stop="
-                        page.applySourceStatusFilter(
-                          sourceItem.sourceType,
-                          statusItem.status,
-                        )
-                      "
-                    >
-                      <span class="analysis-status-chip-label">
-                        {{ statusItem.statusLabel }}
-                      </span>
-                      <span class="analysis-status-chip-value">
-                        {{ statusItem.count }}
-                      </span>
-                    </button>
-                    <button
-                      v-if="
-                        page.formatSourceTypeLabel(sourceItem.sourceType) ===
-                        'EMAIL'
-                      "
-                      type="button"
-                      class="analysis-status-chip analysis-status-chip--default"
-                      @click.stop="
-                        page.applyDeliveryStatusFilter(
-                          sourceItem.sourceType,
-                          '未投递',
-                        )
-                      "
-                    >
-                      <span class="analysis-status-chip-label">未投递</span>
-                      <span class="analysis-status-chip-value">
-                        {{ sourceItem.undeliveredCount }}
-                      </span>
-                    </button>
-                    <span
-                      v-for="folderItem in sourceItem.mailFolderCounts"
-                      :key="`${sourceItem.sourceType}-${folderItem.mailFolder}`"
-                      class="analysis-status-chip analysis-status-chip--default"
-                    >
-                      <span class="analysis-status-chip-label">
-                        {{ folderItem.mailFolderLabel }}
-                      </span>
-                      <span class="analysis-status-chip-value">
-                        {{ folderItem.count }}
-                      </span>
-                    </span>
-                    <div
-                      v-if="!sourceItem.statusCounts.length"
-                      class="analysis-card-empty"
-                    >
-                      当前筛选下暂无对象
-                    </div>
-                  </div>
-                </YCard>
-              </div>
-            </div>
-          </div>
-        </a-spin>
-      </div>
-    </YCard>
-
     <YCard class="workspace-query-card" :bordered="false" :padding="12">
       <div class="workspace-query-bar">
-        <a-form layout="inline" class="workspace-query-form">
+        <a-form
+          layout="inline"
+          class="workspace-query-form"
+          @submit.prevent="page.runQuery"
+        >
           <a-form-item label="文件状态">
             <a-select
               v-model:value="page.query.status"
@@ -226,17 +119,27 @@ const actionConfig = useTableActionConfig({
               allow-clear
             />
           </a-form-item>
-          <a-form-item class="workspace-query-actions">
-            <YButton size="small" type="primary" @click="page.runQuery">
+        </a-form>
+        <div class="workspace-query-actions">
+          <a-space>
+            <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
-              查询
+              查询对象
             </YButton>
             <YButton size="small" @click="page.resetQuery">
               <template #icon><ReloadOutlined /></template>
-              重置
+              重置条件
             </YButton>
-          </a-form-item>
-        </a-form>
+            <YButton
+              :loading="page.retagLoading"
+              size="small"
+              @click="confirmRetag"
+            >
+              <template #icon><TagOutlined /></template>
+              重新打标
+            </YButton>
+          </a-space>
+        </div>
       </div>
     </YCard>
 
@@ -260,7 +163,11 @@ const actionConfig = useTableActionConfig({
             :description="`总数 ${page.total} 条，点击操作按钮查看完整详情。`"
             :meta="`当前页 ${page.tableData.length} 条，异常记录 ${page.errorCount} 条`"
           >
-            <a-form layout="inline" class="workspace-table-toolbar-form">
+            <a-form
+              layout="inline"
+              class="workspace-table-toolbar-form"
+              @submit.prevent="page.runQuery"
+            >
               <a-form-item label="来源ID">
                 <a-input
                   v-model:value="page.query.sourceId"
