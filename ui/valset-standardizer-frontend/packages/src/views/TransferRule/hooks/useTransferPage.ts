@@ -1,9 +1,9 @@
 import { computed, reactive, ref, watch } from "vue";
 import { message, Modal } from "ant-design-vue";
 import type { ISchema, YTablePagination } from "@yss-ui/components";
-import type { Object as JsonObject } from "@/api/generated/valset/schemas/object";
 import type {
   ListRulesParams,
+  Object as JsonObject,
   TransferFormTemplateViewDTO,
   TransferRuleUpsertCommand,
   TransferRuleViewDTO,

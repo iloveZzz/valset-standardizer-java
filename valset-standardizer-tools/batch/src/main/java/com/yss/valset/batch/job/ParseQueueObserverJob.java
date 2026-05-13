@@ -18,7 +18,7 @@ import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
 import com.yss.valset.domain.model.ValsetFileInfo;
-import com.yss.valset.application.service.ValsetFileInfoRepairAppService;
+import com.yss.valset.parser.application.service.ValsetFileInfoRepairAppService;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.model.TransferObject;
@@ -32,7 +32,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;

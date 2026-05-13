@@ -39,16 +39,10 @@ import {
 
 const defaultStageCatalog = outsourcedDataTaskStageCatalog;
 const activeStageCatalog = ref([...defaultStageCatalog]);
-const hiddenStageDisplayMap: Record<string, OutsourcedDataTaskStage> = {
-  DATA_PROCESSING: "STANDARD_LANDING",
-};
-
-const isHiddenStage = (stage?: string) =>
-  String(stage ?? "").trim() === "DATA_PROCESSING";
 
 const normalizeVisibleStage = (value?: string): OutsourcedDataTaskStage => {
   const stage = String(value ?? "").trim();
-  return hiddenStageDisplayMap[stage] ?? normalizeStage(stage);
+  return normalizeStage(stage);
 };
 
 const isCatalogStageMatch = (
@@ -57,53 +51,6 @@ const isCatalogStageMatch = (
 ) =>
   String(value ?? "").trim() === item.stage ||
   String(value ?? "").trim() === item.step;
-
-type StageCatalogItem = {
-  stage?: string;
-  step?: string;
-  stageName?: string;
-  stepName?: string;
-  stageDescription?: string;
-  stepDescription?: string;
-  sortOrder?: number;
-};
-
-const normalizeStageCatalog = (stages?: StageCatalogItem[]) =>
-  stages?.length
-    ? stages
-        .slice()
-        .filter((item) => Boolean(item.stage || item.step))
-        .sort(
-          (left, right) =>
-            Number(left.sortOrder ?? 0) - Number(right.sortOrder ?? 0),
-        )
-        .map((item) => {
-          const stage = String(
-            item.stage ?? item.step ?? "",
-          ).trim() as OutsourcedDataTaskStage;
-          const step = String(
-            item.step ?? item.stage ?? stage,
-          ).trim() as OutsourcedDataTaskStage;
-          const stageName = String(
-            item.stageName ?? item.stepName ?? stage,
-          ).trim();
-          const stepName = String(
-            item.stepName ?? item.stageName ?? stageName,
-          ).trim();
-          return {
-            stage,
-            step,
-            stageName: stageName || stage,
-            stepName: stepName || stageName || stage,
-            stageDescription: String(
-              item.stageDescription ?? item.stepDescription ?? "",
-            ).trim(),
-            stepDescription: String(
-              item.stepDescription ?? item.stageDescription ?? "",
-            ).trim(),
-          };
-        })
-    : [...defaultStageCatalog];
 
 const defaultQuery = (): OutsourcedDataTaskQueryState => ({
   batchId: "",
@@ -123,7 +70,6 @@ const LIVE_STATUS_SET = new Set<OutsourcedDataTaskStatus>([
 
 const RECOVERABLE_EXECUTE_STATUS_SET = new Set<OutsourcedDataTaskStatus>([
   "FAILED",
-  "BLOCKED",
 ]);
 
 const normalizeStage = (value?: string): OutsourcedDataTaskStage => {
@@ -137,10 +83,14 @@ const normalizeStage = (value?: string): OutsourcedDataTaskStage => {
 };
 
 const normalizeStatus = (value?: string): OutsourcedDataTaskStatus => {
-  const status = String(value ?? "").trim() as OutsourcedDataTaskStatus;
-  return outsourcedDataTaskStatusCatalog.some((item) => item.status === status)
-    ? status
-    : "PENDING";
+  const status = String(value ?? "").trim();
+  if (status === "SUCCESS" || status === "RUNNING" || status === "PENDING") {
+    return status;
+  }
+  if (status === "FAILED" || status === "BLOCKED" || status === "STOPPED") {
+    return "FAILED";
+  }
+  return "PENDING";
 };
 
 const statusLabel = (value?: string) => {
@@ -282,14 +232,8 @@ const resolveBatchStatusFromSteps = (steps: OutsourcedDataTaskStepRow[]) => {
   if (steps.some((step) => step.status === "FAILED")) {
     return "FAILED" as const;
   }
-  if (steps.some((step) => step.status === "BLOCKED")) {
-    return "BLOCKED" as const;
-  }
   if (steps.some((step) => step.status === "RUNNING")) {
     return "RUNNING" as const;
-  }
-  if (steps.length > 0 && steps.every((step) => step.status === "STOPPED")) {
-    return "STOPPED" as const;
   }
   if (steps.length > 0 && steps.every((step) => step.status === "SUCCESS")) {
     return "SUCCESS" as const;
@@ -302,8 +246,7 @@ const resolveBatchStageFromSteps = (steps: OutsourcedDataTaskStepRow[]) => {
     .filter(
       (step) =>
         step.status === "RUNNING" ||
-        step.status === "FAILED" ||
-        step.status === "BLOCKED",
+        step.status === "FAILED",
     )
     .sort((left, right) => {
       const updatedAtDiff = String(right.startedAt ?? "").localeCompare(
@@ -361,11 +304,9 @@ const normalizeBatchRowFromSteps = (
     progress:
       currentStatus === "SUCCESS"
         ? 100
-        : currentStatus === "FAILED" || currentStatus === "BLOCKED"
+        : currentStatus === "FAILED" || currentStatus === "RUNNING"
           ? Number(currentStep?.progress ?? row.progress ?? 0)
-          : currentStatus === "RUNNING"
-            ? Number(currentStep?.progress ?? row.progress ?? 0)
-            : Number(row.progress ?? 0),
+          : Number(row.progress ?? 0),
     startedAt: String(
       orderedSteps[0]?.startedAt ??
         row.startedAt ??
@@ -385,7 +326,6 @@ const normalizeBatchRowFromSteps = (
 
 const sortSteps = (steps: OutsourcedDataTaskStepRow[]) =>
   [...steps]
-    .filter((step) => !isHiddenStage(step.stage ?? step.step))
     .sort((left, right) => {
       const stageDiff =
         getStageOrder(normalizeStage(left.stage ?? left.step)) -
@@ -503,7 +443,7 @@ const buildManualState = (
   detail?: OutsourcedDataTaskBatchDetailDTO | null,
 ): OutsourcedDataTaskManualState => {
   const failedStep = row?.steps.find((step) =>
-    ["FAILED", "BLOCKED"].includes(step.status),
+    step.status === "FAILED",
   );
   const currentBlockPoint =
     detail?.currentBlockPoint ||
@@ -515,7 +455,7 @@ const buildManualState = (
   return {
     currentBlockPoint,
     exceptionConfirmText:
-      row?.status === "FAILED" || row?.status === "BLOCKED"
+      row?.status === "FAILED"
         ? outsourcedDataTaskPreviewText.exceptionConfirmText
         : outsourcedDataTaskPreviewText.notExceptionalText,
     rerunPrerequisites: [...outsourcedDataTaskPreviewText.rerunPrerequisites],
@@ -645,7 +585,7 @@ export const useOutsourcedDataTaskPage = (): {
     Number(
       summary.value?.failedCount ??
         filteredRows.value.filter((row) =>
-          ["FAILED", "BLOCKED"].includes(row.status),
+          row.status === "FAILED",
         ).length,
     ),
   );
@@ -666,11 +606,11 @@ export const useOutsourcedDataTaskPage = (): {
           step: item.step,
           stepName: item.stepName,
           stepDescription: item.stepDescription,
-          totalCount: Number(current?.totalCount ?? 0),
-          runningCount: Number(current?.runningCount ?? 0),
-          failedCount: Number(current?.failedCount ?? 0),
-          pendingCount: Number(current?.pendingCount ?? 0),
-        };
+        totalCount: Number(current?.totalCount ?? 0),
+        runningCount: Number(current?.runningCount ?? 0),
+        failedCount: Number(current?.failedCount ?? 0),
+        pendingCount: Number(current?.pendingCount ?? 0),
+      };
       });
     }
     return catalog.map((item) => {
@@ -685,9 +625,7 @@ export const useOutsourcedDataTaskPage = (): {
         totalCount: currentRows.length,
         runningCount: currentRows.filter((row) => row.status === "RUNNING")
           .length,
-        failedCount: currentRows.filter((row) =>
-          ["FAILED", "BLOCKED"].includes(row.status),
-        ).length,
+        failedCount: currentRows.filter((row) => row.status === "FAILED").length,
         pendingCount: currentRows.filter((row) => row.status === "PENDING")
           .length,
       };
@@ -722,14 +660,7 @@ export const useOutsourcedDataTaskPage = (): {
         rows.value.map((row) => [row.batchId, row.steps]),
       );
       summary.value = unwrapSingleResult(summaryRes) ?? null;
-      const workflowStageCatalog = summary.value?.stageCatalog?.length
-        ? summary.value.stageCatalog
-        : summary.value?.stepSummaries;
-      if (workflowStageCatalog?.length) {
-        activeStageCatalog.value = normalizeStageCatalog(workflowStageCatalog);
-      } else {
-        activeStageCatalog.value = [...defaultStageCatalog];
-      }
+      activeStageCatalog.value = [...defaultStageCatalog];
       rows.value = (pageRes.data ?? []).map((item) => {
         const batchId = String(item.batchId ?? "");
         const mapped = mapBatch(item);
@@ -1059,8 +990,7 @@ export const useOutsourcedDataTaskPage = (): {
     formatStatusColor: (status) => {
       if (status === "SUCCESS") return "green";
       if (status === "RUNNING") return "processing";
-      if (status === "FAILED" || status === "BLOCKED") return "red";
-      if (status === "STOPPED") return "orange";
+      if (status === "FAILED") return "red";
       return "default";
     },
     canManualExecute,

@@ -102,5 +102,48 @@ function patchDownloadResponseTypes() {
   }
 }
 
+function patchGeneratedUploadApis() {
+  if (!fs.existsSync(INDEX_FILE)) {
+    console.log("Generated API file not found:", INDEX_FILE);
+    return;
+  }
+
+  let content = fs.readFileSync(INDEX_FILE, "utf8");
+  let changed = false;
+
+  const uploadSourceFilesBlock =
+    /if \(uploadSourceFilesRequest\.files !== undefined\) \{\s*formData\.append\("files", uploadSourceFilesRequest\.files\);\s*\}/m;
+  if (uploadSourceFilesBlock.test(content)) {
+    content = content.replace(
+      uploadSourceFilesBlock,
+      `if (uploadSourceFilesRequest.files !== undefined) {
+      uploadSourceFilesRequest.files.forEach((file) => {
+        formData.append("files", file);
+      });
+    }`
+    );
+    changed = true;
+    console.log("[Transformer] 修复 uploadSourceFiles 多文件表单拼装");
+  }
+
+  const brokenUploadBlock =
+    /const upload = \(boolean: boolean\) => \{\s*const formData = new FormData\(\);\s*formData\.append\("data", uploadRequest\.toString\(\)\);/m;
+  if (brokenUploadBlock.test(content)) {
+    content = content.replace(
+      brokenUploadBlock,
+      `const upload = (file: Blob) => {
+    const formData = new FormData();
+    formData.append("file", file);`
+    );
+    changed = true;
+    console.log("[Transformer] 修复 upload 方法参数与表单字段");
+  }
+
+  if (changed) {
+    fs.writeFileSync(INDEX_FILE, content, "utf8");
+  }
+}
+
 cleanupSchemas();
 patchDownloadResponseTypes();
+patchGeneratedUploadApis();

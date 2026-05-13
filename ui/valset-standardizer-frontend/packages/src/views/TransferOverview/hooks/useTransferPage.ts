@@ -24,6 +24,14 @@ import type {
   TransferTargetViewDTO,
 } from "@/api/generated/valset/schemas";
 
+type OverviewHeroStat = {
+  key: string;
+  label: string;
+  value: number | string;
+  description: string;
+  tone: string;
+};
+
 const api = getJavaSpringBootQuartzApi();
 
 export const useTransferPage = () => {
@@ -352,7 +360,7 @@ export const useTransferPage = () => {
     healthTone: successRate.value >= 95 ? "green" : "gold",
   }));
 
-  const overviewHeroStats = computed(() => [
+  const overviewHeroStats = computed<OverviewHeroStat[]>(() => [
     {
       key: "delivery-total",
       label: "今日投递",
@@ -370,10 +378,10 @@ export const useTransferPage = () => {
     {
       key: "receive-size",
       label: "收取文件大小统计",
-      value: formatBytes(page.objectSizeAnalysis.totalSizeBytes)+"",
-      description: `共 ${page.objectSizeAnalysis.totalCount} 个文件， 按后缀统计展示`,
+      value: `${formatBytes(objectSizeAnalysis.value.totalSizeBytes)}`,
+      description: `共 ${objectSizeAnalysis.value.totalCount} 个文件， 按后缀统计展示`,
       tone: "success",
-    }
+    },
   ]);
 
   const pipelineCards = computed(() => [

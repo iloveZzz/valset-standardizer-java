@@ -1,7 +1,7 @@
-package com.yss.valset.application.service;
+package com.yss.valset.parser.application.service;
 
-import com.yss.valset.application.command.ValsetFileInfoRepairCommand;
-import com.yss.valset.application.dto.ValsetFileInfoRepairResultDTO;
+import com.yss.valset.parser.application.command.ValsetFileInfoRepairCommand;
+import com.yss.valset.parser.application.dto.ValsetFileInfoRepairResultDTO;
 import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.transfer.domain.model.TransferObject;
 

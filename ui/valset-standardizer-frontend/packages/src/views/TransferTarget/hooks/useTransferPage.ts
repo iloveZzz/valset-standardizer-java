@@ -1,7 +1,6 @@
 import { computed, reactive, ref, watch } from "vue";
 import { message, Modal } from "ant-design-vue";
 import type { ISchema, YTablePagination } from "@yss-ui/components";
-import { GetTemplateName2TargetType } from "@/api/generated/valset/schemas/getTemplateName2TargetType";
 import type {
   GetTemplateNameParams,
   TransferFormTemplateViewDTO,
@@ -9,6 +8,7 @@ import type {
   TransferTargetUpsertCommand,
   TransferTargetViewDTO,
 } from "@/api/generated/valset/schemas";
+import { GetTemplateNameTargetType as TargetTypeEnum } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
 import {
   injectFormilyAsyncValidator,
@@ -57,7 +57,7 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
   FILESYS: "文件服务",
 };
 
-const targetTypeOptions = Object.values(GetTemplateName2TargetType).map(
+const targetTypeOptions = Object.values(TargetTypeEnum).map(
   (value) => ({
     label: TARGET_TYPE_LABELS[value] ?? value,
     value,
@@ -75,7 +75,7 @@ const defaultQuery = (): QueryState => ({
 const defaultForm = (): TargetFormState => ({
   targetCode: "",
   targetName: "",
-  targetType: GetTemplateName2TargetType.EMAIL,
+  targetType: TargetTypeEnum.EMAIL,
   enabled: true,
   targetPathTemplate: "",
   connectionConfigText: "{}",
@@ -312,7 +312,6 @@ export const useTransferPage = (): { page: TargetPage } => {
   const mapQuery = (): ListTargetsParams => ({
     targetType: query.targetType || undefined,
     targetCode: query.targetCode || undefined,
-    targetName: query.targetName || undefined,
     enabled:
       query.enabled === "true"
         ? true
@@ -354,7 +353,7 @@ export const useTransferPage = (): { page: TargetPage } => {
     formState.targetId = row.targetId;
     formState.targetCode = row.targetCode || "";
     formState.targetName = row.targetName || "";
-    formState.targetType = row.targetType || GetTemplateName2TargetType.EMAIL;
+    formState.targetType = row.targetType || TargetTypeEnum.EMAIL;
     formState.enabled = row.enabled ?? true;
     formState.targetPathTemplate = row.targetPathTemplate || "";
     formState.connectionConfigText = stringifyJson(row.connectionConfig);

@@ -14,7 +14,6 @@ import {
 import type {
   OutsourcedDataTaskBatchRow,
   OutsourcedDataTaskPage,
-  OutsourcedDataTaskStepRow,
 } from "../types";
 
 const { page, showSceneHeader } = withDefaults(
@@ -218,14 +217,6 @@ const confirmStop = (row: OutsourcedDataTaskBatchRow) => {
   );
 };
 
-const confirmRetryStep = (row: OutsourcedDataTaskStepRow) => {
-  openActionConfirm(
-    outsourcedDataTaskActionTexts.retryStepConfirmTitle,
-    `${outsourcedDataTaskActionTexts.retryStepConfirmContentPrefix}${row.stepName}${outsourcedDataTaskActionTexts.retryStepConfirmContentSuffix}`,
-    () => page.retryStep(row),
-  );
-};
-
 const activeFilterText = computed(() => {
   const filters = [
     outsourcedDataTaskQueryTexts.currentTaskText,
@@ -325,7 +316,7 @@ const taskMetricCards = computed(() => [
           aria-busy="true"
         >
           <div
-            v-for="item in 5"
+            v-for="item in 3"
             :key="item"
             class="outsourced-task-stage outsourced-task-stage--skeleton"
           >
@@ -535,9 +526,7 @@ const taskMetricCards = computed(() => [
                 <span
                   class="outsourced-task-step-error"
                   :class="{
-                    'is-highlight':
-                      stepRow.status === 'FAILED' ||
-                      stepRow.status === 'BLOCKED',
+                    'is-highlight': stepRow.status === 'FAILED',
                   }"
                 >
                   {{ stepRow.errorMessage || "-" }}
@@ -664,13 +653,12 @@ const taskMetricCards = computed(() => [
                   }}</a-tag>
                 </template>
                 <template #errorMessage="{ row }">
-                  <span
-                    class="outsourced-task-step-error"
-                    :class="{
-                      'is-highlight':
-                        row.status === 'FAILED' || row.status === 'BLOCKED',
-                    }"
-                  >
+                <span
+                  class="outsourced-task-step-error"
+                  :class="{
+                    'is-highlight': row.status === 'FAILED',
+                  }"
+                >
                     {{ row.errorMessage || "-" }}
                   </span>
                 </template>

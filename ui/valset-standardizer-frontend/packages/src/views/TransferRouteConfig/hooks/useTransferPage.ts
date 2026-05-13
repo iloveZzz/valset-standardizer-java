@@ -5,8 +5,9 @@ import type { YTablePagination } from "@yss-ui/components";
 import { formatDateTime } from "@/utils/format";
 import { copyToClipboard } from "@/utils";
 import { transferIngestProgressSse } from "@/services/transferIngestProgressSse";
-import { GetTemplateName1SourceType } from "@/api/generated/valset/schemas/getTemplateName1SourceType";
-import { GetTemplateName2TargetType } from "@/api/generated/valset/schemas/getTemplateName2TargetType";
+import type {
+  TransferIngestProgressConnectionState,
+} from "@/services/transferIngestProgressSse";
 import type {
   ListRulesParams,
   ListRoutes1Params,
@@ -17,6 +18,11 @@ import type {
   TransferRuleViewDTO,
   TransferSourceViewDTO,
   TransferTargetViewDTO,
+  UploadSourceFilesRequest,
+} from "@/api/generated/valset/schemas";
+import {
+  GetTemplateName2SourceType as SourceTypeEnum,
+  GetTemplateNameTargetType as TargetTypeEnum,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
 import {
@@ -54,6 +60,12 @@ type SourceIngestState = {
   progressPercent?: number;
   statusMessage?: string;
   totalCount?: number;
+};
+
+type SourceIngestConnectionState = {
+  message?: string;
+  state: TransferIngestProgressConnectionState;
+  updatedAt?: string;
 };
 
 type RouteExecutionState = {
@@ -161,6 +173,42 @@ const describeTriggerType = (value?: string) => {
 };
 
 const formatTriggerTime = (value?: string) => formatDateTime(value);
+
+const formatConnectionStateLabel = (
+  state?: TransferIngestProgressConnectionState,
+) => {
+  switch (state) {
+    case "connected":
+      return "已连接";
+    case "reconnecting":
+      return "重连中";
+    case "closed":
+      return "已关闭";
+    case "error":
+      return "连接异常";
+    case "connecting":
+    default:
+      return "连接中";
+  }
+};
+
+const formatConnectionStateColor = (
+  state?: TransferIngestProgressConnectionState,
+) => {
+  switch (state) {
+    case "connected":
+      return "green";
+    case "reconnecting":
+      return "orange";
+    case "closed":
+      return "default";
+    case "error":
+      return "red";
+    case "connecting":
+    default:
+      return "blue";
+  }
+};
 
 const buildTargetOption = (item: TransferTargetViewDTO) => ({
   label: [
@@ -556,18 +604,21 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     total: 0,
   });
   const sourceIngestStates = reactive<Record<string, SourceIngestState>>({});
+  const sourceIngestConnectionStates = reactive<
+    Record<string, SourceIngestConnectionState>
+  >({});
   const routeExecutionStates = reactive<Record<string, RouteExecutionState>>({});
   const routeFlowFactMessages = reactive<
     Record<string, RouteFlowFactMessage[]>
   >({});
   const sourceIngestMessages = reactive<Record<string, SourceIngestMessage[]>>({});
-  const sourceTypeOptions = Object.values(GetTemplateName1SourceType).map(
+  const sourceTypeOptions = Object.values(SourceTypeEnum).map(
     (value) => ({
       label: SOURCE_TYPE_LABELS[value] ?? value,
       value,
     }),
   );
-  const targetTypeOptions = Object.values(GetTemplateName2TargetType).map(
+  const targetTypeOptions = Object.values(TargetTypeEnum).map(
     (value) => ({
       label: TARGET_TYPE_LABELS[value] ?? value,
       value,
@@ -619,6 +670,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
 
   const clearTrackedSourceState = (sourceId: string) => {
     delete sourceIngestStates[sourceId];
+    delete sourceIngestConnectionStates[sourceId];
     delete routeFlowFactMessages[sourceId];
     delete sourceIngestMessages[sourceId];
   };
@@ -796,6 +848,16 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
             });
           }
         },
+        (event) => {
+          if (event.sourceId !== sourceId) {
+            return;
+          }
+          sourceIngestConnectionStates[sourceId] = {
+            state: event.state,
+            message: event.message,
+            updatedAt: getCurrentTimeText(),
+          };
+        },
       );
 
       sourceProgressUnsubscribers.set(sourceId, unsubscribe);
@@ -805,6 +867,9 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   onBeforeUnmount(() => {
     sourceProgressUnsubscribers.forEach((unsubscribe) => unsubscribe());
     sourceProgressUnsubscribers.clear();
+    Object.keys(sourceIngestConnectionStates).forEach((key) => {
+      delete sourceIngestConnectionStates[key];
+    });
   });
 
   watch(
@@ -1267,6 +1332,24 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     return sourceIngestMessages[row.sourceId] ?? [];
   };
 
+  const getSourceIngestConnectionState = (
+    row: TransferRouteViewDTO | null,
+  ) => {
+    if (!row?.sourceId) {
+      return null;
+    }
+    return sourceIngestConnectionStates[row.sourceId] ?? null;
+  };
+
+  const getSourceIngestConnectionLabel = (row: TransferRouteViewDTO | null) =>
+    formatConnectionStateLabel(getSourceIngestConnectionState(row)?.state);
+
+  const getSourceIngestConnectionColor = (row: TransferRouteViewDTO | null) =>
+    formatConnectionStateColor(getSourceIngestConnectionState(row)?.state);
+
+  const getSourceIngestConnectionMessage = (row: TransferRouteViewDTO | null) =>
+    getSourceIngestConnectionState(row)?.message?.trim() || "";
+
   const getSourceIngestChainItems = (
     row: TransferRouteViewDTO | null,
   ): RouteFlowChainNode[] => {
@@ -1471,7 +1554,11 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
 
     uploadSubmitting.value = true;
     try {
-      await api.uploadSourceFiles(sourceId, files);
+      const payloadData: UploadSourceFilesRequest = {
+        sourceId,
+        files,
+      };
+      await api.uploadSourceFiles(sourceId, payloadData);
       uploadImportResult.value = {
         successkey: "1",
         failkey: "0",
@@ -1875,6 +1962,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     selectLoading,
     sourceActionLoadingIds,
     sourceIngestStates,
+    sourceIngestConnectionStates,
     routeFlowFactMessages,
     sourceIngestMessages,
     uploadVisible,
@@ -1908,6 +1996,10 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     getSourceIngestProgressText,
     getRouteFlowFactMessages,
     getSourceIngestMessages,
+    getSourceIngestConnectionState,
+    getSourceIngestConnectionLabel,
+    getSourceIngestConnectionColor,
+    getSourceIngestConnectionMessage,
     getSourceIngestChainItems,
     getRouteChainStatusColor,
     getRuleDisplayName,

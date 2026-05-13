@@ -1,12 +1,15 @@
 import type { YTablePagination } from "@yss-ui/components";
 import type {
+  GetTemplateName2SourceType,
+  GetTemplateNameTargetType,
   TransferRouteViewDTO,
   TransferRuleViewDTO,
   TransferSourceViewDTO,
   TransferTargetViewDTO,
 } from "@/api/generated/valset/schemas";
-import type { GetTemplateName1SourceType } from "@/api/generated/valset/schemas/getTemplateName1SourceType";
-import type { GetTemplateName2TargetType } from "@/api/generated/valset/schemas/getTemplateName2TargetType";
+import type {
+  TransferIngestProgressConnectionState,
+} from "@/services/transferIngestProgressSse";
 
 export interface RouteFormState {
   routeId?: string;
@@ -61,6 +64,12 @@ export interface SourceIngestMessage {
   timeText: string;
 }
 
+export interface SourceIngestConnectionState {
+  state: TransferIngestProgressConnectionState;
+  message?: string;
+  updatedAt?: string;
+}
+
 export interface RouteFlowChainNode {
   key: string;
   title: string;
@@ -94,8 +103,8 @@ export interface RouteConfigPage {
     enabled: string;
     limit: number;
   };
-  sourceTypeOptions: Array<{ label: string; value: GetTemplateName1SourceType }>;
-  targetTypeOptions: Array<{ label: string; value: GetTemplateName2TargetType }>;
+  sourceTypeOptions: Array<{ label: string; value: GetTemplateName2SourceType }>;
+  targetTypeOptions: Array<{ label: string; value: GetTemplateNameTargetType }>;
   sourceOptions: RouteSelectOption[];
   targetOptions: RouteSelectOption[];
   ruleOptions: RouteSelectOption[];
@@ -128,6 +137,7 @@ export interface RouteConfigPage {
       totalCount?: number;
     }
   >;
+  sourceIngestConnectionStates: Record<string, SourceIngestConnectionState>;
   routeFlowFactMessages: Record<string, RouteFlowFactMessage[]>;
   sourceIngestMessages: Record<string, SourceIngestMessage[]>;
   getSourceIngestChainItems: (
@@ -163,6 +173,12 @@ export interface RouteConfigPage {
   getSourceIngestProgressText: (row: TransferRouteViewDTO | null) => string;
   getRouteFlowFactMessages: (row: TransferRouteViewDTO | null) => RouteFlowFactMessage[];
   getSourceIngestMessages: (row: TransferRouteViewDTO | null) => SourceIngestMessage[];
+  getSourceIngestConnectionState: (
+    row: TransferRouteViewDTO | null,
+  ) => SourceIngestConnectionState | null;
+  getSourceIngestConnectionLabel: (row: TransferRouteViewDTO | null) => string;
+  getSourceIngestConnectionColor: (row: TransferRouteViewDTO | null) => string;
+  getSourceIngestConnectionMessage: (row: TransferRouteViewDTO | null) => string;
   getRouteChainStatusColor: (statusKey: string) => string;
   getRouteEnabledLabel: (enabled?: boolean | null) => string;
   getRuleDisplayName: (ruleId?: string | number | null) => string;

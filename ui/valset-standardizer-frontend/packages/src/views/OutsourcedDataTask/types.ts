@@ -4,9 +4,7 @@ export type OutsourcedDataTaskStatus =
   | "PENDING"
   | "RUNNING"
   | "SUCCESS"
-  | "FAILED"
-  | "STOPPED"
-  | "BLOCKED";
+  | "FAILED";
 
 export type OutsourcedDataTaskStage =
   | "FILE_PARSE"

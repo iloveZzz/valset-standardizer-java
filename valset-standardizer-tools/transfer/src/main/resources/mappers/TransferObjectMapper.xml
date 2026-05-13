@@ -3,7 +3,7 @@
 <mapper namespace="com.yss.valset.transfer.infrastructure.mapper.TransferObjectMybatisMapper">
 
     <!-- 查询邮件收件箱分组列表 - MySQL -->
-    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="mysql">
+    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="MySQL">
         WITH base AS (
             SELECT
                 o.transfer_id,
@@ -86,7 +86,7 @@
     </select>
 
     <!-- 查询邮件收件箱分组列表 - PostgreSQL -->
-    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="postgresql">
+    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="PostgreSQL">
         WITH base AS (
             SELECT
                 o.transfer_id,
@@ -169,7 +169,7 @@
     </select>
 
     <!-- 查询邮件收件箱分组列表 - Oracle -->
-    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="oracle">
+    <select id="loadMailInboxGroups" resultType="com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO" databaseId="Oracle">
         WITH base AS (
             SELECT
                 o.transfer_id,

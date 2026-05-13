@@ -1,7 +1,6 @@
 import { computed, reactive, ref, watch } from "vue";
 import { message, Modal } from "ant-design-vue";
 import type { ISchema, YTablePagination } from "@yss-ui/components";
-import { GetTemplateName1SourceType } from "@/api/generated/valset/schemas/getTemplateName1SourceType";
 import type {
   GetTemplateName2Params,
   ListSourcesParams,
@@ -9,7 +8,9 @@ import type {
   TransferFormTemplateViewDTO,
   TransferSourceUpsertCommand,
   TransferSourceViewDTO,
+  UploadSourceFilesRequest,
 } from "@/api/generated/valset/schemas";
+import { GetTemplateName2SourceType as SourceTypeEnum } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
 import {
   injectFormilyAsyncValidator,
@@ -57,7 +58,7 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   HTTP: "HTTP接口",
 };
 
-const sourceTypeOptions = Object.values(GetTemplateName1SourceType).map(
+const sourceTypeOptions = Object.values(SourceTypeEnum).map(
   (value) => ({
     label: SOURCE_TYPE_LABELS[value] ?? value,
     value,
@@ -75,7 +76,7 @@ const defaultQuery = (): QueryState => ({
 const defaultForm = (): SourceFormState => ({
   sourceCode: "",
   sourceName: "",
-  sourceType: GetTemplateName1SourceType.LOCAL_DIR,
+  sourceType: SourceTypeEnum.LOCAL_DIR,
   enabled: true,
   connectionConfigText: "{}",
   sourceMetaText: "{}",
@@ -396,7 +397,7 @@ export const useTransferPage = (): { page: SourcePage } => {
     formState.sourceCode = row.sourceCode || "";
     formState.sourceName = row.sourceName || "";
     formState.sourceType =
-      row.sourceType || GetTemplateName1SourceType.LOCAL_DIR;
+      row.sourceType || SourceTypeEnum.LOCAL_DIR;
     formState.enabled = row.enabled ?? true;
     formState.connectionConfigText = stringifyJson(row.connectionConfig);
     formState.sourceMetaText = stringifyJson(row.sourceMeta);
@@ -704,7 +705,11 @@ export const useTransferPage = (): { page: SourcePage } => {
 
     uploadSubmitting.value = true;
     try {
-      await api.uploadSourceFiles(uploadSourceRow.value.sourceId, uploadFiles.value);
+      const payload: UploadSourceFilesRequest = {
+        sourceId: uploadSourceRow.value.sourceId,
+        files: uploadFiles.value,
+      };
+      await api.uploadSourceFiles(uploadSourceRow.value.sourceId, payload);
       message.success("文件上传成功");
       closeUploadDialog();
       await loadList();

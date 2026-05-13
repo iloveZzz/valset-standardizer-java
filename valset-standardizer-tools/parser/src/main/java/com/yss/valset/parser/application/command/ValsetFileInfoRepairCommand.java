@@ -1,4 +1,4 @@
-package com.yss.valset.application.command;
+package com.yss.valset.parser.application.command;
 
 import lombok.Data;
 

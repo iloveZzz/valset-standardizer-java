@@ -1,9 +1,9 @@
 package com.yss.valset.application.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.valset.application.command.ValsetFileInfoRepairCommand;
-import com.yss.valset.application.dto.ValsetFileInfoRepairResultDTO;
-import com.yss.valset.application.service.ValsetFileInfoRepairAppService;
+import com.yss.valset.parser.application.command.ValsetFileInfoRepairCommand;
+import com.yss.valset.parser.application.dto.ValsetFileInfoRepairResultDTO;
+import com.yss.valset.parser.application.service.ValsetFileInfoRepairAppService;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.domain.model.ValsetFileSourceChannel;

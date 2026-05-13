@@ -18,7 +18,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableDistributedId
 @EnableScheduling
 @EnableFeignClients(basePackages = "com.yss.valset.workflow.dolphinscheduler")
-@SpringBootApplication(scanBasePackages = {"com.yss"})
+@SpringBootApplication(scanBasePackages = {"com.yss.cloud","com.yss.datamiddle","com.yss.valset"})
 public class ValsetStandardizerBootApplication {
     /**
      * 启动Spring应用程序。

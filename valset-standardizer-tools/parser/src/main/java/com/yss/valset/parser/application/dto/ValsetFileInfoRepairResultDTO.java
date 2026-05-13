@@ -1,4 +1,4 @@
-package com.yss.valset.application.dto;
+package com.yss.valset.parser.application.dto;
 
 import lombok.Builder;
 import lombok.Data;

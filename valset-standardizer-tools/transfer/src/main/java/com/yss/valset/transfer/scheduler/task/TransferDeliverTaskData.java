@@ -1,15 +1,24 @@
 package com.yss.valset.transfer.scheduler.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * 文件投递任务入参。
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TransferDeliverTaskData {
 
     private final String routeId;
     private final String transferId;
     private final int retryCount;
 
-    public TransferDeliverTaskData(String routeId, String transferId, int retryCount) {
+    @JsonCreator
+    public TransferDeliverTaskData(
+            @JsonProperty("routeId") String routeId,
+            @JsonProperty("transferId") String transferId,
+            @JsonProperty("retryCount") int retryCount) {
         this.routeId = routeId;
         this.transferId = transferId;
         this.retryCount = retryCount;

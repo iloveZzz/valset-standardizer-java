@@ -44,9 +44,7 @@ export const outsourcedDataTaskStatusCatalog: Array<{
   { status: "PENDING", label: "待处理" },
   { status: "RUNNING", label: "处理中" },
   { status: "SUCCESS", label: "已完成" },
-  { status: "FAILED", label: "失败" },
-  { status: "STOPPED", label: "已停止" },
-  { status: "BLOCKED", label: "阻塞" },
+  { status: "FAILED", label: "处理异常" },
 ];
 
 export const outsourcedDataTaskTriggerModeLabels: Record<string, string> = {

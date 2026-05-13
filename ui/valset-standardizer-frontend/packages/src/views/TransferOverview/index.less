@@ -948,3 +948,215 @@
   font-size: 12px;
   line-height: 1.6;
 }
+
+.overview-hero-stat-card--skeleton,
+.overview-status-card--skeleton,
+.overview-mini-chart-card--skeleton,
+.overview-status-source-card--skeleton,
+.overview-status-chip--skeleton,
+.overview-mini-summary-card--skeleton,
+.overview-anomaly-card--skeleton {
+  pointer-events: none;
+}
+
+.overview-skeleton {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.88) 0%,
+    rgba(241, 245, 249, 0.98) 50%,
+    rgba(226, 232, 240, 0.88) 100%
+  );
+  background-size: 240% 100%;
+  animation: overview-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.overview-skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.48) 50%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  animation: overview-skeleton-sweep 1.6s ease-in-out infinite;
+  content: "";
+}
+
+.overview-skeleton--title {
+  width: 168px;
+  height: 20px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--section {
+  width: 124px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--badge {
+  width: 72px;
+  height: 26px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--label {
+  width: 92px;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--value {
+  width: 128px;
+  height: 30px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--desc {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--desc-wide {
+  height: 42px;
+  border-radius: 16px;
+}
+
+.overview-skeleton--line {
+  width: min(100%, 280px);
+  height: 13px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--chip-label {
+  width: 48px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--chip-value {
+  width: 24px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.overview-skeleton--switch {
+  width: 66px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+.overview-hero-stat-card--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 132px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.overview-status-card--skeleton,
+.overview-mini-chart-card--skeleton,
+.overview-anomaly-card--skeleton {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.overview-status-head-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.overview-status-source-card--skeleton,
+.overview-status-chip--skeleton,
+.overview-mini-summary-card--skeleton,
+.overview-anomaly-card--skeleton {
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.overview-status-source-card--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overview-status-chip--skeleton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.overview-mini-summary-card--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 92px;
+}
+
+.overview-chart-placeholder {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(241, 245, 249, 0.95),
+    rgba(226, 232, 240, 0.82)
+  );
+}
+
+.overview-chart-placeholder::before {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: translateX(-120%);
+  animation: overview-skeleton-sweep 1.8s ease-in-out infinite;
+  content: "";
+}
+
+.overview-status-card--skeleton .overview-status-chart-shell,
+.overview-mini-chart-card--skeleton .overview-mini-chart {
+  min-height: 220px;
+}
+
+.overview-status-card--skeleton .overview-status-source-grid,
+.overview-mini-chart-card--skeleton .overview-mini-summary-grid {
+  opacity: 0.92;
+}
+
+.overview-status-card--skeleton .overview-status-chart-shell,
+.overview-mini-chart-card--skeleton .overview-mini-chart,
+.overview-anomaly-card--skeleton .overview-skeleton--desc-wide {
+  margin-top: 12px;
+}
+
+@keyframes overview-skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@keyframes overview-skeleton-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(120%);
+  }
+}

@@ -40,13 +40,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -64,6 +67,24 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private static final String PAGE_WORKFLOW_CODE = "VALUATION_PARSE";
+
+    private static final List<OutsourcedDataTaskStage> PAGE_STAGE_SEQUENCE = java.util.List.of(
+            OutsourcedDataTaskStage.FILE_PARSE,
+            OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE,
+            OutsourcedDataTaskStage.STANDARD_LANDING);
+
+    private static final Map<String, OutsourcedDataTaskStage> PAGE_STAGE_ALIAS_MAP = Map.of(
+            "RAW_DATA_EXTRACT", OutsourcedDataTaskStage.FILE_PARSE,
+            "SUBJECT_RECOGNIZE", OutsourcedDataTaskStage.STANDARD_LANDING,
+            "DATA_PROCESSING", OutsourcedDataTaskStage.STANDARD_LANDING,
+            "VERIFY_ARCHIVE", OutsourcedDataTaskStage.STANDARD_LANDING);
+
+    private static final Set<String> PAGE_ABNORMAL_STATUSES = Set.of(
+            OutsourcedDataTaskStatus.FAILED.name(),
+            OutsourcedDataTaskStatus.BLOCKED.name(),
+            OutsourcedDataTaskStatus.STOPPED.name());
 
     private final OutsourcedDataTaskBatchRepository batchRepository;
 
@@ -85,73 +106,81 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
 
     @Override
     public PageResult<OutsourcedDataTaskBatchDTO> pageTasks(OutsourcedDataTaskQueryCommand query) {
+        List<OutsourcedDataTaskBatchDTO> records = loadTaskSnapshots(query);
         int current = normalizePageIndex(query == null ? null : query.getPageIndex());
         int size = normalizePageSize(query == null ? null : query.getPageSize());
-        Page<OutsourcedDataTaskBatchPO> page = batchRepository.selectPage(
-                new Page<>(current, size),
-                buildBatchQuery(query)
-                        .orderByDesc(OutsourcedDataTaskBatchPO::getStartedAt)
-                        .orderByDesc(OutsourcedDataTaskBatchPO::getBatchId));
-        List<OutsourcedDataTaskBatchDTO> records = page.getRecords() == null
-                ? java.util.Arrays.asList()
-                : page.getRecords().stream().map(this::toBatchDTO).collect(java.util.stream.Collectors.toList());
-        return PageResult.of(records, page.getTotal(), page.getSize(), page.getCurrent());
+        long total = records.size();
+        int fromIndex = Math.min((current - 1) * size, records.size());
+        int toIndex = Math.min(fromIndex + size, records.size());
+        List<OutsourcedDataTaskBatchDTO> pageRecords = fromIndex >= toIndex
+                ? java.util.Collections.emptyList()
+                : new ArrayList<>(records.subList(fromIndex, toIndex));
+        return PageResult.of(pageRecords, total, size, current);
     }
 
     @Override
     public OutsourcedDataTaskSummaryDTO summary(OutsourcedDataTaskQueryCommand query) {
-        List<String> batchIds = batchRepository.selectMaps(
-                buildBatchSummaryQuery(query)
-                        .select("batch_id"))
-                .stream()
-                .map(item -> textValue(mapValue(item, "batch_id")))
-                .filter(StringUtils::hasText)
-                .collect(java.util.stream.Collectors.toList());
-        if (batchIds.isEmpty()) {
-            WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
+        OutsourcedDataTaskQueryCommand baseQuery = copyQueryWithoutDynamicFilters(query);
+        List<OutsourcedDataTaskBatchPO> batches = batchRepository.selectList(
+                buildBatchQuery(baseQuery)
+                        .orderByDesc(OutsourcedDataTaskBatchPO::getStartedAt)
+                        .orderByDesc(OutsourcedDataTaskBatchPO::getBatchId));
+        if (batches == null || batches.isEmpty()) {
             OutsourcedDataTaskSummaryDTO summary = new OutsourcedDataTaskSummaryDTO();
-            summary.setStepSummaries(runtimeCatalog.stageSequence().stream()
+            summary.setStepSummaries(PAGE_STAGE_SEQUENCE.stream()
                     .map(stage -> toStageSummary(stage.name(), java.util.Collections.emptyMap()))
                     .collect(java.util.stream.Collectors.toList()));
             summary.setStageCatalog(summary.getStepSummaries());
             fillWorkflowMetadata(summary);
             return summary;
         }
-        List<Map<String, Object>> statusCounts = batchRepository.selectMaps(
-                new QueryWrapper<OutsourcedDataTaskBatchPO>()
-                        .select("status", "COUNT(1) AS total_count")
-                        .in("batch_id", batchIds)
-                        .groupBy("status"));
-        List<Map<String, Object>> stageCounts = stepRepository.selectMaps(
-                new QueryWrapper<OutsourcedDataTaskStepPO>()
-                        .select("stage", "status", "COUNT(1) AS total_count")
-                        .eq("current_flag", true)
-                        .in("batch_id", batchIds)
-                        .groupBy("stage", "status"));
-        Map<String, Long> statusCountMap = statusCounts.stream()
+        Map<String, List<OutsourcedDataTaskStepDTO>> stepsByBatchId = loadCurrentStepDtos(
+                batches.stream()
+                        .map(OutsourcedDataTaskBatchPO::getBatchId)
+                        .filter(StringUtils::hasText)
+                        .collect(java.util.stream.Collectors.toList()));
+        Map<String, OutsourcedDataTaskBatchPO> batchById = batches.stream()
                 .collect(Collectors.toMap(
-                        item -> textValue(mapValue(item, "status")),
-                        item -> longValue(mapValue(item, "total_count")),
-                        Long::sum,
+                        OutsourcedDataTaskBatchPO::getBatchId,
+                        batch -> batch,
+                        (left, right) -> right,
                         LinkedHashMap::new));
-        Map<String, Map<String, Long>> stageStatusCountMap = stageCounts.stream()
-                .collect(Collectors.groupingBy(
-                        item -> displayStageName(textValue(mapValue(item, "stage"))),
-                        LinkedHashMap::new,
-                        Collectors.toMap(
-                                item -> textValue(mapValue(item, "status")),
-                                item -> longValue(mapValue(item, "total_count")),
-                                Long::sum,
-                                LinkedHashMap::new)));
+        List<OutsourcedDataTaskBatchDTO> records = batches.stream()
+                .map(batch -> toBatchDTO(batch,
+                        stepsByBatchId.getOrDefault(batch.getBatchId(), java.util.Collections.emptyList())))
+                .filter(row -> matchesSnapshot(row, query))
+                .collect(java.util.stream.Collectors.toList());
         OutsourcedDataTaskSummaryDTO summary = new OutsourcedDataTaskSummaryDTO();
-        long totalCount = statusCountMap.values().stream().mapToLong(Long::longValue).sum();
-        summary.setTotalCount(totalCount);
-        summary.setRunningCount(statusCountMap.getOrDefault(OutsourcedDataTaskStatus.RUNNING.name(), 0L));
-        summary.setSuccessCount(statusCountMap.getOrDefault(OutsourcedDataTaskStatus.SUCCESS.name(), 0L));
-        summary.setFailedCount(statusCountMap.getOrDefault(OutsourcedDataTaskStatus.FAILED.name(), 0L)
-                + statusCountMap.getOrDefault(OutsourcedDataTaskStatus.BLOCKED.name(), 0L));
-        WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
-        summary.setStepSummaries(runtimeCatalog.stageSequence().stream()
+        summary.setTotalCount(records.size());
+        summary.setRunningCount(records.stream().filter(row -> OutsourcedDataTaskStatus.RUNNING.name().equals(row.getStatus())).count());
+        summary.setSuccessCount(records.stream().filter(row -> OutsourcedDataTaskStatus.SUCCESS.name().equals(row.getStatus())).count());
+        summary.setFailedCount(records.stream().filter(row -> OutsourcedDataTaskStatus.FAILED.name().equals(row.getStatus())).count());
+        Map<String, Map<String, Long>> stageStatusCountMap = new LinkedHashMap<>();
+        for (OutsourcedDataTaskStage stage : PAGE_STAGE_SEQUENCE) {
+            stageStatusCountMap.put(stage.name(), new LinkedHashMap<>());
+        }
+        for (OutsourcedDataTaskBatchDTO record : records) {
+            List<OutsourcedDataTaskStepDTO> steps = stepsByBatchId.get(record.getBatchId());
+            if (steps == null || steps.isEmpty()) {
+                List<OutsourcedDataTaskStepDTO> syntheticSteps = PAGE_STAGE_SEQUENCE.stream()
+                        .map(stage -> buildSyntheticStep(batchById.get(record.getBatchId()), stage,
+                                normalizePageStage(record.getCurrentStage()),
+                                enumStatus(normalizePageStatus(record.getStatus()))))
+                        .collect(java.util.stream.Collectors.toList());
+                for (OutsourcedDataTaskStepDTO step : syntheticSteps) {
+                    Map<String, Long> statusMap = stageStatusCountMap.computeIfAbsent(step.getStage(),
+                            key -> new LinkedHashMap<>());
+                    statusMap.merge(normalizePageStatus(step.getStatus()), 1L, Long::sum);
+                }
+                continue;
+            }
+            for (OutsourcedDataTaskStepDTO step : steps) {
+                Map<String, Long> statusMap = stageStatusCountMap.computeIfAbsent(step.getStage(),
+                        key -> new LinkedHashMap<>());
+                statusMap.merge(normalizePageStatus(step.getStatus()), 1L, Long::sum);
+            }
+        }
+        summary.setStepSummaries(PAGE_STAGE_SEQUENCE.stream()
                 .map(stage -> toStageSummary(stage.name(), stageStatusCountMap.getOrDefault(stage.name(), java.util.Collections.emptyMap())))
                 .collect(java.util.stream.Collectors.toList()));
         summary.setStageCatalog(summary.getStepSummaries());
@@ -161,13 +190,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
 
     @Override
     public List<OutsourcedDataTaskBatchDTO> listTasks(OutsourcedDataTaskQueryCommand query) {
-        return batchRepository.selectList(
-                buildBatchQuery(query)
-                        .orderByDesc(OutsourcedDataTaskBatchPO::getStartedAt)
-                        .orderByDesc(OutsourcedDataTaskBatchPO::getBatchId))
-                .stream()
-                .map(this::toBatchDTO)
-                .collect(java.util.stream.Collectors.toList());
+        return loadTaskSnapshots(query);
     }
 
     @Override
@@ -175,8 +198,13 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         if (!StringUtils.hasText(batchId)) {
             return Optional.empty();
         }
-        return Optional.ofNullable(batchRepository.selectById(batchId))
-                .map(this::toBatchDTO);
+        OutsourcedDataTaskBatchPO batch = batchRepository.selectById(batchId);
+        if (batch == null) {
+            return Optional.empty();
+        }
+        List<OutsourcedDataTaskStepDTO> steps = loadCurrentStepDtos(java.util.Collections.singletonList(batchId))
+                .getOrDefault(batchId, java.util.Collections.emptyList());
+        return Optional.of(toBatchDTO(batch, steps));
     }
 
     @Override
@@ -185,17 +213,8 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             return java.util.Arrays.asList();
         }
         OutsourcedDataTaskBatchPO batch = batchRepository.selectById(batchId);
-        List<OutsourcedDataTaskStepDTO> currentSteps = stepRepository.selectList(
-                Wrappers.lambdaQuery(OutsourcedDataTaskStepPO.class)
-                        .eq(OutsourcedDataTaskStepPO::getBatchId, batchId)
-                        .eq(OutsourcedDataTaskStepPO::getCurrentFlag, true)
-                        .orderByAsc(OutsourcedDataTaskStepPO::getStage)
-                        .orderByAsc(OutsourcedDataTaskStepPO::getRunNo)
-                        .orderByAsc(OutsourcedDataTaskStepPO::getStepId))
-                .stream()
-                .map(this::toStepDTO)
-                .sorted((left, right) -> Integer.compare(stageOrder(left.getStage()), stageOrder(right.getStage())))
-                .collect(java.util.stream.Collectors.toList());
+        List<OutsourcedDataTaskStepDTO> currentSteps = loadCurrentStepDtos(java.util.Collections.singletonList(batchId))
+                .getOrDefault(batchId, java.util.Collections.emptyList());
         if (batch == null) {
             return currentSteps;
         }
@@ -313,6 +332,107 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         return wrapper;
     }
 
+    private List<OutsourcedDataTaskBatchDTO> loadTaskSnapshots(OutsourcedDataTaskQueryCommand query) {
+        OutsourcedDataTaskQueryCommand baseQuery = copyQueryWithoutDynamicFilters(query);
+        List<OutsourcedDataTaskBatchPO> batches = batchRepository.selectList(
+                buildBatchQuery(baseQuery)
+                        .orderByDesc(OutsourcedDataTaskBatchPO::getStartedAt)
+                        .orderByDesc(OutsourcedDataTaskBatchPO::getBatchId));
+        if (batches == null || batches.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        Map<String, List<OutsourcedDataTaskStepDTO>> stepsByBatchId = loadCurrentStepDtos(
+                batches.stream()
+                        .map(OutsourcedDataTaskBatchPO::getBatchId)
+                        .filter(StringUtils::hasText)
+                        .collect(java.util.stream.Collectors.toList()));
+        return batches.stream()
+                .map(batch -> toBatchDTO(batch,
+                        stepsByBatchId.getOrDefault(batch.getBatchId(), java.util.Collections.emptyList())))
+                .filter(row -> matchesSnapshot(row, query))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private Map<String, List<OutsourcedDataTaskStepDTO>> loadCurrentStepDtos(List<String> batchIds) {
+        if (batchIds == null || batchIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        return stepRepository.selectList(
+                Wrappers.lambdaQuery(OutsourcedDataTaskStepPO.class)
+                        .in(OutsourcedDataTaskStepPO::getBatchId, batchIds)
+                        .eq(OutsourcedDataTaskStepPO::getCurrentFlag, true)
+                        .orderByAsc(OutsourcedDataTaskStepPO::getStage)
+                        .orderByAsc(OutsourcedDataTaskStepPO::getRunNo)
+                        .orderByAsc(OutsourcedDataTaskStepPO::getStepId))
+                .stream()
+                .map(this::toStepDTO)
+                .collect(Collectors.groupingBy(
+                        OutsourcedDataTaskStepDTO::getBatchId,
+                        LinkedHashMap::new,
+                        Collectors.toList()));
+    }
+
+    private static OutsourcedDataTaskQueryCommand copyQueryWithoutDynamicFilters(OutsourcedDataTaskQueryCommand query) {
+        if (query == null) {
+            return null;
+        }
+        OutsourcedDataTaskQueryCommand copy = new OutsourcedDataTaskQueryCommand();
+        copy.setBatchId(query.getBatchId());
+        copy.setTaskDate(query.getTaskDate());
+        copy.setBusinessDate(query.getBusinessDate());
+        copy.setManagerName(query.getManagerName());
+        copy.setProductKeyword(query.getProductKeyword());
+        copy.setSourceType(query.getSourceType());
+        copy.setPageIndex(query.getPageIndex());
+        copy.setPageSize(query.getPageSize());
+        return copy;
+    }
+
+    private boolean matchesSnapshot(OutsourcedDataTaskBatchDTO row, OutsourcedDataTaskQueryCommand query) {
+        if (row == null || query == null) {
+            return true;
+        }
+        if (StringUtils.hasText(query.getStatus())
+                && !Objects.equals(normalizePageStatus(query.getStatus()), normalizePageStatus(row.getStatus()))) {
+            return false;
+        }
+        if (StringUtils.hasText(query.getStage())
+                && !hasStage(row, query.getStage())) {
+            return false;
+        }
+        if (StringUtils.hasText(query.getErrorType())) {
+            String errorType = trim(query.getErrorType());
+            String lastErrorCode = trim(row.getLastErrorCode());
+            String lastErrorMessage = trim(row.getLastErrorMessage());
+            if (!matches(lastErrorCode, errorType) && !matches(lastErrorMessage, errorType)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean hasStage(OutsourcedDataTaskBatchDTO row, String stage) {
+        if (row == null || !StringUtils.hasText(stage)) {
+            return true;
+        }
+        String normalizedStage = normalizePageStage(stage).name();
+        if (Objects.equals(normalizedStage, row.getCurrentStage())
+                || Objects.equals(normalizedStage, row.getCurrentStep())) {
+            return true;
+        }
+        return row.getCurrentStageName() != null && row.getCurrentStageName().contains(stage.trim())
+                || row.getCurrentStepName() != null && row.getCurrentStepName().contains(stage.trim())
+                || row.getCurrentStageName() != null && row.getCurrentStageName().contains(normalizedStage)
+                || row.getCurrentStepName() != null && row.getCurrentStepName().contains(normalizedStage);
+    }
+
+    private static boolean matches(String actual, String keyword) {
+        if (!StringUtils.hasText(keyword)) {
+            return true;
+        }
+        return StringUtils.hasText(actual) && actual.toLowerCase(Locale.ROOT).contains(keyword.toLowerCase(Locale.ROOT));
+    }
+
     private void applyCurrentBatchFilter(LambdaQueryWrapper<OutsourcedDataTaskBatchPO> wrapper) {
         wrapper.and(criteria -> criteria
                 .likeRight(OutsourcedDataTaskBatchPO::getBatchId, "FILE-")
@@ -331,15 +451,14 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         OutsourcedDataTaskStageSummaryDTO summary = new OutsourcedDataTaskStageSummaryDTO();
         summary.setStage(stage);
         summary.setStep(stage);
-        WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
-        summary.setStageName(runtimeCatalog.stageLabel(stage));
-        summary.setStepName(runtimeCatalog.stageLabel(stage));
-        summary.setStageDescription(runtimeCatalog.stageDescription(stage));
-        summary.setStepDescription(runtimeCatalog.stageDescription(stage));
+        OutsourcedDataTaskStage visibleStage = normalizePageStage(stage);
+        summary.setStageName(visibleStage.getLabel());
+        summary.setStepName(visibleStage.getLabel());
+        summary.setStageDescription(visibleStage.getDescription());
+        summary.setStepDescription(visibleStage.getDescription());
         summary.setTotalCount(statusCounts.values().stream().mapToLong(Long::longValue).sum());
         summary.setRunningCount(statusCounts.getOrDefault(OutsourcedDataTaskStatus.RUNNING.name(), 0L));
-        summary.setFailedCount(statusCounts.getOrDefault(OutsourcedDataTaskStatus.FAILED.name(), 0L)
-                + statusCounts.getOrDefault(OutsourcedDataTaskStatus.BLOCKED.name(), 0L));
+        summary.setFailedCount(statusCounts.getOrDefault(OutsourcedDataTaskStatus.FAILED.name(), 0L));
         summary.setPendingCount(statusCounts.getOrDefault(OutsourcedDataTaskStatus.PENDING.name(), 0L));
         return summary;
     }
@@ -348,21 +467,20 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         if (summary == null) {
             return;
         }
-        WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
-        Optional<com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog.ActiveWorkflowDefinition> definitionOpt = runtimeCatalog.activeWorkflowDefinition();
-        if (definitionOpt.isPresent()) {
-            com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog.ActiveWorkflowDefinition definition = definitionOpt.get();
-            summary.setWorkflowCode(definition.getWorkflowCode());
-            summary.setWorkflowId(definition.getWorkflowId());
-            summary.setVersionNo(definition.getVersionNo());
-        } else {
-            summary.setWorkflowCode(runtimeCatalog.activeWorkflowCode());
-            summary.setWorkflowId(runtimeCatalog.activeWorkflowId());
-            summary.setVersionNo(runtimeCatalog.activeWorkflowVersionNo());
-        }
+        summary.setWorkflowCode(PAGE_WORKFLOW_CODE);
+        summary.setWorkflowId(null);
+        summary.setVersionNo(null);
     }
 
     private OutsourcedDataTaskBatchDTO toBatchDTO(OutsourcedDataTaskBatchPO po) {
+        List<OutsourcedDataTaskStepDTO> steps = loadCurrentStepDtos(
+                java.util.Collections.singletonList(po.getBatchId()))
+                .getOrDefault(po.getBatchId(), java.util.Collections.emptyList());
+        return toBatchDTO(po, steps);
+    }
+
+    private OutsourcedDataTaskBatchDTO toBatchDTO(OutsourcedDataTaskBatchPO po,
+            List<OutsourcedDataTaskStepDTO> currentSteps) {
         OutsourcedDataTaskBatchDTO dto = new OutsourcedDataTaskBatchDTO();
         dto.setBatchId(po.getBatchId());
         dto.setBatchName(po.getBatchName());
@@ -378,24 +496,36 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         dto.setOriginalFileName(
                 firstText(po.getOriginalFileName(), fileInfo == null ? null : fileInfo.getFileNameOriginal()));
         dto.setSourceType(po.getSourceType());
-        OutsourcedDataTaskStage displayStage = displayStage(enumStage(po.getCurrentStage()));
-        String displayStageName = displayStage == null ? po.getCurrentStage() : displayStage.getLabel();
-        dto.setCurrentStage(displayStage == null ? po.getCurrentStage() : displayStage.name());
-        dto.setCurrentStep(displayStage == null ? po.getCurrentStage() : displayStage.name());
-        dto.setCurrentStageName(displayStageName);
-        dto.setCurrentStepName(displayStageName);
-        dto.setStatus(po.getStatus());
-        dto.setStatusName(statusLabel(po.getStatus()));
-        dto.setProgress(po.getProgress());
-        LocalDateTime startedAt = resolveBatchStartedAt(po.getBatchId(), po.getStartedAt());
-        LocalDateTime endedAt = resolveBatchEndedAt(po.getBatchId(), po.getEndedAt());
+        List<OutsourcedDataTaskStepDTO> orderedSteps = normalizeVisibleSteps(currentSteps);
+        OutsourcedDataTaskStage currentStage = orderedSteps.isEmpty()
+                ? normalizePageStage(po.getCurrentStage())
+                : resolveBatchStageFromSteps(orderedSteps);
+        String currentStatus = orderedSteps.isEmpty()
+                ? normalizePageStatus(po.getStatus())
+                : resolveBatchStatusFromSteps(orderedSteps).name();
+        dto.setCurrentStage(currentStage.name());
+        dto.setCurrentStep(currentStage.name());
+        dto.setCurrentStageName(currentStage.getLabel());
+        dto.setCurrentStepName(currentStage.getLabel());
+        dto.setStatus(currentStatus);
+        dto.setStatusName(statusLabel(currentStatus));
+        dto.setProgress(resolveBatchProgress(currentStage, enumStatus(currentStatus)));
+        LocalDateTime startedAt = orderedSteps.isEmpty()
+                ? resolveBatchStartedAt(po.getBatchId(), po.getStartedAt())
+                : parseDateTime(orderedSteps.get(0).getStartedAt());
+        LocalDateTime endedAt = orderedSteps.isEmpty()
+                ? resolveBatchEndedAt(po.getBatchId(), po.getEndedAt())
+                : parseDateTime(orderedSteps.get(orderedSteps.size() - 1).getEndedAt());
         dto.setStartedAt(formatDateTime(startedAt));
         dto.setEndedAt(formatDateTime(endedAt));
         Long durationMs = durationMs(startedAt, endedAt);
         dto.setDurationMs(durationMs);
-        dto.setDurationText(formatDuration(durationMs, po.getStatus()));
-        dto.setLastErrorCode(po.getLastErrorCode());
-        dto.setLastErrorMessage(po.getLastErrorMessage());
+        dto.setDurationText(formatDuration(durationMs, currentStatus));
+        Optional<OutsourcedDataTaskStepDTO> errorStep = orderedSteps.stream()
+                .filter(step -> PAGE_ABNORMAL_STATUSES.contains(step.getStatus()))
+                .reduce((left, right) -> right);
+        dto.setLastErrorCode(errorStep.map(OutsourcedDataTaskStepDTO::getErrorCode).orElse(po.getLastErrorCode()));
+        dto.setLastErrorMessage(errorStep.map(OutsourcedDataTaskStepDTO::getErrorMessage).orElse(po.getLastErrorMessage()));
         return dto;
     }
 
@@ -751,6 +881,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     private static boolean isTerminalStatus(String status) {
         return OutsourcedDataTaskStatus.SUCCESS.name().equals(status)
                 || OutsourcedDataTaskStatus.FAILED.name().equals(status)
+                || OutsourcedDataTaskStatus.BLOCKED.name().equals(status)
                 || OutsourcedDataTaskStatus.STOPPED.name().equals(status);
     }
 
@@ -776,13 +907,15 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             return;
         }
         reconcileSequentialStepStates(steps, occurredAt);
-        OutsourcedDataTaskStepPO currentStep = resolveCurrentStageStep(steps);
-        int expectedStageCount = Math.max(1, stageCatalog().stageSequence().size());
-        String status = aggregateBatchStatus(steps, expectedStageCount);
+        List<OutsourcedDataTaskStepDTO> visibleSteps = normalizeVisibleSteps(steps.stream()
+                .map(this::toStepDTO)
+                .collect(java.util.stream.Collectors.toList()));
+        OutsourcedDataTaskStepDTO currentStep = resolveCurrentStageStep(visibleSteps);
+        String status = aggregateBatchStatus(visibleSteps);
         batch.setCurrentStage(currentStep == null ? batch.getCurrentStage() : currentStep.getStage());
         batch.setStatus(status);
         batch.setProgress(resolveBatchProgress(
-                currentStep == null ? null : displayStage(enumStage(currentStep.getStage())),
+                currentStep == null ? null : normalizePageStage(currentStep.getStage()),
                 enumStatus(status)));
         batch.setStartedAt(resolveBatchStartedAt(batchId, batch.getStartedAt()));
         batch.setUpdatedAt(occurredAt);
@@ -793,13 +926,11 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             batch.setEndedAt(null);
             batch.setDurationMs(null);
         }
-        Optional<OutsourcedDataTaskStepPO> errorStep = steps.stream()
-                .filter(step -> OutsourcedDataTaskStatus.FAILED.name().equals(step.getStatus())
-                        || OutsourcedDataTaskStatus.BLOCKED.name().equals(step.getStatus()))
-                .max(Comparator.comparing(OutsourcedDataTaskStepPO::getUpdatedAt,
-                        Comparator.nullsFirst(Comparator.naturalOrder())));
-        batch.setLastErrorCode(errorStep.map(OutsourcedDataTaskStepPO::getErrorCode).orElse(null));
-        batch.setLastErrorMessage(errorStep.map(OutsourcedDataTaskStepPO::getErrorMessage).orElse(null));
+        Optional<OutsourcedDataTaskStepDTO> errorStep = visibleSteps.stream()
+                .filter(step -> PAGE_ABNORMAL_STATUSES.contains(step.getStatus()))
+                .reduce((left, right) -> right);
+        batch.setLastErrorCode(errorStep.map(OutsourcedDataTaskStepDTO::getErrorCode).orElse(null));
+        batch.setLastErrorMessage(errorStep.map(OutsourcedDataTaskStepDTO::getErrorMessage).orElse(null));
         batchRepository.updateById(batch);
     }
 
@@ -808,7 +939,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             return;
         }
         List<OutsourcedDataTaskStepPO> orderedSteps = steps.stream()
-                .sorted(Comparator.comparing((OutsourcedDataTaskStepPO step) -> stageOrder(step.getStage()))
+                .sorted(Comparator.comparing((OutsourcedDataTaskStepPO step) -> pageStageOrder(step.getStage()))
                         .thenComparing(OutsourcedDataTaskStepPO::getRunNo,
                                 Comparator.nullsFirst(Comparator.naturalOrder()))
                         .thenComparing(OutsourcedDataTaskStepPO::getStepId,
@@ -816,14 +947,14 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 .collect(java.util.stream.Collectors.toList());
         int latestObservedStageOrder = orderedSteps.stream()
                 .map(OutsourcedDataTaskStepPO::getStage)
-                .mapToInt(this::stageOrder)
+                .mapToInt(OutsourcedDataTaskGatewayImpl::pageStageOrder)
                 .max()
                 .orElse(-1);
         for (OutsourcedDataTaskStepPO step : orderedSteps) {
             if (step == null || step.getStage() == null) {
                 continue;
             }
-            int stageOrder = stageOrder(step.getStage());
+            int stageOrder = pageStageOrder(step.getStage());
             if (stageOrder >= latestObservedStageOrder) {
                 continue;
             }
@@ -843,35 +974,34 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         }
     }
 
-    private OutsourcedDataTaskStepPO resolveCurrentStageStep(List<OutsourcedDataTaskStepPO> steps) {
-        Optional<OutsourcedDataTaskStepPO> active = steps.stream()
+    private OutsourcedDataTaskStepDTO resolveCurrentStageStep(List<OutsourcedDataTaskStepDTO> steps) {
+        Optional<OutsourcedDataTaskStepDTO> active = steps.stream()
                 .filter(step -> OutsourcedDataTaskStatus.RUNNING.name().equals(step.getStatus())
-                        || OutsourcedDataTaskStatus.FAILED.name().equals(step.getStatus())
-                        || OutsourcedDataTaskStatus.BLOCKED.name().equals(step.getStatus()))
-                .max(Comparator
-                        .comparing(OutsourcedDataTaskStepPO::getUpdatedAt,
-                                Comparator.nullsFirst(Comparator.naturalOrder()))
-                        .thenComparing(step -> stageOrder(step.getStage())));
+                        || PAGE_ABNORMAL_STATUSES.contains(step.getStatus()))
+                .max(Comparator.comparing((OutsourcedDataTaskStepDTO step) -> pageStageOrder(step.getStage()))
+                        .thenComparing(OutsourcedDataTaskStepDTO::getRunNo,
+                                Comparator.nullsFirst(Comparator.naturalOrder())));
         if (active.isPresent()) {
             return active.get();
         }
         return steps.stream()
-                .max(Comparator.comparing(step -> stageOrder(step.getStage())))
+                .max(Comparator.comparing((OutsourcedDataTaskStepDTO step) -> pageStageOrder(step.getStage()))
+                        .thenComparing(OutsourcedDataTaskStepDTO::getRunNo,
+                                Comparator.nullsFirst(Comparator.naturalOrder())))
                 .orElse(null);
     }
 
-    private static String aggregateBatchStatus(List<OutsourcedDataTaskStepPO> steps, int expectedStageCount) {
-        if (steps.stream().anyMatch(step -> OutsourcedDataTaskStatus.FAILED.name().equals(step.getStatus()))) {
+    private static String aggregateBatchStatus(List<OutsourcedDataTaskStepDTO> steps) {
+        if (steps.stream().anyMatch(step -> PAGE_ABNORMAL_STATUSES.contains(step.getStatus()))) {
             return OutsourcedDataTaskStatus.FAILED.name();
         }
-        if (steps.stream().anyMatch(step -> OutsourcedDataTaskStatus.BLOCKED.name().equals(step.getStatus()))) {
-            return OutsourcedDataTaskStatus.BLOCKED.name();
+        if (steps.stream().anyMatch(step -> OutsourcedDataTaskStatus.RUNNING.name().equals(step.getStatus()))) {
+            return OutsourcedDataTaskStatus.RUNNING.name();
         }
-        if (steps.stream().allMatch(step -> OutsourcedDataTaskStatus.STOPPED.name().equals(step.getStatus()))) {
-            return OutsourcedDataTaskStatus.STOPPED.name();
-        }
-        long successCount = steps.stream().filter(step -> OutsourcedDataTaskStatus.SUCCESS.name().equals(step.getStatus())).count();
-        if (successCount >= expectedStageCount && steps.size() >= expectedStageCount) {
+        long successCount = steps.stream()
+                .filter(step -> OutsourcedDataTaskStatus.SUCCESS.name().equals(step.getStatus()))
+                .count();
+        if (successCount >= PAGE_STAGE_SEQUENCE.size()) {
             return OutsourcedDataTaskStatus.SUCCESS.name();
         }
         if (successCount > 0) {
@@ -884,23 +1014,25 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         OutsourcedDataTaskStepDTO dto = new OutsourcedDataTaskStepDTO();
         dto.setStepId(po.getStepId());
         dto.setBatchId(po.getBatchId());
-        dto.setStage(po.getStage());
-        dto.setStep(po.getStage());
-        dto.setStageName(stageLabel(po.getStage()));
-        dto.setStepName(stageLabel(po.getStage()));
+        OutsourcedDataTaskStage visibleStage = normalizePageStage(po.getStage());
+        dto.setStage(visibleStage.name());
+        dto.setStep(visibleStage.name());
+        dto.setStageName(stageLabel(visibleStage.name()));
+        dto.setStepName(stageLabel(visibleStage.name()));
         dto.setTaskId(po.getTaskId());
         dto.setTaskType(po.getTaskType());
         dto.setRunNo(po.getRunNo());
         dto.setCurrentFlag(po.getCurrentFlag());
         dto.setTriggerMode(po.getTriggerMode());
         dto.setTriggerModeName(triggerModeLabel(po.getTriggerMode()));
-        dto.setStatus(po.getStatus());
-        dto.setStatusName(statusLabel(po.getStatus()));
+        String status = normalizePageStatus(po.getStatus());
+        dto.setStatus(status);
+        dto.setStatusName(statusLabel(status));
         dto.setProgress(po.getProgress());
         dto.setStartedAt(formatDateTime(po.getStartedAt()));
         dto.setEndedAt(formatDateTime(po.getEndedAt()));
         dto.setDurationMs(po.getDurationMs());
-        dto.setDurationText(formatDuration(po.getDurationMs(), po.getStatus()));
+        dto.setDurationText(formatDuration(po.getDurationMs(), status));
         dto.setInputSummary(po.getInputSummary());
         dto.setOutputSummary(po.getOutputSummary());
         dto.setErrorCode(po.getErrorCode());
@@ -1230,12 +1362,33 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         return value == null ? null : DATE_TIME_FORMATTER.format(value);
     }
 
-    private String stageLabel(String stage) {
-        return stageCatalog().stageLabel(stage);
+    private static LocalDateTime parseDateTime(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value.trim(), DATE_TIME_FORMATTER);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
-    private String statusLabel(String status) {
-        return stageCatalog().statusLabel(status);
+    private static String stageLabel(String stage) {
+        return normalizePageStage(stage).getLabel();
+    }
+
+    private static String statusLabel(String status) {
+        String normalized = normalizePageStatus(status);
+        if (OutsourcedDataTaskStatus.RUNNING.name().equals(normalized)) {
+            return OutsourcedDataTaskStatus.RUNNING.getLabel();
+        }
+        if (OutsourcedDataTaskStatus.SUCCESS.name().equals(normalized)) {
+            return OutsourcedDataTaskStatus.SUCCESS.getLabel();
+        }
+        if (OutsourcedDataTaskStatus.FAILED.name().equals(normalized)) {
+            return "处理异常";
+        }
+        return OutsourcedDataTaskStatus.PENDING.getLabel();
     }
 
     private static String triggerModeLabel(String triggerMode) {
@@ -1263,7 +1416,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     }
 
     private int stageOrder(String stage) {
-        return stageCatalog().stageOrder(stage);
+        return pageStageOrder(stage);
     }
 
     private WorkflowRuntimeCatalog stageCatalog() {
@@ -1281,9 +1434,9 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                                 step -> step,
                                 (left, right) -> right,
                                 LinkedHashMap::new));
-        OutsourcedDataTaskStage batchStage = displayStage(enumStage(batch.getCurrentStage()));
-        OutsourcedDataTaskStatus batchStatus = enumStatus(batch.getStatus());
-        return stageCatalog().stageSequence().stream()
+        OutsourcedDataTaskStage batchStage = normalizePageStage(batch.getCurrentStage());
+        OutsourcedDataTaskStatus batchStatus = enumStatus(normalizePageStatus(batch.getStatus()));
+        return PAGE_STAGE_SEQUENCE.stream()
                 .map(stage -> {
                     OutsourcedDataTaskStepDTO current = stepsByStage.get(stage.name());
                     if (current != null) {
@@ -1309,17 +1462,15 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         dto.setTaskId(null);
         dto.setTaskType(stage.name());
         dto.setRunNo(1);
-        OutsourcedDataTaskStage displayBatchStage = stageCatalog().normalizeStage(batch.getCurrentStage());
-        dto.setCurrentFlag(displayBatchStage != null && Objects.equals(stage.name(), displayBatchStage.name()));
+        dto.setCurrentFlag(batchStage != null && Objects.equals(stage.name(), batchStage.name()));
         boolean beforeCurrent = batchStage != null && stageOrder(stage.name()) < stageOrder(batchStage.name());
         boolean isCurrent = batchStage != null && Objects.equals(stage.name(), batchStage.name());
         OutsourcedDataTaskStatus status;
         if (batchStatus == OutsourcedDataTaskStatus.SUCCESS) {
             status = OutsourcedDataTaskStatus.SUCCESS;
-        } else if (batchStatus == OutsourcedDataTaskStatus.FAILED || batchStatus == OutsourcedDataTaskStatus.BLOCKED
-                || batchStatus == OutsourcedDataTaskStatus.STOPPED) {
+        } else if (batchStatus == OutsourcedDataTaskStatus.FAILED) {
             status = beforeCurrent ? OutsourcedDataTaskStatus.SUCCESS
-                    : (isCurrent ? batchStatus : OutsourcedDataTaskStatus.PENDING);
+                    : (isCurrent ? OutsourcedDataTaskStatus.FAILED : OutsourcedDataTaskStatus.PENDING);
         } else if (batchStatus == OutsourcedDataTaskStatus.RUNNING) {
             status = beforeCurrent ? OutsourcedDataTaskStatus.SUCCESS
                     : (isCurrent ? OutsourcedDataTaskStatus.RUNNING : OutsourcedDataTaskStatus.PENDING);
@@ -1339,9 +1490,8 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 : null;
         dto.setStartedAt(startedAt);
         dto.setEndedAt(status == OutsourcedDataTaskStatus.SUCCESS || status == OutsourcedDataTaskStatus.FAILED
-                || status == OutsourcedDataTaskStatus.STOPPED
-                        ? formatDateTime(batch.getEndedAt())
-                        : null);
+                ? formatDateTime(batch.getEndedAt())
+                : null);
         Long durationMs = stage == batchStage ? batch.getDurationMs() : null;
         dto.setDurationMs(durationMs);
         dto.setDurationText(stage == batchStage ? formatDuration(batch.getDurationMs(), batch.getStatus()) : "-");
@@ -1357,10 +1507,137 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         if (status == OutsourcedDataTaskStatus.SUCCESS) {
             return 100;
         }
-        if (status == OutsourcedDataTaskStatus.FAILED || status == OutsourcedDataTaskStatus.BLOCKED) {
-            return stage == null ? 0 : Math.max(15, stageOrder(stage.name()) * 16);
+        if (status == OutsourcedDataTaskStatus.FAILED) {
+            return stage == null ? 0 : Math.max(15, (stageOrder(stage.name()) + 1) * 33);
         }
-        return stage == null ? 0 : Math.min(95, stageOrder(stage.name()) * 16 + 10);
+        return stage == null ? 0 : Math.min(95, (stageOrder(stage.name()) + 1) * 33);
+    }
+
+    private static List<OutsourcedDataTaskStepDTO> normalizeVisibleSteps(List<OutsourcedDataTaskStepDTO> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        Map<String, OutsourcedDataTaskStepDTO> merged = new LinkedHashMap<>();
+        for (OutsourcedDataTaskStepDTO step : steps) {
+            if (step == null || !StringUtils.hasText(step.getStage())) {
+                continue;
+            }
+            String stage = normalizePageStage(step.getStage()).name();
+            OutsourcedDataTaskStepDTO copy = copyStepForVisibleStage(step, stage);
+            merged.put(stage, copy);
+        }
+        return merged.values().stream()
+                .sorted((left, right) -> Integer.compare(pageStageOrder(left.getStage()), pageStageOrder(right.getStage())))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private static OutsourcedDataTaskStage resolveBatchStageFromSteps(List<OutsourcedDataTaskStepDTO> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return OutsourcedDataTaskStage.FILE_PARSE;
+        }
+        Optional<OutsourcedDataTaskStepDTO> active = steps.stream()
+                .filter(step -> OutsourcedDataTaskStatus.RUNNING.name().equals(step.getStatus())
+                        || PAGE_ABNORMAL_STATUSES.contains(step.getStatus()))
+                .max(Comparator.comparing((OutsourcedDataTaskStepDTO step) -> pageStageOrder(step.getStage()))
+                        .thenComparing(OutsourcedDataTaskStepDTO::getRunNo,
+                                Comparator.nullsFirst(Comparator.naturalOrder())));
+        if (active.isPresent()) {
+            return normalizePageStage(active.get().getStage());
+        }
+        return normalizePageStage(steps.get(steps.size() - 1).getStage());
+    }
+
+    private static OutsourcedDataTaskStatus resolveBatchStatusFromSteps(List<OutsourcedDataTaskStepDTO> steps) {
+        if (steps == null || steps.isEmpty()) {
+            return OutsourcedDataTaskStatus.PENDING;
+        }
+        if (steps.stream().anyMatch(step -> PAGE_ABNORMAL_STATUSES.contains(step.getStatus()))) {
+            return OutsourcedDataTaskStatus.FAILED;
+        }
+        if (steps.stream().anyMatch(step -> OutsourcedDataTaskStatus.RUNNING.name().equals(step.getStatus()))) {
+            return OutsourcedDataTaskStatus.RUNNING;
+        }
+        long successCount = steps.stream()
+                .filter(step -> OutsourcedDataTaskStatus.SUCCESS.name().equals(step.getStatus()))
+                .count();
+        if (successCount >= PAGE_STAGE_SEQUENCE.size()) {
+            return OutsourcedDataTaskStatus.SUCCESS;
+        }
+        if (successCount > 0) {
+            return OutsourcedDataTaskStatus.RUNNING;
+        }
+        return OutsourcedDataTaskStatus.PENDING;
+    }
+
+    private static OutsourcedDataTaskStepDTO copyStepForVisibleStage(OutsourcedDataTaskStepDTO source, String stage) {
+        OutsourcedDataTaskStepDTO dto = new OutsourcedDataTaskStepDTO();
+        dto.setStepId(source.getStepId());
+        dto.setBatchId(source.getBatchId());
+        dto.setStage(stage);
+        dto.setStep(stage);
+        dto.setStageName(normalizePageStage(stage).getLabel());
+        dto.setStepName(normalizePageStage(stage).getLabel());
+        dto.setTaskId(source.getTaskId());
+        dto.setTaskType(source.getTaskType());
+        dto.setRunNo(source.getRunNo());
+        dto.setCurrentFlag(source.getCurrentFlag());
+        dto.setTriggerMode(source.getTriggerMode());
+        dto.setTriggerModeName(source.getTriggerModeName());
+        dto.setStatus(normalizePageStatus(source.getStatus()));
+        dto.setStatusName(statusLabel(dto.getStatus()));
+        dto.setProgress(source.getProgress());
+        dto.setStartedAt(source.getStartedAt());
+        dto.setEndedAt(source.getEndedAt());
+        dto.setDurationMs(source.getDurationMs());
+        dto.setDurationText(source.getDurationText());
+        dto.setInputSummary(source.getInputSummary());
+        dto.setOutputSummary(source.getOutputSummary());
+        dto.setErrorCode(source.getErrorCode());
+        dto.setErrorMessage(source.getErrorMessage());
+        dto.setLogRef(source.getLogRef());
+        return dto;
+    }
+
+    private static OutsourcedDataTaskStage normalizePageStage(String stage) {
+        if (!StringUtils.hasText(stage)) {
+            return OutsourcedDataTaskStage.FILE_PARSE;
+        }
+        String normalized = stage.trim();
+        OutsourcedDataTaskStage alias = PAGE_STAGE_ALIAS_MAP.get(normalized);
+        if (alias != null) {
+            return alias;
+        }
+        try {
+            return OutsourcedDataTaskStage.valueOf(normalized);
+        } catch (IllegalArgumentException ignored) {
+            return OutsourcedDataTaskStage.FILE_PARSE;
+        }
+    }
+
+    private static String normalizePageStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return OutsourcedDataTaskStatus.PENDING.name();
+        }
+        String normalized = status.trim();
+        if (OutsourcedDataTaskStatus.SUCCESS.name().equals(normalized)
+                || OutsourcedDataTaskStatus.RUNNING.name().equals(normalized)
+                || OutsourcedDataTaskStatus.PENDING.name().equals(normalized)) {
+            return normalized;
+        }
+        if (PAGE_ABNORMAL_STATUSES.contains(normalized)) {
+            return OutsourcedDataTaskStatus.FAILED.name();
+        }
+        return OutsourcedDataTaskStatus.PENDING.name();
+    }
+
+    private static int pageStageOrder(String stage) {
+        OutsourcedDataTaskStage visibleStage = normalizePageStage(stage);
+        for (int i = 0; i < PAGE_STAGE_SEQUENCE.size(); i++) {
+            if (PAGE_STAGE_SEQUENCE.get(i) == visibleStage) {
+                return i;
+            }
+        }
+        return PAGE_STAGE_SEQUENCE.size();
     }
 
     private ValsetFileInfo resolveBatchFileInfo(OutsourcedDataTaskBatchPO batch) {

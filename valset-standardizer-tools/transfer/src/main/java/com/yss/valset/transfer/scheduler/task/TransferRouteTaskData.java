@@ -1,13 +1,19 @@
 package com.yss.valset.transfer.scheduler.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * 文件路由任务入参。
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TransferRouteTaskData {
 
     private final String transferId;
 
-    public TransferRouteTaskData(String transferId) {
+    @JsonCreator
+    public TransferRouteTaskData(@JsonProperty("transferId") String transferId) {
         this.transferId = transferId;
     }
 

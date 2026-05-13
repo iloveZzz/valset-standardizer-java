@@ -95,7 +95,7 @@ export type WorkflowTaskInstanceLogQueryParams = {
 export type WorkflowTaskInstanceStateCountQueryParams = {
   startDate: string;
   endDate: string;
-  projectCode: string | number;
+  projectCode: number;
 };
 
 export type SingleResult<T> = {

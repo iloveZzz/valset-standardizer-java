@@ -818,7 +818,7 @@ export const useWorkflowInstancePage = (): { page: WorkflowInstancePage } => {
       const params: WorkflowInstanceStateCountQueryParams = {
         startDate: query.triggerTimeFrom,
         endDate: query.triggerTimeTo,
-        projectCode,
+        projectCode: Number(projectCode),
       };
       const res = await getEtlWorkflowInstanceStateCount(params);
       const page = (unwrapSingleResult(res) ?? {}) as WorkflowInstanceStateCountPageDTO;

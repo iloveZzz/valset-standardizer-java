@@ -1,7 +1,6 @@
 package com.yss.valset.transfer.infrastructure.mapper;
 
 import com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.List;
 /**
  * 文件主对象 MyBatis Mapper。
  */
-@Mapper
 public interface TransferObjectMybatisMapper {
 
     /**

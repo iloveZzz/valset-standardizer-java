@@ -468,7 +468,7 @@ export const useEtlWorkflowTaskInstancePage = (): { page: WorkflowTaskInstancePa
       const res = await getEtlWorkflowTaskInstanceStateCount({
         startDate: query.startTimeFrom,
         endDate: query.endTimeTo,
-        projectCode,
+        projectCode: Number(projectCode),
       });
       const page = unwrapSingleResult(res) ?? ({} as {
         totalCount?: number;

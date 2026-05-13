@@ -452,7 +452,9 @@ export const getJavaApi = () => {
       formData.append("file", uploadSourceFilesRequest.file);
     }
     if (uploadSourceFilesRequest.files !== undefined) {
-      formData.append("files", uploadSourceFilesRequest.files);
+      uploadSourceFilesRequest.files.forEach((file) => {
+        formData.append("files", file);
+      });
     }
 
     return customInstance<SingleResultTransferSourceMutationResponse>({
@@ -919,9 +921,9 @@ export const getJavaApi = () => {
   /**
    * @summary 手动上传文件并执行 ODS 提取。
    */
-  const upload = (boolean: boolean) => {
+  const upload = (file: Blob) => {
     const formData = new FormData();
-    formData.append("data", uploadRequest.toString());
+    formData.append("file", file);
 
     return customInstance<SingleResultUploadValuationFileResponse>({
       url: `/files/upload`,

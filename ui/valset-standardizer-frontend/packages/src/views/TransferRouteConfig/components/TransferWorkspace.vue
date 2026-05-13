@@ -228,6 +228,22 @@ watch(
                           {{ page.getSourceIngestProgressText(row) }}
                         </div>
                       </div>
+                      <div
+                        v-if="node.key === 'source-status'"
+                        class="route-ingest-connection-cell"
+                      >
+                        <a-tag
+                          :color="page.getSourceIngestConnectionColor(row)"
+                        >
+                          SSE {{ page.getSourceIngestConnectionLabel(row) }}
+                        </a-tag>
+                        <span>
+                          {{
+                            page.getSourceIngestConnectionMessage(row) ||
+                            "等待连接事件"
+                          }}
+                        </span>
+                      </div>
                       <p>{{ node.content }}</p>
                     </div>
                   </div>
@@ -572,7 +588,7 @@ watch(
         </div>
 
         <div class="route-detail-panels">
-          <section class="route-detail-panel">
+          <section class="route-detail-panel route-detail-panel--live">
             <div class="route-detail-panel-header">
               <h4>来源信息</h4>
               <a-button
@@ -627,6 +643,33 @@ watch(
                           ?.ingestStartedAt,
                       )
                     : "-"
+                }}
+              </a-descriptions-item>
+            </a-descriptions>
+          </section>
+
+          <section class="route-detail-panel route-detail-panel--live">
+            <div class="route-detail-panel-header">
+              <h4>实时订阅</h4>
+            </div>
+            <a-descriptions bordered :column="1" size="small">
+              <a-descriptions-item label="连接状态">
+                <a-tag
+                  :color="page.getSourceIngestConnectionColor(page.selectedRow)"
+                >
+                  {{ page.getSourceIngestConnectionLabel(page.selectedRow) }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="最后更新时间">
+                {{
+                  page.getSourceIngestConnectionState(page.selectedRow)
+                    ?.updatedAt || "-"
+                }}
+              </a-descriptions-item>
+              <a-descriptions-item label="最近事件">
+                {{
+                  page.getSourceIngestConnectionMessage(page.selectedRow) ||
+                  "暂无连接事件"
                 }}
               </a-descriptions-item>
             </a-descriptions>

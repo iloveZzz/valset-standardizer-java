@@ -31,6 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 文件来源管理接口。
@@ -220,19 +222,25 @@ public class TransferSourceController {
      */
     @GetMapping(value = "/{sourceId}/progress/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "订阅来源收取进度", description = "通过 SSE 持续推送指定来源的收取状态、进度、完成和错误事件。")
-    public SseEmitter subscribeProgress(@PathVariable String sourceId) {
+    public SseEmitter subscribeProgress(@PathVariable String sourceId) throws InterruptedException {
         TransferSourceViewDTO source = transferSourceManagementAppService.getSource(sourceId);
         SseEmitter emitter = transferIngestProgressAppService.subscribe(sourceId);
-        transferIngestProgressAppService.publishStatus(
-                sourceId,
-                normalizeInitialStatus(source),
-                buildInitialStatusMessage(source),
-                source == null ? null : source.getIngestTriggerType(),
-                source == null || source.getIngestStartedAt() == null ? null : source.getIngestStartedAt().toString()
-        );
-        if (Boolean.TRUE.equals(source.getIngestBusy())) {
-            transferIngestProgressAppService.publishProgress(sourceId, 0L, 0L, "收取已开始，等待首个文件进度");
-        }
+        CompletableFuture.runAsync(() -> {
+            transferIngestProgressAppService.publishStatus(
+                    sourceId,
+                    normalizeInitialStatus(source),
+                    buildInitialStatusMessage(source),
+                    source == null ? null : source.getIngestTriggerType(),
+                    source == null || source.getIngestStartedAt() == null ? null : source.getIngestStartedAt().toString()
+            );
+            if (Boolean.TRUE.equals(source.getIngestBusy())) {
+                transferIngestProgressAppService.publishProgress(sourceId, 0L, 0L, "收取已开始，等待首个文件进度");
+            }
+            try {
+                TimeUnit.MICROSECONDS.sleep(200L);
+            } catch (InterruptedException e) {
+            }
+        });
         return emitter;
     }
 

@@ -64,7 +64,6 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       force: true,
       include: ["axios", "ant-design-vue"],
-      exclude: ["@/api/generated/approval"],
     },
     build: {
       target: "es2020",

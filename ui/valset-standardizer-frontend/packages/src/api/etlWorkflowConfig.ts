@@ -1,5 +1,6 @@
 import { getJavaApi } from "./generated/valset";
 import type { WorkflowInstanceDTO } from "./etlWorkflowInstance";
+import type { WorkflowDefinitionDTO as GeneratedWorkflowDefinitionDTO } from "./generated/valset/schemas";
 
 export type EtlPlatformType = "SPRING_BATCH" | "DOLPHIN_SCHEDULER" | "XXL_JOB";
 export type WorkflowSyncStatus = "UNSYNCED" | "SYNCING" | "SYNCED" | "FAILED";
@@ -83,11 +84,13 @@ export const validateEtlWorkflowDefinition = (
   definition: WorkflowDefinitionDTO,
 ) =>
   generatedApi.validateDefinition(
-    definition,
+    definition as GeneratedWorkflowDefinitionDTO,
   ) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const saveEtlWorkflowDefinition = (definition: WorkflowDefinitionDTO) =>
-  generatedApi.saveDefinition(definition) as Promise<SingleResult<WorkflowDefinitionDTO>>;
+  generatedApi.saveDefinition(
+    definition as GeneratedWorkflowDefinitionDTO,
+  ) as Promise<SingleResult<WorkflowDefinitionDTO>>;
 
 export const syncEtlWorkflowDefinition = (
   workflowCode: string,

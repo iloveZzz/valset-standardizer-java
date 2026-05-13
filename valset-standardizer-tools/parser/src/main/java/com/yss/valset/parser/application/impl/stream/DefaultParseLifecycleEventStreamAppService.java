@@ -59,7 +59,11 @@ public class DefaultParseLifecycleEventStreamAppService implements ParseLifecycl
                     .data("已订阅解析生命周期事件流", MediaType.TEXT_PLAIN));
         } catch (IOException exception) {
             remove(subscriber);
-            emitter.completeWithError(exception);
+            try {
+                emitter.complete();
+            } catch (Exception ignore) {
+                // 忽略关闭异常
+            }
         }
         return emitter;
     }

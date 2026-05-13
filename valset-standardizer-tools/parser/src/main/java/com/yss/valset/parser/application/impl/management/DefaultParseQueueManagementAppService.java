@@ -1,6 +1,5 @@
 package com.yss.valset.parser.application.impl.management;
 
-import com.alibaba.nacos.shaded.com.google.common.collect.ImmutableList;
 import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.parser.application.command.ParseQueueBackfillCommand;
 import com.yss.valset.parser.application.command.ParseQueueCompleteCommand;
@@ -36,6 +35,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -115,7 +115,7 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         String sourceCode = command == null ? null : command.getSourceCode();
         String routeId = command == null ? null : command.getRouteId();
         List<TransferObject> candidates = command != null && StringUtils.hasText(command.getTransferId())
-                ? transferObjectGateway.findById(command.getTransferId()).map(ImmutableList::of).orElse(ImmutableList.of())
+                ? transferObjectGateway.findById(command.getTransferId()).map(Collections::singletonList).orElse(Collections.emptyList())
                 : transferObjectGateway.listParseQueueCandidates(sourceId, sourceCode, routeId, fileStatus, deliveryStatus, null);
         if (candidates.isEmpty()) {
             return java.util.Arrays.asList();

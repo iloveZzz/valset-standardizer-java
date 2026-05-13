@@ -1,5 +1,8 @@
 package com.yss.valset.transfer.scheduler.task;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yss.valset.transfer.application.command.IngestTransferSourceCommand;
 import com.yss.valset.transfer.domain.model.SourceType;
 
@@ -9,6 +12,7 @@ import java.util.Map;
 /**
  * 文件收取任务入参。
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TransferIngestTaskData {
 
     private final String sourceId;
@@ -18,7 +22,14 @@ public class TransferIngestTaskData {
     private final Map<String, Object> parameters;
     private final String ingestLockToken;
 
-    public TransferIngestTaskData(String sourceId, String sourceType, String sourceCode, String triggerType, Map<String, Object> parameters, String ingestLockToken) {
+    @JsonCreator
+    public TransferIngestTaskData(
+            @JsonProperty("sourceId") String sourceId,
+            @JsonProperty("sourceType") String sourceType,
+            @JsonProperty("sourceCode") String sourceCode,
+            @JsonProperty("triggerType") String triggerType,
+            @JsonProperty("parameters") Map<String, Object> parameters,
+            @JsonProperty("ingestLockToken") String ingestLockToken) {
         this.sourceId = sourceId;
         this.sourceType = sourceType;
         this.sourceCode = sourceCode;

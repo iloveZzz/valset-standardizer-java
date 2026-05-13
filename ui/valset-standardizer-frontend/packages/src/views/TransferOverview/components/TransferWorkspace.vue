@@ -218,19 +218,108 @@ onBeforeUnmount(() => {
 <template>
   <div class="transfer-workspace">
     <div class="workspace-body">
-      <template v-if="page.loading">
-        <a-spin
-          style="display: flex; justify-content: center; padding: 72px 0"
-        />
-      </template>
+      <section
+        v-if="page.activeSection === 'overview'"
+        class="workspace-section workspace-section--overview"
+      >
+        <div class="overview-hero-panel">
+          <div class="overview-hero">
+            <template v-if="page.loading">
+              <div class="overview-hero-head">
+                <span class="overview-skeleton overview-skeleton--title"></span>
+                <span class="overview-skeleton overview-skeleton--badge"></span>
+              </div>
+              <div class="overview-hero-summary-row">
+                <div class="overview-hero-summary-group">
+                  <div class="overview-hero-board-main">
+                    <div
+                      v-for="item in 3"
+                      :key="`hero-stat-${item}`"
+                      class="overview-hero-stat-card overview-hero-stat-card--skeleton"
+                    >
+                      <span class="overview-skeleton overview-skeleton--label"></span>
+                      <span class="overview-skeleton overview-skeleton--value"></span>
+                      <span class="overview-skeleton overview-skeleton--desc"></span>
+                    </div>
+                  </div>
+                </div>
 
-      <template v-else>
-        <section
-          v-if="page.activeSection === 'overview'"
-          class="workspace-section workspace-section--overview"
-        >
-          <div class="overview-hero-panel">
-            <div class="overview-hero">
+                <div class="overview-hero-summary-group">
+                  <div class="overview-object-summary-stack">
+                    <div
+                      v-for="item in 2"
+                      :key="`object-stat-${item}`"
+                      class="overview-hero-stat-card overview-hero-stat-card--skeleton"
+                    >
+                      <span class="overview-skeleton overview-skeleton--label"></span>
+                      <span class="overview-skeleton overview-skeleton--value"></span>
+                      <span class="overview-skeleton overview-skeleton--desc"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="overview-hero-columns">
+                <div class="overview-hero-charts-grid">
+                  <div class="overview-status-card overview-status-card--skeleton">
+                    <div class="overview-status-head">
+                      <div class="overview-status-head-copy">
+                        <span class="overview-skeleton overview-skeleton--section"></span>
+                        <span class="overview-skeleton overview-skeleton--line"></span>
+                      </div>
+                      <span class="overview-skeleton overview-skeleton--badge"></span>
+                    </div>
+                    <div class="overview-status-body">
+                      <div class="overview-status-source-grid">
+                        <div
+                          v-for="item in 2"
+                          :key="`source-stat-${item}`"
+                          class="overview-status-source-card overview-status-source-card--skeleton"
+                        >
+                          <div class="overview-status-source-head">
+                            <span class="overview-skeleton overview-skeleton--label"></span>
+                            <span class="overview-skeleton overview-skeleton--badge"></span>
+                          </div>
+                          <div class="overview-status-chip-grid">
+                            <div
+                              v-for="chip in 3"
+                              :key="`source-chip-${item}-${chip}`"
+                              class="overview-status-chip overview-status-chip--skeleton"
+                            >
+                              <span class="overview-skeleton overview-skeleton--chip-label"></span>
+                              <span class="overview-skeleton overview-skeleton--chip-value"></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="overview-status-chart-shell">
+                        <div class="overview-status-chart overview-chart-placeholder"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="overview-mini-chart-card overview-mini-chart-card--stage overview-mini-chart-card--skeleton">
+                    <div class="section-title section-title-inline">
+                      <div>
+                        <span class="overview-skeleton overview-skeleton--section"></span>
+                        <span class="overview-skeleton overview-skeleton--line"></span>
+                      </div>
+                    </div>
+                    <div class="overview-mini-chart overview-chart-placeholder"></div>
+                    <div class="overview-mini-summary-grid overview-mini-summary-grid--stage">
+                      <div
+                        v-for="item in 4"
+                        :key="`stage-stat-${item}`"
+                        class="overview-mini-summary-card overview-mini-summary-card--skeleton"
+                      >
+                        <span class="overview-skeleton overview-skeleton--label"></span>
+                        <span class="overview-skeleton overview-skeleton--value"></span>
+                        <span class="overview-skeleton overview-skeleton--desc"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <template v-else>
               <div class="overview-hero-head">
                 <div class="workspace-kicker workspace-kicker--overview">
                   {{ page.overviewHero.title }}
@@ -366,33 +455,53 @@ onBeforeUnmount(() => {
                   </YCard>
                 </div>
               </div>
-            </div>
+            </template>
           </div>
 
           <div class="overview-surface-grid">
             <YCard class="overview-trend-panel" :bordered="false" :padding="18">
-              <div class="section-title">
-                <div>
-                  <h3>文件投递个数趋势图</h3>
-                  <p>支持查看最近 3 天、7 天和 30 天的投递趋势。</p>
+              <template v-if="page.loading">
+                <div class="section-title">
+                  <div>
+                    <span class="overview-skeleton overview-skeleton--section"></span>
+                    <span class="overview-skeleton overview-skeleton--line"></span>
+                  </div>
+                  <div class="trend-window-switch">
+                    <span
+                      v-for="item in 3"
+                      :key="`trend-window-${item}`"
+                      class="overview-skeleton overview-skeleton--switch"
+                    ></span>
+                  </div>
                 </div>
-                <div class="trend-window-switch">
-                  <YButton
-                    v-for="item in page.trendOptions"
-                    :key="item.value"
-                    class="trend-window-button"
-                    :theme="
-                      page.trendWindow === item.value ? 'primary' : undefined
-                    "
-                    @click="page.setTrendWindow(item.value)"
-                  >
-                    {{ item.label }}
-                  </YButton>
+                <div class="trend-chart-shell trend-chart-shell--echarts">
+                  <div class="trend-chart-canvas overview-chart-placeholder"></div>
                 </div>
-              </div>
-              <div class="trend-chart-shell trend-chart-shell--echarts">
-                <div ref="trendChartRef" class="trend-chart-canvas"></div>
-              </div>
+              </template>
+              <template v-else>
+                <div class="section-title">
+                  <div>
+                    <h3>文件投递个数趋势图</h3>
+                    <p>支持查看最近 3 天、7 天和 30 天的投递趋势。</p>
+                  </div>
+                  <div class="trend-window-switch">
+                    <YButton
+                      v-for="item in page.trendOptions"
+                      :key="item.value"
+                      class="trend-window-button"
+                      :theme="
+                        page.trendWindow === item.value ? 'primary' : undefined
+                      "
+                      @click="page.setTrendWindow(item.value)"
+                    >
+                      {{ item.label }}
+                    </YButton>
+                  </div>
+                </div>
+                <div class="trend-chart-shell trend-chart-shell--echarts">
+                  <div ref="trendChartRef" class="trend-chart-canvas"></div>
+                </div>
+              </template>
             </YCard>
           </div>
 
@@ -402,50 +511,83 @@ onBeforeUnmount(() => {
               :bordered="false"
               :padding="14"
             >
-              <div class="section-title">
-                <div>
-                  <h3>异常聚焦</h3>
-                  <p>优先展示估值表解析任务中的异常批次，便于快速定位问题。</p>
+              <template v-if="page.loading">
+                <div class="section-title">
+                  <div>
+                    <span class="overview-skeleton overview-skeleton--section"></span>
+                    <span class="overview-skeleton overview-skeleton--line"></span>
+                  </div>
+                  <span class="overview-skeleton overview-skeleton--badge"></span>
                 </div>
-                <a-tag color="red">{{ page.anomalyCount }} 条</a-tag>
-              </div>
-              <div
-                v-if="page.anomalyItems.length"
-                class="overview-anomaly-list"
-              >
+                <div class="overview-anomaly-list">
+                  <div
+                    v-for="item in 4"
+                    :key="`anomaly-${item}`"
+                    class="overview-anomaly-card overview-anomaly-card--skeleton"
+                  >
+                    <div class="overview-anomaly-title">
+                      <span class="overview-skeleton overview-skeleton--label"></span>
+                      <span class="overview-skeleton overview-skeleton--badge"></span>
+                    </div>
+                    <div class="overview-anomaly-meta">
+                      <span class="overview-skeleton overview-skeleton--line"></span>
+                      <span class="overview-skeleton overview-skeleton--line"></span>
+                    </div>
+                    <div class="overview-anomaly-meta">
+                      <span class="overview-skeleton overview-skeleton--line"></span>
+                      <span class="overview-skeleton overview-skeleton--line"></span>
+                    </div>
+                    <div class="overview-skeleton overview-skeleton--desc overview-skeleton--desc-wide"></div>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="section-title">
+                  <div>
+                    <h3>异常聚焦</h3>
+                    <p>优先展示估值表解析任务中的异常批次，便于快速定位问题。</p>
+                  </div>
+                  <a-tag color="red">{{ page.anomalyCount }} 条</a-tag>
+                </div>
                 <div
-                  v-for="item in page.anomalyItems"
-                  :key="item.key"
-                  class="overview-anomaly-card"
+                  v-if="page.anomalyItems.length"
+                  class="overview-anomaly-list"
                 >
-                  <div class="overview-anomaly-title">
-                    <strong>{{ item.batchName || item.batchId }}</strong>
-                    <a-tag color="red">{{ item.statusName }}</a-tag>
-                  </div>
-                  <div class="overview-anomaly-meta">
-                    <span>批次：{{ item.batchId || "-" }}</span>
-                    <span
-                      >产品：{{
-                        item.productName || item.productCode || "-"
-                      }}</span
-                    >
-                  </div>
-                  <div class="overview-anomaly-meta">
-                    <span>责任人：{{ item.managerName || "-" }}</span>
-                    <span
-                      >阶段：{{
-                        item.currentStageName || item.currentStepName || "-"
-                      }}</span
-                    >
-                  </div>
-                  <div class="overview-anomaly-desc">
-                    {{ item.lastErrorMessage || "未提供错误信息" }}
+                  <div
+                    v-for="item in page.anomalyItems"
+                    :key="item.key"
+                    class="overview-anomaly-card"
+                  >
+                    <div class="overview-anomaly-title">
+                      <strong>{{ item.batchName || item.batchId }}</strong>
+                      <a-tag color="red">{{ item.statusName }}</a-tag>
+                    </div>
+                    <div class="overview-anomaly-meta">
+                      <span>批次：{{ item.batchId || "-" }}</span>
+                      <span
+                        >产品：{{
+                          item.productName || item.productCode || "-"
+                        }}</span
+                      >
+                    </div>
+                    <div class="overview-anomaly-meta">
+                      <span>责任人：{{ item.managerName || "-" }}</span>
+                      <span
+                        >阶段：{{
+                          item.currentStageName || item.currentStepName || "-"
+                        }}</span
+                      >
+                    </div>
+                    <div class="overview-anomaly-desc">
+                      {{ item.lastErrorMessage || "未提供错误信息" }}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <a-empty v-else description="暂无异常记录" />
+                <a-empty v-else description="暂无异常记录" />
+              </template>
             </YCard>
           </div>
+        </div>
         </section>
 
         <section
@@ -524,7 +666,6 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </section>
-      </template>
     </div>
   </div>
 </template>

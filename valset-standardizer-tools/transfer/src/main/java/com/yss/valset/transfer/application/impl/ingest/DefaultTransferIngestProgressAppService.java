@@ -1,17 +1,22 @@
 package com.yss.valset.transfer.application.impl.ingest;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.transfer.application.service.TransferIngestProgressAppService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 默认文件收取进度推送服务。
@@ -20,15 +25,40 @@ import java.util.concurrent.CopyOnWriteArraySet;
 @RequiredArgsConstructor
 public class DefaultTransferIngestProgressAppService implements TransferIngestProgressAppService {
 
-    private final ObjectMapper objectMapper;
+    private static final long HEARTBEAT_INITIAL_DELAY_SECONDS = 15L;
+    private static final long HEARTBEAT_PERIOD_SECONDS = 15L;
+
     private final Map<String, Set<SseEmitter>> emitterRegistry = new ConcurrentHashMap<>();
+    private final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor(
+            runnable -> {
+                Thread thread = new Thread(runnable, "transfer-ingest-progress-heartbeat");
+                thread.setDaemon(true);
+                return thread;
+            }
+    );
+
+    @PostConstruct
+    public void startHeartbeat() {
+        heartbeatScheduler.scheduleWithFixedDelay(
+                this::sendHeartbeatSafely,
+                HEARTBEAT_INITIAL_DELAY_SECONDS,
+                HEARTBEAT_PERIOD_SECONDS,
+                TimeUnit.SECONDS
+        );
+    }
+
+    @PreDestroy
+    public void shutdownHeartbeat() {
+        heartbeatScheduler.shutdownNow();
+    }
 
     @Override
     public SseEmitter subscribe(String sourceId) {
         if (sourceId == null || sourceId.trim().isEmpty()) {
             throw new IllegalArgumentException("来源主键不能为空");
         }
-        SseEmitter emitter = new SseEmitter();
+        // 使用无限超时保持 SSE 订阅长连接，避免浏览器在默认超时后反复重连。
+        SseEmitter emitter = new SseEmitter(0L);
         emitterRegistry.computeIfAbsent(sourceId, key -> new CopyOnWriteArraySet<>()).add(emitter);
         emitter.onCompletion(() -> removeEmitter(sourceId, emitter));
         emitter.onTimeout(() -> {
@@ -64,6 +94,21 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
         send(sourceId, "error", new ErrorData(code, message));
     }
 
+    private void sendHeartbeatSafely() {
+        emitterRegistry.forEach((sourceId, emitters) -> {
+            if (emitters == null || emitters.isEmpty()) {
+                return;
+            }
+            for (SseEmitter emitter : emitters) {
+                try {
+                    emitter.send(SseEmitter.event().comment("heartbeat"));
+                } catch (Exception exception) {
+                    handleSendFailure(sourceId, emitter, exception);
+                }
+            }
+        });
+    }
+
     private void send(String sourceId, String type, Object data) {
         if (sourceId == null || sourceId.trim().isEmpty()) {
             return;
@@ -72,25 +117,21 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
         if (emitters == null || emitters.isEmpty()) {
             return;
         }
-        String payload;
-        try {
-            payload = objectMapper.writeValueAsString(new TransferSseMessage<>(type, sourceId, data));
-        } catch (Exception exception) {
-            return;
-        }
-
         for (SseEmitter emitter : emitters) {
             try {
                 emitter.send(SseEmitter.event()
                         .name(type)
-                        .data(payload, MediaType.APPLICATION_JSON));
-            } catch (IOException exception) {
-                removeEmitter(sourceId, emitter);
-            } catch (IllegalStateException exception) {
-                removeEmitter(sourceId, emitter);
-            } catch (RuntimeException exception) {
-                removeEmitter(sourceId, emitter);
+                        .data(new TransferSseMessage<>(type, sourceId, data), MediaType.APPLICATION_JSON));
+            } catch (Exception exception) {
+                handleSendFailure(sourceId, emitter, exception);
             }
+        }
+    }
+
+    private void handleSendFailure(String sourceId, SseEmitter emitter, Exception exception) {
+        removeEmitter(sourceId, emitter);
+        if (isClientDisconnect(exception)) {
+            completeSilently(emitter);
         }
     }
 
@@ -115,6 +156,39 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
         return status.trim().toLowerCase();
     }
 
+    private boolean isClientDisconnect(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof ClosedChannelException) {
+                return true;
+            }
+            String className = current.getClass().getName();
+            if (className.contains("ClientAbortException")
+                    || className.contains("AsyncRequestNotUsableException")) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null) {
+                String lowerMessage = message.toLowerCase(Locale.ROOT);
+                if (lowerMessage.contains("broken pipe")
+                        || lowerMessage.contains("connection reset by peer")
+                        || lowerMessage.contains("stream closed")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private void completeSilently(SseEmitter emitter) {
+        try {
+            emitter.complete();
+        } catch (IllegalStateException ignore) {
+            // 连接已关闭，忽略
+        }
+    }
+
     private static final class TransferSseMessage<T> {
         private final String type;
         private final String taskId;
@@ -126,15 +200,15 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
             this.data = data;
         }
 
-        String type() {
+        public String getType() {
             return type;
         }
 
-        String taskId() {
+        public String getTaskId() {
             return taskId;
         }
 
-        T data() {
+        public T getData() {
             return data;
         }
     }
@@ -150,15 +224,15 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
             this.message = message;
         }
 
-        long processedCount() {
+        public long getProcessedCount() {
             return processedCount;
         }
 
-        long totalCount() {
+        public long getTotalCount() {
             return totalCount;
         }
 
-        String message() {
+        public String getMessage() {
             return message;
         }
     }
@@ -170,7 +244,7 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
             this.message = message;
         }
 
-        String message() {
+        public String getMessage() {
             return message;
         }
     }
@@ -188,19 +262,19 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
             this.triggeredAt = triggeredAt;
         }
 
-        String status() {
+        public String getStatus() {
             return status;
         }
 
-        String message() {
+        public String getMessage() {
             return message;
         }
 
-        String triggerType() {
+        public String getTriggerType() {
             return triggerType;
         }
 
-        String triggeredAt() {
+        public String getTriggeredAt() {
             return triggeredAt;
         }
     }
@@ -212,7 +286,7 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
             this.message = message;
         }
 
-        String message() {
+        public String getMessage() {
             return message;
         }
     }
@@ -226,11 +300,11 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
             this.message = message;
         }
 
-        String code() {
+        public String getCode() {
             return code;
         }
 
-        String message() {
+        public String getMessage() {
             return message;
         }
     }

@@ -5,6 +5,19 @@ type TransferIngestProgressSseEventType =
   | "complete"
   | "error";
 
+export type TransferIngestProgressConnectionState =
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "closed"
+  | "error";
+
+export interface TransferIngestProgressConnectionEvent {
+  sourceId: string;
+  state: TransferIngestProgressConnectionState;
+  message?: string;
+}
+
 export interface TransferIngestProgressStatusData {
   status: string;
   message?: string;
@@ -40,6 +53,10 @@ export type TransferIngestProgressMessage =
 
 export type TransferIngestProgressHandler = (
   message: TransferIngestProgressMessage,
+) => void;
+
+export type TransferIngestProgressConnectionHandler = (
+  event: TransferIngestProgressConnectionEvent,
 ) => void;
 
 interface TransferIngestProgressConnection {
@@ -154,14 +171,30 @@ class TransferIngestProgressSseService {
   public subscribe(
     sourceId: string,
     handler: TransferIngestProgressHandler,
+    connectionHandler?: TransferIngestProgressConnectionHandler,
   ): () => void {
     if (!sourceId) {
       return () => undefined;
     }
 
+    connectionHandler?.({
+      sourceId,
+      state: "connecting",
+    });
+
     const existing = this.connections.get(sourceId);
     if (existing) {
       existing.handlers.add(handler);
+      const currentState =
+        existing.eventSource.readyState === EventSource.OPEN
+          ? "connected"
+          : existing.eventSource.readyState === EventSource.CLOSED
+            ? "closed"
+            : "connecting";
+      connectionHandler?.({
+        sourceId,
+        state: currentState,
+      });
       return () => this.unsubscribe(sourceId, handler);
     }
 
@@ -199,7 +232,7 @@ class TransferIngestProgressSseService {
         dispatch("status", event);
       }
     });
-  eventSource.addEventListener("progress", (event) => {
+    eventSource.addEventListener("progress", (event) => {
       if (event instanceof MessageEvent) {
         dispatch("progress", event);
       }
@@ -233,6 +266,18 @@ class TransferIngestProgressSseService {
       }
       dispatch(type, event);
     };
+    eventSource.onopen = () => {
+      connectionHandler?.({
+        sourceId,
+        state: "connected",
+      });
+    };
+    eventSource.onerror = () => {
+      connectionHandler?.({
+        sourceId,
+        state: eventSource.readyState === EventSource.CLOSED ? "error" : "reconnecting",
+      });
+    };
 
     this.connections.set(sourceId, connection);
     return () => this.unsubscribe(sourceId, handler);
@@ -257,6 +302,7 @@ class TransferIngestProgressSseService {
     }
 
     connection.eventSource.close();
+    // 连接关闭后不再维持订阅状态。
     this.connections.delete(sourceId);
   }
 }

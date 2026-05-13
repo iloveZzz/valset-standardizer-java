@@ -9,7 +9,7 @@ export type UploadSourceFilesRequest = {
   /** 单文件上传 */
   file?: Blob;
   /** 多文件上传(array of file) */
-  files?: Blob;
+  files?: Blob[];
   /** 来源主键 */
   sourceId: string;
 };

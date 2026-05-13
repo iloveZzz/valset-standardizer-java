@@ -51,8 +51,16 @@ server:
 
 yss:
   mybatis:
-    mapper-scan: com.yss.valset.extract.repository.mapper,com.yss.valset.transfer.infrastructure.mapper,com.yss.valset.task.infrastructure.mapper,com.yss.valset.parser.infrastructure.mapper,com.yss.valset.workflow.infrastructure.mapper
-
+    helperDialect: mysql
+    mapperLocations: classpath*:mappers/*.xml
+mybatis-plus:
+  mapper-locations: classpath*:mappers/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: assign_id
 management:
   endpoints:
     web:
@@ -66,14 +74,6 @@ management:
     tracing:
       endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://127.0.0.1:4318/v1/traces}
 
-mybatis-plus:
-  mapper-locations: classpath*:/mappers/**/*.xml
-  configuration:
-    map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  global-config:
-    db-config:
-      id-type: assign_id
 
 logging:
   level:
