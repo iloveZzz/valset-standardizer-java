@@ -1,5 +1,8 @@
 package com.yss.valset.task.infrastructure.gateway;
 
+import com.alibaba.nacos.shaded.com.google.common.collect.ImmutableList;
+import com.alibaba.nacos.shaded.com.google.common.collect.ImmutableMap;
+import com.alibaba.nacos.shaded.com.google.common.collect.ImmutableSet;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -70,18 +73,18 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
 
     private static final String PAGE_WORKFLOW_CODE = "VALUATION_PARSE";
 
-    private static final List<OutsourcedDataTaskStage> PAGE_STAGE_SEQUENCE = java.util.List.of(
+    private static final List<OutsourcedDataTaskStage> PAGE_STAGE_SEQUENCE = ImmutableList.of(
             OutsourcedDataTaskStage.FILE_PARSE,
             OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE,
             OutsourcedDataTaskStage.STANDARD_LANDING);
 
-    private static final Map<String, OutsourcedDataTaskStage> PAGE_STAGE_ALIAS_MAP = Map.of(
+    private static final Map<String, OutsourcedDataTaskStage> PAGE_STAGE_ALIAS_MAP = ImmutableMap.of(
             "RAW_DATA_EXTRACT", OutsourcedDataTaskStage.FILE_PARSE,
             "SUBJECT_RECOGNIZE", OutsourcedDataTaskStage.STANDARD_LANDING,
             "DATA_PROCESSING", OutsourcedDataTaskStage.STANDARD_LANDING,
             "VERIFY_ARCHIVE", OutsourcedDataTaskStage.STANDARD_LANDING);
 
-    private static final Set<String> PAGE_ABNORMAL_STATUSES = Set.of(
+    private static final Set<String> PAGE_ABNORMAL_STATUSES = ImmutableSet.of(
             OutsourcedDataTaskStatus.FAILED.name(),
             OutsourcedDataTaskStatus.BLOCKED.name(),
             OutsourcedDataTaskStatus.STOPPED.name());
