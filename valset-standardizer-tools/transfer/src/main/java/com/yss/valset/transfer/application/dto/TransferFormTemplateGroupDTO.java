@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferFormTemplateGroupDTO {
+public class TransferFormTemplateGroupDTO implements java.io.Serializable{
 
     /**
      * 分组编码。

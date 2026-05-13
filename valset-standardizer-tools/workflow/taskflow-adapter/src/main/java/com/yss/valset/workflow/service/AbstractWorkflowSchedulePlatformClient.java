@@ -36,12 +36,12 @@ public abstract class AbstractWorkflowSchedulePlatformClient implements Workflow
 
     @Override
     public List<WorkflowScheduleDTO> querySchedules(WorkflowScheduleDTO schedule) {
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     @Override
     public List<String> previewSchedule(WorkflowSchedulePreviewRequest request) {
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     @Override

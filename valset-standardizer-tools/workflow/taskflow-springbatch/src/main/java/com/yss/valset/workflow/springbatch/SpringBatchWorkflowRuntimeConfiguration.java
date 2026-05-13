@@ -3,9 +3,9 @@ package com.yss.valset.workflow.springbatch;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.configuration.support.MapJobRegistry;
 import org.springframework.batch.core.launch.JobLauncher;
-import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
+import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.repository.support.ResourcelessJobRepository;
+import org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean;
 import org.springframework.batch.support.transaction.ResourcelessTransactionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -40,8 +40,10 @@ public class SpringBatchWorkflowRuntimeConfiguration {
     /** 仅提供最小化作业仓库，不依赖数据库。 */
     @Bean(name = "springBatchJobRepository")
     @Primary
-    public JobRepository springBatchJobRepository() {
-        return new ResourcelessJobRepository();
+    public JobRepository springBatchJobRepository() throws Exception {
+        MapJobRepositoryFactoryBean factoryBean = new MapJobRepositoryFactoryBean(new ResourcelessTransactionManager());
+        factoryBean.afterPropertiesSet();
+        return factoryBean.getObject();
     }
 
     /** 统一使用同步执行器，便于内部工作流在当前线程中直接推进。 */
@@ -55,7 +57,7 @@ public class SpringBatchWorkflowRuntimeConfiguration {
     @Primary
     public JobLauncher springBatchJobLauncher(@Qualifier("springBatchJobRepository") JobRepository jobRepository,
                                               TaskExecutor springBatchTaskExecutor) throws Exception {
-        TaskExecutorJobLauncher launcher = new TaskExecutorJobLauncher();
+        SimpleJobLauncher launcher = new SimpleJobLauncher();
         launcher.setJobRepository(jobRepository);
         launcher.setTaskExecutor(springBatchTaskExecutor);
         launcher.afterPropertiesSet();

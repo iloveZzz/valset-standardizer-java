@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferRuleMutationResponse {
+public class TransferRuleMutationResponse implements java.io.Serializable{
 
     /**
      * 操作类型。

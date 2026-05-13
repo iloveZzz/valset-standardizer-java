@@ -16,7 +16,7 @@ public class RouteMatchPluginRegistry {
     private final List<RouteMatchPlugin> plugins;
 
     public RouteMatchPluginRegistry(List<RouteMatchPlugin> plugins) {
-        this.plugins = List.copyOf(plugins);
+        this.plugins = java.util.Collections.unmodifiableList(new java.util.ArrayList<>(plugins));
     }
 
     public RouteMatchPlugin getRequired(RecognitionContext context) {

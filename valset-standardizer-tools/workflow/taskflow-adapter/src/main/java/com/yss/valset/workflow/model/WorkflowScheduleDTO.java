@@ -15,7 +15,7 @@ import java.util.Map;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowScheduleDTO {
+public class WorkflowScheduleDTO implements java.io.Serializable {
 
     private Long scheduleId;
 

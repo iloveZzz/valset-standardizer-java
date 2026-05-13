@@ -44,7 +44,7 @@ public class EmailSourceConnector implements SourceConnector {
      */
     @Override
     public Path materialize(TransferSource source, com.yss.valset.transfer.domain.model.TransferObject transferObject) {
-        if (transferObject == null || transferObject.mailId() == null || transferObject.mailId().isBlank()) {
+        if (transferObject == null || transferObject.mailId() == null || transferObject.mailId().trim().isEmpty()) {
             throw new IllegalStateException("邮件附件落盘失败，缺少 mailId");
         }
         try {

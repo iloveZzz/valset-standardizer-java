@@ -14,7 +14,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class ParseRuleBundleExportDTO {
+public class ParseRuleBundleExportDTO implements java.io.Serializable {
 
     /**
      * 包类型。

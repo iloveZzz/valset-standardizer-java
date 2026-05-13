@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferObjectPageViewDTO {
+public class TransferObjectPageViewDTO implements java.io.Serializable {
 
     /**
      * 记录列表。

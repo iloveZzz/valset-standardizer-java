@@ -34,14 +34,14 @@ public interface ParseQueueMapper extends TransferMapstructSupport {
     ParseQueuePO toPO(ParseQueue queue);
 
     default ParseStatus parseStatusOf(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return ParseStatus.valueOf(value);
     }
 
     default ParseTriggerMode triggerModeOf(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return ParseTriggerMode.valueOf(value);

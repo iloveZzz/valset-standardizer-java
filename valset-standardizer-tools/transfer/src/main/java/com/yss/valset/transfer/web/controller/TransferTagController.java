@@ -1,7 +1,7 @@
 package com.yss.valset.transfer.web.controller;
 
-import com.yss.cloud.dto.response.PageResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.PageResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.transfer.application.command.TransferTagTestCommand;
 import com.yss.valset.transfer.application.command.TransferTagUpsertCommand;
 import com.yss.valset.transfer.application.dto.TransferTagMutationResponse;
@@ -10,7 +10,7 @@ import com.yss.valset.transfer.application.dto.TransferTagViewDTO;
 import com.yss.valset.transfer.application.service.TransferTagManagementAppService;
 import com.yss.valset.transfer.domain.form.TransferFormTemplateNames;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -110,7 +110,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                     .successCount(0)
                     .failureCount(0)
                     .skippedCount(0)
-                    .items(List.of())
+                    .items(java.util.Arrays.asList())
                     .build();
         }
         TransferObjectRedeliverCommand command = new TransferObjectRedeliverCommand();
@@ -130,7 +130,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                     .successCount(0)
                     .failureCount(0)
                     .matchedTagCount(0)
-                    .items(List.of())
+                    .items(java.util.Arrays.asList())
                     .build();
         }
 
@@ -169,13 +169,13 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
 
     private List<String> normalizeIds(List<String> transferIds) {
         if (transferIds == null || transferIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return transferIds.stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private TransferObjectRedeliverItemViewDTO buildItem(String transferId,
@@ -222,7 +222,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                     pageIndex,
                     RETAG_PAGE_SIZE
             );
-            List<TransferObject> records = page == null || page.records() == null ? List.of() : page.records();
+            List<TransferObject> records = page == null || page.records() == null ? java.util.Arrays.asList() : page.records();
             if (records.isEmpty()) {
                 break;
             }
@@ -256,7 +256,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                     pageIndex,
                     AUTO_REDELIVER_PAGE_SIZE
             );
-            List<TransferObject> records = page == null || page.records() == null ? List.of() : page.records();
+            List<TransferObject> records = page == null || page.records() == null ? java.util.Arrays.asList() : page.records();
             if (records.isEmpty()) {
                 break;
             }
@@ -272,7 +272,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
             }
             pageIndex++;
         }
-        return results.stream().distinct().toList();
+        return results.stream().distinct().collect(java.util.stream.Collectors.toList());
     }
 
     private String buildFailureMessage(RuntimeException exception) {

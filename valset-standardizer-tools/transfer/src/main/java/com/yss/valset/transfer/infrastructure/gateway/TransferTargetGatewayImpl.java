@@ -49,9 +49,9 @@ public class TransferTargetGatewayImpl implements TransferTargetGateway {
 
     @Override
     public List<TransferTarget> listTargets(String targetType, String targetCode, Boolean enabled, Integer limit) {
-        var query = Wrappers.lambdaQuery(TransferTargetPO.class)
-                .eq(targetType != null && !targetType.isBlank(), TransferTargetPO::getTargetType, targetType)
-                .like(targetCode != null && !targetCode.isBlank(), TransferTargetPO::getTargetCode, targetCode)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TransferTargetPO> query = Wrappers.lambdaQuery(TransferTargetPO.class)
+                .eq(targetType != null && !targetType.trim().isEmpty(), TransferTargetPO::getTargetType, targetType)
+                .like(targetCode != null && !targetCode.trim().isEmpty(), TransferTargetPO::getTargetCode, targetCode)
                 .eq(enabled != null, TransferTargetPO::getEnabled, enabled)
                 .orderByAsc(TransferTargetPO::getTargetType)
                 .orderByAsc(TransferTargetPO::getTargetCode);
@@ -61,7 +61,7 @@ public class TransferTargetGatewayImpl implements TransferTargetGateway {
         return transferTargetRepository.selectList(query)
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override

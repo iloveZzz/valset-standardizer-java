@@ -28,37 +28,37 @@ public class MappingHintIndex {
      * 通过规范化的外部名称查找提示。
      */
     public List<MappingHint> findNameHints(String normalizedKey) {
-        if (normalizedKey == null || normalizedKey.isBlank() || hintsByName == null) {
-            return List.of();
+        if (normalizedKey == null || normalizedKey.trim().isEmpty() || hintsByName == null) {
+            return java.util.Arrays.asList();
         }
-        return hintsByName.getOrDefault(normalizedKey, List.of());
+        return hintsByName.getOrDefault(normalizedKey, java.util.Arrays.asList());
     }
 
     /**
      * 通过外部代码查找提示。
      */
     public List<MappingHint> findCodeHints(String subjectCode) {
-        if (subjectCode == null || subjectCode.isBlank() || hintsByCode == null) {
-            return List.of();
+        if (subjectCode == null || subjectCode.trim().isEmpty() || hintsByCode == null) {
+            return java.util.Arrays.asList();
         }
-        return hintsByCode.getOrDefault(subjectCode.trim(), List.of());
+        return hintsByCode.getOrDefault(subjectCode.trim(), java.util.Arrays.asList());
     }
 
     /**
      * 由历史映射提示列表构建索引。
      */
     public static MappingHintIndex fromHints(List<MappingHint> hints) {
-        List<MappingHint> safeHints = hints == null ? List.of() : new ArrayList<>(hints);
+        List<MappingHint> safeHints = hints == null ? java.util.Arrays.asList() : new ArrayList<>(hints);
         Map<String, List<MappingHint>> hintsByName = safeHints.stream()
-                .filter(hint -> hint != null && hint.getNormalizedKey() != null && !hint.getNormalizedKey().isBlank())
+                .filter(hint -> hint != null && hint.getNormalizedKey() != null && !hint.getNormalizedKey().trim().isEmpty())
                 .collect(Collectors.groupingBy(hint -> hint.getNormalizedKey().trim(), LinkedHashMap::new,
                         Collectors.toCollection(ArrayList::new)));
         Map<String, List<MappingHint>> hintsByCode = safeHints.stream()
-                .filter(hint -> hint != null && hint.getStandardCode() != null && !hint.getStandardCode().isBlank())
+                .filter(hint -> hint != null && hint.getStandardCode() != null && !hint.getStandardCode().trim().isEmpty())
                 .collect(Collectors.groupingBy(hint -> hint.getStandardCode().trim(), LinkedHashMap::new,
                         Collectors.toCollection(ArrayList::new)));
         return MappingHintIndex.builder()
-                .hints(safeHints.stream().filter(item -> item != null).toList())
+                .hints(safeHints.stream().filter(item -> item != null).collect(java.util.stream.Collectors.toList()))
                 .hintsByName(hintsByName)
                 .hintsByCode(hintsByCode)
                 .build();

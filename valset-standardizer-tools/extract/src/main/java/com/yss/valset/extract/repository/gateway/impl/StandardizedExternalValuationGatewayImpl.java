@@ -29,9 +29,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class StandardizedExternalValuationGatewayImpl implements StandardizedExternalValuationGateway {
 
-    private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {
+    private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<List<String>>() {
     };
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<Map<String, Object>>() {
     };
 
     private final DwdExternalValuationStandardSubjectRepository subjectRepository;
@@ -146,7 +146,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
 
     private List<SubjectRecord> loadSubjects(List<DwdExternalValuationStandardSubjectPO> poList) {
         if (poList == null || poList.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<SubjectRecord> result = new ArrayList<>(poList.size());
         for (DwdExternalValuationStandardSubjectPO po : poList) {
@@ -178,7 +178,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
 
     private List<MetricRecord> loadMetrics(List<DwdExternalValuationStandardMetricPO> poList) {
         if (poList == null || poList.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<MetricRecord> result = new ArrayList<>(poList.size());
         for (DwdExternalValuationStandardMetricPO po : poList) {
@@ -215,7 +215,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
 
     private <T> T readJson(String value, TypeReference<T> typeReference) {
         try {
-            if (value == null || value.isBlank()) {
+            if (value == null || value.trim().isEmpty()) {
                 return null;
             }
             return objectMapper.readValue(value, typeReference);

@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferObjectExtensionCountViewDTO {
+public class TransferObjectExtensionCountViewDTO implements java.io.Serializable {
 
     /**
      * 后缀。

@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +69,7 @@ public class EvaluateMappingExecutionAppServiceImpl implements EvaluateMappingEx
             
             String sourceTypeStr = command.getStandardSourceType();
             DataSourceType type = DataSourceType.EXCEL;
-            if (sourceTypeStr != null && !sourceTypeStr.isBlank()) {
+            if (sourceTypeStr != null && !sourceTypeStr.trim().isEmpty()) {
                 type = DataSourceType.valueOf(sourceTypeStr.toUpperCase());
             }
             DataSourceConfig config = DataSourceConfig.builder()
@@ -173,7 +174,7 @@ public class EvaluateMappingExecutionAppServiceImpl implements EvaluateMappingEx
      * 解决评价分割模式。
      */
     private String splitMode(EvaluateMappingTaskCommand command) {
-        return command.getSplitMode() == null || command.getSplitMode().isBlank()
+        return command.getSplitMode() == null || command.getSplitMode().trim().isEmpty()
                 ? "org_holdout"
                 : command.getSplitMode();
     }
@@ -210,7 +211,7 @@ public class EvaluateMappingExecutionAppServiceImpl implements EvaluateMappingEx
             payload.put("baselineTop3", baselineMetrics.get("top3_recall"));
             payload.put("recommendedTop3", recommendedMetrics.get("top3_recall"));
             payload.put("outputDir", resolveTaskOutputDirectory(taskId).toString());
-            payload.put("artifacts", List.of(
+            payload.put("artifacts", java.util.Arrays.asList(
                     "mapping_evaluation.json",
                     "failure_cluster.json",
                     "weight_search_report.json",
@@ -232,6 +233,6 @@ public class EvaluateMappingExecutionAppServiceImpl implements EvaluateMappingEx
      * 解析任务输出目录。
      */
     private Path resolveTaskOutputDirectory(Long taskId) {
-        return Path.of(outputRoot).toAbsolutePath().resolve("task-" + taskId);
+        return Paths.get(outputRoot).toAbsolutePath().resolve("task-" + taskId);
     }
 }

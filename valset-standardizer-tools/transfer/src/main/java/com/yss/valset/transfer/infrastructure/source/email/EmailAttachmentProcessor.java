@@ -9,18 +9,18 @@ import com.yss.valset.transfer.application.service.TransferIngestProgressAppServ
 import com.yss.valset.transfer.domain.rule.ConditionRuleParser;
 import com.yss.valset.transfer.domain.rule.JSONUtils;
 import com.yss.valset.transfer.domain.rule.ScriptRuleEngineAdapter;
-import jakarta.mail.Address;
-import jakarta.mail.BodyPart;
-import jakarta.mail.Folder;
-import jakarta.mail.Message;
-import jakarta.mail.Multipart;
-import jakarta.mail.Part;
-import jakarta.mail.Session;
-import jakarta.mail.Store;
-import jakarta.mail.UIDFolder;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeBodyPart;
-import jakarta.mail.internet.MimeUtility;
+import javax.mail.Address;
+import javax.mail.BodyPart;
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.Multipart;
+import javax.mail.Part;
+import javax.mail.Session;
+import javax.mail.Store;
+import javax.mail.UIDFolder;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeUtility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -34,7 +34,6 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -68,12 +67,12 @@ public class EmailAttachmentProcessor {
         List<RecognitionContext> contexts = new ArrayList<>();
         int attachmentCount = 0;
         Object content = mailSnapshot.content();
-        if (content instanceof Multipart multipart) {
-            List<AttachmentPartEntry> attachmentEntries = collectAttachmentEntries(multipart);
+        if (content instanceof Multipart) {
+            List<AttachmentPartEntry> attachmentEntries = collectAttachmentEntries((Multipart) content);
             attachmentCount = attachmentEntries.size();
             List<String> attachmentNames = new ArrayList<>();
             for (AttachmentPartEntry attachmentEntry : attachmentEntries) {
-                if (attachmentEntry == null || attachmentEntry.fileName() == null || attachmentEntry.fileName().isBlank()) {
+                if (attachmentEntry == null || attachmentEntry.fileName() == null || attachmentEntry.fileName().trim().isEmpty()) {
                     continue;
                 }
                 RecognitionContext context = buildAttachmentContextIfAccepted(
@@ -284,7 +283,7 @@ public class EmailAttachmentProcessor {
             return null;
         }
         String json = rawMailCondition instanceof String ? String.valueOf(rawMailCondition) : JSONUtils.toJsonString(rawMailCondition);
-        if (json == null || json.isBlank()) {
+        if (json == null || json.trim().isEmpty()) {
             return null;
         }
         try {
@@ -295,7 +294,7 @@ public class EmailAttachmentProcessor {
     }
 
     private boolean acceptMailAttachment(String mailConditionExpression, Map<String, Object> variables) {
-        if (mailConditionExpression == null || mailConditionExpression.isBlank()) {
+        if (mailConditionExpression == null || mailConditionExpression.trim().isEmpty()) {
             return true;
         }
         return scriptRuleEngineAdapter.evaluateBooleanExpression(mailConditionExpression, variables);
@@ -312,7 +311,7 @@ public class EmailAttachmentProcessor {
             try (Folder folder = store.getFolder(config.folder())) {
                 folder.open(Folder.READ_ONLY);
                 UIDFolder uidFolder = folder instanceof UIDFolder ? (UIDFolder) folder : null;
-                Map<String, Object> fileMeta = transferObject.fileMeta() == null ? Map.of() : transferObject.fileMeta();
+                Map<String, Object> fileMeta = transferObject.fileMeta() == null ? java.util.Collections.emptyMap() : transferObject.fileMeta();
                 Message message = resolveMessage(folder, uidFolder, transferObject.mailId(), fileMeta, config);
                 if (message == null) {
                     throw new IllegalStateException("未找到对应邮件，mailId=" + transferObject.mailId());
@@ -330,10 +329,10 @@ public class EmailAttachmentProcessor {
      */
     private ResolvedAttachment resolveTargetAttachment(Message message, String mailId, int attachmentIndex, String attachmentName) throws Exception {
         Object content = message.getContent();
-        if (!(content instanceof Multipart multipart)) {
+        if (!(content instanceof Multipart)) {
             throw new IllegalStateException("邮件不包含附件，mailId=" + mailId);
         }
-        BodyPart bodyPart = resolveAttachmentPart(multipart, attachmentIndex, attachmentName);
+        BodyPart bodyPart = resolveAttachmentPart((Multipart) content, attachmentIndex, attachmentName);
         if (bodyPart == null) {
             throw new IllegalStateException("未找到邮件附件，mailId=" + mailId + ", attachmentName=" + attachmentName + ", attachmentIndex=" + attachmentIndex);
         }
@@ -344,7 +343,7 @@ public class EmailAttachmentProcessor {
     }
 
     Message resolveMessage(Folder folder, UIDFolder uidFolder, String mailId, Map<String, Object> fileMeta, EmailSourceConfig config) throws Exception {
-        if (mailId == null || mailId.isBlank()) {
+        if (mailId == null || mailId.trim().isEmpty()) {
             return null;
         }
         Long mailUid = resolveMailUid(fileMeta);
@@ -393,7 +392,7 @@ public class EmailAttachmentProcessor {
 
     private int resolveAttachmentIndex(Map<String, Object> fileMeta) {
         Object raw = fileMeta == null ? null : fileMeta.get(TransferConfigKeys.ATTACHMENT_INDEX);
-        if (raw == null || String.valueOf(raw).isBlank()) {
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             return -1;
         }
         try {
@@ -405,7 +404,7 @@ public class EmailAttachmentProcessor {
 
     private String resolveAttachmentName(Map<String, Object> fileMeta, String fallback) {
         Object raw = fileMeta == null ? null : fileMeta.get(TransferConfigKeys.ATTACHMENT_NAME);
-        if (raw == null || String.valueOf(raw).isBlank()) {
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             return normalizeAttachmentName(fallback);
         }
         return normalizeAttachmentName(String.valueOf(raw));
@@ -442,7 +441,7 @@ public class EmailAttachmentProcessor {
     }
 
     private String normalizeMimeType(String contentType) {
-        if (contentType == null || contentType.isBlank()) {
+        if (contentType == null || contentType.trim().isEmpty()) {
             return null;
         }
         String normalized = contentType.trim();
@@ -450,7 +449,7 @@ public class EmailAttachmentProcessor {
         if (semicolon > 0) {
             normalized = normalized.substring(0, semicolon).trim();
         }
-        return normalized.isBlank() ? null : normalized;
+        return normalized.trim().isEmpty() ? null : normalized;
     }
 
     private BodyPart resolveAttachmentPart(Multipart multipart, int attachmentIndex, String attachmentName) throws Exception {
@@ -466,7 +465,7 @@ public class EmailAttachmentProcessor {
                 return bodyPart;
             }
             String fileName = normalizeAttachmentName(bodyPart.getFileName());
-            if (attachmentName != null && !attachmentName.isBlank() && attachmentName.equals(fileName)) {
+            if (attachmentName != null && !attachmentName.trim().isEmpty() && attachmentName.equals(fileName)) {
                 return bodyPart;
             }
             if (fallback == null) {
@@ -502,12 +501,12 @@ public class EmailAttachmentProcessor {
             } catch (Exception ignored) {
                 // 不能读取内容时，不阻断其它附件继续扫描。
             }
-            if (childContent instanceof Multipart nestedMultipart) {
-                collectAttachmentEntries(nestedMultipart, attachmentEntries);
-            } else if (childContent instanceof Message nestedMessage) {
-                Object nestedMessageContent = nestedMessage.getContent();
-                if (nestedMessageContent instanceof Multipart nestedMessageMultipart) {
-                    collectAttachmentEntries(nestedMessageMultipart, attachmentEntries);
+            if (childContent instanceof Multipart) {
+                collectAttachmentEntries((Multipart) childContent, attachmentEntries);
+            } else if (childContent instanceof Message) {
+                Object nestedMessageContent = ((Message) childContent).getContent();
+                if (nestedMessageContent instanceof Multipart) {
+                    collectAttachmentEntries((Multipart) nestedMessageContent, attachmentEntries);
                 }
             }
         }
@@ -520,17 +519,18 @@ public class EmailAttachmentProcessor {
         if (Part.ATTACHMENT.equalsIgnoreCase(bodyPart.getDisposition())) {
             return true;
         }
-        if (fileName != null && !fileName.isBlank()) {
+        if (fileName != null && !fileName.trim().isEmpty()) {
             return true;
         }
         return bodyPart instanceof MimeBodyPart && normalizeAttachmentName(bodyPart.getFileName()) != null;
     }
 
     private String extractBodyText(Object content) throws Exception {
-        if (content instanceof String stringContent) {
-            return limitBody(stringContent);
+        if (content instanceof String) {
+            return limitBody((String) content);
         }
-        if (content instanceof Multipart multipart) {
+        if (content instanceof Multipart) {
+            Multipart multipart = (Multipart) content;
             StringBuilder builder = new StringBuilder();
             for (int i = 0; i < multipart.getCount(); i++) {
                 BodyPart bodyPart = multipart.getBodyPart(i);
@@ -559,14 +559,15 @@ public class EmailAttachmentProcessor {
             }
         }
         String value = joiner.toString();
-        return value.isBlank() ? null : value;
+        return value.trim().isEmpty() ? null : value;
     }
 
     private String formatAddress(Address address) {
-        if (address instanceof InternetAddress internetAddress) {
+        if (address instanceof InternetAddress) {
+            InternetAddress internetAddress = (InternetAddress) address;
             String email = normalizeAddressPart(internetAddress.getAddress());
             String personal = decodePersonal(internetAddress.getPersonal());
-            if (personal != null && !personal.isBlank()) {
+            if (personal != null && !personal.trim().isEmpty()) {
                 return personal + " <" + email + ">";
             }
             return email;
@@ -575,7 +576,7 @@ public class EmailAttachmentProcessor {
     }
 
     private String decodePersonal(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         try {
@@ -605,7 +606,7 @@ public class EmailAttachmentProcessor {
 
     private String resolveMailId(Message message, EmailSourceConfig config, UIDFolder uidFolder) throws Exception {
         String[] header = message.getHeader("Message-ID");
-        if (header != null && header.length > 0 && header[0] != null && !header[0].isBlank()) {
+        if (header != null && header.length > 0 && header[0] != null && !header[0].trim().isEmpty()) {
             return header[0];
         }
         if (uidFolder != null) {
@@ -622,7 +623,7 @@ public class EmailAttachmentProcessor {
     }
 
     private String normalizeAttachmentName(String rawName) {
-        if (rawName == null || rawName.isBlank()) {
+        if (rawName == null || rawName.trim().isEmpty()) {
             return rawName;
         }
         String decoded = rawName;
@@ -649,7 +650,7 @@ public class EmailAttachmentProcessor {
     }
 
     private String limitBody(String body) {
-        if (body == null || body.isBlank()) {
+        if (body == null || body.trim().isEmpty()) {
             return body;
         }
         int maxLength = 4096;
@@ -661,7 +662,7 @@ public class EmailAttachmentProcessor {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value;
             }
         }
@@ -670,7 +671,7 @@ public class EmailAttachmentProcessor {
 
     private String resolveAttachmentFileType(String fileName) {
         String normalized = normalizeAttachmentName(fileName);
-        if (normalized == null || normalized.isBlank()) {
+        if (normalized == null || normalized.trim().isEmpty()) {
             return null;
         }
         String lower = normalized.toLowerCase(Locale.ROOT);
@@ -750,14 +751,22 @@ public class EmailAttachmentProcessor {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashed = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashed, 0, 6);
+            StringBuilder builder = new StringBuilder();
+            for (int index = 0; index < 6 && index < hashed.length; index++) {
+                String hex = Integer.toHexString(hashed[index] & 0xff);
+                if (hex.length() == 1) {
+                    builder.append('0');
+                }
+                builder.append(hex);
+            }
+            return builder.toString();
         } catch (NoSuchAlgorithmException e) {
             return Integer.toHexString(raw.hashCode());
         }
     }
 
     private void applyTimeouts(Properties properties, String protocol, int timeoutMillis) {
-        if (properties == null || protocol == null || protocol.isBlank() || timeoutMillis <= 0) {
+        if (properties == null || protocol == null || protocol.trim().isEmpty() || timeoutMillis <= 0) {
             return;
         }
         properties.put("mail." + protocol + ".connectiontimeout", String.valueOf(timeoutMillis));
@@ -765,27 +774,161 @@ public class EmailAttachmentProcessor {
         properties.put("mail." + protocol + ".writetimeout", String.valueOf(timeoutMillis));
     }
 
-    private record MailMessageSnapshot(
-            String sender,
-            String recipientsTo,
-            String recipientsCc,
-            String recipientsBcc,
-            String subject,
-            Date sentDate,
-            String body,
-            Object content,
-            String mailConditionExpression) {
+    private static final class MailMessageSnapshot {
+        private final String sender;
+        private final String recipientsTo;
+        private final String recipientsCc;
+        private final String recipientsBcc;
+        private final String subject;
+        private final Date sentDate;
+        private final String body;
+        private final Object content;
+        private final String mailConditionExpression;
+
+        private MailMessageSnapshot(String sender,
+                                    String recipientsTo,
+                                    String recipientsCc,
+                                    String recipientsBcc,
+                                    String subject,
+                                    Date sentDate,
+                                    String body,
+                                    Object content,
+                                    String mailConditionExpression) {
+            this.sender = sender;
+            this.recipientsTo = recipientsTo;
+            this.recipientsCc = recipientsCc;
+            this.recipientsBcc = recipientsBcc;
+            this.subject = subject;
+            this.sentDate = sentDate;
+            this.body = body;
+            this.content = content;
+            this.mailConditionExpression = mailConditionExpression;
+        }
+
+        String sender() {
+            return sender;
+        }
+
+        String recipientsTo() {
+            return recipientsTo;
+        }
+
+        String recipientsCc() {
+            return recipientsCc;
+        }
+
+        String recipientsBcc() {
+            return recipientsBcc;
+        }
+
+        String subject() {
+            return subject;
+        }
+
+        Date sentDate() {
+            return sentDate;
+        }
+
+        String body() {
+            return body;
+        }
+
+        Object content() {
+            return content;
+        }
+
+        String mailConditionExpression() {
+            return mailConditionExpression;
+        }
     }
 
-    record AttachmentExtractionResult(List<RecognitionContext> contexts, int attachmentCount, int acceptedCount) {
+    static final class AttachmentExtractionResult {
+        private final List<RecognitionContext> contexts;
+        private final int attachmentCount;
+        private final int acceptedCount;
+
+        AttachmentExtractionResult(List<RecognitionContext> contexts, int attachmentCount, int acceptedCount) {
+            this.contexts = contexts;
+            this.attachmentCount = attachmentCount;
+            this.acceptedCount = acceptedCount;
+        }
+
+        List<RecognitionContext> contexts() {
+            return contexts;
+        }
+
+        int attachmentCount() {
+            return attachmentCount;
+        }
+
+        int acceptedCount() {
+            return acceptedCount;
+        }
     }
 
-    private record AttachmentPartEntry(int index, BodyPart bodyPart, String fileName) {
+    private static final class AttachmentPartEntry {
+        private final int index;
+        private final BodyPart bodyPart;
+        private final String fileName;
+
+        private AttachmentPartEntry(int index, BodyPart bodyPart, String fileName) {
+            this.index = index;
+            this.bodyPart = bodyPart;
+            this.fileName = fileName;
+        }
+
+        int index() {
+            return index;
+        }
+
+        BodyPart bodyPart() {
+            return bodyPart;
+        }
+
+        String fileName() {
+            return fileName;
+        }
     }
 
-    private record ResolvedAttachment(BodyPart bodyPart, String attachmentName) {
+    private static final class ResolvedAttachment {
+        private final BodyPart bodyPart;
+        private final String attachmentName;
+
+        private ResolvedAttachment(BodyPart bodyPart, String attachmentName) {
+            this.bodyPart = bodyPart;
+            this.attachmentName = attachmentName;
+        }
+
+        BodyPart bodyPart() {
+            return bodyPart;
+        }
+
+        String attachmentName() {
+            return attachmentName;
+        }
     }
 
-    private record AttachmentMaterializationResult(Path tempFile, String fingerprint, long size) {
+    private static final class AttachmentMaterializationResult {
+        private final Path tempFile;
+        private final String fingerprint;
+        private final long size;
+
+        private AttachmentMaterializationResult(Path tempFile, String fingerprint, long size) {
+            this.tempFile = tempFile;
+            this.fingerprint = fingerprint;
+            this.size = size;
+        }
+
+        Path tempFile() {
+            return tempFile;
+        }
+
+        String fingerprint() {
+            return fingerprint;
+        }
+
+        long size() {
+            return size;
+        }
     }
 }

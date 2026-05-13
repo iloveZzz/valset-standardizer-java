@@ -44,7 +44,7 @@ public class DbTransferJobScheduler implements TransferJobScheduler {
                 sourceCode,
                 sourceType,
                 instanceId,
-                ingestLockToken != null && !ingestLockToken.isBlank(),
+                ingestLockToken != null && !ingestLockToken.trim().isEmpty(),
                 parameters == null ? 0 : parameters.size());
         TransferIngestTaskData taskData = new TransferIngestTaskData(
                 sourceId,
@@ -172,7 +172,7 @@ public class DbTransferJobScheduler implements TransferJobScheduler {
     }
 
     static String normalizeCronExpression(String cronExpression) {
-        if (cronExpression == null || cronExpression.isBlank()) {
+        if (cronExpression == null || cronExpression.trim().isEmpty()) {
             return DEFAULT_CRON;
         }
         String normalized = cronExpression.trim().replaceAll("\\s+", " ");
@@ -192,7 +192,7 @@ public class DbTransferJobScheduler implements TransferJobScheduler {
 
     private Map<String, Object> copy(Map<String, Object> source) {
         if (source == null || source.isEmpty()) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         return new LinkedHashMap<>(source);
     }

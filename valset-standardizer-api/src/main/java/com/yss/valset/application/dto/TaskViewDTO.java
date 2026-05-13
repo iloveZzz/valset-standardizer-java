@@ -3,6 +3,7 @@ package com.yss.valset.application.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -11,7 +12,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TaskViewDTO {
+public class TaskViewDTO implements Serializable {
     /**
      * 唯一的任务标识符。
      */

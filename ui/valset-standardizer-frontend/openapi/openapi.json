@@ -6983,13 +6983,13 @@
       "JsonNode": {
         "type": "object",
         "properties": {
-          "containerNode": {
+          "valueNode": {
             "format": "boolean",
             "description": "No comments found.",
             "type": "boolean",
             "example": true
           },
-          "valueNode": {
+          "containerNode": {
             "format": "boolean",
             "description": "No comments found.",
             "type": "boolean",
@@ -12055,6 +12055,12 @@
             "description": "No comments found.(object)",
             "type": "object"
           },
+          "sendFailed": {
+            "format": "boolean",
+            "description": "No comments found.",
+            "type": "boolean",
+            "example": true
+          },
           "timeoutCallback": {
             "description": "No comments found.(object)",
             "type": "object"
@@ -12064,10 +12070,6 @@
             "type": "object"
           },
           "completionCallback": {
-            "description": "No comments found.(object)",
-            "type": "object"
-          },
-          "writeLock": {
             "description": "No comments found.(object)",
             "type": "object"
           }

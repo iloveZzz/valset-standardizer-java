@@ -35,8 +35,8 @@ public class TransferTagBusinessDateFormTemplate extends FormTemplate {
         values.put("regexPattern", BUSINESS_DATE_REGEX_PATTERN);
         Map<String, Object> tagMeta = new LinkedHashMap<>();
         tagMeta.put("defaultTag", Boolean.TRUE);
-        tagMeta.put("candidateFields", List.of("fileName", "originalName", "subject", "path"));
-        tagMeta.put("supportedFormats", List.of("yyyy-MM-dd", "yyyyMMdd", "yyyy/MM/dd", "yyyy年MM月dd日"));
+        tagMeta.put("candidateFields", java.util.Arrays.asList("fileName", "originalName", "subject", "path"));
+        tagMeta.put("supportedFormats", java.util.Arrays.asList("yyyy-MM-dd", "yyyyMMdd", "yyyy/MM/dd", "yyyy年MM月dd日"));
         values.put("tagMeta", tagMeta);
         return values;
     }

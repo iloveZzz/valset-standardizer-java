@@ -62,7 +62,7 @@ public class WorkflowRuntimeCatalog {
     public List<StageDefinition> getStages() {
         List<StageDefinition> dbStages = activeDefinition()
                 .map(this::toStageDefinitions)
-                .orElse(List.of());
+                .orElse(java.util.Arrays.asList());
         if (dbStages.isEmpty()) {
             throw new IllegalStateException("未找到启用中的工作流阶段配置：" + DEFAULT_WORKFLOW_CODE);
         }
@@ -75,10 +75,10 @@ public class WorkflowRuntimeCatalog {
 
     public List<String> getIgnoredWorkflowTaskTypes() {
         List<String> defaults = defaultIgnoredWorkflowTaskTypes();
-        List<String> extras = List.of(TaskType.MATCH_SUBJECT.name(), TaskType.EXPORT_RESULT.name());
+        List<String> extras = java.util.Arrays.asList(TaskType.MATCH_SUBJECT.name(), TaskType.EXPORT_RESULT.name());
         List<String> merged = new ArrayList<>(defaults);
         merged.addAll(extras);
-        return merged.stream().distinct().toList();
+        return merged.stream().distinct().collect(java.util.stream.Collectors.toList());
     }
 
     public Optional<ActiveWorkflowDefinition> activeWorkflowDefinition() {
@@ -114,7 +114,7 @@ public class WorkflowRuntimeCatalog {
         return getStages().stream()
                 .map(StageDefinition::toStage)
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     public int stageOrder(String stage) {
@@ -164,11 +164,16 @@ public class WorkflowRuntimeCatalog {
         }
         try {
             OutsourcedDataTaskStage parsed = OutsourcedDataTaskStage.valueOf(normalized);
-            return switch (parsed) {
-                case RAW_DATA_EXTRACT -> OutsourcedDataTaskStage.FILE_PARSE;
-                case SUBJECT_RECOGNIZE, VERIFY_ARCHIVE, DATA_PROCESSING -> OutsourcedDataTaskStage.STANDARD_LANDING;
-                default -> parsed;
-            };
+            switch (parsed) {
+                case RAW_DATA_EXTRACT:
+                    return OutsourcedDataTaskStage.FILE_PARSE;
+                case SUBJECT_RECOGNIZE:
+                case VERIFY_ARCHIVE:
+                case DATA_PROCESSING:
+                    return OutsourcedDataTaskStage.STANDARD_LANDING;
+                default:
+                    return parsed;
+            }
         } catch (Exception ignored) {
             return firstStage();
         }
@@ -310,7 +315,7 @@ public class WorkflowRuntimeCatalog {
 
     private List<OutsourcedWorkflowStagePO> loadStages(String workflowId) {
         if (!StringUtils.hasText(workflowId) || stageRepository == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<OutsourcedWorkflowStagePO> stagePOs = stageRepository.selectList(
                 com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(OutsourcedWorkflowStagePO.class)
@@ -318,11 +323,11 @@ public class WorkflowRuntimeCatalog {
                         .eq(OutsourcedWorkflowStagePO::getEnabled, true)
                         .orderByAsc(OutsourcedWorkflowStagePO::getSortOrder));
         if (stagePOs == null || stagePOs.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return stagePOs.stream()
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private ActiveWorkflowDefinition copyWorkflowDefinition(ActiveWorkflowDefinition source) {
@@ -337,19 +342,19 @@ public class WorkflowRuntimeCatalog {
         copy.setParseFallbackStage(source.getParseFallbackStage());
         copy.setWorkflowFallbackStage(source.getWorkflowFallbackStage());
         copy.setVersionNo(source.getVersionNo());
-        copy.setStages(source.getStages() == null ? List.of() : new ArrayList<>(source.getStages()));
+        copy.setStages(source.getStages() == null ? java.util.Arrays.asList() : new ArrayList<>(source.getStages()));
         return copy;
     }
 
     private List<StageDefinition> toStageDefinitions(ActiveWorkflowDefinition definition) {
         if (definition == null || definition.getStages() == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return definition.getStages().stream()
                 .filter(stage -> stage != null && Boolean.TRUE.equals(stage.getEnabled()))
                 .map(this::toStageDefinition)
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private StageDefinition toStageDefinition(OutsourcedWorkflowStagePO dto) {
@@ -367,23 +372,23 @@ public class WorkflowRuntimeCatalog {
     }
 
     private static List<String> defaultIgnoredWorkflowTaskTypes() {
-        return List.of(TaskType.PARSE_WORKBOOK.name());
+        return java.util.Arrays.asList(TaskType.PARSE_WORKBOOK.name());
     }
 
     private static List<String> defaultSuccessTaskStatuses() {
-        return List.of(TaskStatus.SUCCESS.name());
+        return java.util.Arrays.asList(TaskStatus.SUCCESS.name());
     }
 
     private static List<String> defaultFailedTaskStatuses() {
-        return List.of(TaskStatus.FAILED.name());
+        return java.util.Arrays.asList(TaskStatus.FAILED.name());
     }
 
     private static List<String> defaultStoppedTaskStatuses() {
-        return List.of(TaskStatus.CANCELED.name());
+        return java.util.Arrays.asList(TaskStatus.CANCELED.name());
     }
 
     private static List<String> defaultRunningTaskStatuses() {
-        return List.of(TaskStatus.RUNNING.name(), TaskStatus.RETRYING.name());
+        return java.util.Arrays.asList(TaskStatus.RUNNING.name(), TaskStatus.RETRYING.name());
     }
 
     private static boolean contains(List<String> values, String value) {

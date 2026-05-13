@@ -11,6 +11,7 @@ import com.yss.valset.domain.model.SubjectRecord;
 import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.extract.rule.ParseRuleSupport;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -43,7 +44,7 @@ import java.util.regex.Pattern;
 public class CsvValuationDataParser implements ValuationDataParser {
 
     private static final String DEFAULT_SHEET_NAME = "CSV_RAW_DATA";
-    private static final List<String> FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
+    private static final List<String> FOOTER_KEYWORDS = java.util.Arrays.asList("制表", "复核", "打印", "备注");
     private static final Charset[] CANDIDATE_CHARSETS = new Charset[] {
             Charset.forName("UTF-8"),
             Charset.forName("GBK"),
@@ -149,7 +150,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
         if (lastException != null) {
             throw lastException;
         }
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     private ParsedValuationData emptyResult(Path csvPath) {
@@ -157,12 +158,12 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 .workbookPath(csvPath.toAbsolutePath().toString())
                 .sheetName(DEFAULT_SHEET_NAME)
                 .title(csvPath.getFileName().toString())
-                .basicInfo(Map.of())
-                .headers(List.of())
-                .headerDetails(List.of())
-                .headerColumns(List.of())
-                .subjects(List.of())
-                .metrics(List.of())
+                .basicInfo(java.util.Collections.emptyMap())
+                .headers(java.util.Arrays.asList())
+                .headerDetails(java.util.Arrays.asList())
+                .headerColumns(java.util.Arrays.asList())
+                .subjects(java.util.Arrays.asList())
+                .metrics(java.util.Arrays.asList())
                 .build();
     }
 
@@ -223,7 +224,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
     private HeaderLayout buildHeaderLayout(List<List<String>> headerBlockRows) {
         if (headerBlockRows.isEmpty()) {
-            return new HeaderLayout(List.of(), List.of(), List.of());
+            return new HeaderLayout(java.util.Arrays.asList(), java.util.Arrays.asList(), java.util.Arrays.asList());
         }
         int columnCount = headerBlockRows.stream().mapToInt(List::size).max().orElse(0);
         List<String> headers = new ArrayList<>(columnCount);
@@ -236,7 +237,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
                     continue;
                 }
                 String segment = headerRow.get(columnIndex);
-                if (!segment.isBlank()) {
+                if (!segment.trim().isEmpty()) {
                     pathSegments.add(segment);
                 }
             }
@@ -248,7 +249,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
                     .headerName(headerPath)
                     .headerPath(headerPath)
                     .pathSegments(pathSegments)
-                    .blankColumn(headerPath.isBlank())
+                    .blankColumn(headerPath.trim().isEmpty())
                     .build());
         }
         return new HeaderLayout(headers, headerDetails, headerColumns);
@@ -258,7 +259,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
         Map<String, Integer> headerIndex = new LinkedHashMap<>();
         for (int index = 0; index < headers.size(); index++) {
             String header = headers.get(index);
-            if (!header.isBlank()) {
+            if (!header.trim().isEmpty()) {
                 headerIndex.putIfAbsent(header, index);
             }
         }
@@ -269,7 +270,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
         List<String> normalized = new ArrayList<>(rowTexts.size());
         String carry = "";
         for (String text : rowTexts) {
-            if (text == null || text.isBlank()) {
+            if (text == null || text.trim().isEmpty()) {
                 normalized.add(carry);
                 continue;
             }
@@ -280,7 +281,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
     }
 
     private boolean isBlankRow(List<String> rowTexts) {
-        return rowTexts == null || rowTexts.stream().allMatch(String::isBlank);
+        return rowTexts == null || rowTexts.stream().allMatch(String::isEmpty);
     }
 
     private TitleAndInfo extractTitleAndBasicInfo(List<List<Object>> rows, int headerRowIndex) {
@@ -288,7 +289,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
         List<String> titleCandidates = new ArrayList<>();
         for (int rowIndex = 0; rowIndex < headerRowIndex; rowIndex++) {
             List<String> rowTexts = toRowTexts(rows.get(rowIndex));
-            List<String> nonEmptyTexts = rowTexts.stream().filter(text -> !text.isBlank()).toList();
+            List<String> nonEmptyTexts = rowTexts.stream().filter(text -> !text.trim().isEmpty()).collect(java.util.stream.Collectors.toList());
             if (nonEmptyTexts.isEmpty()) {
                 continue;
             }
@@ -304,10 +305,10 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 String[] parts = text.split(delimiter, 2);
                 String key = stripTrailingPunctuation(parts[0]);
                 String value = parts.length > 1 ? parts[1].trim() : "";
-                if (value.isBlank()) {
+                if (value.trim().isEmpty()) {
                     value = findNextMeaningfulText(rowTexts, cellIndex + 1);
                 }
-                if (!key.isBlank()) {
+                if (!key.trim().isEmpty()) {
                     basicInfo.put(key, stripTrailingPunctuation(value));
                 }
             }
@@ -352,11 +353,11 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
     private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
         if (parseRuleTemplateResolver == null) {
-            return List.of("科目代码", "科目名称", "币种");
+            return java.util.Arrays.asList("科目代码", "科目名称", "币种");
         }
         List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
         return requiredHeaders == null || requiredHeaders.isEmpty()
-                ? List.of("科目代码", "科目名称", "币种")
+                ? java.util.Arrays.asList("科目代码", "科目名称", "币种")
                 : requiredHeaders;
     }
 
@@ -411,13 +412,13 @@ public class CsvValuationDataParser implements ValuationDataParser {
                     .metricName(metricName)
                     .metricType("metric_data")
                     .value(toTextValue(rawValue))
-                    .rawValues(Map.of("value", normalizeMetricValue(rawValue)))
+                    .rawValues(com.yss.valset.common.support.Java8Maps.of("value", normalizeMetricValue(rawValue)))
                     .build();
         }
 
         Map<String, Object> rawValues = new LinkedHashMap<>();
         for (String header : headers) {
-            if (header == null || header.isBlank()) {
+            if (header == null || header.trim().isEmpty()) {
                 continue;
             }
             Integer columnIndex = headerIndex.get(header);
@@ -426,7 +427,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
             }
             rawValues.put(header, normalizeMetricValue(ExcelParsingSupport.valueAt(rowValues, columnIndex)));
         }
-        if (!rawValues.containsKey("科目名称") || rawValues.get("科目名称") == null || rawValues.get("科目名称").toString().isBlank()) {
+        if (!rawValues.containsKey("科目名称") || rawValues.get("科目名称") == null || rawValues.get("科目名称").toString().trim().isEmpty()) {
             rawValues.put("科目名称", metricName);
         }
 
@@ -477,7 +478,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
     }
 
     private boolean headerMatches(String header, String headerName) {
-        if (header == null || header.isBlank() || headerName == null || headerName.isBlank()) {
+        if (header == null || header.trim().isEmpty() || headerName == null || headerName.trim().isEmpty()) {
             return false;
         }
         if (header.equals(headerName)) {
@@ -519,7 +520,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
         }
         for (int index = startIndex; index < rowTexts.size(); index++) {
             String text = rowTexts.get(index);
-            if (text != null && !text.isBlank()) {
+            if (text != null && !text.trim().isEmpty()) {
                 return text;
             }
         }
@@ -542,7 +543,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
         for (int index = labelIndex + 1; index < rowValues.size(); index++) {
             Object value = ExcelParsingSupport.valueAt(rowValues, index);
             String text = ExcelParsingSupport.textAt(rowValues, index);
-            if (text.isBlank() || "-".equals(text)) {
+            if (text.trim().isEmpty() || "-".equals(text)) {
                 continue;
             }
             return value;
@@ -557,7 +558,8 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
     private String toTextValue(Object rawValue) {
         Object normalizedValue = normalizeMetricValue(rawValue);
-        if (normalizedValue instanceof BigDecimal decimal) {
+        if (normalizedValue instanceof BigDecimal) {
+            BigDecimal decimal = (BigDecimal) normalizedValue;
             return decimal.stripTrailingZeros().toPlainString();
         }
         return normalizedValue == null ? "" : String.valueOf(normalizedValue);
@@ -568,8 +570,10 @@ public class CsvValuationDataParser implements ValuationDataParser {
             if (value == null) {
                 continue;
             }
-            if (value instanceof String text && text.isBlank()) {
-                continue;
+            if (value instanceof String) {
+                if (((String) value).trim().isEmpty()) {
+                    continue;
+                }
             }
             return value;
         }
@@ -608,12 +612,32 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return config.getSourceType().name();
     }
 
-    private record TitleAndInfo(String title, Map<String, String> basicInfo) {
+    @Value
+    private static class TitleAndInfo {
+        String title;
+        Map<String, String> basicInfo;
+
+        public String title() { return title; }
+        public Map<String, String> basicInfo() { return basicInfo; }
     }
 
-    private record HeaderLayout(List<String> headers, List<List<String>> headerDetails, List<HeaderColumnMeta> headerColumns) {
+    @Value
+    private static class HeaderLayout {
+        List<String> headers;
+        List<List<String>> headerDetails;
+        List<HeaderColumnMeta> headerColumns;
+
+        public List<String> headers() { return headers; }
+        public List<List<String>> headerDetails() { return headerDetails; }
+        public List<HeaderColumnMeta> headerColumns() { return headerColumns; }
     }
 
-    private record SplitResult(List<SubjectRecord> subjects, List<MetricRecord> metrics) {
+    @Value
+    private static class SplitResult {
+        List<SubjectRecord> subjects;
+        List<MetricRecord> metrics;
+
+        public List<SubjectRecord> subjects() { return subjects; }
+        public List<MetricRecord> metrics() { return metrics; }
     }
 }

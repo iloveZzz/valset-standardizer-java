@@ -16,7 +16,7 @@ public class TransferActionPluginRegistry {
     private final List<TransferActionPlugin> plugins;
 
     public TransferActionPluginRegistry(List<TransferActionPlugin> plugins) {
-        this.plugins = List.copyOf(plugins);
+        this.plugins = java.util.Collections.unmodifiableList(new java.util.ArrayList<>(plugins));
     }
 
     public TransferActionPlugin getRequired(TransferRoute route) {

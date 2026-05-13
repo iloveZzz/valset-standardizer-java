@@ -14,6 +14,7 @@ import com.yss.valset.application.service.ValuationWorkflowQueryService;
 import com.yss.valset.domain.gateway.MatchResultGateway;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.model.ParsedValuationData;
+import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.domain.model.ValsetMatchResult;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
@@ -72,7 +73,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
                         .rowDataNumber(row.getRowDataNumber())
                         .rowData(parseRowData(row.getRowDataJson()))
                         .build())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         List<RawValuationSheetDTO> sheetViews = buildSheetViews(fileId);
         return RawValuationDataViewDTO.builder()
                 .fileId(fileId == null ? null : String.valueOf(fileId))
@@ -158,38 +159,38 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
             return sheetStyles.stream()
                     .collect(Collectors.groupingBy(ValuationSheetStylePO::getSheetName,
                             LinkedHashMap::new,
-                            Collectors.toList()))
+                            java.util.stream.Collectors.toList()))
                     .entrySet()
                     .stream()
                     .map(entry -> RawValuationSheetDTO.builder()
                             .sheetName(entry.getKey())
                             .headerMeta(entry.getValue().stream()
                                     .map(ValuationSheetStylePO::getSheetStyleJson)
-                                    .filter(value -> value != null && !value.isBlank())
+                                    .filter(value -> value != null && !value.trim().isEmpty())
                                     .findFirst()
                                     .map(this::parseMap)
                                     .orElse(null))
                             .build())
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
         }
 
         String fallbackSheetName = "Sheet1";
         try {
-            var fileInfo = subjectMatchFileInfoGateway.findById(fileId);
-            if (fileInfo != null && fileInfo.getFileFormat() != null && !fileInfo.getFileFormat().isBlank()) {
+            ValsetFileInfo fileInfo = subjectMatchFileInfoGateway.findById(fileId);
+            if (fileInfo != null && fileInfo.getFileFormat() != null && !fileInfo.getFileFormat().trim().isEmpty()) {
                 fallbackSheetName = fileInfo.getFileFormat();
             }
         } catch (Exception ignored) {
             // fallback
         }
-        return List.of(RawValuationSheetDTO.builder()
+        return java.util.Arrays.asList(RawValuationSheetDTO.builder()
                 .sheetName(fallbackSheetName)
                 .headerMeta(null)
                 .build());
     }
 
     private Map<String, Object> parseMap(String json) {
-        if (json == null || json.isBlank()) {
+        if (json == null || json.trim().isEmpty()) {
             return null;
         }
         try {

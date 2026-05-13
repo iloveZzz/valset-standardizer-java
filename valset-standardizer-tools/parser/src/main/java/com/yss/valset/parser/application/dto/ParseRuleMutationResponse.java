@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class ParseRuleMutationResponse {
+public class ParseRuleMutationResponse implements java.io.Serializable {
     /**
      * 模板详情。
      */

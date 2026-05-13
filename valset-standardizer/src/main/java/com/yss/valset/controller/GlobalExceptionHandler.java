@@ -1,6 +1,6 @@
 package com.yss.valset.controller;
 
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.application.dto.TaskExecutionErrorDTO;
 import com.yss.valset.common.exception.TaskExecutionException;
 import org.springframework.http.HttpStatus;

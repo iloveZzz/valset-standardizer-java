@@ -1,0 +1,23 @@
+spring:
+  config:
+    import:
+      - optional:${spring.application.name}.yml?refreshEnabled=true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${nacosserver:localhost:8848}
+        namespace: ${namespace:yss-datamiddle-dev}
+        group: ${nacos_group:yss-dm}
+        username: '${spring.cloud.nacos.username}'
+        password: '${spring.cloud.nacos.password}'
+      config:
+        import-check:
+          enabled: false
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        namespace: ${spring.cloud.nacos.discovery.namespace}
+        group:  ${spring.cloud.nacos.discovery.group}
+        file-extension: yml
+        password: '${spring.cloud.nacos.password}'
+        username: '${spring.cloud.nacos.username}'
+      username: ${nacos_username:nacos}
+      password: ${nacos_password:nacos}

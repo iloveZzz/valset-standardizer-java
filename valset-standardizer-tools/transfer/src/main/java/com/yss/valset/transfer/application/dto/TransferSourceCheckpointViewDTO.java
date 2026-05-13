@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TransferSourceCheckpointViewDTO {
+public class TransferSourceCheckpointViewDTO implements java.io.Serializable {
 
     /**
      * 检查点主键。

@@ -13,7 +13,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferObjectViewDTO {
+public class TransferObjectViewDTO implements java.io.Serializable {
 
     /**
      * 文件主键。

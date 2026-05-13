@@ -1,7 +1,7 @@
 package com.yss.valset.transfer.web.controller;
 
-import com.yss.cloud.dto.response.PageResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.PageResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.transfer.application.dto.TransferObjectDownloadViewDTO;
 import com.yss.valset.transfer.application.command.TransferObjectRetagCommand;
 import com.yss.valset.transfer.application.command.TransferObjectRedeliverCommand;
@@ -230,7 +230,7 @@ public class TransferObjectController {
     }
 
     private MediaType resolveContentType(String contentType) {
-        if (contentType == null || contentType.isBlank()) {
+        if (contentType == null || contentType.trim().isEmpty()) {
             return MediaType.APPLICATION_OCTET_STREAM;
         }
         try {

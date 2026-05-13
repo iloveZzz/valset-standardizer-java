@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 @Component
 public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolver {
 
-    private static final List<String> FALLBACK_REQUIRED_HEADERS = List.of("科目代码", "科目名称", "币种");
+    private static final List<String> FALLBACK_REQUIRED_HEADERS = java.util.Arrays.asList("科目代码", "科目名称", "币种");
     private static final Pattern FALLBACK_SUBJECT_CODE_PATTERN = Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
 
     private final ParseRuleProfileRepository profileRepository;
@@ -33,8 +33,8 @@ public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolv
     public ParseRuleProfilePO resolvePublishedProfile(String fileScene, String fileTypeName) {
         List<ParseRuleProfilePO> profiles = profileRepository.selectList(Wrappers.lambdaQuery(ParseRuleProfilePO.class)
                 .eq(ParseRuleProfilePO::getStatus, "PUBLISHED")
-                .eq(fileScene != null && !fileScene.isBlank(), ParseRuleProfilePO::getFileScene, fileScene.trim())
-                .eq(fileTypeName != null && !fileTypeName.isBlank(), ParseRuleProfilePO::getFileTypeName, fileTypeName.trim())
+                .eq(fileScene != null && !fileScene.trim().isEmpty(), ParseRuleProfilePO::getFileScene, fileScene.trim())
+                .eq(fileTypeName != null && !fileTypeName.trim().isEmpty(), ParseRuleProfilePO::getFileTypeName, fileTypeName.trim())
                 .orderByDesc(ParseRuleProfilePO::getPriority)
                 .orderByDesc(ParseRuleProfilePO::getPublishedTime)
                 .orderByDesc(ParseRuleProfilePO::getId));
@@ -60,7 +60,7 @@ public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolv
     @Override
     public String resolveHeaderExpr(String fileScene, String fileTypeName) {
         ParseRuleProfilePO profile = resolvePublishedProfile(fileScene, fileTypeName);
-        return profile == null || profile.getHeaderExpr() == null || profile.getHeaderExpr().isBlank()
+        return profile == null || profile.getHeaderExpr() == null || profile.getHeaderExpr().trim().isEmpty()
                 ? ParseRuleExpressions.HEADER_ROW_EXPR
                 : profile.getHeaderExpr().trim();
     }
@@ -68,7 +68,7 @@ public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolv
     @Override
     public String resolveRowClassifyExpr(String fileScene, String fileTypeName) {
         ParseRuleProfilePO profile = resolvePublishedProfile(fileScene, fileTypeName);
-        return profile == null || profile.getRowClassifyExpr() == null || profile.getRowClassifyExpr().isBlank()
+        return profile == null || profile.getRowClassifyExpr() == null || profile.getRowClassifyExpr().trim().isEmpty()
                 ? ParseRuleExpressions.ROW_CLASSIFY_EXPR
                 : profile.getRowClassifyExpr().trim();
     }
@@ -76,7 +76,7 @@ public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolv
     @Override
     public String resolveFieldMapExpr(String fileScene, String fileTypeName) {
         ParseRuleProfilePO profile = resolvePublishedProfile(fileScene, fileTypeName);
-        return profile == null || profile.getFieldMapExpr() == null || profile.getFieldMapExpr().isBlank()
+        return profile == null || profile.getFieldMapExpr() == null || profile.getFieldMapExpr().trim().isEmpty()
                 ? null
                 : profile.getFieldMapExpr().trim();
     }
@@ -84,7 +84,7 @@ public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolv
     @Override
     public String resolveTransformExpr(String fileScene, String fileTypeName) {
         ParseRuleProfilePO profile = resolvePublishedProfile(fileScene, fileTypeName);
-        return profile == null || profile.getTransformExpr() == null || profile.getTransformExpr().isBlank()
+        return profile == null || profile.getTransformExpr() == null || profile.getTransformExpr().trim().isEmpty()
                 ? null
                 : profile.getTransformExpr().trim();
     }
@@ -102,16 +102,16 @@ public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolv
     }
 
     private List<String> parseRequiredHeaders(ParseRuleProfilePO profile) {
-        if (profile == null || profile.getRequiredHeadersJson() == null || profile.getRequiredHeadersJson().isBlank()) {
+        if (profile == null || profile.getRequiredHeadersJson() == null || profile.getRequiredHeadersJson().trim().isEmpty()) {
             return FALLBACK_REQUIRED_HEADERS;
         }
         try {
             List<String> requiredHeaders = objectMapper.readValue(profile.getRequiredHeadersJson(), new TypeReference<List<String>>() {
             });
-            List<String> normalized = requiredHeaders == null ? List.of() : requiredHeaders.stream()
-                    .filter(header -> header != null && !header.isBlank())
+            List<String> normalized = requiredHeaders == null ? java.util.Arrays.asList() : requiredHeaders.stream()
+                    .filter(header -> header != null && !header.trim().isEmpty())
                     .map(String::trim)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             return normalized.isEmpty() ? FALLBACK_REQUIRED_HEADERS : normalized;
         } catch (Exception exception) {
             log.warn("解析模板表头必选字段失败，profileCode={}, version={}, requiredHeadersJson={}",
@@ -124,7 +124,7 @@ public class DefaultParseRuleTemplateResolver implements ParseRuleTemplateResolv
     }
 
     private Pattern parseSubjectCodePattern(ParseRuleProfilePO profile) {
-        if (profile == null || profile.getSubjectCodePattern() == null || profile.getSubjectCodePattern().isBlank()) {
+        if (profile == null || profile.getSubjectCodePattern() == null || profile.getSubjectCodePattern().trim().isEmpty()) {
             return FALLBACK_SUBJECT_CODE_PATTERN;
         }
         try {

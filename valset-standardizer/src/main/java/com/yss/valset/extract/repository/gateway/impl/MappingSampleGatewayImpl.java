@@ -29,7 +29,7 @@ public class MappingSampleGatewayImpl implements MappingSampleGateway {
                         .orderByAsc(MappingSamplePO::getExternalCode)
         );
         if (poList == null || poList.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return mappingSampleConvertor.toDomain(poList);
     }

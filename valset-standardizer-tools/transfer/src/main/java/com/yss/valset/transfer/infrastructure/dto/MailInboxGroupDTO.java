@@ -6,7 +6,7 @@ import java.time.LocalDate;
 /**
  * 邮件收件箱分组数据传输对象。
  */
-public class MailInboxGroupDTO {
+public class MailInboxGroupDTO implements java.io.Serializable {
 
     /**
      * 文件主键。

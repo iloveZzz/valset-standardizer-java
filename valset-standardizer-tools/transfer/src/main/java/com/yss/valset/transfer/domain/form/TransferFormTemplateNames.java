@@ -37,13 +37,20 @@ public final class TransferFormTemplateNames {
         if (sourceType == null) {
             return null;
         }
-        return switch (sourceType) {
-            case LOCAL_DIR -> TRANSFER_SOURCE_LOCAL;
-            case EMAIL -> TRANSFER_SOURCE_EMAIL;
-            case S3 -> TRANSFER_SOURCE_S3;
-            case SFTP -> TRANSFER_SOURCE_SFTP;
-            case HTTP -> TRANSFER_SOURCE_HTTP;
-        };
+        switch (sourceType) {
+            case LOCAL_DIR:
+                return TRANSFER_SOURCE_LOCAL;
+            case EMAIL:
+                return TRANSFER_SOURCE_EMAIL;
+            case S3:
+                return TRANSFER_SOURCE_S3;
+            case SFTP:
+                return TRANSFER_SOURCE_SFTP;
+            case HTTP:
+                return TRANSFER_SOURCE_HTTP;
+            default:
+                return null;
+        }
     }
 
     /**
@@ -56,12 +63,19 @@ public final class TransferFormTemplateNames {
         if (targetType == null) {
             return null;
         }
-        return switch (targetType) {
-            case EMAIL -> TRANSFER_TARGET_EMAIL;
-            case S3 -> TRANSFER_TARGET_S3;
-            case SFTP -> TRANSFER_TARGET_SFTP;
-            case LOCAL_DIR -> TRANSFER_TARGET_LOCAL;
-            case FILESYS -> TRANSFER_TARGET_FILESYS;
-        };
+        switch (targetType) {
+            case EMAIL:
+                return TRANSFER_TARGET_EMAIL;
+            case S3:
+                return TRANSFER_TARGET_S3;
+            case SFTP:
+                return TRANSFER_TARGET_SFTP;
+            case LOCAL_DIR:
+                return TRANSFER_TARGET_LOCAL;
+            case FILESYS:
+                return TRANSFER_TARGET_FILESYS;
+            default:
+                return null;
+        }
     }
 }

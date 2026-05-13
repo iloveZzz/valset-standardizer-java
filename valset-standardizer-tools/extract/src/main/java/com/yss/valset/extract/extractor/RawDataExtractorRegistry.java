@@ -19,7 +19,7 @@ public class RawDataExtractorRegistry {
 
     public RawDataExtractorRegistry(PoiRawDataExtractor poiRawDataExtractor,
                                     CsvRawDataExtractor csvRawDataExtractor) {
-        this.extractorMap = Map.of(
+        this.extractorMap = com.yss.valset.common.support.Java8Maps.of(
                 DataSourceType.EXCEL, poiRawDataExtractor,
                 DataSourceType.CSV, csvRawDataExtractor
         );

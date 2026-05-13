@@ -95,7 +95,7 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
     private ParsedValuationData parseWorkbook(MatchTaskCommand command) {
         String sourceTypeStr = command.getDataSourceType();
         DataSourceType type = DataSourceType.EXCEL;
-        if (sourceTypeStr != null && !sourceTypeStr.isBlank()) {
+        if (sourceTypeStr != null && !sourceTypeStr.trim().isEmpty()) {
             type = DataSourceType.valueOf(sourceTypeStr.toUpperCase());
         }
 

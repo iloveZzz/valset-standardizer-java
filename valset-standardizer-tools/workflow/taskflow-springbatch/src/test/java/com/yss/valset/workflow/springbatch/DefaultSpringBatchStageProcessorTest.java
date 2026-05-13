@@ -31,7 +31,7 @@ class DefaultSpringBatchStageProcessorTest {
                         .platformType(EtlPlatformType.SPRING_BATCH)
                         .externalWorkflowId("job-a")
                         .build())
-                .stages(List.of(WorkflowStageDTO.builder()
+                .stages(java.util.Arrays.asList(WorkflowStageDTO.builder()
                         .stageCode("STRUCTURE_STANDARDIZE")
                         .stageName("结构标准化")
                         .stageOrder(2)
@@ -49,7 +49,9 @@ class DefaultSpringBatchStageProcessorTest {
                 .platformType(EtlPlatformType.SPRING_BATCH)
                 .externalWorkflowId("job-a")
                 .rawStatus("RUNNING")
-                .context(Map.of("dataSourceType", "EXCEL"))
+                .context(new java.util.HashMap<String, Object>() {{
+                    put("dataSourceType", "EXCEL");
+                }})
                 .build();
 
         Map<String, Object> context = new LinkedHashMap<>();
@@ -108,6 +110,6 @@ class DefaultSpringBatchStageProcessorTest {
                 .containsEntry("normalizedStageCode", "STRUCTURE_STANDARDIZE")
                 .containsEntry("dataSourceType", "CSV")
                 .containsEntry("fileId", 1001L)
-                .containsEntry("targetTables", List.of("t_stg_external_valuation", "t_stg_external_valuation_detail"));
+                .containsEntry("targetTables", java.util.Arrays.asList("t_stg_external_valuation", "t_stg_external_valuation_detail"));
     }
 }

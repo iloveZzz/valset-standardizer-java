@@ -4,7 +4,7 @@ import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
 import com.yss.valset.workflow.model.WorkflowInstanceDTO;
 import com.yss.valset.workflow.model.WorkflowInstanceViewDTO;
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 
 import java.util.List;
 import java.util.Optional;

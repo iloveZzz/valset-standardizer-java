@@ -10,7 +10,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TransferTagTestResultDTO {
+public class TransferTagTestResultDTO implements java.io.Serializable {
 
     private String tagId;
 

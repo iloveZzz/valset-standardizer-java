@@ -10,7 +10,7 @@ import java.nio.file.Path;
  */
 @Data
 @Builder
-public class TransferObjectDownloadViewDTO {
+public class TransferObjectDownloadViewDTO implements java.io.Serializable {
 
     /**
      * 文件主键。

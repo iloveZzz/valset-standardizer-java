@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class ParseRulePublishLogViewDTO {
+public class ParseRulePublishLogViewDTO implements java.io.Serializable {
     /**
      * 发布日志主键。
      */

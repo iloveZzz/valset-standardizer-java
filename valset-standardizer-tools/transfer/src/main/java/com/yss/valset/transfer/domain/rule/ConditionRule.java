@@ -123,17 +123,32 @@ public class ConditionRule implements Serializable {
         if (op == null) {
             return "";
         }
-        return switch (op.toUpperCase(Locale.ROOT)) {
-            case "EQ" -> "==";
-            case "GT" -> ">";
-            case "LT" -> "<";
-            case "GTE" -> ">=";
-            case "LTE" -> "<=";
-            case "BETWEEN" -> "BETWEEN";
-            case "CONTAINS" -> "CONTAINS";
-            case "IN" -> "IN";
-            default -> op;
-        };
+        String normalized = op.toUpperCase(Locale.ROOT);
+        if ("EQ".equals(normalized)) {
+            return "==";
+        }
+        if ("GT".equals(normalized)) {
+            return ">";
+        }
+        if ("LT".equals(normalized)) {
+            return "<";
+        }
+        if ("GTE".equals(normalized)) {
+            return ">=";
+        }
+        if ("LTE".equals(normalized)) {
+            return "<=";
+        }
+        if ("BETWEEN".equals(normalized)) {
+            return "BETWEEN";
+        }
+        if ("CONTAINS".equals(normalized)) {
+            return "CONTAINS";
+        }
+        if ("IN".equals(normalized)) {
+            return "IN";
+        }
+        return op;
     }
 
     /**
@@ -173,17 +188,32 @@ public class ConditionRule implements Serializable {
         if (op == null) {
             return "";
         }
-        return switch (op.toUpperCase(Locale.ROOT)) {
-            case "EQ" -> "=";
-            case "GT" -> ">";
-            case "LT" -> "<";
-            case "GTE" -> ">=";
-            case "LTE" -> "<=";
-            case "BETWEEN" -> "BETWEEN";
-            case "IN" -> "IN";
-            case "CONTAINS" -> "LIKE";
-            default -> op;
-        };
+        String normalized = op.toUpperCase(Locale.ROOT);
+        if ("EQ".equals(normalized)) {
+            return "=";
+        }
+        if ("GT".equals(normalized)) {
+            return ">";
+        }
+        if ("LT".equals(normalized)) {
+            return "<";
+        }
+        if ("GTE".equals(normalized)) {
+            return ">=";
+        }
+        if ("LTE".equals(normalized)) {
+            return "<=";
+        }
+        if ("BETWEEN".equals(normalized)) {
+            return "BETWEEN";
+        }
+        if ("IN".equals(normalized)) {
+            return "IN";
+        }
+        if ("CONTAINS".equals(normalized)) {
+            return "LIKE";
+        }
+        return op;
     }
 
     private String normalizeOperator(String op) {
@@ -197,14 +227,17 @@ public class ConditionRule implements Serializable {
         if (!first && betweenValue2 != null) {
             return betweenValue2;
         }
-        if (value instanceof String text && text.contains("~")) {
-            String[] parts = text.split("~", 2);
-            if (parts.length == 2) {
-                return first ? parts[0] : parts[1];
+        if (value instanceof String) {
+            String text = (String) value;
+            if (text.contains("~")) {
+                String[] parts = text.split("~", 2);
+                if (parts.length == 2) {
+                    return first ? parts[0] : parts[1];
+                }
             }
         }
-        if (value instanceof Collection<?> collection) {
-            List<?> items = new ArrayList<>(collection);
+        if (value instanceof Collection<?>) {
+            List<?> items = new ArrayList<>((Collection<?>) value);
             if (items.size() >= 2) {
                 return first ? items.get(0) : items.get(1);
             }
@@ -220,13 +253,13 @@ public class ConditionRule implements Serializable {
 
     private List<String> toStringList(Object rawValue) {
         if (rawValue == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> values = new ArrayList<>();
-        if (rawValue instanceof Collection<?> collection) {
-            for (Object item : collection) {
+        if (rawValue instanceof Collection<?>) {
+            for (Object item : (Collection<?>) rawValue) {
                 String text = normalizeText(item);
-                if (!text.isBlank()) {
+                if (!text.trim().isEmpty()) {
                     values.add(text);
                 }
             }
@@ -236,7 +269,7 @@ public class ConditionRule implements Serializable {
             int length = Array.getLength(rawValue);
             for (int index = 0; index < length; index++) {
                 String text = normalizeText(Array.get(rawValue, index));
-                if (!text.isBlank()) {
+                if (!text.trim().isEmpty()) {
                     values.add(text);
                 }
             }
@@ -246,13 +279,13 @@ public class ConditionRule implements Serializable {
         if (text.contains(",") || text.contains(";") || text.contains("|")) {
             for (String part : text.split("[,;|]")) {
                 String normalized = part == null ? "" : part.trim();
-                if (!normalized.isBlank()) {
+                if (!normalized.trim().isEmpty()) {
                     values.add(normalized);
                 }
             }
             return values;
         }
-        if (!text.isBlank()) {
+        if (!text.trim().isEmpty()) {
             values.add(text);
         }
         return values;
@@ -286,10 +319,16 @@ public class ConditionRule implements Serializable {
         if (operator == null) {
             return false;
         }
-        return switch (operator.toUpperCase(Locale.ROOT)) {
-            case "GT", "GTE", "LT", "LTE", "BETWEEN", ">", ">=", "<", "<=" -> true;
-            default -> false;
-        };
+        String normalized = operator.toUpperCase(Locale.ROOT);
+        return "GT".equals(normalized)
+                || "GTE".equals(normalized)
+                || "LT".equals(normalized)
+                || "LTE".equals(normalized)
+                || "BETWEEN".equals(normalized)
+                || ">".equals(normalized)
+                || ">=".equals(normalized)
+                || "<".equals(normalized)
+                || "<=".equals(normalized);
     }
 
     private boolean isNumericText(String value) {

@@ -50,10 +50,10 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
 
     @Override
     public List<TransferSource> listSources(String sourceType, String sourceCode, String sourceName, Boolean enabled, Integer limit) {
-        var query = Wrappers.lambdaQuery(TransferSourcePO.class)
-                .eq(sourceType != null && !sourceType.isBlank(), TransferSourcePO::getSourceType, sourceType)
-                .like(sourceCode != null && !sourceCode.isBlank(), TransferSourcePO::getSourceCode, sourceCode)
-                .like(sourceName != null && !sourceName.isBlank(), TransferSourcePO::getSourceName, sourceName)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TransferSourcePO> query = Wrappers.lambdaQuery(TransferSourcePO.class)
+                .eq(sourceType != null && !sourceType.trim().isEmpty(), TransferSourcePO::getSourceType, sourceType)
+                .like(sourceCode != null && !sourceCode.trim().isEmpty(), TransferSourcePO::getSourceCode, sourceCode)
+                .like(sourceName != null && !sourceName.trim().isEmpty(), TransferSourcePO::getSourceName, sourceName)
                 .eq(enabled != null, TransferSourcePO::getEnabled, enabled)
                 .orderByAsc(TransferSourcePO::getSourceType)
                 .orderByAsc(TransferSourcePO::getSourceCode);
@@ -63,7 +63,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
         return transferSourceRepository.selectList(query)
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -196,7 +196,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);

@@ -33,7 +33,7 @@ public class WorkflowJsonCodec {
     }
 
     public Map<String, Object> toMap(String json) {
-        if (json == null || json.isBlank()) {
+        if (json == null || json.trim().isEmpty()) {
             return new LinkedHashMap<>();
         }
         try {

@@ -1,6 +1,6 @@
 package com.yss.valset.task.application.impl.management;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
@@ -188,7 +188,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                     requireBatch(batchId);
                     return accepted(batchId, null, "STOP", "已提交批量停止请求");
                 })
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<OutsourcedDataTaskActionResultDTO> batchAction(OutsourcedDataTaskBatchCommand command,
@@ -200,7 +200,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                 .map(batchId -> {
                     return manualExecute ? execute(batchId, null) : retry(batchId, null);
                 })
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private void triggerCurrentTask(String batchId, WorkflowTask sourceTask, boolean resumeFromFailure) {
@@ -277,16 +277,20 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         if (taskType == null) {
             return TaskStage.OTHER;
         }
-        return switch (taskType) {
-            case EXTRACT_DATA -> TaskStage.EXTRACT;
-            case PARSE_WORKBOOK -> TaskStage.PARSE;
-            case MATCH_SUBJECT -> TaskStage.MATCH;
-            default -> TaskStage.OTHER;
-        };
+        switch (taskType) {
+            case EXTRACT_DATA:
+                return TaskStage.EXTRACT;
+            case PARSE_WORKBOOK:
+                return TaskStage.PARSE;
+            case MATCH_SUBJECT:
+                return TaskStage.MATCH;
+            default:
+                return TaskStage.OTHER;
+        }
     }
 
     private String normalizeJson(String payload) {
-        if (payload == null || payload.isBlank() || objectMapper == null) {
+        if (payload == null || payload.trim().isEmpty() || objectMapper == null) {
             return payload;
         }
         try {
@@ -341,8 +345,8 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             }
             Object forceRebuild = payload.get("forceRebuild");
             if (forceRebuild != null) {
-                commonContext.putIfAbsent(WorkflowContextKeys.FORCE_REBUILD, forceRebuild instanceof Boolean booleanValue
-                        ? booleanValue
+                commonContext.putIfAbsent(WorkflowContextKeys.FORCE_REBUILD, forceRebuild instanceof Boolean
+                        ? (Boolean) forceRebuild
                         : Boolean.valueOf(String.valueOf(forceRebuild)));
             }
             context.setCommonContext(commonContext);
@@ -353,8 +357,8 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             context.setBusinessContextJson(context.getConfigJson());
             context.setBindingId(textValue(payload.get("workflowBindingId")));
             Object bindingResolved = payload.get("workflowBindingResolved");
-            if (bindingResolved instanceof Boolean booleanValue) {
-                context.setBindingResolved(booleanValue);
+            if (bindingResolved instanceof Boolean) {
+                context.setBindingResolved((Boolean) bindingResolved);
             } else if (bindingResolved != null) {
                 context.setBindingResolved(Boolean.valueOf(String.valueOf(bindingResolved)));
             }
@@ -365,8 +369,8 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
     }
 
     private Integer numberValue(Object value) {
-        if (value instanceof Number number) {
-            return number.intValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
         }
         if (value == null) {
             return null;
@@ -383,7 +387,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             return null;
         }
         String text = String.valueOf(value);
-        return text.isBlank() ? null : text.trim();
+        return text.trim().isEmpty() ? null : text.trim();
     }
 
     private Map<String, Object> parseContextEnvelope(String configJson) {
@@ -478,7 +482,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                     summary.setPendingCount(countByStatus(stageBatches, OutsourcedDataTaskStatus.PENDING));
                     return summary;
                 })
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private OutsourcedDataTaskSummaryDTO enrichSummary(OutsourcedDataTaskSummaryDTO summary) {
@@ -494,15 +498,17 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             return;
         }
         WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
-        runtimeCatalog.activeWorkflowDefinition().ifPresentOrElse(definition -> {
+        Optional<WorkflowRuntimeCatalog.ActiveWorkflowDefinition> definitionOpt = runtimeCatalog.activeWorkflowDefinition();
+        if (definitionOpt.isPresent()) {
+            WorkflowRuntimeCatalog.ActiveWorkflowDefinition definition = definitionOpt.get();
             summary.setWorkflowCode(definition.getWorkflowCode());
             summary.setWorkflowId(definition.getWorkflowId());
             summary.setVersionNo(definition.getVersionNo());
-        }, () -> {
+        } else {
             summary.setWorkflowCode(runtimeCatalog.activeWorkflowCode());
             summary.setWorkflowId(runtimeCatalog.activeWorkflowId());
             summary.setVersionNo(runtimeCatalog.activeWorkflowVersionNo());
-        });
+        }
     }
 
     private OutsourcedDataTaskActionResultDTO accepted(String batchId, String stepId, String action, String message) {

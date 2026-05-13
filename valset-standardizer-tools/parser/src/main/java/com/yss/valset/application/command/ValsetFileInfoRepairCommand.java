@@ -2,8 +2,8 @@ package com.yss.valset.application.command;
 
 import lombok.Data;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 
 /**
  * 文件主数据回填命令。

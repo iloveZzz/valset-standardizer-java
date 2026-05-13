@@ -65,7 +65,7 @@ public final class TaskFailureClassifier {
 
     public static String resolveReadableMessage(Throwable throwable) {
         String rootMessage = rootCauseMessage(throwable);
-        if (rootMessage != null && !rootMessage.isBlank()) {
+        if (rootMessage != null && !rootMessage.trim().isEmpty()) {
             return rootMessage.trim();
         }
         return throwable == null ? null : throwable.getMessage();
@@ -88,28 +88,34 @@ public final class TaskFailureClassifier {
     }
 
     private static String codeFromThrowable(Throwable throwable) {
-        if (throwable instanceof BizException bizException) {
+        if (throwable instanceof BizException) {
+            BizException bizException = (BizException) throwable;
             String code = bizException.getCode();
-            if (code == null || code.isBlank()) {
+            if (code == null || code.trim().isEmpty()) {
                 return null;
             }
             String normalized = code.trim().toUpperCase(Locale.ROOT);
-            return switch (normalized) {
-                case "FILE_ACCESS_ERROR" -> FILE_ACCESS_ERROR;
-                case "UNSUPPORTED_DATA_SOURCE" -> UNSUPPORTED_DATA_SOURCE;
-                case "INVALID_WORKBOOK" -> INVALID_WORKBOOK;
-                case "MATCH_ENGINE_ERROR" -> MATCH_ENGINE_ERROR;
-                default -> normalized;
-            };
+            switch (normalized) {
+                case "FILE_ACCESS_ERROR":
+                    return FILE_ACCESS_ERROR;
+                case "UNSUPPORTED_DATA_SOURCE":
+                    return UNSUPPORTED_DATA_SOURCE;
+                case "INVALID_WORKBOOK":
+                    return INVALID_WORKBOOK;
+                case "MATCH_ENGINE_ERROR":
+                    return MATCH_ENGINE_ERROR;
+                default:
+                    return normalized;
+            }
         }
         return null;
     }
 
     private static String firstMeaningfulMessage(Throwable rootCause, Throwable throwable) {
-        if (rootCause != null && rootCause.getMessage() != null && !rootCause.getMessage().isBlank()) {
+        if (rootCause != null && rootCause.getMessage() != null && !rootCause.getMessage().trim().isEmpty()) {
             return rootCause.getMessage();
         }
-        if (throwable != null && throwable.getMessage() != null && !throwable.getMessage().isBlank()) {
+        if (throwable != null && throwable.getMessage() != null && !throwable.getMessage().trim().isEmpty()) {
             return throwable.getMessage();
         }
         return null;

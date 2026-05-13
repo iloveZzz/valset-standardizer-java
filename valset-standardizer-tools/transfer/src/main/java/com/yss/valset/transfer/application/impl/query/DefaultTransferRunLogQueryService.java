@@ -1,6 +1,6 @@
 package com.yss.valset.transfer.application.impl.query;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.transfer.application.dto.TransferRunLogViewDTO;
 import com.yss.valset.transfer.application.dto.TransferRunLogAnalysisViewDTO;
 import com.yss.valset.transfer.application.dto.TransferRunLogStageAnalysisViewDTO;
@@ -59,7 +59,7 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
         return transferRunLogGateway.listLogs(sourceId, transferId, routeId, normalizedStage, normalizedStatus, normalizedTriggerType, limit)
                 .stream()
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -87,7 +87,7 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                 pageSize
         );
         return PageResult.of(
-                page.records().stream().map(this::toView).toList(),
+                page.records().stream().map(this::toView).collect(java.util.stream.Collectors.toList()),
                 page.total(),
                 page.pageSize(),
                 pageIndex
@@ -119,7 +119,7 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                 .sourceCount(stageTotal(analysis, "INGEST"))
                 .routeCount(stageTotal(analysis, "ROUTE"))
                 .targetCount(stageTotal(analysis, "DELIVER"))
-                .stageAnalyses(analysis.stageAnalyses() == null ? List.of() : analysis.stageAnalyses().stream().map(this::toStageView).toList())
+                .stageAnalyses(analysis.stageAnalyses() == null ? java.util.Arrays.asList() : analysis.stageAnalyses().stream().map(this::toStageView).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 
@@ -259,7 +259,7 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                 .runStage(stageAnalysis.runStage())
                 .stageLabel(resolveStageLabel(stageAnalysis.runStage()))
                 .totalCount(stageAnalysis.totalCount())
-                .statusCounts(stageAnalysis.statusCounts().stream().map(this::toStatusView).toList())
+                .statusCounts(stageAnalysis.statusCounts().stream().map(this::toStatusView).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 
@@ -275,23 +275,31 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
         if (!StringUtils.hasText(runStage)) {
             return "-";
         }
-        return switch (runStage.trim().toUpperCase(Locale.ROOT)) {
-            case "INGEST" -> "来源";
-            case "ROUTE" -> "路由";
-            case "DELIVER" -> "目标";
-            default -> runStage;
-        };
+        String normalized = runStage.trim().toUpperCase(Locale.ROOT);
+        if ("INGEST".equals(normalized)) {
+            return "来源";
+        }
+        if ("ROUTE".equals(normalized)) {
+            return "路由";
+        }
+        if ("DELIVER".equals(normalized)) {
+            return "目标";
+        }
+        return runStage;
     }
 
     private String resolveStatusLabel(String runStatus) {
         if (!StringUtils.hasText(runStatus)) {
             return "-";
         }
-        return switch (runStatus.trim().toUpperCase(Locale.ROOT)) {
-            case "SUCCESS" -> "成功";
-            case "FAILED" -> "失败";
-            default -> runStatus;
-        };
+        String normalized = runStatus.trim().toUpperCase(Locale.ROOT);
+        if ("SUCCESS".equals(normalized)) {
+            return "成功";
+        }
+        if ("FAILED".equals(normalized)) {
+            return "失败";
+        }
+        return runStatus;
     }
 
     private Long stageTotal(TransferRunLogAnalysis analysis,

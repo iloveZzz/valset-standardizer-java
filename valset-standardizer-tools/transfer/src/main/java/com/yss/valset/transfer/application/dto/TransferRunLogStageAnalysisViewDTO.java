@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferRunLogStageAnalysisViewDTO {
+public class TransferRunLogStageAnalysisViewDTO implements java.io.Serializable {
 
     /**
      * 运行阶段。

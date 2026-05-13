@@ -66,9 +66,9 @@ public class SftpSourceConnector implements SourceConnector {
         SftpSourceConfig config = SftpSourceConfig.from(source);
         List<RecognitionContext> contexts = new ArrayList<>();
         JSch jsch = new JSch();
-        if (config.privateKeyPath() != null && !config.privateKeyPath().isBlank()) {
+        if (config.privateKeyPath() != null && !config.privateKeyPath().trim().isEmpty()) {
             try {
-                if (config.passphrase() == null || config.passphrase().isBlank()) {
+                if (config.passphrase() == null || config.passphrase().trim().isEmpty()) {
                     jsch.addIdentity(config.privateKeyPath());
                 } else {
                     jsch.addIdentity(config.privateKeyPath(), config.passphrase());
@@ -82,14 +82,14 @@ public class SftpSourceConnector implements SourceConnector {
         ChannelSftp channelSftp = null;
         try {
             session = jsch.getSession(config.username(), config.host(), config.port());
-            if (config.password() != null && !config.password().isBlank()) {
+            if (config.password() != null && !config.password().trim().isEmpty()) {
                 session.setPassword(config.password());
             }
             session.setConfig("StrictHostKeyChecking", config.strictHostKeyChecking() ? "yes" : "no");
             session.connect(config.connectTimeoutMillis());
             channelSftp = openSftpChannel(session, config.channelTimeoutMillis());
             String cursor = readCursor(source);
-            AtomicBoolean seenCursor = new AtomicBoolean(cursor == null || cursor.isBlank());
+            AtomicBoolean seenCursor = new AtomicBoolean(cursor == null || cursor.trim().isEmpty());
             String remoteDir = normalizeRemoteDir(config.remoteDir());
             long totalFiles = countFiles(channelSftp, config, remoteDir);
             SourceFetchLogSupport.logStart(log, "SFTP", source, "remoteDir", remoteDir, "文件总数", totalFiles);
@@ -121,7 +121,7 @@ public class SftpSourceConnector implements SourceConnector {
         Vector<LsEntry> entries = channelSftp.ls(remoteDir);
         List<LsEntry> sortedEntries = entries.stream()
                 .sorted(Comparator.comparing(LsEntry::getFilename))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         for (LsEntry entry : sortedEntries) {
             if (shouldStop(sourceId)) {
                 return;
@@ -147,7 +147,7 @@ public class SftpSourceConnector implements SourceConnector {
                     continue;
                 }
                 String checkpointKey = buildCheckpointKey(childRemotePath, attrs.getSize(), attrs.getMTime());
-                if (cursor != null && !cursor.isBlank() && !seenCursor.get()) {
+                if (cursor != null && !cursor.trim().isEmpty() && !seenCursor.get()) {
                     if (cursor.equals(checkpointKey)) {
                         seenCursor.set(true);
                     }
@@ -196,7 +196,7 @@ public class SftpSourceConnector implements SourceConnector {
     private long countFiles(ChannelSftp channelSftp, SftpSourceConfig config, String remoteDir) throws SftpException {
         long total = 0L;
         Vector<LsEntry> entries = channelSftp.ls(remoteDir);
-        for (LsEntry entry : entries.stream().sorted(Comparator.comparing(LsEntry::getFilename)).toList()) {
+        for (LsEntry entry : entries.stream().sorted(Comparator.comparing(LsEntry::getFilename)).collect(java.util.stream.Collectors.toList())) {
             String name = entry.getFilename();
             if (".".equals(name) || "..".equals(name)) {
                 continue;
@@ -223,12 +223,12 @@ public class SftpSourceConnector implements SourceConnector {
         }
         return transferSourceCheckpointGateway.findCheckpoint(source.sourceId(), TransferConfigKeys.CHECKPOINT_SCAN_CURSOR)
                 .map(checkpoint -> checkpoint.checkpointValue())
-                .filter(value -> value != null && !value.isBlank())
+                .filter(value -> value != null && !value.trim().isEmpty())
                 .orElse(null);
     }
 
     private String normalizeRemoteDir(String remoteDir) {
-        if (remoteDir == null || remoteDir.isBlank()) {
+        if (remoteDir == null || remoteDir.trim().isEmpty()) {
             throw new IllegalArgumentException("SFTP 来源缺少 remoteDir 配置");
         }
         return remoteDir.startsWith("/") ? remoteDir : "/" + remoteDir;
@@ -274,7 +274,7 @@ public class SftpSourceConnector implements SourceConnector {
     }
 
     private boolean shouldStop(String sourceId) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             return false;
         }
         return transferSourceGateway.findById(sourceId)

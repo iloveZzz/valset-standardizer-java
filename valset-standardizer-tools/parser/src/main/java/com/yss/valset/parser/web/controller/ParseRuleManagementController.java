@@ -1,7 +1,7 @@
 package com.yss.valset.parser.web.controller;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.parser.application.command.ParseRuleProfileUpsertCommand;
 import com.yss.valset.parser.application.command.ParseRulePublishCommand;
 import com.yss.valset.parser.application.command.ParseRuleRollbackCommand;

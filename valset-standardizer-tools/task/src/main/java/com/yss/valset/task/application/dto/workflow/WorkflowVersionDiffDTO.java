@@ -9,7 +9,7 @@ import java.util.List;
  * 工作流版本差异视图。
  */
 @Data
-public class WorkflowVersionDiffDTO {
+public class WorkflowVersionDiffDTO implements java.io.Serializable{
 
     private String leftWorkflowId;
     private String rightWorkflowId;

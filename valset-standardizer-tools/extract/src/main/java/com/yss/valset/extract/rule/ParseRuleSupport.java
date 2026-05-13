@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  */
 public final class ParseRuleSupport {
 
-    public static final List<String> DEFAULT_FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
+    public static final List<String> DEFAULT_FOOTER_KEYWORDS = java.util.Arrays.asList("制表", "复核", "打印", "备注");
 
     private ParseRuleSupport() {
     }
@@ -23,7 +23,7 @@ public final class ParseRuleSupport {
      */
     public static List<String> toTexts(List<Object> rowValues) {
         if (CollectionUtils.isEmpty(rowValues)) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> texts = new ArrayList<>(rowValues.size());
         for (Object value : rowValues) {
@@ -42,7 +42,7 @@ public final class ParseRuleSupport {
         List<String> texts = toTexts(rowValues);
         int hitCount = 0;
         for (String keyword : keywords) {
-            if (keyword == null || keyword.isBlank()) {
+            if (keyword == null || keyword.trim().isEmpty()) {
                 continue;
             }
             if (texts.stream().anyMatch(text -> matchesKeyword(text, keyword))) {
@@ -71,7 +71,7 @@ public final class ParseRuleSupport {
         }
         List<String> texts = toTexts(rowValues);
         for (String keyword : keywords) {
-            if (keyword == null || keyword.isBlank()) {
+            if (keyword == null || keyword.trim().isEmpty()) {
                 continue;
             }
             if (texts.stream().anyMatch(text -> matchesKeyword(text, keyword))) {
@@ -85,7 +85,7 @@ public final class ParseRuleSupport {
      * 判断文本是否命中任意关键词。
      */
     public static boolean containsAny(String text, List<String> keywords) {
-        if (text == null || text.isBlank() || CollectionUtils.isEmpty(keywords)) {
+        if (text == null || text.trim().isEmpty() || CollectionUtils.isEmpty(keywords)) {
             return false;
         }
         for (String keyword : keywords) {
@@ -100,7 +100,7 @@ public final class ParseRuleSupport {
      * 判断文本是否命中全部关键词。
      */
     public static boolean containsAll(String text, List<String> keywords) {
-        if (text == null || text.isBlank() || CollectionUtils.isEmpty(keywords)) {
+        if (text == null || text.trim().isEmpty() || CollectionUtils.isEmpty(keywords)) {
             return false;
         }
         for (String keyword : keywords) {
@@ -118,7 +118,7 @@ public final class ParseRuleSupport {
         if (value == null) {
             return false;
         }
-        return !ExcelParsingSupport.normalizeText(value).isBlank();
+        return !ExcelParsingSupport.normalizeText(value).trim().isEmpty();
     }
 
     /**
@@ -129,7 +129,7 @@ public final class ParseRuleSupport {
             return -1;
         }
         for (int index = 0; index < rowValues.size(); index++) {
-            if (!ExcelParsingSupport.textAt(rowValues, index).isBlank()) {
+            if (!ExcelParsingSupport.textAt(rowValues, index).trim().isEmpty()) {
                 return index;
             }
         }
@@ -238,7 +238,7 @@ public final class ParseRuleSupport {
         }
         for (int index = codeIndex + 1; index < rowValues.size(); index++) {
             String text = ExcelParsingSupport.textAt(rowValues, index);
-            if (!text.isBlank()) {
+            if (!text.trim().isEmpty()) {
                 return true;
             }
         }
@@ -304,7 +304,7 @@ public final class ParseRuleSupport {
      * 判断文本是否命中关键字。
      */
     public static boolean matchesKeyword(String text, String keyword) {
-        if (text == null || text.isBlank() || keyword == null || keyword.isBlank()) {
+        if (text == null || text.trim().isEmpty() || keyword == null || keyword.trim().isEmpty()) {
             return false;
         }
         return text.equals(keyword) || text.contains(keyword) || keyword.contains(text);
@@ -319,7 +319,7 @@ public final class ParseRuleSupport {
         }
         int count = 0;
         for (Object value : rowValues) {
-            if (!ExcelParsingSupport.normalizeText(value).isBlank()) {
+            if (!ExcelParsingSupport.normalizeText(value).trim().isEmpty()) {
                 count++;
             }
         }
@@ -334,8 +334,8 @@ public final class ParseRuleSupport {
             return Collections.emptyList();
         }
         return keywords.stream()
-                .filter(keyword -> keyword != null && !keyword.isBlank())
+                .filter(keyword -> keyword != null && !keyword.trim().isEmpty())
                 .map(String::trim)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 }

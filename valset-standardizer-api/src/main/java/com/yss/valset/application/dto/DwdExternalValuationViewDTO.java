@@ -6,6 +6,7 @@ import com.yss.valset.domain.model.SubjectRecord;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -14,7 +15,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class DwdExternalValuationViewDTO {
+public class DwdExternalValuationViewDTO implements Serializable {
     /**
      * 文件主键。
      */

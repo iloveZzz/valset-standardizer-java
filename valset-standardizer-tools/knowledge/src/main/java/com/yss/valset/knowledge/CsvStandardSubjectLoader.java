@@ -38,7 +38,7 @@ public class CsvStandardSubjectLoader implements StandardSubjectLoader {
             for (CSVRecord record : csvParser) {
                 String code = record.isMapped("StandardCode") ? record.get("StandardCode") : "";
                 String name = record.isMapped("StandardName") ? record.get("StandardName") : "";
-                if (!code.isBlank() && !name.isBlank()) {
+                if (!code.trim().isEmpty() && !name.trim().isEmpty()) {
                     StandardSubject subject = StandardSubject.builder()
                             .standardCode(code)
                             .standardName(name)

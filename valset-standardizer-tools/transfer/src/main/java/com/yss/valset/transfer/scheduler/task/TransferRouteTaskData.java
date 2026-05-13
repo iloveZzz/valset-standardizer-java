@@ -1,15 +1,54 @@
 package com.yss.valset.transfer.scheduler.task;
 
-import java.io.Serial;
-import java.io.Serializable;
-
 /**
  * 文件路由任务入参。
  */
-public record TransferRouteTaskData(
-        String transferId
-) implements Serializable {
+public class TransferRouteTaskData {
 
-    @Serial
-    private static final long serialVersionUID = 1L;
+    private final String transferId;
+
+    public TransferRouteTaskData(String transferId) {
+        this.transferId = transferId;
+    }
+
+
+
+    public String transferId() {
+        return transferId;
+    }
+
+
+
+    public String getTransferId() {
+        return transferId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        TransferRouteTaskData other = (TransferRouteTaskData) o;
+        if (!java.util.Objects.equals(transferId, other.transferId)) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(transferId);
+    }
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("TransferRouteTaskData[");
+        sb.append("transferId=").append(transferId);
+        sb.append(']');
+        return sb.toString();
+    }
+
+
 }

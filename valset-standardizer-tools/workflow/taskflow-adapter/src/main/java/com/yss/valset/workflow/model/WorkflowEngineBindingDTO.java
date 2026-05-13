@@ -1,6 +1,6 @@
 package com.yss.valset.workflow.model;
 
-import jakarta.validation.constraints.NotNull;
+import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,7 +17,7 @@ import java.util.Map;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowEngineBindingDTO {
+public class WorkflowEngineBindingDTO implements java.io.Serializable {
 
     @NotNull
     private EtlPlatformType platformType;

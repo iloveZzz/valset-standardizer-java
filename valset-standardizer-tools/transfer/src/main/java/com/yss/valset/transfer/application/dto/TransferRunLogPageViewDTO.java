@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferRunLogPageViewDTO {
+public class TransferRunLogPageViewDTO implements java.io.Serializable {
 
     /**
      * 当前页码。

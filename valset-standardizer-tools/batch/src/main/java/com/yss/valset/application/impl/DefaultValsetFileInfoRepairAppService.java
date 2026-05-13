@@ -82,11 +82,21 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
             scannedCount = 1;
             RepairOutcome outcome = repairSingle(transferId.trim(), createMissing, dryRun);
             switch (outcome) {
-                case CREATED -> createdCount = 1;
-                case UPDATED -> updatedCount = 1;
-                case MATCHED -> matchedCount = 1;
-                case SKIPPED -> skippedCount = 1;
-                case FAILED -> failedCount = 1;
+                case CREATED:
+                    createdCount = 1;
+                    break;
+                case UPDATED:
+                    updatedCount = 1;
+                    break;
+                case MATCHED:
+                    matchedCount = 1;
+                    break;
+                case SKIPPED:
+                    skippedCount = 1;
+                    break;
+                case FAILED:
+                    failedCount = 1;
+                    break;
             }
             return buildResult(dryRun, transferId, pageSize, scannedCount, matchedCount, createdCount, updatedCount, skippedCount, failedCount);
         }
@@ -94,7 +104,7 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
         int pageIndex = 0;
         while (true) {
             TransferObjectPage page = transferObjectGateway.pageObjects(null, null, null, null, null, null, null, null, null, null, null, null,pageIndex, pageSize);
-            List<TransferObject> records = page == null || page.records() == null ? List.of() : page.records();
+            List<TransferObject> records = page == null || page.records() == null ? java.util.Arrays.asList() : page.records();
             if (records.isEmpty()) {
                 break;
             }
@@ -103,11 +113,21 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
                 try {
                     RepairOutcome outcome = repairSingle(transferObject, createMissing, dryRun);
                     switch (outcome) {
-                        case CREATED -> createdCount++;
-                        case UPDATED -> updatedCount++;
-                        case MATCHED -> matchedCount++;
-                        case SKIPPED -> skippedCount++;
-                        case FAILED -> failedCount++;
+                        case CREATED:
+                            createdCount++;
+                            break;
+                        case UPDATED:
+                            updatedCount++;
+                            break;
+                        case MATCHED:
+                            matchedCount++;
+                            break;
+                        case SKIPPED:
+                            skippedCount++;
+                            break;
+                        case FAILED:
+                            failedCount++;
+                            break;
                     }
                 } catch (Exception exception) {
                     failedCount++;

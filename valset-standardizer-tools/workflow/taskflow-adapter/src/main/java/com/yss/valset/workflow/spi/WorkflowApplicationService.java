@@ -1,6 +1,6 @@
 package com.yss.valset.workflow.spi;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.workflow.model.WorkflowCallbackRequest;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;

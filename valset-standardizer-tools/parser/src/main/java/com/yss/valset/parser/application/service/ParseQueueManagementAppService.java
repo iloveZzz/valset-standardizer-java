@@ -1,6 +1,6 @@
 package com.yss.valset.parser.application.service;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.parser.application.command.ParseQueueBackfillCommand;
 import com.yss.valset.parser.application.command.ParseQueueCompleteCommand;
 import com.yss.valset.parser.application.command.ParseQueueFailCommand;

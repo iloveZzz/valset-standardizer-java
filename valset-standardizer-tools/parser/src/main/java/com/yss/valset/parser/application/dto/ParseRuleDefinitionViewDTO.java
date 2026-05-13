@@ -9,7 +9,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class ParseRuleDefinitionViewDTO {
+public class ParseRuleDefinitionViewDTO implements java.io.Serializable {
     /**
      * 规则步骤主键。
      */

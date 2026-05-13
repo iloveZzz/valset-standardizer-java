@@ -9,7 +9,7 @@ public enum WorkflowTriggerMode {
     START_SUSPEND_TASK_PROCESS;
 
     public static WorkflowTriggerMode fromValue(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return START_PROCESS;
         }
         try {

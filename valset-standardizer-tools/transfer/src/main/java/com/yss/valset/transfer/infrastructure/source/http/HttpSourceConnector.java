@@ -54,14 +54,14 @@ public class HttpSourceConnector implements SourceConnector {
             List<Path> visibleFiles = stream
                     .filter(Files::isRegularFile)
                     .sorted(Comparator.comparing(Path::toString))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             SourceFetchLogSupport.logStart(log, "HTTP", source, "directory", directory, "文件总数", visibleFiles.size());
             Stream<Path> fileStream = visibleFiles.stream();
             if (config.limit() > 0) {
                 fileStream = fileStream.limit(config.limit());
             }
             List<RecognitionContext> contexts = new ArrayList<>();
-            for (Path path : fileStream.toList()) {
+            for (Path path : fileStream.collect(java.util.stream.Collectors.toList())) {
                 if (shouldStop(source)) {
                     break;
                 }
@@ -118,7 +118,7 @@ public class HttpSourceConnector implements SourceConnector {
     }
 
     private Path resolveDirectory(TransferSource source) {
-        if (source == null || source.sourceId() == null || source.sourceId().isBlank()) {
+        if (source == null || source.sourceId() == null || source.sourceId().trim().isEmpty()) {
             throw new IllegalArgumentException("HTTP 来源缺少 sourceId");
         }
         Path directory = Paths.get(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads", "http", source.sourceId());

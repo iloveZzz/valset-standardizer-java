@@ -43,6 +43,6 @@ public class ValsetFileIngestLogGatewayImpl implements ValsetFileIngestLogGatewa
         if (poList == null || poList.isEmpty()) {
             return Collections.emptyList();
         }
-        return poList.stream().map(ingestLogConvertor::toDomain).toList();
+        return poList.stream().map(ingestLogConvertor::toDomain).collect(java.util.stream.Collectors.toList());
     }
 }

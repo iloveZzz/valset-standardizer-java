@@ -3,6 +3,7 @@ package com.yss.valset.transfer.scheduler;
 import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.RecurringTaskWithPersistentSchedule;
 import com.github.kagkarlsson.scheduler.task.helper.Tasks;
+import com.yss.valset.transfer.application.dto.TransferObjectRedeliverResponse;
 import com.yss.valset.transfer.application.port.TransferProcessUseCase;
 import com.yss.valset.transfer.application.service.TransferObjectManagementAppService;
 import com.yss.valset.transfer.application.port.TransferRunLogMaintenanceUseCase;
@@ -29,7 +30,6 @@ public class TransferSchedulerTaskConfiguration {
     @Bean
     public RecurringTaskWithPersistentSchedule<TransferIngestScheduledTaskData> transferIngestCronTask(TransferProcessUseCase transferProcessUseCase) {
         return Tasks.recurringWithPersistentSchedule(TransferSchedulerTasks.INGEST_CRON_TASK)
-                .onDeadExecutionRevive()
                 .execute((taskInstance, executionContext) -> transferProcessUseCase.ingest(
                         taskInstance.getData().payload().toCommand()
                 ));
@@ -66,10 +66,9 @@ public class TransferSchedulerTaskConfiguration {
     public RecurringTaskWithPersistentSchedule<TransferObjectRedeliverScheduledTaskData> transferObjectRedeliverTask(
             TransferObjectManagementAppService transferObjectManagementAppService) {
         return Tasks.recurringWithPersistentSchedule(TransferSchedulerTasks.OBJECT_REDELIVER_TASK)
-                .onDeadExecutionRevive()
                 .execute((taskInstance, executionContext) -> {
                     try {
-                        var response = transferObjectManagementAppService.redeliverIdentifiedUndelivered();
+                        TransferObjectRedeliverResponse response = transferObjectManagementAppService.redeliverIdentifiedUndelivered();
                         log.info("分拣对象定时重投递完成，requestedCount={}，successCount={}，failureCount={}，skippedCount={}",
                                 response.getRequestedCount(),
                                 response.getSuccessCount(),
@@ -85,7 +84,6 @@ public class TransferSchedulerTaskConfiguration {
     public RecurringTaskWithPersistentSchedule<TransferRunLogCleanupScheduledTaskData> transferRunLogCleanupTask(
             TransferRunLogMaintenanceUseCase transferRunLogMaintenanceUseCase) {
         return Tasks.recurringWithPersistentSchedule(TransferSchedulerTasks.RUN_LOG_CLEANUP_TASK)
-                .onDeadExecutionRevive()
                 .execute((taskInstance, executionContext) -> {
                     try {
                         transferRunLogMaintenanceUseCase.cleanupYesterdayLogs();

@@ -5,10 +5,9 @@
     <parent>
         <groupId>com.yss.datamiddle</groupId>
         <artifactId>valset-standardizer-parent</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>2.0.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
-
     <artifactId>valset-standardizer-tools</artifactId>
     <name>valset-standardizer-tools</name>
     <packaging>pom</packaging>

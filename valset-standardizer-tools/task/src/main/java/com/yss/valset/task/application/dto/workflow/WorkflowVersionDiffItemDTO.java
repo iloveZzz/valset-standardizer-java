@@ -6,7 +6,7 @@ import lombok.Data;
  * 工作流版本差异项。
  */
 @Data
-public class WorkflowVersionDiffItemDTO {
+public class WorkflowVersionDiffItemDTO implements java.io.Serializable{
 
     private String path;
     private String leftValue;

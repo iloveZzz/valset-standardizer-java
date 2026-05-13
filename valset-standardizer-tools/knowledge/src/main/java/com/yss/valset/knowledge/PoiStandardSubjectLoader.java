@@ -7,6 +7,7 @@ import com.yss.valset.domain.model.StandardSubject;
 import com.yss.valset.common.support.ExcelParsingSupport;
 import com.yss.valset.extract.support.MatchTextSupport;
 import com.yss.valset.common.support.SubjectHierarchySupport;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.stereotype.Component;
@@ -51,7 +52,7 @@ public class PoiStandardSubjectLoader implements StandardSubjectLoader {
                     List<Object> rowValues = ExcelParsingSupport.readRowValues(row, evaluator, formatter);
                     String standardCode = ExcelParsingSupport.textAt(rowValues, 0);
                     String standardName = ExcelParsingSupport.textAt(rowValues, 1);
-                    if (standardCode.isBlank() || standardName.isBlank()) {
+                    if (standardCode.trim().isEmpty() || standardName.trim().isEmpty()) {
                         continue;
                     }
                     List<String> segments = SubjectHierarchySupport.splitSubjectCode(standardCode);
@@ -111,7 +112,7 @@ public class PoiStandardSubjectLoader implements StandardSubjectLoader {
             rawValues.addAll(rowValues);
             String standardCode = ExcelParsingSupport.textAt(rawValues, 0);
             String standardName = ExcelParsingSupport.textAt(rawValues, 1);
-            if (standardCode.isBlank() || standardName.isBlank()) {
+            if (standardCode.trim().isEmpty() || standardName.trim().isEmpty()) {
                 continue;
             }
             List<String> segments = SubjectHierarchySupport.splitSubjectCode(standardCode);
@@ -156,11 +157,16 @@ public class PoiStandardSubjectLoader implements StandardSubjectLoader {
         return subjects;
     }
 
-    private record BaseRow(
-            String standardCode,
-            String standardName,
-            List<String> segments,
-            List<String> pathCodes
-    ) {
+    @Value
+    private static class BaseRow {
+        String standardCode;
+        String standardName;
+        List<String> segments;
+        List<String> pathCodes;
+
+        public String standardCode() { return standardCode; }
+        public String standardName() { return standardName; }
+        public List<String> segments() { return segments; }
+        public List<String> pathCodes() { return pathCodes; }
     }
 }

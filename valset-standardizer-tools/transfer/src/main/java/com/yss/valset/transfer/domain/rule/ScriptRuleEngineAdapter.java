@@ -32,20 +32,27 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
             return new RuleEvaluationResult(false, Collections.emptyList(), "规则未启用");
         }
         String script = ruleDefinition.scriptBody();
-        if (script == null || script.isBlank()) {
+        if (script == null || script.trim().isEmpty()) {
             return new RuleEvaluationResult(false, Collections.emptyList(), "规则脚本为空");
         }
         Map<String, Object> variables = buildVariables(context);
         variables.putIfAbsent("rule", ruleDefinition);
 
         Object rawResult = executeExpression(script, variables);
-        if (rawResult instanceof Boolean matched) {
+        if (rawResult instanceof Boolean) {
+            boolean matched = ((Boolean) rawResult).booleanValue();
             return new RuleEvaluationResult(matched, Collections.emptyList(), matched ? "规则命中" : "规则未命中");
         }
-        if (rawResult instanceof Map<?, ?> map) {
+        if (rawResult instanceof Map<?, ?>) {
+            Map<?, ?> map = (Map<?, ?>) rawResult;
             boolean matched = resolveBoolean(map.get("matched"));
             String message = map.get("message") == null ? "规则执行完成" : String.valueOf(map.get("message"));
-            List<?> routeRawList = map.get("routes") instanceof List<?> list ? list : List.of();
+            List<?> routeRawList;
+            if (map.get("routes") instanceof List<?>) {
+                routeRawList = (List<?>) map.get("routes");
+            } else {
+                routeRawList = java.util.Collections.emptyList();
+            }
             return new RuleEvaluationResult(matched, Collections.emptyList(), message + ", routes=" + routeRawList.size());
         }
         if (rawResult == null) {
@@ -58,7 +65,7 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
      * 执行任意 QLExpress 表达式。
      */
     public Object evaluateExpression(String expression, Map<String, Object> variables) {
-        if (expression == null || expression.isBlank()) {
+        if (expression == null || expression.trim().isEmpty()) {
             return null;
         }
         return executeExpression(expression, buildVariables(variables));
@@ -129,11 +136,11 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
     }
 
     private boolean resolveBoolean(Object value) {
-        if (value instanceof Boolean bool) {
-            return bool;
+        if (value instanceof Boolean) {
+            return ((Boolean) value).booleanValue();
         }
-        if (value instanceof Number number) {
-            return number.intValue() != 0;
+        if (value instanceof Number) {
+            return ((Number) value).intValue() != 0;
         }
         if (value == null) {
             return false;

@@ -1,6 +1,6 @@
 package com.yss.valset.controller;
 
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.knowledge.KnowledgeImportAppService;
 import com.yss.valset.knowledge.KnowledgeImportResponse;
 import io.swagger.v3.oas.annotations.Operation;

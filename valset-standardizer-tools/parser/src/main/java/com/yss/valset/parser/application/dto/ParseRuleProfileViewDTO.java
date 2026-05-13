@@ -11,7 +11,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class ParseRuleProfileViewDTO {
+public class ParseRuleProfileViewDTO implements java.io.Serializable {
     /**
      * 模板主键。
      */

@@ -1,7 +1,7 @@
 package com.yss.valset.transfer.web.controller;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.transfer.application.command.TransferSourceUpsertCommand;
 import com.yss.valset.transfer.application.dto.TransferSourceCheckpointViewDTO;
 import com.yss.valset.transfer.application.dto.TransferSourceMutationResponse;
@@ -11,7 +11,7 @@ import com.yss.valset.transfer.application.service.TransferSourceManagementAppSe
 import com.yss.valset.transfer.domain.form.TransferFormTemplateNames;
 import com.yss.valset.transfer.domain.model.SourceType;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -237,7 +237,7 @@ public class TransferSourceController {
     }
 
     private String normalizeInitialStatus(TransferSourceViewDTO source) {
-        if (source == null || source.getIngestStatus() == null || source.getIngestStatus().isBlank()) {
+        if (source == null || source.getIngestStatus() == null || source.getIngestStatus().trim().isEmpty()) {
             return Boolean.TRUE.equals(source == null ? null : source.getIngestBusy()) ? "running" : "idle";
         }
         return source.getIngestStatus().trim().toLowerCase();
@@ -252,10 +252,10 @@ public class TransferSourceController {
             String triggerTime = formatTriggerTime(source.getIngestStartedAt());
             return "来源当前正在收取中，触发方式：" + triggerType + "，触发时间：" + triggerTime;
         }
-        if (source.getIngestStatus() == null || source.getIngestStatus().isBlank()) {
+        if (source.getIngestStatus() == null || source.getIngestStatus().trim().isEmpty()) {
             return "来源当前待运行";
         }
-        if (source.getIngestTriggerType() != null && !source.getIngestTriggerType().isBlank()) {
+        if (source.getIngestTriggerType() != null && !source.getIngestTriggerType().trim().isEmpty()) {
             String triggerTime = formatTriggerTime(source.getIngestStartedAt());
             return "来源当前状态：" + source.getIngestStatus() + "，最近触发方式：" + describeTriggerType(source.getIngestTriggerType()) + "，触发时间：" + triggerTime;
         }
@@ -270,15 +270,19 @@ public class TransferSourceController {
     }
 
     private String describeTriggerType(String triggerType) {
-        if (triggerType == null || triggerType.isBlank()) {
+        if (triggerType == null || triggerType.trim().isEmpty()) {
             return "未知";
         }
         String normalized = triggerType.trim().toUpperCase();
-        return switch (normalized) {
-            case "CRON" -> "cron 定时";
-            case "MANUAL" -> "手动触发";
-            case "SYSTEM" -> "系统触发";
-            default -> normalized;
-        };
+        if ("CRON".equals(normalized)) {
+            return "cron 定时";
+        }
+        if ("MANUAL".equals(normalized)) {
+            return "手动触发";
+        }
+        if ("SYSTEM".equals(normalized)) {
+            return "系统触发";
+        }
+        return normalized;
     }
 }

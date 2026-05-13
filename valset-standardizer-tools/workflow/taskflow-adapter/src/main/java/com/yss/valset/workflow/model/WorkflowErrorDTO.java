@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowErrorDTO {
+public class WorkflowErrorDTO implements java.io.Serializable {
 
     private String code;
 

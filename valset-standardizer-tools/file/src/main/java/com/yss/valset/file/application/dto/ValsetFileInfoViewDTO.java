@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class ValsetFileInfoViewDTO {
+public class ValsetFileInfoViewDTO implements java.io.Serializable {
     private String fileId;
     private String fileNameOriginal;
     private String fileNameNormalized;

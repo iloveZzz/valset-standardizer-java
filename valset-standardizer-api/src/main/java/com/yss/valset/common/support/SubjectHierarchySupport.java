@@ -27,13 +27,13 @@ public final class SubjectHierarchySupport {
                 .replace('\u00A0', ' ')
                 .trim();
         if (code.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         if (code.contains(".") || code.contains(" ")) {
             String[] segments = code.split("[\\.\\s]+");
             List<String> result = new ArrayList<>(segments.length);
             for (String segment : segments) {
-                if (!segment.isBlank()) {
+                if (!segment.trim().isEmpty()) {
                     result.add(segment.trim());
                 }
             }
@@ -41,12 +41,12 @@ public final class SubjectHierarchySupport {
         }
         String compact = code.replaceAll("[\\s\\.\\p{Punct}]+", "");
         if (compact.length() <= 4) {
-            return List.of(compact);
+            return java.util.Arrays.asList(compact);
         }
         String prefix = compact.substring(0, 4);
         String remainder = compact.substring(4);
         if (!remainder.chars().allMatch(Character::isDigit)) {
-            return List.of(prefix, remainder);
+            return java.util.Arrays.asList(prefix, remainder);
         }
         List<String> segments = new ArrayList<>();
         segments.add(prefix);
@@ -66,7 +66,7 @@ public final class SubjectHierarchySupport {
      */
     public static List<String> buildSubjectPathCodes(String subjectCode, List<String> segments) {
         if (segments == null || segments.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> pathCodes = new ArrayList<>(segments.size());
         StringBuilder current = new StringBuilder();
@@ -98,7 +98,7 @@ public final class SubjectHierarchySupport {
      */
     public static List<SubjectRecord> enrichSubjectHierarchy(List<SubjectRecord> subjects) {
         if (subjects == null || subjects.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Set<String> existingCodes = new LinkedHashSet<>();
         for (SubjectRecord subject : subjects) {
@@ -109,7 +109,7 @@ public final class SubjectHierarchySupport {
         for (SubjectRecord subject : subjects) {
             String parentCode = findExistingParentCode(subject.getPathCodes(), existingCodes);
             subject.setParentCode(parentCode);
-            if (parentCode != null && !parentCode.isBlank()) {
+            if (parentCode != null && !parentCode.trim().isEmpty()) {
                 parentCodes.add(parentCode);
             }
         }

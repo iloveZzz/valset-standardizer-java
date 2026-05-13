@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TransferTargetViewDTO {
+public class TransferTargetViewDTO implements java.io.Serializable {
 
     /**
      * 投递目标主键。

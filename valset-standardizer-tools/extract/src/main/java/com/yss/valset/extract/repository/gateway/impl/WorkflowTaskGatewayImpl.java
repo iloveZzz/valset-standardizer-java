@@ -53,7 +53,7 @@ public class WorkflowTaskGatewayImpl implements WorkflowTaskGateway {
      */
     @Override
     public WorkflowTask findLatestSuccessfulTask(TaskType taskType, String businessKey) {
-        if (taskType == null || businessKey == null || businessKey.isBlank()) {
+        if (taskType == null || businessKey == null || businessKey.trim().isEmpty()) {
             return null;
         }
         List<WorkflowTaskPO> poList = workflowTaskRepository.selectList(

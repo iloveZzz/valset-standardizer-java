@@ -27,7 +27,7 @@ public final class ExcelParsingSupport {
      */
     public static List<Object> readRowValues(Row row, FormulaEvaluator evaluator, DataFormatter formatter) {
         if (row == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         int lastCellNum = Math.max(row.getLastCellNum(), (short) 0);
         List<Object> values = new ArrayList<>(lastCellNum);
@@ -85,7 +85,8 @@ public final class ExcelParsingSupport {
         if (value == null) {
             return "";
         }
-        if (value instanceof BigDecimal decimal) {
+        if (value instanceof BigDecimal) {
+            BigDecimal decimal = (BigDecimal) value;
             BigDecimal normalized = decimal.stripTrailingZeros();
             return normalized.scale() <= 0 ? normalized.toBigInteger().toString() : normalized.toPlainString();
         }
@@ -99,8 +100,8 @@ public final class ExcelParsingSupport {
         if (value == null) {
             return null;
         }
-        if (value instanceof BigDecimal decimal) {
-            return decimal.stripTrailingZeros();
+        if (value instanceof BigDecimal) {
+            return ((BigDecimal) value).stripTrailingZeros();
         }
         String text = normalizeText(value);
         if (text.isEmpty()) {
@@ -161,7 +162,7 @@ public final class ExcelParsingSupport {
 
         List<String> segments = new ArrayList<>();
         for (String segment : normalized.split("[\\.\\s]+")) {
-            if (!segment.isBlank()) {
+            if (!segment.trim().isEmpty()) {
                 segments.add(segment.trim());
             }
         }
@@ -204,7 +205,7 @@ public final class ExcelParsingSupport {
         boolean seenMeaningfulText = false;
         for (int columnIndex = 0; columnIndex < rowValues.size(); columnIndex++) {
             String candidateCode = textAt(rowValues, columnIndex);
-            if (candidateCode.isBlank() || "-".equals(candidateCode)) {
+            if (candidateCode.trim().isEmpty() || "-".equals(candidateCode)) {
                 continue;
             }
             if (!isSubjectCode(candidateCode, pattern)) {
@@ -230,7 +231,7 @@ public final class ExcelParsingSupport {
         }
         for (int columnIndex = codeColumnIndex + 1; columnIndex < rowValues.size(); columnIndex++) {
             String candidateText = textAt(rowValues, columnIndex);
-            if (candidateText.isBlank() || "-".equals(candidateText)) {
+            if (candidateText.trim().isEmpty() || "-".equals(candidateText)) {
                 continue;
             }
             return true;
@@ -297,7 +298,7 @@ public final class ExcelParsingSupport {
         }
         for (int index = 0; index < rowValues.size(); index++) {
             String text = textAt(rowValues, index);
-            if (!text.isBlank() && !"-".equals(text)) {
+            if (!text.trim().isEmpty() && !"-".equals(text)) {
                 return index;
             }
         }
@@ -314,7 +315,7 @@ public final class ExcelParsingSupport {
         int count = 0;
         for (Object value : rowValues) {
             String text = normalizeText(value);
-            if (!text.isBlank() && !"-".equals(text)) {
+            if (!text.trim().isEmpty() && !"-".equals(text)) {
                 count++;
             }
         }
@@ -325,7 +326,7 @@ public final class ExcelParsingSupport {
      * 判断文本是否看起来像数字、百分比或日期时间值。
      */
     public static boolean looksNumericLike(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return false;
         }
         return text.trim().matches(".*\\d.*");
@@ -352,7 +353,7 @@ public final class ExcelParsingSupport {
     }
 
     private static boolean containsChineseCharacter(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return false;
         }
         for (int index = 0; index < value.length(); index++) {

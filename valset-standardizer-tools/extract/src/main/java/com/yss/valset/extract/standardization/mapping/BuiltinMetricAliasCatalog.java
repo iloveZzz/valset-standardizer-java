@@ -2,6 +2,7 @@ package com.yss.valset.extract.standardization.mapping;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.Value;
 
 /**
  * 外部估值指标内置别名白名单。
@@ -36,14 +37,14 @@ public final class BuiltinMetricAliasCatalog {
         mapping.put("实收资本", "实收资本");
         mapping.put("净值(成本)", "净值(成本)");
         mapping.put("净值 (成本)", "净值(成本)");
-        ALIAS_TO_STANDARD_NAME = Map.copyOf(mapping);
+        ALIAS_TO_STANDARD_NAME = java.util.Collections.unmodifiableMap(new java.util.HashMap<>(mapping));
     }
 
     private BuiltinMetricAliasCatalog() {
     }
 
     public static BuiltinMetricMapping match(String metricName) {
-        if (metricName == null || metricName.isBlank()) {
+        if (metricName == null || metricName.trim().isEmpty()) {
             return null;
         }
         String candidateText = canonicalize(metricName);
@@ -51,7 +52,7 @@ public final class BuiltinMetricAliasCatalog {
         String bestStandardName = null;
         for (Map.Entry<String, String> entry : ALIAS_TO_STANDARD_NAME.entrySet()) {
             String alias = entry.getKey();
-            if (alias == null || alias.isBlank() || alias.length() < 2) {
+            if (alias == null || alias.trim().isEmpty() || alias.length() < 2) {
                 continue;
             }
             String normalizedAlias = canonicalize(alias);
@@ -63,7 +64,7 @@ public final class BuiltinMetricAliasCatalog {
                 bestStandardName = entry.getValue();
             }
         }
-        if (bestStandardName == null || bestStandardName.isBlank()) {
+        if (bestStandardName == null || bestStandardName.trim().isEmpty()) {
             return null;
         }
         return new BuiltinMetricMapping(bestStandardName, bestStandardName);
@@ -79,6 +80,12 @@ public final class BuiltinMetricAliasCatalog {
                 .replaceAll("\\s+", "");
     }
 
-    public record BuiltinMetricMapping(String standardCode, String standardName) {
+    @Value
+    public static class BuiltinMetricMapping {
+        String standardCode;
+        String standardName;
+
+        public String standardCode() { return standardCode; }
+        public String standardName() { return standardName; }
     }
 }

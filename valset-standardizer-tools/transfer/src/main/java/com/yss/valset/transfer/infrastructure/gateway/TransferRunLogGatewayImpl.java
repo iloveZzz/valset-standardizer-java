@@ -139,9 +139,9 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                         .eq(sourceIdValue != null, TransferRunLogPO::getSourceId, sourceIdValue)
                         .eq(transferIdValue != null, TransferRunLogPO::getTransferId, transferIdValue)
                         .eq(routeIdValue != null, TransferRunLogPO::getRouteId, routeIdValue)
-                        .eq(runStage != null && !runStage.isBlank(), TransferRunLogPO::getRunStage, runStage)
-                        .eq(runStatus != null && !runStatus.isBlank(), TransferRunLogPO::getRunStatus, runStatus)
-                        .eq(triggerType != null && !triggerType.isBlank(), TransferRunLogPO::getTriggerType, triggerType)
+                        .eq(runStage != null && !runStage.trim().isEmpty(), TransferRunLogPO::getRunStage, runStage)
+                        .eq(runStatus != null && !runStatus.trim().isEmpty(), TransferRunLogPO::getRunStatus, runStatus)
+                        .eq(triggerType != null && !triggerType.trim().isEmpty(), TransferRunLogPO::getTriggerType, triggerType)
                         .and(StringUtils.hasText(keyword), wrapper -> wrapper
                                 .like(TransferRunLogPO::getSourceCode, keyword)
                                 .or()
@@ -159,7 +159,7 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
         );
         List<TransferRunLog> records = page.getRecords() == null ? Collections.emptyList() : page.getRecords().stream()
                 .map(transferRunLogMapper::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         return new TransferRunLogPage(records, page.getTotal(), page.getCurrent() - 1, page.getSize());
     }
 
@@ -174,12 +174,12 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
         List<TransferRunLog> logs = loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, false, keyword, null);
         Map<String, List<TransferRunLog>> logsByStage = logs.stream()
                 .filter(log -> StringUtils.hasText(log.runStage()))
-                .collect(Collectors.groupingBy(TransferRunLog::runStage, LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(TransferRunLog::runStage, LinkedHashMap::new, java.util.stream.Collectors.toList()));
 
         List<TransferRunLogStageAnalysis> stageAnalyses = EnumSet.allOf(com.yss.valset.transfer.domain.model.TransferRunStage.class)
                 .stream()
                 .map(stage -> {
-                    List<TransferRunLog> stageLogs = logsByStage.getOrDefault(stage.name(), List.of());
+                    List<TransferRunLog> stageLogs = logsByStage.getOrDefault(stage.name(), java.util.Arrays.asList());
                     if (TransferRunStage.DELIVER.name().equals(stage.name())) {
                         stageLogs = collapseLatestTransferObjectLogs(stageLogs);
                     }
@@ -188,16 +188,16 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                             .collect(Collectors.groupingBy(TransferRunLog::runStatus, LinkedHashMap::new, Collectors.counting()));
                     List<TransferRunLogStatusCount> statusCounts = statusCountMap.entrySet().stream()
                             .map(entry -> new TransferRunLogStatusCount(entry.getKey(), entry.getValue()))
-                            .toList();
+                            .collect(java.util.stream.Collectors.toList());
                     return new TransferRunLogStageAnalysis(stage.name(), stageLogs.size(), statusCounts);
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
 
         return new TransferRunLogAnalysis(logs.size(), stageAnalyses);
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);
@@ -215,13 +215,13 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
         Long sourceIdValue = parseLong(sourceId);
         Long transferIdValue = parseLong(transferId);
         Long routeIdValue = parseLong(routeId);
-        var query = Wrappers.lambdaQuery(TransferRunLogPO.class)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TransferRunLogPO> query = Wrappers.lambdaQuery(TransferRunLogPO.class)
                 .eq(sourceIdValue != null, TransferRunLogPO::getSourceId, sourceIdValue)
                 .eq(transferIdValue != null, TransferRunLogPO::getTransferId, transferIdValue)
                 .eq(routeIdValue != null, TransferRunLogPO::getRouteId, routeIdValue)
-                .eq(runStage != null && !runStage.isBlank(), TransferRunLogPO::getRunStage, runStage)
-                .eq(runStatus != null && !runStatus.isBlank(), TransferRunLogPO::getRunStatus, runStatus)
-                .eq(triggerType != null && !triggerType.isBlank(), TransferRunLogPO::getTriggerType, triggerType)
+                .eq(runStage != null && !runStage.trim().isEmpty(), TransferRunLogPO::getRunStage, runStage)
+                .eq(runStatus != null && !runStatus.trim().isEmpty(), TransferRunLogPO::getRunStatus, runStatus)
+                .eq(triggerType != null && !triggerType.trim().isEmpty(), TransferRunLogPO::getTriggerType, triggerType)
                 .and(StringUtils.hasText(keyword), wrapper -> wrapper
                         .like(TransferRunLogPO::getSourceCode, keyword)
                         .or()
@@ -243,12 +243,12 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
         return transferRunLogRepository.selectList(query)
                 .stream()
                 .map(transferRunLogMapper::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<TransferRunLog> collapseLatestTransferObjectLogs(List<TransferRunLog> logs) {
         if (logs == null || logs.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Map<String, TransferRunLog> latestByTransferId = new LinkedHashMap<>();
         for (TransferRunLog log : logs) {
@@ -265,11 +265,11 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
 
     private List<TransferRunLog> slice(List<TransferRunLog> logs, int pageIndex, int pageSize) {
         if (logs == null || logs.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         int fromIndex = Math.max(pageIndex, 0) * Math.max(pageSize, 1);
         if (fromIndex >= logs.size()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         int toIndex = Math.min(fromIndex + Math.max(pageSize, 1), logs.size());
         return logs.subList(fromIndex, toIndex);

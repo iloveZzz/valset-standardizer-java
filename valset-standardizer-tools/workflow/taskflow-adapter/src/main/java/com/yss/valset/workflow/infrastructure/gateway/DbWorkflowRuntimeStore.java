@@ -2,7 +2,7 @@ package com.yss.valset.workflow.infrastructure.gateway;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowDefinitionPO;
 import com.yss.valset.workflow.infrastructure.entity.WorkflowEngineBindingPO;
@@ -125,7 +125,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                                 .orderByAsc(WorkflowDefinitionPO::getWorkflowVersionNo))
                 .stream()
                 .map(this::toDefinitionDTO)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -154,7 +154,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                 buildInstanceQuery(request));
         List<WorkflowInstanceViewDTO> records = page.getRecords().stream()
                 .map(this::toInstanceViewDTO)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         return PageResult.of(records, page.getTotal(), page.getSize(), pageIndex);
     }
 
@@ -188,7 +188,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
             throw new IllegalArgumentException("工作流定义不能为空");
         }
         return definition.toBuilder()
-                .stages(new ArrayList<>(definition.getStages() == null ? List.of() : definition.getStages()))
+                .stages(new ArrayList<>(definition.getStages() == null ? java.util.Arrays.asList() : definition.getStages()))
                 .build();
     }
 
@@ -261,7 +261,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                     .stream()
                     .map(WorkflowDefinitionPO::getWorkflowId)
                     .filter(StringUtils::hasText)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             if (workflowIds.isEmpty()) {
                 query.eq(WorkflowInstancePO::getWorkflowId, "__NO_WORKFLOW_MATCH__");
             } else {
@@ -306,7 +306,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         }
         List<WorkflowStageDTO> orderedStages = stages.stream()
                 .sorted(Comparator.comparing(WorkflowStageDTO::getStageOrder))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         for (WorkflowStageDTO stage : orderedStages) {
             WorkflowStagePO po = new WorkflowStagePO();
             po.setStageId(generateId("wfs"));
@@ -335,7 +335,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
             return;
         }
         Map<String, Object> attributes = new LinkedHashMap<>(
-                binding.getAttributes() == null ? Map.of() : binding.getAttributes());
+                binding.getAttributes() == null ? java.util.Collections.emptyMap() : binding.getAttributes());
         Map<String, Object> existingAttributes = existing == null
                 ? new LinkedHashMap<>()
                 : workflowJsonCodec.toMap(existing.getAttributesJson());
@@ -369,7 +369,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
                                 .orderByAsc(WorkflowStagePO::getStageId))
                 .stream()
                 .map(this::toStageDTO)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         WorkflowEngineBindingPO bindingPO = workflowEngineBindingRepository.selectOne(
                 Wrappers.lambdaQuery(WorkflowEngineBindingPO.class)
                         .eq(WorkflowEngineBindingPO::getWorkflowId, po.getWorkflowId())
@@ -541,7 +541,7 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         Map<String, Object> bindingSyncState = asMap(bindingAttributes.get(DOLPHINSCHEDULER_SYNC_KEY));
         Map<String, Object> baseSyncState = bindingSyncState != null
                 ? bindingSyncState
-                : existingSyncState == null ? Map.of() : existingSyncState;
+                : existingSyncState == null ? java.util.Collections.emptyMap() : existingSyncState;
         Map<String, Object> syncState = new LinkedHashMap<>(baseSyncState);
         if (binding.getSyncStatus() != null) {
             syncState.put(SYNC_STATUS_KEY, binding.getSyncStatus().name());
@@ -605,8 +605,8 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         if (value == null) {
             return null;
         }
-        if (value instanceof Number number) {
-            return number.intValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
         }
         String text = valueOf(value);
         if (!StringUtils.hasText(text)) {
@@ -619,8 +619,8 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
         if (value == null) {
             return null;
         }
-        if (value instanceof Boolean bool) {
-            return bool;
+        if (value instanceof Boolean) {
+            return (Boolean) value;
         }
         String text = valueOf(value);
         if (!StringUtils.hasText(text)) {
@@ -634,7 +634,8 @@ public class DbWorkflowRuntimeStore implements WorkflowRuntimeStore {
     }
 
     private static Map<String, Object> asMap(Object value) {
-        if (value instanceof Map<?, ?> map) {
+        if (value instanceof Map<?, ?>) {
+            Map<?, ?> map = (Map<?, ?>) value;
             Map<String, Object> result = new LinkedHashMap<>();
             map.forEach((key, item) -> result.put(String.valueOf(key), item));
             return result;

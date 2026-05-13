@@ -21,21 +21,21 @@ public interface TransferMapstructSupport {
     }
 
     default TransferStatus statusOf(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return TransferStatus.valueOf(value);
     }
 
     default TargetType targetTypeOf(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return TargetType.valueOf(value);
     }
 
     default SourceType sourceTypeOf(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return SourceType.valueOf(value);
@@ -70,7 +70,7 @@ public interface TransferMapstructSupport {
     }
 
     default Long longValue(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);

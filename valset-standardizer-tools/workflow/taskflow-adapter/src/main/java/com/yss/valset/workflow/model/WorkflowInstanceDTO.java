@@ -18,7 +18,7 @@ import java.util.Map;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowInstanceDTO {
+public class WorkflowInstanceDTO implements java.io.Serializable {
 
     private String instanceId;
 

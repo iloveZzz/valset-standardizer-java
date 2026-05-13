@@ -26,22 +26,22 @@ public class TransferObjectTagGatewayImpl implements TransferObjectTagGateway {
 
     @Override
     public List<TransferObjectTag> listByTransferId(String transferId) {
-        if (transferId == null || transferId.isBlank()) {
-            return List.of();
+        if (transferId == null || transferId.trim().isEmpty()) {
+            return java.util.Arrays.asList();
         }
-        return listByTransferIds(List.of(transferId));
+        return listByTransferIds(java.util.Arrays.asList(transferId));
     }
 
     @Override
     public List<TransferObjectTag> listByTransferIds(List<String> transferIds) {
         if (transferIds == null || transferIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> normalizedTransferIds = transferIds.stream()
-                .filter(id -> id != null && !id.isBlank())
-                .toList();
+                .filter(id -> id != null && !id.trim().isEmpty())
+                .collect(java.util.stream.Collectors.toList());
         if (normalizedTransferIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return transferObjectTagRepository.selectList(
                         Wrappers.lambdaQuery(TransferObjectTagPO.class)
@@ -51,13 +51,13 @@ public class TransferObjectTagGatewayImpl implements TransferObjectTagGateway {
                 )
                 .stream()
                 .map(transferObjectTagMapper::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
     public List<TransferObjectTag> saveAll(List<TransferObjectTag> tags) {
         if (tags == null || tags.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<TransferObjectTagPO> pos = tags.stream().map(tag -> {
             TransferObjectTagPO po = transferObjectTagMapper.toPO(tag);
@@ -65,11 +65,11 @@ public class TransferObjectTagGatewayImpl implements TransferObjectTagGateway {
                 po.setCreatedAt(LocalDateTime.now());
             }
             return po;
-        }).toList();
+        }).collect(java.util.stream.Collectors.toList());
         for (TransferObjectTagPO po : pos) {
             transferObjectTagRepository.insert(po);
         }
-        return pos.stream().map(transferObjectTagMapper::toDomain).toList();
+        return pos.stream().map(transferObjectTagMapper::toDomain).collect(java.util.stream.Collectors.toList());
     }
 
     @Override

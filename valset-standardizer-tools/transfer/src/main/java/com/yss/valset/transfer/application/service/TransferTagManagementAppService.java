@@ -1,6 +1,6 @@
 package com.yss.valset.transfer.application.service;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.transfer.application.command.TransferTagTestCommand;
 import com.yss.valset.transfer.application.command.TransferTagUpsertCommand;
 import com.yss.valset.transfer.application.dto.TransferTagMutationResponse;

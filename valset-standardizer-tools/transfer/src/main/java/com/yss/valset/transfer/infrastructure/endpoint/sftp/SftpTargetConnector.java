@@ -52,9 +52,9 @@ public class SftpTargetConnector implements TargetConnector {
         }
 
         JSch jsch = new JSch();
-        if (config.privateKeyPath() != null && !config.privateKeyPath().isBlank()) {
+        if (config.privateKeyPath() != null && !config.privateKeyPath().trim().isEmpty()) {
             try {
-                if (config.passphrase() == null || config.passphrase().isBlank()) {
+                if (config.passphrase() == null || config.passphrase().trim().isEmpty()) {
                     jsch.addIdentity(config.privateKeyPath());
                 } else {
                     jsch.addIdentity(config.privateKeyPath(), config.passphrase());
@@ -68,7 +68,7 @@ public class SftpTargetConnector implements TargetConnector {
         ChannelSftp channelSftp = null;
         try {
             session = jsch.getSession(config.username(), config.host(), config.port());
-            if (config.password() != null && !config.password().isBlank()) {
+            if (config.password() != null && !config.password().trim().isEmpty()) {
                 session.setPassword(config.password());
             }
             session.setConfig("StrictHostKeyChecking", config.strictHostKeyChecking() ? "yes" : "no");
@@ -111,7 +111,7 @@ public class SftpTargetConnector implements TargetConnector {
         );
         String fileName = firstNonBlank(transferObject.originalName(), "transfer-file");
         String resolvedRemoteDir = resolveTemplate(remoteDir, context, transferObject);
-        if (resolvedRemoteDir == null || resolvedRemoteDir.isBlank()) {
+        if (resolvedRemoteDir == null || resolvedRemoteDir.trim().isEmpty()) {
             return fileName;
         }
         return joinRemotePath(resolvedRemoteDir, fileName);
@@ -127,14 +127,14 @@ public class SftpTargetConnector implements TargetConnector {
     }
 
     private void createDirectories(ChannelSftp channelSftp, String remoteDir) throws Exception {
-        if (remoteDir == null || remoteDir.isBlank() || "/".equals(remoteDir)) {
+        if (remoteDir == null || remoteDir.trim().isEmpty() || "/".equals(remoteDir)) {
             return;
         }
         String normalized = remoteDir.startsWith("/") ? remoteDir : "/" + remoteDir;
         String[] segments = normalized.split("/");
         StringBuilder current = new StringBuilder();
         for (String segment : segments) {
-            if (segment == null || segment.isBlank()) {
+            if (segment == null || segment.trim().isEmpty()) {
                 continue;
             }
             current.append('/').append(segment);
@@ -162,7 +162,7 @@ public class SftpTargetConnector implements TargetConnector {
     }
 
     private String joinRemotePath(String remoteDir, String fileName) {
-        if (remoteDir == null || remoteDir.isBlank()) {
+        if (remoteDir == null || remoteDir.trim().isEmpty()) {
             return fileName;
         }
         String normalizedRemoteDir = remoteDir.endsWith("/") && remoteDir.length() > 1
@@ -175,7 +175,7 @@ public class SftpTargetConnector implements TargetConnector {
     }
 
     private String resolveTemplate(String template, TransferContext context, TransferObject transferObject) {
-        if (template == null || template.isBlank()) {
+        if (template == null || template.trim().isEmpty()) {
             return template;
         }
         Map<String, String> variables = new LinkedHashMap<>();
@@ -201,7 +201,7 @@ public class SftpTargetConnector implements TargetConnector {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value;
             }
         }

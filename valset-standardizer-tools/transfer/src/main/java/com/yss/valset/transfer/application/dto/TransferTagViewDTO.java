@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TransferTagViewDTO {
+public class TransferTagViewDTO implements java.io.Serializable {
 
     private String tagId;
 

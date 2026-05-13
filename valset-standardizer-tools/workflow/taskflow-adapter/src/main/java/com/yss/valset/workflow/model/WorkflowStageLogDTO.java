@@ -16,7 +16,7 @@ import java.util.Map;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowStageLogDTO {
+public class WorkflowStageLogDTO implements java.io.Serializable {
 
     private String instanceId;
 

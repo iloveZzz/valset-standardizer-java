@@ -1,6 +1,6 @@
 import type { YTablePagination } from "@yss-ui/components";
 
-export interface TagViewDTO {
+export interface TagViewDTO implements java.io.Serializable {
   tagId?: string;
   tagCode?: string;
   tagName?: string;
@@ -25,7 +25,7 @@ export interface TagMutationResponse {
   tag?: TagViewDTO;
 }
 
-export interface TagTestResultDTO {
+export interface TagTestResultDTO implements java.io.Serializable {
   tagId?: string;
   matched?: boolean;
   matchStrategy?: string;

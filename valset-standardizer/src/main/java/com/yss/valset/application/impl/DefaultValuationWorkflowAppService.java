@@ -35,8 +35,6 @@ import com.yss.valset.domain.model.WorkflowTask;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskType;
-import io.micrometer.tracing.Span;
-import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -48,7 +46,6 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Locale;
-import java.util.function.Supplier;
 
 /**
  * 外部估值全流程编排服务默认实现。
@@ -67,7 +64,6 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     private final WorkflowTaskReuseService taskReuseService;
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final ValsetFileIngestLogGateway subjectMatchFileIngestLogGateway;
-    private final Tracer tracer;
     private final WorkflowRuntimeParamService workflowRuntimeParamService;
     private final WorkflowExecutionContextResolver workflowExecutionContextResolver;
     private final WorkflowCommonContextBuilder workflowCommonContextBuilder;
@@ -84,7 +80,6 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                                               WorkflowTaskReuseService taskReuseService,
                                               ValsetFileInfoGateway subjectMatchFileInfoGateway,
                                               ValsetFileIngestLogGateway subjectMatchFileIngestLogGateway,
-                                              Tracer tracer,
                                               WorkflowRuntimeParamService workflowRuntimeParamService,
                                               WorkflowExecutionContextResolver workflowExecutionContextResolver,
                                               WorkflowCommonContextBuilder workflowCommonContextBuilder,
@@ -100,7 +95,6 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         this.taskReuseService = taskReuseService;
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.subjectMatchFileIngestLogGateway = subjectMatchFileIngestLogGateway;
-        this.tracer = tracer;
         this.workflowRuntimeParamService = workflowRuntimeParamService;
         this.workflowExecutionContextResolver = workflowExecutionContextResolver;
         this.workflowCommonContextBuilder = workflowCommonContextBuilder;
@@ -242,90 +236,69 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                                                 Integer topK,
                                                 String createdBy,
                                                 Boolean forceRebuild) {
-        Span rootSpan = tracer.nextSpan().name("workflow.full.execute")
-                .tag("data.source.type", dataSourceType == null ? "EXCEL" : dataSourceType)
-                .start();
-        try (Tracer.SpanInScope ws = tracer.withSpan(rootSpan)) {
-            long startedAt = System.currentTimeMillis();
-            log.info("全流程执行开始，fileName={}, dataSourceType={}, topK={}, createdBy={}, forceRebuild={}",
-                    file == null ? null : file.getOriginalFilename(),
-                    dataSourceType,
-                    topK,
-                    createdBy,
-                    forceRebuild);
+        long startedAt = System.currentTimeMillis();
+        log.info("全流程执行开始，fileName={}, dataSourceType={}, topK={}, createdBy={}, forceRebuild={}",
+                file == null ? null : file.getOriginalFilename(),
+                dataSourceType,
+                topK,
+                createdBy,
+                forceRebuild);
 
-            // Step 1: 上传 + 原始提取
-            UploadValuationFileResponse uploadResponse = traceSpan("workflow.full.extract",
-                    () -> uploadAndExtract(file, dataSourceType, createdBy, forceRebuild));
+        // Step 1: 上传 + 原始提取
+        UploadValuationFileResponse uploadResponse = uploadAndExtract(file, dataSourceType, createdBy, forceRebuild);
 
-            ParseTaskCommand parseTaskCommand = new ParseTaskCommand();
-            parseTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
-            parseTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
-            parseTaskCommand.setFileId(toLong(uploadResponse.getFileId()));
-            parseTaskCommand.setFileNameOriginal(file.getOriginalFilename());
-            parseTaskCommand.setCreatedBy(createdBy);
-            parseTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
-            applyWorkflowContext(parseTaskCommand, workflowExecutionContextResolver.resolve(TaskType.PARSE_WORKBOOK, TaskStage.PARSE));
-            parseTaskCommand.setWorkflowEngineConfigJson(writeWorkflowContextJson(
-                    workflowCommonContextBuilder.build(parseTaskCommand),
-                    workflowBusinessContextBuilder.build(parseTaskCommand)));
-            // Step 2: 结构化解析 + 标准化落地
-            TaskViewDTO parseTask = traceSpan("workflow.full.parse", () -> analyze(parseTaskCommand));
+        ParseTaskCommand parseTaskCommand = new ParseTaskCommand();
+        parseTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
+        parseTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
+        parseTaskCommand.setFileId(toLong(uploadResponse.getFileId()));
+        parseTaskCommand.setFileNameOriginal(file.getOriginalFilename());
+        parseTaskCommand.setCreatedBy(createdBy);
+        parseTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
+        applyWorkflowContext(parseTaskCommand, workflowExecutionContextResolver.resolve(TaskType.PARSE_WORKBOOK, TaskStage.PARSE));
+        parseTaskCommand.setWorkflowEngineConfigJson(writeWorkflowContextJson(
+                workflowCommonContextBuilder.build(parseTaskCommand),
+                workflowBusinessContextBuilder.build(parseTaskCommand)));
+        // Step 2: 结构化解析 + 标准化落地
+        TaskViewDTO parseTask = analyze(parseTaskCommand);
 
-            MatchTaskCommand matchTaskCommand = new MatchTaskCommand();
-            matchTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
-            matchTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
-            matchTaskCommand.setFileId(toLong(uploadResponse.getFileId()));
-            matchTaskCommand.setTopK(topK == null ? 5 : topK);
-            matchTaskCommand.setCreatedBy(createdBy);
-            matchTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
-            applyWorkflowContext(matchTaskCommand, workflowExecutionContextResolver.resolve(TaskType.MATCH_SUBJECT, TaskStage.MATCH));
-            matchTaskCommand.setWorkflowEngineConfigJson(writeWorkflowContextJson(
-                    workflowCommonContextBuilder.build(matchTaskCommand),
-                    workflowBusinessContextBuilder.build(matchTaskCommand)));
-            // Step 3: 科目匹配（可配置跳过）
-            TaskViewDTO matchTask = traceSpan("workflow.full.match", () -> workflowRuntimeParamService.enableMatchProcess()
-                    ? match(matchTaskCommand)
-                    : buildSkippedMatchTask(matchTaskCommand, "subject.match.workflow.enable-match-process=false"));
+        MatchTaskCommand matchTaskCommand = new MatchTaskCommand();
+        matchTaskCommand.setDataSourceType(uploadResponse.getDataSourceType());
+        matchTaskCommand.setWorkbookPath(uploadResponse.getWorkbookPath());
+        matchTaskCommand.setFileId(toLong(uploadResponse.getFileId()));
+        matchTaskCommand.setTopK(topK == null ? 5 : topK);
+        matchTaskCommand.setCreatedBy(createdBy);
+        matchTaskCommand.setForceRebuild(Boolean.TRUE.equals(forceRebuild));
+        applyWorkflowContext(matchTaskCommand, workflowExecutionContextResolver.resolve(TaskType.MATCH_SUBJECT, TaskStage.MATCH));
+        matchTaskCommand.setWorkflowEngineConfigJson(writeWorkflowContextJson(
+                workflowCommonContextBuilder.build(matchTaskCommand),
+                workflowBusinessContextBuilder.build(matchTaskCommand)));
+        // Step 3: 科目匹配（可配置跳过）
+        TaskViewDTO matchTask = workflowRuntimeParamService.enableMatchProcess()
+                ? match(matchTaskCommand)
+                : buildSkippedMatchTask(matchTaskCommand, "subject.match.workflow.enable-match-process=false");
 
-            log.info("全流程执行完成，fileId={}, extractTaskId={}, parseTaskId={}, matchTaskId={}, totalMs={}",
-                    uploadResponse.getFileId(),
-                    uploadResponse.getExtractTask() == null ? null : uploadResponse.getExtractTask().getTaskId(),
-                    parseTask == null ? null : parseTask.getTaskId(),
-                    matchTask == null ? null : matchTask.getTaskId(),
-                    System.currentTimeMillis() - startedAt);
-            return FullWorkflowResponse.builder()
-                    .fileId(uploadResponse.getFileId())
-                    .workbookPath(uploadResponse.getWorkbookPath())
-                    .dataSourceType(uploadResponse.getDataSourceType())
-                    .fileFingerprint(uploadResponse.getFileFingerprint())
-                    .filesysTaskId(uploadResponse.getFilesysTaskId())
-                    .filesysFileId(uploadResponse.getFilesysFileId())
-                    .filesysObjectKey(uploadResponse.getFilesysObjectKey())
-                    .filesysInstantUpload(uploadResponse.getFilesysInstantUpload())
-                    .extractTask(uploadResponse.getExtractTask())
-                    .parseTask(parseTask)
-                    .matchTask(matchTask)
-                    .build();
-        } catch (Exception exception) {
-            rootSpan.error(exception);
-            throw exception;
-        } finally {
-            rootSpan.end();
-        }
+        log.info("全流程执行完成，fileId={}, extractTaskId={}, parseTaskId={}, matchTaskId={}, totalMs={}",
+                uploadResponse.getFileId(),
+                uploadResponse.getExtractTask() == null ? null : uploadResponse.getExtractTask().getTaskId(),
+                parseTask == null ? null : parseTask.getTaskId(),
+                matchTask == null ? null : matchTask.getTaskId(),
+                System.currentTimeMillis() - startedAt);
+        return FullWorkflowResponse.builder()
+                .fileId(uploadResponse.getFileId())
+                .workbookPath(uploadResponse.getWorkbookPath())
+                .dataSourceType(uploadResponse.getDataSourceType())
+                .fileFingerprint(uploadResponse.getFileFingerprint())
+                .filesysTaskId(uploadResponse.getFilesysTaskId())
+                .filesysFileId(uploadResponse.getFilesysFileId())
+                .filesysObjectKey(uploadResponse.getFilesysObjectKey())
+                .filesysInstantUpload(uploadResponse.getFilesysInstantUpload())
+                .extractTask(uploadResponse.getExtractTask())
+                .parseTask(parseTask)
+                .matchTask(matchTask)
+                .build();
     }
 
-    private <T> T traceSpan(String spanName, Supplier<T> supplier) {
-        Span span = tracer.nextSpan().name(spanName).start();
-        try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
-            return supplier.get();
-        } catch (RuntimeException exception) {
-            span.error(exception);
-            throw exception;
-        } finally {
-            span.end();
-        }
-    }
+
 
     private TaskViewDTO buildSkippedMatchTask(MatchTaskCommand command, String reason) {
         Map<String, Object> resultData = new LinkedHashMap<>();
@@ -450,30 +423,37 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         if (taskType == null) {
             return TaskStage.OTHER;
         }
-        return switch (taskType) {
-            case EXTRACT_DATA -> TaskStage.EXTRACT;
-            case PARSE_WORKBOOK -> TaskStage.PARSE;
-            case MATCH_SUBJECT -> TaskStage.MATCH;
-            default -> TaskStage.OTHER;
-        };
+        switch (taskType) {
+            case EXTRACT_DATA:
+                return TaskStage.EXTRACT;
+            case PARSE_WORKBOOK:
+                return TaskStage.PARSE;
+            case MATCH_SUBJECT:
+                return TaskStage.MATCH;
+            default:
+                return TaskStage.OTHER;
+        }
     }
 
     private Long extractFileId(TaskViewDTO extractTask) {
         Map<String, Object> resultData = extractTask.getResultData();
         if (resultData != null) {
             Object fileId = resultData.get("fileId");
-            if (fileId instanceof Number number) {
-                return number.longValue();
+            if (fileId instanceof Number) {
+                return ((Number) fileId).longValue();
             }
-            if (fileId instanceof String text && !text.isBlank()) {
-                return Long.parseLong(text);
+            if (fileId instanceof String) {
+                String text = (String) fileId;
+                if (!text.trim().isEmpty()) {
+                    return Long.parseLong(text);
+                }
             }
         }
         return toLong(extractTask.getTaskId());
     }
 
     private Long toLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.parseLong(value);
@@ -556,10 +536,10 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     }
 
     private String resolveSourceUri(StoredFileDTO storedFile) {
-        if (storedFile.getFilesysObjectKey() != null && !storedFile.getFilesysObjectKey().isBlank()) {
+        if (storedFile.getFilesysObjectKey() != null && !storedFile.getFilesysObjectKey().trim().isEmpty()) {
             return storedFile.getFilesysObjectKey();
         }
-        if (storedFile.getFilesysFileId() != null && !storedFile.getFilesysFileId().isBlank()) {
+        if (storedFile.getFilesysFileId() != null && !storedFile.getFilesysFileId().trim().isEmpty()) {
             return "filesys:" + storedFile.getFilesysFileId();
         }
         return storedFile.getAbsolutePath();
@@ -611,14 +591,14 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     }
 
     private String normalizeFilename(String filename) {
-        if (filename == null || filename.isBlank()) {
+        if (filename == null || filename.trim().isEmpty()) {
             return "valuation-file";
         }
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
     }
 
     private String resolveExtension(String filename) {
-        if (filename == null || filename.isBlank()) {
+        if (filename == null || filename.trim().isEmpty()) {
             return null;
         }
         int index = filename.lastIndexOf('.');
@@ -646,34 +626,37 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     }
 
     private boolean isForceRebuild(Object command) {
-        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
+        if (command instanceof ExtractDataTaskCommand) {
+            ExtractDataTaskCommand extractDataTaskCommand = (ExtractDataTaskCommand) command;
             return Boolean.TRUE.equals(extractDataTaskCommand.getForceRebuild());
         }
-        if (command instanceof ParseTaskCommand parseTaskCommand) {
+        if (command instanceof ParseTaskCommand) {
+            ParseTaskCommand parseTaskCommand = (ParseTaskCommand) command;
             return Boolean.TRUE.equals(parseTaskCommand.getForceRebuild());
         }
-        if (command instanceof MatchTaskCommand matchTaskCommand) {
+        if (command instanceof MatchTaskCommand) {
+            MatchTaskCommand matchTaskCommand = (MatchTaskCommand) command;
             return Boolean.TRUE.equals(matchTaskCommand.getForceRebuild());
         }
         return false;
     }
 
     private String resolveExtractFileFingerprint(ExtractDataTaskCommand command) {
-        if (command.getFileFingerprint() != null && !command.getFileFingerprint().isBlank()) {
+        if (command.getFileFingerprint() != null && !command.getFileFingerprint().trim().isEmpty()) {
             return command.getFileFingerprint().trim().toLowerCase();
         }
         return command.getWorkbookPath();
     }
 
     private String normalizeDataSourceType(String dataSourceType) {
-        if (dataSourceType == null || dataSourceType.isBlank()) {
+        if (dataSourceType == null || dataSourceType.trim().isEmpty()) {
             return "EXCEL";
         }
         return dataSourceType.trim().toUpperCase();
     }
 
     private String firstReadablePath(String candidate) {
-        if (candidate == null || candidate.isBlank()) {
+        if (candidate == null || candidate.trim().isEmpty()) {
             return null;
         }
         try {

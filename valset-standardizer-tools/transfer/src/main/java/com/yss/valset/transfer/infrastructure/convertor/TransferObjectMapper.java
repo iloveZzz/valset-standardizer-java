@@ -68,7 +68,7 @@ public interface TransferObjectMapper extends TransferMapstructSupport {
         return new ProbeResult(
                 detectedRaw == null || Boolean.parseBoolean(String.valueOf(detectedRaw)),
                 detectedTypeRaw == null ? null : String.valueOf(detectedTypeRaw),
-                attributesRaw instanceof Map<?, ?> map ? safeMap(castMap(map)) : Map.of()
+                attributesRaw instanceof Map<?, ?> ? safeMap(castMap((Map<?, ?>) attributesRaw)) : java.util.Collections.emptyMap()
         );
     }
 

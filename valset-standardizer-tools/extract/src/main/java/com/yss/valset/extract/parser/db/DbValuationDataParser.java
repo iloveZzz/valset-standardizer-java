@@ -24,12 +24,12 @@ public class DbValuationDataParser implements ValuationDataParser {
         return ParsedValuationData.builder()
                 .workbookPath("db://unsupported")
                 .title("DB Source Unsupported")
-                .basicInfo(Map.of())
-                .headers(List.of())
-                .headerDetails(List.of())
-                .headerColumns(List.of())
-                .subjects(List.of())
-                .metrics(List.of())
+                .basicInfo(java.util.Collections.emptyMap())
+                .headers(java.util.Arrays.asList())
+                .headerDetails(java.util.Arrays.asList())
+                .headerColumns(java.util.Arrays.asList())
+                .subjects(java.util.Arrays.asList())
+                .metrics(java.util.Arrays.asList())
                 .build();
     }
 }

@@ -1,6 +1,6 @@
 package com.yss.valset.parser.web.controller;
 
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.parser.application.dto.ParseQueueObserverRunSummary;
 import com.yss.valset.parser.application.port.ParseQueueObservationUseCase;
 import io.swagger.v3.oas.annotations.Operation;

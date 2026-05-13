@@ -50,16 +50,16 @@ public class TransferTagGatewayImpl implements TransferTagGateway {
         Page<TransferTagPO> page = transferTagRepository.selectPage(
                 new Page<>(current, size),
                 Wrappers.lambdaQuery(TransferTagPO.class)
-                        .like(tagCode != null && !tagCode.isBlank(), TransferTagPO::getTagCode, tagCode)
-                        .like(tagName != null && !tagName.isBlank(), TransferTagPO::getTagName, tagName)
-                        .eq(matchStrategy != null && !matchStrategy.isBlank(), TransferTagPO::getMatchStrategy, matchStrategy)
+                        .like(tagCode != null && !tagCode.trim().isEmpty(), TransferTagPO::getTagCode, tagCode)
+                        .like(tagName != null && !tagName.trim().isEmpty(), TransferTagPO::getTagName, tagName)
+                        .eq(matchStrategy != null && !matchStrategy.trim().isEmpty(), TransferTagPO::getMatchStrategy, matchStrategy)
                         .eq(enabled != null, TransferTagPO::getEnabled, enabled)
                         .orderByAsc(TransferTagPO::getPriority)
                         .orderByAsc(TransferTagPO::getTagId)
         );
         List<TransferTagDefinition> records = page.getRecords() == null
-                ? List.of()
-                : page.getRecords().stream().map(this::toDomain).toList();
+                ? java.util.Arrays.asList()
+                : page.getRecords().stream().map(this::toDomain).collect(java.util.stream.Collectors.toList());
         return new TransferTagPage(records, page.getTotal(), page.getCurrent() - 1, page.getSize());
     }
 
@@ -73,7 +73,7 @@ public class TransferTagGatewayImpl implements TransferTagGateway {
                 )
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -100,7 +100,7 @@ public class TransferTagGatewayImpl implements TransferTagGateway {
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);

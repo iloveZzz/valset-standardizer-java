@@ -1,6 +1,6 @@
 package com.yss.valset.task.application.service;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;

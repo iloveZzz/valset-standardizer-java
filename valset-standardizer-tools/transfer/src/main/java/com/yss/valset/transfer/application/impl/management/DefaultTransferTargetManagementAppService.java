@@ -35,7 +35,7 @@ public class DefaultTransferTargetManagementAppService implements TransferTarget
         return transferTargetGateway.listTargets(targetType, targetCode, enabled, limit)
                 .stream()
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -61,7 +61,7 @@ public class DefaultTransferTargetManagementAppService implements TransferTarget
                 existing == null ? null : existing.connectionConfig(),
                 command.getConnectionConfig()
         );
-        Map<String, Object> targetMeta = command.getTargetMeta() == null ? Map.of() : command.getTargetMeta();
+        Map<String, Object> targetMeta = command.getTargetMeta() == null ? java.util.Collections.emptyMap() : command.getTargetMeta();
         TransferTarget transferTarget = new TransferTarget(
                 parseLong(command.getTargetId()) == null ? null : parseLong(command.getTargetId()),
                 command.getTargetCode(),
@@ -131,9 +131,9 @@ public class DefaultTransferTargetManagementAppService implements TransferTarget
         if (existing == null || existing.isEmpty() || incoming == null || incoming.isEmpty()) {
             return merged;
         }
-        for (String key : List.of("password", "accessKey", "secretKey", "passphrase")) {
+        for (String key : java.util.Arrays.asList("password", "accessKey", "secretKey", "passphrase")) {
             Object incomingValue = incoming.get(key);
-            if (incomingValue == null || String.valueOf(incomingValue).isBlank()) {
+            if (incomingValue == null || String.valueOf(incomingValue).trim().isEmpty()) {
                 Object existingValue = existing.get(key);
                 if (existingValue != null) {
                     merged.put(key, existingValue);
@@ -144,7 +144,7 @@ public class DefaultTransferTargetManagementAppService implements TransferTarget
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);

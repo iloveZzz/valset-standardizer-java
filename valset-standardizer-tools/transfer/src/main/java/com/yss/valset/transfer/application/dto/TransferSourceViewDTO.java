@@ -13,7 +13,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TransferSourceViewDTO {
+public class TransferSourceViewDTO implements java.io.Serializable {
 
     /**
      * 文件来源主键。

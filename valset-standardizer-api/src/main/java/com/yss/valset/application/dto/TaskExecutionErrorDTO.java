@@ -3,12 +3,14 @@ package com.yss.valset.application.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 任务执行失败时返回给前端的结构化错误信息。
  */
 @Data
 @Builder
-public class TaskExecutionErrorDTO {
+public class TaskExecutionErrorDTO implements Serializable {
     /**
      * 错误编码。
      */

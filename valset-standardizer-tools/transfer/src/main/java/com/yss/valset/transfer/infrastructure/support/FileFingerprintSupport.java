@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 
 /**
  * 文件内容指纹工具。
@@ -43,7 +42,16 @@ public final class FileFingerprintSupport {
                     digest.update(buffer, 0, read);
                 }
             }
-            return HexFormat.of().formatHex(digest.digest());
+            byte[] hashed = digest.digest();
+            StringBuilder builder = new StringBuilder(hashed.length * 2);
+            for (byte value : hashed) {
+                String hex = Integer.toHexString(value & 0xff);
+                if (hex.length() == 1) {
+                    builder.append('0');
+                }
+                builder.append(hex);
+            }
+            return builder.toString();
         } catch (IOException e) {
             throw new IllegalStateException("计算文件指纹失败", e);
         } catch (NoSuchAlgorithmException e) {

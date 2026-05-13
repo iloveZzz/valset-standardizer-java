@@ -15,27 +15,27 @@ public final class MatchTextSupport {
     private static final Pattern TOKEN_SPLIT_PATTERN = Pattern.compile("[_\\-\\s>/]+");
     private static final Pattern NON_WORD_PATTERN = Pattern.compile("[^\\w\\u4e00-\\u9fff]+");
 
-    private static final Set<String> INSTANCE_KEYWORDS = Set.of(
+    private static final Set<String> INSTANCE_KEYWORDS = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
             "支行", "营业部", "席位", "账户", "账户号", "证券", "基金", "公司", "银行", "银行股份", "托管行", "代码", "编号", "otc", "ib"
-    );
+    ));
 
-    private static final Set<String> BUSINESS_KEYWORDS = Set.of(
+    private static final Set<String> BUSINESS_KEYWORDS = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
             "存款", "协议存款", "活期", "定期", "通知存款", "回购", "返售", "利息", "应计", "成本", "估值", "增值", "减值", "准备",
             "应收", "应付", "收入", "管理费", "托管费", "手续费", "佣金", "债券", "股票", "新股", "未上市", "网上", "网下", "锁定",
             "限售", "科创板", "创业板", "银行间", "上交所", "深交所", "场外", "开放式", "中债登", "上清所", "质押式", "买断式",
             "期货", "期权", "备付金", "清算备付金", "信用账户", "普通账户", "货币", "暂估", "增值税", "城建税", "教育税",
             "教育附加", "地方教育附加", "印花税", "结算服务费", "结算费用", "交易费用", "交易手续费"
-    );
+    ));
 
-    private static final Set<String> GENERIC_TOKENS = Set.of("资产", "金融", "产品", "集合", "专用", "默认", "其他");
+    private static final Set<String> GENERIC_TOKENS = new java.util.LinkedHashSet<>(java.util.Arrays.asList("资产", "金融", "产品", "集合", "专用", "默认", "其他"));
 
     private static final Map<String, String> SYNONYM_GROUPS;
 
-    private static final Set<String> DOMAIN_SIGNALS = Set.of(
+    private static final Set<String> DOMAIN_SIGNALS = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
             "成本", "估值增值", "期货", "期权", "科创板", "创业板", "网上", "网下", "锁定", "新股", "非公开发行", "信用账户",
             "备付金", "利息", "应收", "应付", "收入", "暂估", "货币", "场外", "开放式", "上交所", "深交所", "银行间",
             "债券", "结算服务费", "交易手续费", "城建税", "教育税", "教育附加"
-    );
+    ));
 
     static {
         Map<String, String> synonymGroups = new LinkedHashMap<>();
@@ -87,16 +87,16 @@ public final class MatchTextSupport {
     public static List<String> tokenizeText(String value) {
         String normalized = normalizeMatchText(value);
         if (normalized.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> rawTokens = new ArrayList<>();
         for (String chunk : normalized.split("\\s+")) {
-            if (chunk.isBlank()) {
+            if (chunk.trim().isEmpty()) {
                 continue;
             }
             String[] tokens = TOKEN_SPLIT_PATTERN.split(chunk);
             for (String token : tokens) {
-                if (!token.isBlank()) {
+                if (!token.trim().isEmpty()) {
                     rawTokens.add(token);
                 }
             }
@@ -124,7 +124,7 @@ public final class MatchTextSupport {
         }
         List<String> filtered = new ArrayList<>();
         for (String pathName : pathNames) {
-            if (pathName != null && !pathName.isBlank()) {
+            if (pathName != null && !pathName.trim().isEmpty()) {
                 filtered.add(pathName);
             }
         }
@@ -137,7 +137,7 @@ public final class MatchTextSupport {
     public static Map<String, Integer> tokenCounter(String value) {
         List<String> tokens = tokenizeText(value);
         if (tokens.isEmpty()) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         Map<String, Integer> counter = new HashMap<>();
         for (String token : tokens) {
@@ -177,7 +177,7 @@ public final class MatchTextSupport {
     public static Set<String> keywordSet(String value) {
         String normalized = normalizeMatchText(value);
         if (normalized.isEmpty()) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         Set<String> result = new LinkedHashSet<>();
         for (String keyword : BUSINESS_KEYWORDS) {
@@ -194,7 +194,7 @@ public final class MatchTextSupport {
     public static Set<String> domainSignalSet(String value) {
         String normalized = normalizeMatchText(value);
         if (normalized.isEmpty()) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         Set<String> result = new LinkedHashSet<>();
         for (String signal : DOMAIN_SIGNALS) {
@@ -253,7 +253,7 @@ public final class MatchTextSupport {
      * 检查文本是否包含任何提供的关键字。
      */
     public static boolean containsAny(String text, Collection<String> keywords) {
-        if (text == null || text.isBlank() || keywords == null || keywords.isEmpty()) {
+        if (text == null || text.trim().isEmpty() || keywords == null || keywords.isEmpty()) {
             return false;
         }
         for (String keyword : keywords) {
@@ -303,7 +303,7 @@ public final class MatchTextSupport {
      */
     public static Set<String> intersection(Set<String> left, Set<String> right) {
         if (left == null || right == null || left.isEmpty() || right.isEmpty()) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         Set<String> result = new HashSet<>(left);
         result.retainAll(right);

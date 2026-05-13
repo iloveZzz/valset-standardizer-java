@@ -31,11 +31,11 @@ public class TransferJsonMapper {
         if (value == null) {
             return null;
         }
-        if (value instanceof Map<?, ?> map) {
-            value = transferSecretCodec.encryptMap(castMap(map));
+        if (value instanceof Map<?, ?>) {
+            value = transferSecretCodec.encryptMap(castMap((Map<?, ?>) value));
         }
-        if (value instanceof CharSequence charSequence) {
-            return charSequence.toString();
+        if (value instanceof CharSequence) {
+            return value.toString();
         }
         try {
             return objectMapper.writeValueAsString(value);
@@ -49,8 +49,8 @@ public class TransferJsonMapper {
         if (value == null) {
             return null;
         }
-        if (value instanceof Map<?, ?> map) {
-            Map<String, Object> compactMap = compactMap(castMap(map));
+        if (value instanceof Map<?, ?>) {
+            Map<String, Object> compactMap = compactMap(castMap((Map<?, ?>) value));
             if (compactMap.isEmpty()) {
                 return null;
             }
@@ -68,7 +68,7 @@ public class TransferJsonMapper {
     }
 
     public Map<String, Object> toMap(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         try {
@@ -103,15 +103,16 @@ public class TransferJsonMapper {
         if (value == null) {
             return null;
         }
-        if (value instanceof CharSequence charSequence) {
-            String text = charSequence.toString().trim();
+        if (value instanceof CharSequence) {
+            String text = value.toString().trim();
             return text.isEmpty() ? null : text;
         }
-        if (value instanceof Map<?, ?> map) {
-            Map<String, Object> compactMap = compactMap(castMap(map));
+        if (value instanceof Map<?, ?>) {
+            Map<String, Object> compactMap = compactMap(castMap((Map<?, ?>) value));
             return compactMap.isEmpty() ? null : compactMap;
         }
-        if (value instanceof Collection<?> collection) {
+        if (value instanceof Collection<?>) {
+            Collection<?> collection = (Collection<?>) value;
             ArrayList<Object> compactItems = new ArrayList<>();
             for (Object item : collection) {
                 Object compactItem = compactValue(item);

@@ -3,6 +3,7 @@ package com.yss.valset.application.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -10,7 +11,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class RawValuationSheetDTO {
+public class RawValuationSheetDTO implements Serializable {
     /**
      * 工作表名称。
      */

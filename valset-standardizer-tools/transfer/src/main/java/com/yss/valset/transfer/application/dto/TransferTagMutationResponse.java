@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferTagMutationResponse {
+public class TransferTagMutationResponse implements java.io.Serializable{
 
     private String operation;
 

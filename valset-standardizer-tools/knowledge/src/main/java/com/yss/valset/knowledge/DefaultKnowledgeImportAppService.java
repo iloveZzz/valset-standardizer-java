@@ -118,7 +118,7 @@ public class DefaultKnowledgeImportAppService implements KnowledgeImportAppServi
     }
 
     private DataSourceType resolveDataSourceType(String dataSourceType) {
-        if (dataSourceType == null || dataSourceType.isBlank()) {
+        if (dataSourceType == null || dataSourceType.trim().isEmpty()) {
             return DataSourceType.EXCEL;
         }
         try {

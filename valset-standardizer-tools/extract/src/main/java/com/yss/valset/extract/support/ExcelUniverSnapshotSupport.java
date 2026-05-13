@@ -99,9 +99,9 @@ public class ExcelUniverSnapshotSupport implements Closeable {
             headerMeta.put("defaultColumnWidth", resolveDefaultColumnWidth(sheet));
             headerMeta.put("defaultRowHeight", resolveDefaultRowHeight(sheet));
             headerMeta.put("mergeData", buildMergeData(sheet));
-            headerMeta.put("headerRowNumbers", previewRows == null ? List.of() : previewRows.stream()
+            headerMeta.put("headerRowNumbers", previewRows == null ? java.util.Arrays.asList() : previewRows.stream()
                     .map(RowSnapshot::getRowIndex)
-                    .toList());
+                    .collect(java.util.stream.Collectors.toList()));
             Map<Integer, Map<Integer, Map<String, Object>>> cellData = new LinkedHashMap<>();
             if (previewRows != null) {
                 for (RowSnapshot previewRow : previewRows) {
@@ -173,7 +173,7 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         if (cellStyle.getFillPattern() != FillPatternType.NO_FILL) {
             String fillColor = resolveFillColor(cellStyle);
             if (fillColor != null) {
-                styleData.put("bg", Map.of("rgb", fillColor));
+                styleData.put("bg", com.yss.valset.common.support.Java8Maps.of("rgb", fillColor));
             }
         }
 
@@ -188,12 +188,12 @@ public class ExcelUniverSnapshotSupport implements Closeable {
 
         int rotation = cellStyle.getRotation();
         if (rotation != 0) {
-            styleData.put("tr", Map.of("a", rotation == 255 ? 90 : rotation, "v", rotation == 255 ? 1 : 0));
+            styleData.put("tr", com.yss.valset.common.support.Java8Maps.of("a", rotation == 255 ? 90 : rotation, "v", rotation == 255 ? 1 : 0));
         }
 
         String dataFormat = cellStyle.getDataFormatString();
-        if (dataFormat != null && !dataFormat.isBlank() && !"General".equalsIgnoreCase(dataFormat)) {
-            styleData.put("n", Map.of("pattern", dataFormat));
+        if (dataFormat != null && !dataFormat.trim().isEmpty() && !"General".equalsIgnoreCase(dataFormat)) {
+            styleData.put("n", com.yss.valset.common.support.Java8Maps.of("pattern", dataFormat));
         }
         return styleData;
     }
@@ -215,7 +215,7 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         border.put("s", borderStyle.getCode());
         String color = resolveIndexedColor(colorIndex);
         if (color != null) {
-            border.put("cl", Map.of("rgb", color));
+            border.put("cl", com.yss.valset.common.support.Java8Maps.of("rgb", color));
         }
         borderData.put(key, border);
     }
@@ -224,22 +224,32 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         if (alignment == null) {
             return 1;
         }
-        return switch (alignment) {
-            case CENTER, CENTER_SELECTION, GENERAL -> 2;
-            case RIGHT, FILL, JUSTIFY -> 3;
-            default -> 1;
-        };
+        switch (alignment) {
+            case CENTER:
+            case CENTER_SELECTION:
+            case GENERAL:
+                return 2;
+            case RIGHT:
+            case FILL:
+            case JUSTIFY:
+                return 3;
+            default:
+                return 1;
+        }
     }
 
     private Integer convertVerticalAlignment(VerticalAlignment alignment) {
         if (alignment == null) {
             return 1;
         }
-        return switch (alignment) {
-            case CENTER -> 2;
-            case BOTTOM -> 3;
-            default -> 1;
-        };
+        switch (alignment) {
+            case CENTER:
+                return 2;
+            case BOTTOM:
+                return 3;
+            default:
+                return 1;
+        }
     }
 
     private String resolveFillColor(CellStyle cellStyle) {
@@ -255,8 +265,8 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         if (color == null) {
             return null;
         }
-        if (color instanceof XSSFColor xssfColor) {
-            return normalizeHex(xssfColor.getARGBHex());
+        if (color instanceof XSSFColor) {
+            return normalizeHex(((XSSFColor) color).getARGBHex());
         }
         return null;
     }
@@ -270,21 +280,30 @@ public class ExcelUniverSnapshotSupport implements Closeable {
     }
 
     private String indexedColorHex(short colorIndex) {
-        return switch (colorIndex) {
-            case 8 -> "#000000";
-            case 10 -> "#FF0000";
-            case 11 -> "#00FF00";
-            case 12 -> "#0000FF";
-            case 13 -> "#FFFF00";
-            case 14 -> "#FF00FF";
-            case 15 -> "#00FFFF";
-            case 64 -> "#000000";
-            default -> null;
-        };
+        switch (colorIndex) {
+            case 8:
+                return "#000000";
+            case 10:
+                return "#FF0000";
+            case 11:
+                return "#00FF00";
+            case 12:
+                return "#0000FF";
+            case 13:
+                return "#FFFF00";
+            case 14:
+                return "#FF00FF";
+            case 15:
+                return "#00FFFF";
+            case 64:
+                return "#000000";
+            default:
+                return null;
+        }
     }
 
     private String normalizeHex(String color) {
-        if (color == null || color.isBlank()) {
+        if (color == null || color.trim().isEmpty()) {
             return null;
         }
         String value = color.replace("#", "");
@@ -299,7 +318,7 @@ public class ExcelUniverSnapshotSupport implements Closeable {
 
     private List<Map<String, Object>> buildMergeData(Sheet sheet) {
         if (sheet == null || sheet.getNumMergedRegions() <= 0) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<Map<String, Object>> mergeData = new ArrayList<>(sheet.getNumMergedRegions());
         for (int index = 0; index < sheet.getNumMergedRegions(); index++) {
@@ -347,9 +366,9 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         headerMeta.put("defaultColumnWidth", XML_DEFAULT_COLUMN_WIDTH);
         headerMeta.put("defaultRowHeight", XML_DEFAULT_ROW_HEIGHT);
         headerMeta.put("mergeData", buildMergeData(sheet));
-        headerMeta.put("headerRowNumbers", previewRows == null ? List.of() : previewRows.stream()
+        headerMeta.put("headerRowNumbers", previewRows == null ? java.util.Arrays.asList() : previewRows.stream()
                 .map(RowSnapshot::getRowIndex)
-                .toList());
+                .collect(java.util.stream.Collectors.toList()));
         Map<Integer, Map<Integer, Map<String, Object>>> cellData = new LinkedHashMap<>();
         if (previewRows != null) {
             for (RowSnapshot previewRow : previewRows) {
@@ -393,7 +412,7 @@ public class ExcelUniverSnapshotSupport implements Closeable {
 
     private List<Map<String, Object>> buildMergeData(SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet) {
         if (sheet == null || sheet.mergeRegions() == null || sheet.mergeRegions().isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<Map<String, Object>> mergeData = new ArrayList<>(sheet.mergeRegions().size());
         for (SpreadsheetXmlSupport.SpreadsheetXmlMergeRegion range : sheet.mergeRegions()) {

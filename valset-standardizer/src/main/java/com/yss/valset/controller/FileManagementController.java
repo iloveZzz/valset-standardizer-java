@@ -1,7 +1,7 @@
 package com.yss.valset.controller;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.application.dto.ValsetFileInfoRepairResultDTO;
 import com.yss.valset.application.dto.UploadValuationFileResponse;
 import com.yss.valset.application.command.ValsetFileInfoRepairCommand;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 
 /**
  * 文件信息管理接口。

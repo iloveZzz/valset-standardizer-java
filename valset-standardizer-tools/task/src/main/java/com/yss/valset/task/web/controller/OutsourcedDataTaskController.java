@@ -1,8 +1,9 @@
 package com.yss.valset.task.web.controller;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.PageResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
+import com.yss.cloud.dto.result.PageResult;
+import com.yss.cloud.dto.result.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
@@ -13,7 +14,7 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import com.yss.valset.task.application.service.OutsourcedDataTaskService;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

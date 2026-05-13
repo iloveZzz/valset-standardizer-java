@@ -84,7 +84,7 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
                 Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
                         .ge(TransferDeliveryRecordPO::getDeliveredAt, startInclusive)
                         .lt(TransferDeliveryRecordPO::getDeliveredAt, endExclusive)
-                        .eq(executeStatus != null && !executeStatus.isBlank(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
+                        .eq(executeStatus != null && !executeStatus.trim().isEmpty(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
         );
     }
 
@@ -92,11 +92,11 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
     public List<TransferDeliveryRecord> listRecords(String routeId, String transferId, String targetCode, String executeStatus, Integer limit) {
         Long routeIdValue = parseLong(routeId);
         Long transferIdValue = parseLong(transferId);
-        var query = Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TransferDeliveryRecordPO> query = Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
                 .eq(routeIdValue != null, TransferDeliveryRecordPO::getRouteId, routeIdValue)
                 .eq(transferIdValue != null, TransferDeliveryRecordPO::getTransferId, transferIdValue)
-                .like(targetCode != null && !targetCode.isBlank(), TransferDeliveryRecordPO::getTargetCode, targetCode)
-                .eq(executeStatus != null && !executeStatus.isBlank(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
+                .like(targetCode != null && !targetCode.trim().isEmpty(), TransferDeliveryRecordPO::getTargetCode, targetCode)
+                .eq(executeStatus != null && !executeStatus.trim().isEmpty(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
                 .orderByDesc(TransferDeliveryRecordPO::getDeliveredAt)
                 .orderByDesc(TransferDeliveryRecordPO::getDeliveryId);
         if (limit != null && limit > 0) {
@@ -105,36 +105,36 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
         return transferDeliveryRecordRepository.selectList(query)
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
     public List<TransferDeliveryRecord> listRecordsByTransferIds(List<String> transferIds, String executeStatus) {
         if (transferIds == null || transferIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<Long> normalizedTransferIds = transferIds.stream()
                 .map(this::parseLong)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (normalizedTransferIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return transferDeliveryRecordRepository.selectList(
                         Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
                                 .in(TransferDeliveryRecordPO::getTransferId, normalizedTransferIds)
-                                .eq(executeStatus != null && !executeStatus.isBlank(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
+                                .eq(executeStatus != null && !executeStatus.trim().isEmpty(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
                                 .orderByDesc(TransferDeliveryRecordPO::getDeliveredAt)
                                 .orderByDesc(TransferDeliveryRecordPO::getDeliveryId)
                 )
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);
@@ -162,7 +162,7 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
 
     private java.util.Map<String, Object> buildResponseSnapshot(TransferResult transferResult) {
         java.util.Map<String, Object> snapshot = new java.util.LinkedHashMap<>();
-        java.util.List<String> messages = transferResult == null || transferResult.messages() == null ? java.util.List.of() : transferResult.messages();
+        java.util.List<String> messages = transferResult == null || transferResult.messages() == null ? java.util.Arrays.asList() : transferResult.messages();
         int previewSize = Math.min(messages.size(), 3);
         snapshot.put("success", transferResult != null && transferResult.success());
         snapshot.put("fileId", transferResult == null ? null : transferResult.fileId());

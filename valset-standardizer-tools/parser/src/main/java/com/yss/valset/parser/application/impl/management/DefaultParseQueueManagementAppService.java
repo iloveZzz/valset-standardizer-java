@@ -1,6 +1,7 @@
 package com.yss.valset.parser.application.impl.management;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.alibaba.nacos.shaded.com.google.common.collect.ImmutableList;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.parser.application.command.ParseQueueBackfillCommand;
 import com.yss.valset.parser.application.command.ParseQueueCompleteCommand;
 import com.yss.valset.parser.application.command.ParseQueueFailCommand;
@@ -76,7 +77,7 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
                 query == null ? null : query.getPageIndex(),
                 query == null ? null : query.getPageSize()
         );
-        List<ParseQueueViewDTO> records = page.records() == null ? List.of() : page.records().stream().map(this::toView).toList();
+        List<ParseQueueViewDTO> records = page.records() == null ? java.util.Arrays.asList() : page.records().stream().map(this::toView).collect(java.util.stream.Collectors.toList());
         return PageResult.of(records, page.total(), page.pageSize(), page.pageIndex());
     }
 
@@ -114,10 +115,10 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         String sourceCode = command == null ? null : command.getSourceCode();
         String routeId = command == null ? null : command.getRouteId();
         List<TransferObject> candidates = command != null && StringUtils.hasText(command.getTransferId())
-                ? transferObjectGateway.findById(command.getTransferId()).map(List::of).orElse(List.of())
+                ? transferObjectGateway.findById(command.getTransferId()).map(ImmutableList::of).orElse(ImmutableList.of())
                 : transferObjectGateway.listParseQueueCandidates(sourceId, sourceCode, routeId, fileStatus, deliveryStatus, null);
         if (candidates.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Map<String, TransferDeliveryRecord> deliveryRecordMap = loadLatestDeliveryRecordMap(candidates);
         Map<String, TransferObjectTag> valuationTagMap = loadValuationTagMap(candidates);
@@ -367,16 +368,16 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         if (!StringUtils.hasText(transferId)) {
             return null;
         }
-        return transferDeliveryGateway.listRecordsByTransferIds(List.of(transferId), "SUCCESS").stream().findFirst().orElse(null);
+        return transferDeliveryGateway.listRecordsByTransferIds(java.util.Arrays.asList(transferId), "SUCCESS").stream().findFirst().orElse(null);
     }
 
     private Map<String, TransferDeliveryRecord> loadLatestDeliveryRecordMap(List<TransferObject> objects) {
-        List<String> transferIds = objects == null ? List.of() : objects.stream()
+        List<String> transferIds = objects == null ? java.util.Arrays.asList() : objects.stream()
                 .map(TransferObject::transferId)
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         Map<String, TransferDeliveryRecord> result = new LinkedHashMap<>();
         for (TransferDeliveryRecord record : transferDeliveryGateway.listRecordsByTransferIds(transferIds, "SUCCESS")) {
@@ -388,12 +389,12 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
     }
 
     private Map<String, TransferObjectTag> loadValuationTagMap(List<TransferObject> objects) {
-        List<String> transferIds = objects == null ? List.of() : objects.stream()
+        List<String> transferIds = objects == null ? java.util.Arrays.asList() : objects.stream()
                 .map(TransferObject::transferId)
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         Map<String, TransferObjectTag> result = new LinkedHashMap<>();
         for (TransferObjectTag tag : transferObjectTagGateway.listByTransferIds(transferIds)) {
@@ -634,10 +635,10 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         if (!StringUtils.hasText(normalized)) {
             return null;
         }
-        return switch (normalized) {
-            case "IDENTIFIED" -> "已识别";
-            default -> normalized;
-        };
+        if ("IDENTIFIED".equals(normalized)) {
+            return "已识别";
+        }
+        return normalized;
     }
 
     private String resolveDeliveryStatusLabel(String value) {
@@ -645,11 +646,13 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         if (!StringUtils.hasText(normalized)) {
             return null;
         }
-        return switch (normalized) {
-            case "DELIVERED" -> "已投递";
-            case "UNDELIVERED" -> "未投递";
-            default -> normalized;
-        };
+        if ("DELIVERED".equals(normalized)) {
+            return "已投递";
+        }
+        if ("UNDELIVERED".equals(normalized)) {
+            return "未投递";
+        }
+        return normalized;
     }
 
     private String normalizeFileStatus(String value) {
@@ -657,11 +660,13 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
             return null;
         }
         String normalized = value.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "IDENTIFIED", "已识别" -> "IDENTIFIED";
-            case "DELIVERED", "已投递" -> "DELIVERED";
-            default -> normalized;
-        };
+        if ("IDENTIFIED".equals(normalized) || "已识别".equals(normalized)) {
+            return "IDENTIFIED";
+        }
+        if ("DELIVERED".equals(normalized) || "已投递".equals(normalized)) {
+            return "DELIVERED";
+        }
+        return normalized;
     }
 
     private String normalizeDeliveryStatus(String value) {
@@ -669,11 +674,16 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
             return null;
         }
         String normalized = value.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "DELIVERED", "SUCCESS", "已投递" -> "DELIVERED";
-            case "UNDELIVERED", "FAILED", "NOT_DELIVERED", "未投递" -> "UNDELIVERED";
-            default -> normalized;
-        };
+        if ("DELIVERED".equals(normalized) || "SUCCESS".equals(normalized) || "已投递".equals(normalized)) {
+            return "DELIVERED";
+        }
+        if ("UNDELIVERED".equals(normalized)
+                || "FAILED".equals(normalized)
+                || "NOT_DELIVERED".equals(normalized)
+                || "未投递".equals(normalized)) {
+            return "UNDELIVERED";
+        }
+        return normalized;
     }
 
     private String normalizeParseStatus(String value) {
@@ -681,13 +691,19 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
             return null;
         }
         String normalized = value.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "PENDING", "待解析" -> "PENDING";
-            case "PARSING", "解析中" -> "PARSING";
-            case "PARSED", "已解析" -> "PARSED";
-            case "FAILED", "解析失败" -> "FAILED";
-            default -> normalized;
-        };
+        if ("PENDING".equals(normalized) || "待解析".equals(normalized)) {
+            return "PENDING";
+        }
+        if ("PARSING".equals(normalized) || "解析中".equals(normalized)) {
+            return "PARSING";
+        }
+        if ("PARSED".equals(normalized) || "已解析".equals(normalized)) {
+            return "PARSED";
+        }
+        if ("FAILED".equals(normalized) || "解析失败".equals(normalized)) {
+            return "FAILED";
+        }
+        return normalized;
     }
 
     private String normalizeTriggerMode(String value) {
@@ -695,11 +711,13 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
             return null;
         }
         String normalized = value.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "AUTO", "自动生成" -> "AUTO";
-            case "MANUAL", "手工生成" -> "MANUAL";
-            default -> normalized;
-        };
+        if ("AUTO".equals(normalized) || "自动生成".equals(normalized)) {
+            return "AUTO";
+        }
+        if ("MANUAL".equals(normalized) || "手工生成".equals(normalized)) {
+            return "MANUAL";
+        }
+        return normalized;
     }
 
     private String enumName(Enum<?> value) {

@@ -31,7 +31,7 @@ public class DefaultTransferFormTemplateQueryService implements TransferFormTemp
                 .stream()
                 .sorted(Comparator.comparing(FormTemplate::getCategory).thenComparing(FormTemplate::getName))
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -46,7 +46,7 @@ public class DefaultTransferFormTemplateQueryService implements TransferFormTemp
                         .categoryName(categoryNameOf(entry.getKey()))
                         .templates(entry.getValue())
                         .build())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -75,14 +75,24 @@ public class DefaultTransferFormTemplateQueryService implements TransferFormTemp
         if (category == null) {
             return "未分类";
         }
-        return switch (category) {
-            case "transfer_source" -> "来源";
-            case "transfer_target" -> "目标";
-            case "transfer_rule" -> "路由规则";
-            case "transfer_route" -> "路由配置";
-            case "transfer_tag" -> "标签管理";
-            case "storage" -> "存储";
-            default -> category;
-        };
+        if ("transfer_source".equals(category)) {
+            return "来源";
+        }
+        if ("transfer_target".equals(category)) {
+            return "目标";
+        }
+        if ("transfer_rule".equals(category)) {
+            return "路由规则";
+        }
+        if ("transfer_route".equals(category)) {
+            return "路由配置";
+        }
+        if ("transfer_tag".equals(category)) {
+            return "标签管理";
+        }
+        if ("storage".equals(category)) {
+            return "存储";
+        }
+        return category;
     }
 }

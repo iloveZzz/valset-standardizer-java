@@ -49,7 +49,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
     @Override
     public List<TransferObjectTag> tag(TransferObject transferObject, RecognitionContext recognitionContext, ProbeResult probeResult) {
         if (transferObject == null || transferObject.transferId() == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         RecognitionContext effectiveRecognitionContext = resolveTaggingContext(recognitionContext, transferObject);
         String tagPath = resolveTagPath(effectiveRecognitionContext, transferObject);
@@ -100,16 +100,16 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
 
     @Override
     public List<TransferObjectTag> retag(String transferId, boolean overwrite) {
-        if (transferId == null || transferId.isBlank()) {
-            return List.of();
+        if (transferId == null || transferId.trim().isEmpty()) {
+            return java.util.Arrays.asList();
         }
         TransferObject transferObject = transferObjectGateway.findById(transferId).orElse(null);
         if (transferObject == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<TransferTagDefinition> tagDefinitions = transferTagGateway.listEnabledTags();
         if (tagDefinitions.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         if (overwrite) {
             transferObjectTagGateway.deleteByTransferId(transferId);
@@ -137,7 +137,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
                 null,
                 normalizeText(command == null ? null : command.getMailFolder()),
                 normalizeText(command == null ? null : command.getPath()),
-                command == null || command.getAttributes() == null ? Map.of() : command.getAttributes()
+                command == null || command.getAttributes() == null ? java.util.Collections.emptyMap() : command.getAttributes()
         );
         TagEvaluation evaluation = evaluate(definition, recognitionContext, null, null);
         return TransferTagTestResultDTO.builder()
@@ -179,18 +179,24 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
             regexMatched = regexResult.matched();
             matchedField = regexResult.matchedField();
             matchedValue = regexResult.matchedValue();
-            if (regexResult.message() != null && !regexResult.message().isBlank()) {
+            if (regexResult.message() != null && !regexResult.message().trim().isEmpty()) {
                 message = regexResult.message();
             }
         }
-        boolean matched = switch (strategy) {
-            case "" -> scriptMatched || regexMatched;
-            case "SCRIPT_RULE" -> scriptMatched;
-            case "REGEX_RULE" -> regexMatched;
-            case "SCRIPT_AND_REGEX" -> scriptMatched && regexMatched;
-            case "SCRIPT_OR_REGEX" -> scriptMatched || regexMatched;
-            default -> scriptMatched || regexMatched;
-        };
+        boolean matched;
+        if ("".equals(strategy)) {
+            matched = scriptMatched || regexMatched;
+        } else if ("SCRIPT_RULE".equals(strategy)) {
+            matched = scriptMatched;
+        } else if ("REGEX_RULE".equals(strategy)) {
+            matched = regexMatched;
+        } else if ("SCRIPT_AND_REGEX".equals(strategy)) {
+            matched = scriptMatched && regexMatched;
+        } else if ("SCRIPT_OR_REGEX".equals(strategy)) {
+            matched = scriptMatched || regexMatched;
+        } else {
+            matched = scriptMatched || regexMatched;
+        }
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("sourceType", recognitionContext == null ? null : recognitionContext.sourceType());
         snapshot.put("sourceCode", recognitionContext == null ? null : recognitionContext.sourceCode());
@@ -222,7 +228,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
     }
 
     private String normalizeScriptBody(String scriptBody) {
-        if (scriptBody == null || scriptBody.isBlank()) {
+        if (scriptBody == null || scriptBody.trim().isEmpty()) {
             return scriptBody;
         }
         String normalized = scriptBody.trim();
@@ -233,16 +239,14 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
                 || normalized.contains("String(source)")
                 || normalized.contains("filePath.trim()")
                 || normalized.contains("source.trim()"))) {
-            return """
-                    String source = hasText(filePath) ? filePath : path;
-                    if (!hasText(source)) {
-                        return false;
-                    }
-                    if (!(isExcelFile(source) || isCsvFile(source))) {
-                        return false;
-                    }
-                    return isValuationTableByMeta(source, tagMeta);
-                    """;
+            return "String source = hasText(filePath) ? filePath : path;\n"
+                    + "if (!hasText(source)) {\n"
+                    + "    return false;\n"
+                    + "}\n"
+                    + "if (!(isExcelFile(source) || isCsvFile(source))) {\n"
+                    + "    return false;\n"
+                    + "}\n"
+                    + "return isValuationTableByMeta(source, tagMeta);";
         }
         return scriptBody;
     }
@@ -262,7 +266,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
             variables.putIfAbsent("mailFolder", transferObject.mailFolder());
             variables.putIfAbsent("mimeType", transferObject.mimeType());
             variables.putIfAbsent("attributes", transferObject.fileMeta());
-            variables.putIfAbsent("tags", List.of());
+            variables.putIfAbsent("tags", java.util.Arrays.asList());
         }
         return variables;
     }
@@ -271,7 +275,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
         if (transferObject == null) {
             return null;
         }
-        Map<String, Object> fileMeta = transferObject.fileMeta() == null ? Map.of() : transferObject.fileMeta();
+        Map<String, Object> fileMeta = transferObject.fileMeta() == null ? java.util.Collections.emptyMap() : transferObject.fileMeta();
         return new RecognitionContext(
                 parseSourceType(transferObject.sourceType()),
                 transferObject.sourceCode(),
@@ -293,10 +297,10 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
     }
 
     private String resolveTagPath(RecognitionContext recognitionContext, TransferObject transferObject) {
-        if (transferObject != null && transferObject.localTempPath() != null && !transferObject.localTempPath().isBlank()) {
+        if (transferObject != null && transferObject.localTempPath() != null && !transferObject.localTempPath().trim().isEmpty()) {
             return transferObject.localTempPath();
         }
-        if (recognitionContext != null && recognitionContext.path() != null && !recognitionContext.path().isBlank()) {
+        if (recognitionContext != null && recognitionContext.path() != null && !recognitionContext.path().trim().isEmpty()) {
             return recognitionContext.path();
         }
         return null;
@@ -330,7 +334,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
                                            RecognitionContext recognitionContext,
                                            TransferObject transferObject) {
         String pattern = normalizeText(definition.regexPattern());
-        if (pattern.isBlank()) {
+        if (pattern.trim().isEmpty()) {
             return RegexMatchResult.miss("正则配置为空");
         }
         String candidate = firstNonBlank(
@@ -341,7 +345,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
                 recognitionContext == null ? null : recognitionContext.sourceCode(),
                 transferObject == null ? null : transferObject.sourceCode()
         );
-        if (candidate.isBlank()) {
+        if (candidate.trim().isEmpty()) {
             return RegexMatchResult.miss("正则候选值为空");
         }
         boolean matched = Pattern.compile(pattern).matcher(candidate).find();
@@ -359,7 +363,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
             return "";
         }
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value.trim();
             }
         }
@@ -367,7 +371,7 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
     }
 
     private SourceType parseSourceType(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         try {
@@ -377,27 +381,99 @@ public class DefaultTransferTaggingService implements TransferTaggingUseCase {
         }
     }
 
-    private record TagEvaluation(
-            boolean matched,
-            boolean matchedByScript,
-            boolean matchedByRegex,
-            String message,
-            String matchedField,
-            String matchedValue,
-            Map<String, Object> snapshot
-    ) {
+    private static final class TagEvaluation {
+        private final boolean matched;
+        private final boolean matchedByScript;
+        private final boolean matchedByRegex;
+        private final String message;
+        private final String matchedField;
+        private final String matchedValue;
+        private final Map<String, Object> snapshot;
+
+        private TagEvaluation(boolean matched,
+                              boolean matchedByScript,
+                              boolean matchedByRegex,
+                              String message,
+                              String matchedField,
+                              String matchedValue,
+                              Map<String, Object> snapshot) {
+            this.matched = matched;
+            this.matchedByScript = matchedByScript;
+            this.matchedByRegex = matchedByRegex;
+            this.message = message;
+            this.matchedField = matchedField;
+            this.matchedValue = matchedValue;
+            this.snapshot = snapshot;
+        }
+
         static TagEvaluation miss(String message) {
-            return new TagEvaluation(false, false, false, message, null, null, Map.of());
+            return new TagEvaluation(false, false, false, message, null, null, java.util.Collections.emptyMap());
+        }
+
+        boolean matched() {
+            return matched;
+        }
+
+        boolean matchedByScript() {
+            return matchedByScript;
+        }
+
+        boolean matchedByRegex() {
+            return matchedByRegex;
+        }
+
+        String message() {
+            return message;
+        }
+
+        String matchedField() {
+            return matchedField;
+        }
+
+        String matchedValue() {
+            return matchedValue;
+        }
+
+        Map<String, Object> snapshot() {
+            return snapshot;
         }
     }
 
-    private record RegexMatchResult(boolean matched, String matchedField, String matchedValue, String message) {
+    private static final class RegexMatchResult {
+        private final boolean matched;
+        private final String matchedField;
+        private final String matchedValue;
+        private final String message;
+
+        private RegexMatchResult(boolean matched, String matchedField, String matchedValue, String message) {
+            this.matched = matched;
+            this.matchedField = matchedField;
+            this.matchedValue = matchedValue;
+            this.message = message;
+        }
+
         static RegexMatchResult hit(String field, String value, String message) {
             return new RegexMatchResult(true, field, value, message);
         }
 
         static RegexMatchResult miss(String message) {
             return new RegexMatchResult(false, null, null, message);
+        }
+
+        boolean matched() {
+            return matched;
+        }
+
+        String matchedField() {
+            return matchedField;
+        }
+
+        String matchedValue() {
+            return matchedValue;
+        }
+
+        String message() {
+            return message;
         }
     }
 }

@@ -22,7 +22,7 @@ public final class TrIndexStandardizationSupport {
 
     public static List<TrIndexPO> buildRows(ParsedValuationData standardizedValuationData, String sourceTp, String sourceSign) {
         if (standardizedValuationData == null || standardizedValuationData.getMetrics() == null || standardizedValuationData.getMetrics().isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         LocalDateTime timeStamp = LocalDateTime.now();
         List<TrIndexPO> result = new ArrayList<>(standardizedValuationData.getMetrics().size());
@@ -43,7 +43,7 @@ public final class TrIndexStandardizationSupport {
             LocalDateTime timeStamp
     ) {
         Map<String, Object> standardValues = metric == null || metric.getStandardValues() == null
-                ? Map.of()
+                ? java.util.Collections.emptyMap()
                 : new LinkedHashMap<>(metric.getStandardValues());
 
         TrIndexPO row = new TrIndexPO();
@@ -86,11 +86,11 @@ public final class TrIndexStandardizationSupport {
             return null;
         }
         for (String key : keys) {
-            if (key == null || key.isBlank()) {
+            if (key == null || key.trim().isEmpty()) {
                 continue;
             }
             String value = basicInfo.get(key);
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value.trim();
             }
         }
@@ -103,7 +103,7 @@ public final class TrIndexStandardizationSupport {
     }
 
     private static String normalizeDateValue(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String compact = text.replaceAll("[^0-9]", "");
@@ -114,7 +114,7 @@ public final class TrIndexStandardizationSupport {
     }
 
     private static String extractBizDate(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String compact = text.replaceAll("[^0-9]", "");
@@ -136,7 +136,7 @@ public final class TrIndexStandardizationSupport {
             return null;
         }
         for (String candidate : candidates) {
-            if (candidate != null && !candidate.isBlank()) {
+            if (candidate != null && !candidate.trim().isEmpty()) {
                 return candidate.trim();
             }
         }

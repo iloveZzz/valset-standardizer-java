@@ -2,6 +2,7 @@ package com.yss.valset.extract.support;
 
 import com.yss.valset.domain.matcher.ValsetMatcher;
 import com.yss.valset.domain.model.*;
+import lombok.Value;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,7 +28,7 @@ public final class MappingEvaluationSupport {
     public static List<MappingSample> deduplicateSamples(List<MappingSample> samples) {
         Map<String, MappingSample> deduped = new LinkedHashMap<>();
         if (samples == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         for (MappingSample sample : samples) {
             String key = String.join("|",
@@ -47,10 +48,10 @@ public final class MappingEvaluationSupport {
         if ("hash_holdout".equalsIgnoreCase(splitMode)) {
             List<MappingSample> train = samples.stream()
                     .filter(sample -> stableBucket(sample.getOrgName(), sample.getExternalCode(), sample.getExternalName()) != 0)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             List<MappingSample> test = samples.stream()
                     .filter(sample -> stableBucket(sample.getOrgName(), sample.getExternalCode(), sample.getExternalName()) == 0)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             validateSplit(train, test);
             return new SplitResult(train, test);
         }
@@ -60,20 +61,20 @@ public final class MappingEvaluationSupport {
         List<String> orgNames = samples.stream()
                 .map(MappingSample::getOrgName)
                 .filter(Objects::nonNull)
-                .filter(value -> !value.isBlank())
+                .filter(value -> !value.trim().isEmpty())
                 .distinct()
                 .sorted()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         Map<String, Boolean> holdoutFlags = new HashMap<>();
         for (int index = 0; index < orgNames.size(); index++) {
             holdoutFlags.put(orgNames.get(index), index % 5 == 0);
         }
         List<MappingSample> train = samples.stream()
                 .filter(sample -> !Boolean.TRUE.equals(holdoutFlags.get(sample.getOrgName())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         List<MappingSample> test = samples.stream()
                 .filter(sample -> Boolean.TRUE.equals(holdoutFlags.get(sample.getOrgName())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         validateSplit(train, test);
         return new SplitResult(train, test);
     }
@@ -83,14 +84,14 @@ public final class MappingEvaluationSupport {
      */
     public static List<MappingSample> buildTuningSubset(List<MappingSample> samples, int maxPerOrg, int maxTotal) {
         if (samples == null || samples.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<MappingSample> ordered = samples.stream()
                 .sorted(Comparator
                         .comparing((MappingSample sample) -> safe(sample.getOrgName()))
                         .thenComparing(sample -> safe(sample.getExternalCode()))
                         .thenComparing(sample -> safe(sample.getExternalName())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         List<MappingSample> selected = new ArrayList<>();
         Map<String, Integer> perOrgCounter = new LinkedHashMap<>();
         for (MappingSample sample : ordered) {
@@ -118,10 +119,10 @@ public final class MappingEvaluationSupport {
             for (MappingSample sample : samples) {
                 String normalizedName = MatchTextSupport.normalizeMatchText(sample.getExternalName());
                 HintKey hintKey = new HintKey(sample.getStandardCode(), sample.getStandardName());
-                if (!normalizedName.isBlank()) {
+                if (!normalizedName.trim().isEmpty()) {
                     increment(nameCounter, normalizedName, hintKey);
                 }
-                if (sample.getExternalCode() != null && !sample.getExternalCode().isBlank()) {
+                if (sample.getExternalCode() != null && !sample.getExternalCode().trim().isEmpty()) {
                     increment(codeCounter, sample.getExternalCode().trim(), hintKey);
                 }
             }
@@ -212,10 +213,10 @@ public final class MappingEvaluationSupport {
         List<Map<String, Object>> failures = new ArrayList<>();
 
         for (MappingSample sample : testSamples) {
-            ValsetMatchResult result = subjectMatcher.matchSubject(buildSampleSubject(sample), List.of(), context, topK);
+            ValsetMatchResult result = subjectMatcher.matchSubject(buildSampleSubject(sample), java.util.Arrays.asList(), context, topK);
             List<String> predictedCodes = result.getTopCandidates() == null
-                    ? List.of()
-                    : result.getTopCandidates().stream().map(MatchCandidate::getStandardCode).toList();
+                    ? java.util.Arrays.asList()
+                    : result.getTopCandidates().stream().map(MatchCandidate::getStandardCode).collect(java.util.stream.Collectors.toList());
             boolean hit1 = Objects.equals(result.getMatchedStandardCode(), sample.getStandardCode());
             boolean hit3 = predictedCodes.stream().limit(3).anyMatch(sample.getStandardCode()::equals);
             boolean hit5 = predictedCodes.stream().limit(5).anyMatch(sample.getStandardCode()::equals);
@@ -345,14 +346,14 @@ public final class MappingEvaluationSupport {
                             .supportCount(item.getValue())
                             .confidence(BigDecimal.valueOf((double) item.getValue() / total))
                             .build())
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             result.put(entry.getKey(), hints);
         }
         return result;
     }
 
     private static List<MatchWeights> generateWeightCandidates() {
-        return List.of(
+        return java.util.Arrays.asList(
                 MatchWeights.builder().nameWeight(BigDecimal.valueOf(0.22D)).pathWeight(BigDecimal.valueOf(0.22D)).keywordWeight(BigDecimal.valueOf(0.22D)).codeWeight(BigDecimal.valueOf(0.04D)).historyWeight(BigDecimal.valueOf(0.30D)).embeddingWeight(BigDecimal.ZERO).build(),
                 MatchWeights.builder().nameWeight(BigDecimal.valueOf(0.18D)).pathWeight(BigDecimal.valueOf(0.18D)).keywordWeight(BigDecimal.valueOf(0.29D)).codeWeight(BigDecimal.valueOf(0.05D)).historyWeight(BigDecimal.valueOf(0.30D)).embeddingWeight(BigDecimal.ZERO).build(),
                 MatchWeights.builder().nameWeight(BigDecimal.valueOf(0.24D)).pathWeight(BigDecimal.valueOf(0.24D)).keywordWeight(BigDecimal.valueOf(0.18D)).codeWeight(BigDecimal.valueOf(0.04D)).historyWeight(BigDecimal.valueOf(0.30D)).embeddingWeight(BigDecimal.ZERO).build(),
@@ -363,13 +364,13 @@ public final class MappingEvaluationSupport {
     }
 
     private static boolean isBetter(Map<String, Object> current, Map<String, Object> best) {
-        List<Double> currentKey = List.of(
+        List<Double> currentKey = java.util.Arrays.asList(
                 metricValue(current, "top1_accuracy"),
                 metricValue(current, "top3_recall"),
                 metricValue(current, "high_confidence_top1_accuracy"),
                 -metricValue(current, "low_confidence_ratio")
         );
-        List<Double> bestKey = List.of(
+        List<Double> bestKey = java.util.Arrays.asList(
                 metricValue(best, "top1_accuracy"),
                 metricValue(best, "top3_recall"),
                 metricValue(best, "high_confidence_top1_accuracy"),
@@ -386,9 +387,9 @@ public final class MappingEvaluationSupport {
 
     private static SubjectRecord buildSampleSubject(MappingSample sample) {
         String externalCode = safe(sample.getExternalCode());
-        int level = externalCode.isBlank() ? 1 : Math.max(1, externalCode.split("\\.").length);
-        String rootCode = externalCode.isBlank() ? "" : externalCode.split("\\.")[0];
-        List<String> pathCodes = externalCode.isBlank() ? List.of() : List.of(externalCode);
+        int level = externalCode.trim().isEmpty() ? 1 : Math.max(1, externalCode.split("\\.").length);
+        String rootCode = externalCode.trim().isEmpty() ? "" : externalCode.split("\\.")[0];
+        List<String> pathCodes = externalCode.trim().isEmpty() ? java.util.Arrays.asList() : java.util.Arrays.asList(externalCode);
         return SubjectRecord.builder()
                 .sheetName("mapping_eval")
                 .rowDataNumber(0)
@@ -420,7 +421,7 @@ public final class MappingEvaluationSupport {
 
     private static String extractRoot(String subjectCode) {
         String code = safe(subjectCode);
-        if (code.isBlank()) {
+        if (code.trim().isEmpty()) {
             return "";
         }
         return code.contains(".") ? code.substring(0, code.indexOf('.')) : code;
@@ -436,7 +437,7 @@ public final class MappingEvaluationSupport {
                     row.add(entry.getValue());
                     return row;
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private static double metricValue(Map<String, Object> metrics, String key) {
@@ -444,8 +445,8 @@ public final class MappingEvaluationSupport {
         if (value == null) {
             return 0D;
         }
-        if (value instanceof Number number) {
-            return number.doubleValue();
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
         }
         return Double.parseDouble(String.valueOf(value));
     }
@@ -466,12 +467,30 @@ public final class MappingEvaluationSupport {
         return value == null ? "" : String.valueOf(value);
     }
 
-    private record HintKey(String standardCode, String standardName) {
+    @Value
+    private static class HintKey {
+        String standardCode;
+        String standardName;
+
+        public String standardCode() { return standardCode; }
+        public String standardName() { return standardName; }
     }
 
-    public record SplitResult(List<MappingSample> trainSamples, List<MappingSample> testSamples) {
+    @Value
+    public static class SplitResult {
+        List<MappingSample> trainSamples;
+        List<MappingSample> testSamples;
+
+        public List<MappingSample> trainSamples() { return trainSamples; }
+        public List<MappingSample> testSamples() { return testSamples; }
     }
 
-    public record SearchResult(MatchWeights bestWeights, Map<String, Object> report) {
+    @Value
+    public static class SearchResult {
+        MatchWeights bestWeights;
+        Map<String, Object> report;
+
+        public MatchWeights bestWeights() { return bestWeights; }
+        public Map<String, Object> report() { return report; }
     }
 }

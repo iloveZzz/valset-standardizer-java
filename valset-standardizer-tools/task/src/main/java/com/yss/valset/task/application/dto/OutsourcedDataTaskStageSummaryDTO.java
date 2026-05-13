@@ -6,7 +6,7 @@ import lombok.Data;
  * 估值表解析任务步骤总览。
  */
 @Data
-public class OutsourcedDataTaskStageSummaryDTO {
+public class OutsourcedDataTaskStageSummaryDTO implements java.io.Serializable{
 
     private String stage;
 

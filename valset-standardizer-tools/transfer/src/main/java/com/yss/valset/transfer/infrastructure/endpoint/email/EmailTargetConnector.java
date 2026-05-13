@@ -7,7 +7,7 @@ import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferResult;
 import com.yss.valset.transfer.domain.model.TransferTarget;
 import com.yss.valset.transfer.domain.model.config.EmailTargetConfig;
-import jakarta.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
@@ -49,15 +49,15 @@ public class EmailTargetConnector implements TargetConnector {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(config.from());
             helper.setTo(splitAddresses(config.to()));
-            if (!config.cc().isBlank()) {
+            if (!config.cc().trim().isEmpty()) {
                 helper.setCc(splitAddresses(config.cc()));
             }
-            if (!config.bcc().isBlank()) {
+            if (!config.bcc().trim().isEmpty()) {
                 helper.setBcc(splitAddresses(config.bcc()));
             }
             helper.setSubject(resolveSubject(config, transferObject));
             helper.setText(resolveBody(config, transferObject), false);
-            if (config.forwardOriginalSender() && transferObject.mailFrom() != null && !transferObject.mailFrom().isBlank()) {
+            if (config.forwardOriginalSender() && transferObject.mailFrom() != null && !transferObject.mailFrom().trim().isEmpty()) {
                 helper.setReplyTo(firstNonBlank(transferObject.mailFrom(), config.from()));
             }
             helper.addAttachment(firstNonBlank(transferObject.originalName(), "transfer-file"), attachment);
@@ -90,11 +90,11 @@ public class EmailTargetConnector implements TargetConnector {
     }
 
     private String resolveSubject(EmailTargetConfig config, TransferObject transferObject) {
-        if (config.subjectTemplate() != null && !config.subjectTemplate().isBlank()) {
+        if (config.subjectTemplate() != null && !config.subjectTemplate().trim().isEmpty()) {
             return renderTemplate(config.subjectTemplate(), transferObject);
         }
         String originalSubject = transferObject.mailSubject();
-        if (originalSubject != null && !originalSubject.isBlank()) {
+        if (originalSubject != null && !originalSubject.trim().isEmpty()) {
             return "邮件转发：" + originalSubject;
         }
         return "文件转发：" + firstNonBlank(transferObject.originalName(), "transfer-file");
@@ -102,14 +102,14 @@ public class EmailTargetConnector implements TargetConnector {
 
     private String resolveBody(EmailTargetConfig config, TransferObject transferObject) {
         String templateBody = null;
-        if (config.bodyTemplate() != null && !config.bodyTemplate().isBlank()) {
+        if (config.bodyTemplate() != null && !config.bodyTemplate().trim().isEmpty()) {
             templateBody = renderTemplate(config.bodyTemplate(), transferObject);
         }
         if (!config.forwardMailContent()) {
             return templateBody != null ? templateBody : "文件已转发，请查收附件。";
         }
         String forwardedMail = buildForwardedMailBody(transferObject);
-        if (templateBody == null || templateBody.isBlank()) {
+        if (templateBody == null || templateBody.trim().isEmpty()) {
             return forwardedMail;
         }
         return templateBody + System.lineSeparator() + System.lineSeparator() + forwardedMail;
@@ -155,13 +155,13 @@ public class EmailTargetConnector implements TargetConnector {
 
     private String[] splitAddresses(String addresses) {
         return java.util.Arrays.stream(addresses.split("[,;\\s]+"))
-                .filter(value -> value != null && !value.isBlank())
+                .filter(value -> value != null && !value.trim().isEmpty())
                 .toArray(String[]::new);
     }
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value;
             }
         }

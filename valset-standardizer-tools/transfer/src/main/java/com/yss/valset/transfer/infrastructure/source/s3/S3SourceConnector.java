@@ -67,7 +67,7 @@ public class S3SourceConnector implements SourceConnector {
             List<S3ObjectSummary> summaries = listObjects(s3Client, config);
             summaries.sort(Comparator.comparing(S3ObjectSummary::getKey));
             SourceFetchLogSupport.logStart(log, "S3", source, "bucket", config.bucket(), "对象总数", summaries.size());
-            boolean seenCursor = cursor == null || cursor.isBlank();
+            boolean seenCursor = cursor == null || cursor.trim().isEmpty();
             for (S3ObjectSummary summary : summaries) {
                 if (shouldStop(source)) {
                     break;
@@ -75,7 +75,7 @@ public class S3SourceConnector implements SourceConnector {
                 if (config.limit() > 0 && contexts.size() >= config.limit()) {
                     break;
                 }
-                if (summary.getKey() == null || summary.getKey().isBlank() || summary.getKey().endsWith("/")) {
+                if (summary.getKey() == null || summary.getKey().trim().isEmpty() || summary.getKey().endsWith("/")) {
                     continue;
                 }
                 String objectName = lastPathSegment(summary.getKey());
@@ -137,7 +137,7 @@ public class S3SourceConnector implements SourceConnector {
         }
         return transferSourceCheckpointGateway.findCheckpoint(source.sourceId(), TransferConfigKeys.CHECKPOINT_SCAN_CURSOR)
                 .map(checkpoint -> checkpoint.checkpointValue())
-                .filter(value -> value != null && !value.isBlank())
+                .filter(value -> value != null && !value.trim().isEmpty())
                 .orElse(null);
     }
 
@@ -146,11 +146,11 @@ public class S3SourceConnector implements SourceConnector {
         String prefix = config.prefix() == null ? "" : config.prefix();
         String marker = null;
         do {
-            var request = new com.amazonaws.services.s3.model.ListObjectsV2Request()
+            com.amazonaws.services.s3.model.ListObjectsV2Request request = new com.amazonaws.services.s3.model.ListObjectsV2Request()
                     .withBucketName(config.bucket())
                     .withPrefix(prefix)
                     .withContinuationToken(marker);
-            var result = s3Client.listObjectsV2(request);
+            com.amazonaws.services.s3.model.ListObjectsV2Result result = s3Client.listObjectsV2(request);
             summaries.addAll(result.getObjectSummaries());
             marker = result.isTruncated() ? result.getNextContinuationToken() : null;
         } while (marker != null);
@@ -159,12 +159,12 @@ public class S3SourceConnector implements SourceConnector {
 
     private AmazonS3 buildClient(S3SourceConfig config) {
         AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
-        if (config.accessKey() != null && !config.accessKey().isBlank() && config.secretKey() != null && !config.secretKey().isBlank()) {
+        if (config.accessKey() != null && !config.accessKey().trim().isEmpty() && config.secretKey() != null && !config.secretKey().trim().isEmpty()) {
             builder.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(config.accessKey(), config.secretKey())));
         }
-        if (config.endpointUrl() != null && !config.endpointUrl().isBlank()) {
+        if (config.endpointUrl() != null && !config.endpointUrl().trim().isEmpty()) {
             builder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(config.endpointUrl(), config.region()));
-        } else if (config.region() != null && !config.region().isBlank()) {
+        } else if (config.region() != null && !config.region().trim().isEmpty()) {
             builder.withRegion(config.region());
         }
         if (config.usePathStyle()) {
@@ -174,7 +174,7 @@ public class S3SourceConnector implements SourceConnector {
     }
 
     private String lastPathSegment(String key) {
-        if (key == null || key.isBlank()) {
+        if (key == null || key.trim().isEmpty()) {
             return "transfer-file";
         }
         int index = key.lastIndexOf('/');

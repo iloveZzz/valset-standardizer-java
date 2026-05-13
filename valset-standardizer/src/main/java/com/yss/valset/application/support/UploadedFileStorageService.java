@@ -11,11 +11,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
 import java.util.Locale;
-import java.util.HexFormat;
 
 /**
  * 上传文件落盘服务。
@@ -64,7 +64,7 @@ public class UploadedFileStorageService {
         YssFilesysUploadFlowResult filesysResult = uploadToFilesysIfConfigured(file, bytes, originalFilename);
         String storedFilename = buildStoredFilename(originalFilename, bytes);
 
-        Path directory = Path.of(uploadRoot).toAbsolutePath().resolve(LocalDate.now().toString());
+        Path directory = Paths.get(uploadRoot).toAbsolutePath().resolve(LocalDate.now().toString());
         Path storedPath = directory.resolve(storedFilename);
         try {
             Files.createDirectories(directory);
@@ -100,18 +100,18 @@ public class UploadedFileStorageService {
      * 删除已落盘的重复文件。
      */
     public void deleteStoredFile(String absolutePath) {
-        if (absolutePath == null || absolutePath.isBlank()) {
+        if (absolutePath == null || absolutePath.trim().isEmpty()) {
             return;
         }
         try {
-            Files.deleteIfExists(Path.of(absolutePath));
+            Files.deleteIfExists(Paths.get(absolutePath));
         } catch (IOException exception) {
             log.warn("删除重复落盘文件失败，absolutePath={}", absolutePath, exception);
         }
     }
 
     private String resolveDataSourceType(String dataSourceType, String filename) {
-        if (dataSourceType != null && !dataSourceType.isBlank()) {
+        if (dataSourceType != null && !dataSourceType.trim().isEmpty()) {
             return dataSourceType.trim().toUpperCase(Locale.ROOT);
         }
         String lowerName = filename.toLowerCase(Locale.ROOT);
@@ -137,10 +137,10 @@ public class UploadedFileStorageService {
     }
 
     private String resolveUploadRoot(String configuredUploadRoot) {
-        if (configuredUploadRoot != null && !configuredUploadRoot.isBlank()) {
+        if (configuredUploadRoot != null && !configuredUploadRoot.trim().isEmpty()) {
             return configuredUploadRoot;
         }
-        return Path.of(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
+        return Paths.get(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
     }
 
     /**
@@ -150,22 +150,33 @@ public class UploadedFileStorageService {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             digest.update(bytes);
-            return HexFormat.of().formatHex(digest.digest());
+            return toHex(digest.digest());
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 算法不可用", exception);
         }
     }
 
+    private String toHex(byte[] bytes) {
+        char[] digits = "0123456789abcdef".toCharArray();
+        char[] result = new char[bytes.length * 2];
+        for (int i = 0; i < bytes.length; i++) {
+            int value = bytes[i] & 0xFF;
+            result[i * 2] = digits[value >>> 4];
+            result[i * 2 + 1] = digits[value & 0x0F];
+        }
+        return new String(result);
+    }
+
     private YssFilesysUploadFlowResult uploadToFilesysIfConfigured(MultipartFile file, byte[] bytes, String originalFilename) {
         String parentId = resolveFilesysParentId();
         String storageSettingId = resolveFilesysStorageSettingId();
-        if (parentId == null || parentId.isBlank() || storageSettingId == null || storageSettingId.isBlank()) {
+        if (parentId == null || parentId.trim().isEmpty() || storageSettingId == null || storageSettingId.trim().isEmpty()) {
             log.warn("filesys 上传参数未配置完整，跳过 filesys 上传，仅保留临时抽取副本，originalFilename={}", originalFilename);
             return null;
         }
         try {
             String mimeType = file.getContentType();
-            if (mimeType == null || mimeType.isBlank()) {
+            if (mimeType == null || mimeType.trim().isEmpty()) {
                 mimeType = "application/octet-stream";
             }
             YssFilesysUploadFlowResult result = yssFilesysUploadFlowService.upload(

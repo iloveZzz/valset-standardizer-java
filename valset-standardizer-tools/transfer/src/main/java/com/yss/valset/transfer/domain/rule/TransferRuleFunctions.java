@@ -61,7 +61,7 @@ public class TransferRuleFunctions {
     public boolean containsIgnoreCase(Object source, Object keyword) {
         String sourceText = normalizeKeyword(source);
         String keywordText = normalizeKeyword(keyword);
-        if (sourceText.isBlank() || keywordText.isBlank()) {
+        if (sourceText.trim().isEmpty() || keywordText.trim().isEmpty()) {
             return false;
         }
         return sourceText.toLowerCase(Locale.ROOT).contains(keywordText.toLowerCase(Locale.ROOT));
@@ -82,7 +82,7 @@ public class TransferRuleFunctions {
         }
         String sourceText = normalizeKeyword(source);
         String regexText = normalizeKeyword(regex);
-        if (sourceText.isBlank() || regexText.isBlank()) {
+        if (sourceText.trim().isEmpty() || regexText.trim().isEmpty()) {
             return false;
         }
         return Pattern.compile(regexText).matcher(sourceText).matches();
@@ -94,11 +94,11 @@ public class TransferRuleFunctions {
     @QLFunction({"matchesAnyRegex"})
     public boolean matchesAnyRegex(Object source, Object regexList) {
         String sourceText = normalizeKeyword(source);
-        if (sourceText.isBlank() || regexList == null) {
+        if (sourceText.trim().isEmpty() || regexList == null) {
             return false;
         }
-        if (regexList instanceof Collection<?> collection) {
-            for (Object regex : collection) {
+        if (regexList instanceof Collection<?>) {
+            for (Object regex : (Collection<?>) regexList) {
                 if (matchesRegex(sourceText, String.valueOf(regex))) {
                     return true;
                 }
@@ -115,7 +115,7 @@ public class TransferRuleFunctions {
             return false;
         }
         String regexText = normalizeKeyword(regexList);
-        if (regexText.isBlank()) {
+        if (regexText.trim().isEmpty()) {
             return false;
         }
         for (String item : regexText.split("[,;|\\n]")) {
@@ -266,7 +266,7 @@ public class TransferRuleFunctions {
         Integer scanLimit = normalizeScanLimit(extractScanLimit(meta));
         Collection<?> keywords = extractHeaderKeywords(meta);
         if (keywords == null || keywords.isEmpty()) {
-            keywords = List.of("科目代码", "科目名称");
+            keywords = java.util.Arrays.asList("科目代码", "科目名称");
         }
         return isValuationTableByKeywords(source, scanLimit, keywords);
     }
@@ -298,14 +298,14 @@ public class TransferRuleFunctions {
      */
     public boolean containsAny(Object source, Object keywords) {
         String sourceText = normalizeKeyword(source);
-        if (sourceText.isBlank()) {
+        if (sourceText.trim().isEmpty()) {
             return false;
         }
         if (keywords == null) {
             return false;
         }
-        if (keywords instanceof Collection<?> collection) {
-            return containsAny(sourceText, collection);
+        if (keywords instanceof Collection<?>) {
+            return containsAny(sourceText, (Collection<?>) keywords);
         }
         if (keywords.getClass().isArray()) {
             int length = java.lang.reflect.Array.getLength(keywords);
@@ -322,13 +322,13 @@ public class TransferRuleFunctions {
      * 判断文本是否命中任意一个关键词。
      */
     public boolean containsAny(String source, Collection<?> keywords) {
-        if (source == null || source.isBlank() || keywords == null || keywords.isEmpty()) {
+        if (source == null || source.trim().isEmpty() || keywords == null || keywords.isEmpty()) {
             return false;
         }
         String normalizedSource = source.trim().toLowerCase(Locale.ROOT);
         for (Object keyword : keywords) {
             String candidate = normalizeKeyword(keyword);
-            if (candidate.isBlank()) {
+            if (candidate.trim().isEmpty()) {
                 continue;
             }
             String normalizedCandidate = candidate.toLowerCase(Locale.ROOT);
@@ -353,14 +353,14 @@ public class TransferRuleFunctions {
      */
     public boolean containsAll(Object source, Object keywords) {
         String sourceText = normalizeKeyword(source);
-        if (sourceText.isBlank()) {
+        if (sourceText.trim().isEmpty()) {
             return false;
         }
         if (keywords == null) {
             return false;
         }
-        if (keywords instanceof Collection<?> collection) {
-            return containsAll(sourceText, collection);
+        if (keywords instanceof Collection<?>) {
+            return containsAll(sourceText, (Collection<?>) keywords);
         }
         if (keywords.getClass().isArray()) {
             int length = java.lang.reflect.Array.getLength(keywords);
@@ -377,13 +377,13 @@ public class TransferRuleFunctions {
      * 判断文本是否同时命中所有关键词。
      */
     public boolean containsAll(String source, Collection<?> keywords) {
-        if (source == null || source.isBlank() || keywords == null || keywords.isEmpty()) {
+        if (source == null || source.trim().isEmpty() || keywords == null || keywords.isEmpty()) {
             return false;
         }
         String normalizedSource = source.trim().toLowerCase(Locale.ROOT);
         for (Object keyword : keywords) {
             String candidate = normalizeKeyword(keyword);
-            if (candidate.isBlank()) {
+            if (candidate.trim().isEmpty()) {
                 continue;
             }
             String normalizedCandidate = candidate.toLowerCase(Locale.ROOT);
@@ -413,13 +413,13 @@ public class TransferRuleFunctions {
     }
 
     private List<String> parseKeywords(String keywords) {
-        if (keywords == null || keywords.isBlank()) {
-            return List.of();
+        if (keywords == null || keywords.trim().isEmpty()) {
+            return java.util.Arrays.asList();
         }
         return Stream.of(keywords.split("[,;|\\n]"))
                 .map(item -> item == null ? "" : item.trim())
-                .filter(item -> !item.isBlank())
-                .toList();
+                .filter(item -> !item.trim().isEmpty())
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private String normalizeKeyword(Object keyword) {
@@ -431,7 +431,7 @@ public class TransferRuleFunctions {
             return false;
         }
         String candidate = normalizeKeyword(fileName);
-        if (candidate.isBlank()) {
+        if (candidate.trim().isEmpty()) {
             return false;
         }
         String lower = candidate.toLowerCase(Locale.ROOT);
@@ -447,14 +447,14 @@ public class TransferRuleFunctions {
         if (source == null) {
             throw new IllegalArgumentException("文件路径不能为空");
         }
-        if (source instanceof Path path) {
-            return path;
+        if (source instanceof Path) {
+            return (Path) source;
         }
-        if (source instanceof File file) {
-            return file.toPath();
+        if (source instanceof File) {
+            return ((File) source).toPath();
         }
         String pathText = String.valueOf(source).trim();
-        if (pathText.isBlank()) {
+        if (pathText.trim().isEmpty()) {
             throw new IllegalArgumentException("文件路径不能为空");
         }
         return Paths.get(pathText);
@@ -480,12 +480,12 @@ public class TransferRuleFunctions {
         try (InputStream inputStream = Files.newInputStream(filePath);
              Workbook workbook = WorkbookFactory.create(inputStream)) {
             if (workbook.getNumberOfSheets() <= 0) {
-                return List.of();
+                return java.util.Arrays.asList();
             }
 
             Sheet sheet = workbook.getSheetAt(0);
             if (sheet == null) {
-                return List.of();
+                return java.util.Arrays.asList();
             }
 
             DataFormatter formatter = new DataFormatter(Locale.ROOT);
@@ -515,29 +515,29 @@ public class TransferRuleFunctions {
 
     private List<String> readExcelRow(Row row, DataFormatter formatter, FormulaEvaluator evaluator) {
         if (row == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         short lastCellNum = row.getLastCellNum();
         if (lastCellNum <= 0) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
 
         List<String> values = new ArrayList<>(lastCellNum);
         for (int cellIndex = 0; cellIndex < lastCellNum; cellIndex++) {
-            var cell = row.getCell(cellIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+            org.apache.poi.ss.usermodel.Cell cell = row.getCell(cellIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
             if (cell == null) {
                 values.add(null);
                 continue;
             }
             String value = formatter.formatCellValue(cell, evaluator);
-            values.add(value == null || value.isBlank() ? null : value);
+            values.add(value == null || value.trim().isEmpty() ? null : value);
         }
         return values;
     }
 
     private List<String> normalizeSpreadsheetXmlRow(List<String> row) {
         if (row == null || row.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> normalized = new ArrayList<>(row.size());
         for (String value : row) {
@@ -613,7 +613,7 @@ public class TransferRuleFunctions {
         }
         String expected1 = normalizeKeyword(keyword1);
         String expected2 = normalizeKeyword(keyword2);
-        if (expected1.isBlank() || expected2.isBlank()) {
+        if (expected1.trim().isEmpty() || expected2.trim().isEmpty()) {
             return -1;
         }
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
@@ -636,8 +636,8 @@ public class TransferRuleFunctions {
         }
         List<String> normalizedKeywords = keywords.stream()
                 .map(this::normalizeKeyword)
-                .filter(item -> !item.isBlank())
-                .toList();
+                .filter(item -> !item.trim().isEmpty())
+                .collect(java.util.stream.Collectors.toList());
         if (normalizedKeywords.isEmpty()) {
             return -1;
         }
@@ -662,7 +662,7 @@ public class TransferRuleFunctions {
             return "";
         }
         return row.stream()
-                .filter(item -> item != null && !item.isBlank())
+                .filter(item -> item != null && !item.trim().isEmpty())
                 .map(String::trim)
                 .reduce((left, right) -> left + " " + right)
                 .orElse("");
@@ -674,7 +674,7 @@ public class TransferRuleFunctions {
         }
         String normalizedSource = source.trim().toLowerCase(Locale.ROOT);
         String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
-        if (normalizedSource.isBlank() || normalizedKeyword.isBlank()) {
+        if (normalizedSource.trim().isEmpty() || normalizedKeyword.trim().isEmpty()) {
             return false;
         }
         return normalizedSource.contains(normalizedKeyword);
@@ -688,30 +688,35 @@ public class TransferRuleFunctions {
     }
 
     private Integer extractScanLimit(Object meta) {
-        if (!(meta instanceof Map<?, ?> map)) {
+        if (!(meta instanceof Map<?, ?>)) {
             return DEFAULT_HEADER_SCAN_LIMIT;
         }
+        Map<?, ?> map = (Map<?, ?>) meta;
         Object scanLimit = map.get("scanLimit");
-        if (scanLimit instanceof Number number) {
-            return number.intValue();
+        if (scanLimit instanceof Number) {
+            return ((Number) scanLimit).intValue();
         }
-        if (scanLimit instanceof String text && !text.isBlank()) {
-            try {
-                return Integer.parseInt(text.trim());
-            } catch (NumberFormatException ignored) {
-                return DEFAULT_HEADER_SCAN_LIMIT;
+        if (scanLimit instanceof String) {
+            String text = (String) scanLimit;
+            if (!text.trim().isEmpty()) {
+                try {
+                    return Integer.parseInt(text.trim());
+                } catch (NumberFormatException ignored) {
+                    return DEFAULT_HEADER_SCAN_LIMIT;
+                }
             }
         }
         return DEFAULT_HEADER_SCAN_LIMIT;
     }
 
     private Collection<?> extractHeaderKeywords(Object meta) {
-        if (!(meta instanceof Map<?, ?> map)) {
-            return List.of();
+        if (!(meta instanceof Map<?, ?>)) {
+            return java.util.Arrays.asList();
         }
+        Map<?, ?> map = (Map<?, ?>) meta;
         Object keywords = map.get("headerKeywords");
-        if (keywords instanceof Collection<?> collection) {
-            return collection;
+        if (keywords instanceof Collection<?>) {
+            return (Collection<?>) keywords;
         }
         if (keywords != null && keywords.getClass().isArray()) {
             int length = java.lang.reflect.Array.getLength(keywords);
@@ -721,10 +726,13 @@ public class TransferRuleFunctions {
             }
             return values;
         }
-        if (keywords instanceof String text && !text.isBlank()) {
-            return parseKeywords(text);
+        if (keywords instanceof String) {
+            String text = (String) keywords;
+            if (!text.trim().isEmpty()) {
+                return parseKeywords(text);
+            }
         }
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     private boolean isXlsx(Path filePath) {
@@ -801,7 +809,7 @@ public class TransferRuleFunctions {
                 return;
             }
             while (rows.size() < rowNum) {
-                rows.add(List.of());
+                rows.add(java.util.Arrays.asList());
             }
             rows.add(currentRow);
         }
@@ -815,7 +823,7 @@ public class TransferRuleFunctions {
             while (currentRow.size() < columnIndex) {
                 currentRow.add(null);
             }
-            currentRow.add(formattedValue == null || formattedValue.isBlank() ? null : formattedValue);
+            currentRow.add(formattedValue == null || formattedValue.trim().isEmpty() ? null : formattedValue);
         }
 
         @Override
@@ -825,7 +833,7 @@ public class TransferRuleFunctions {
     }
 
     private static int columnIndexFromCellReference(String cellReference) {
-        if (cellReference == null || cellReference.isBlank()) {
+        if (cellReference == null || cellReference.trim().isEmpty()) {
             return 0;
         }
         int columnIndex = 0;

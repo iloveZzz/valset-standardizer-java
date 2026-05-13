@@ -10,16 +10,16 @@ import java.util.List;
  */
 enum SpringBatchBusinessStage {
 
-    FILE_PARSE("FILE_PARSE", "EXTRACT", "原始文件抽取与解析已完成", "RAW", List.of("t_ods_valuation_filedata")),
+    FILE_PARSE("FILE_PARSE", "EXTRACT", "原始文件抽取与解析已完成", "RAW", java.util.Arrays.asList("t_ods_valuation_filedata")),
     STRUCTURE_STANDARDIZE("STRUCTURE_STANDARDIZE", "STANDARDIZE", "字段映射与结构标准化已完成", "STAGING",
-            List.of("t_stg_external_valuation", "t_stg_external_valuation_detail")),
-    SUBJECT_RECOGNIZE("SUBJECT_RECOGNIZE", "RECOGNIZE", "科目识别与标签补全已完成", "MATCH", List.of("t_subject_match_result")),
+            java.util.Arrays.asList("t_stg_external_valuation", "t_stg_external_valuation_detail")),
+    SUBJECT_RECOGNIZE("SUBJECT_RECOGNIZE", "RECOGNIZE", "科目识别与标签补全已完成", "MATCH", java.util.Arrays.asList("t_subject_match_result")),
     STANDARD_LANDING("STANDARD_LANDING", "LANDING", "标准表落地已完成", "DWD",
-            List.of("t_dwd_external_valuation", "t_dwd_external_valuation_detail")),
+            java.util.Arrays.asList("t_dwd_external_valuation", "t_dwd_external_valuation_detail")),
     DATA_PROCESSING("DATA_PROCESSING", "PROCESS", "后续加工任务已完成", "PROCESS",
-            List.of("t_valset_parse_task", "t_valset_parse_task_step")),
+            java.util.Arrays.asList("t_valset_parse_task", "t_valset_parse_task_step")),
     VERIFY_ARCHIVE("VERIFY_ARCHIVE", "ARCHIVE", "一致性校验与归档已完成", "ARCHIVE",
-            List.of("t_valset_parse_task_log"));
+            java.util.Arrays.asList("t_valset_parse_task_log"));
 
     private final String code;
     private final String family;
@@ -56,17 +56,26 @@ enum SpringBatchBusinessStage {
     }
 
     public static SpringBatchBusinessStage fromStageCode(String stageCode) {
-        if (stageCode == null || stageCode.isBlank()) {
+        if (stageCode == null || stageCode.trim().isEmpty()) {
             return FILE_PARSE;
         }
-        return switch (stageCode.trim().toUpperCase()) {
-            case "RAW_DATA_EXTRACT", "FILE_PARSE" -> FILE_PARSE;
-            case "STRUCTURE_STANDARDIZE" -> STRUCTURE_STANDARDIZE;
-            case "SUBJECT_RECOGNIZE" -> SUBJECT_RECOGNIZE;
-            case "STANDARD_LANDING" -> STANDARD_LANDING;
-            case "DATA_PROCESSING" -> DATA_PROCESSING;
-            case "VERIFY_ARCHIVE" -> VERIFY_ARCHIVE;
-            default -> FILE_PARSE;
-        };
+        String normalized = stageCode.trim().toUpperCase();
+        switch (normalized) {
+            case "RAW_DATA_EXTRACT":
+            case "FILE_PARSE":
+                return FILE_PARSE;
+            case "STRUCTURE_STANDARDIZE":
+                return STRUCTURE_STANDARDIZE;
+            case "SUBJECT_RECOGNIZE":
+                return SUBJECT_RECOGNIZE;
+            case "STANDARD_LANDING":
+                return STANDARD_LANDING;
+            case "DATA_PROCESSING":
+                return DATA_PROCESSING;
+            case "VERIFY_ARCHIVE":
+                return VERIFY_ARCHIVE;
+            default:
+                return FILE_PARSE;
+        }
     }
 }

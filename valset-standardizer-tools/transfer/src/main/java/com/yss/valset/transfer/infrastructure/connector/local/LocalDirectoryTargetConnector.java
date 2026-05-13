@@ -58,7 +58,7 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
                 }
             }
             Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-            return new TransferResult(true, null, targetPath.toAbsolutePath().toString(), List.of("本地目录投递成功，path=" + targetPath.toAbsolutePath()));
+            return new TransferResult(true, null, targetPath.toAbsolutePath().toString(), java.util.Arrays.asList("本地目录投递成功，path=" + targetPath.toAbsolutePath()));
         } catch (IOException e) {
             throw new IllegalStateException("本地目录投递失败，path=" + targetPath.toAbsolutePath(), e);
         }
@@ -90,7 +90,7 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
                 attributeText(context, TransferConfigKeys.TARGET_PATH),
                 context.transferTarget() == null ? null : context.transferTarget().targetPathTemplate()
         );
-        if (targetPathTemplate != null && !targetPathTemplate.isBlank()) {
+        if (targetPathTemplate != null && !targetPathTemplate.trim().isEmpty()) {
             String resolvedTargetPath = resolveTemplate(targetPathTemplate, context, transferObject);
             Path targetPath = Paths.get(expandHomeDirectory(resolvedTargetPath));
             if (!targetPath.isAbsolute()) {
@@ -104,14 +104,14 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
                 transferObject.originalName()
         );
         String resolvedFileName = resolveTemplate(fileNameTemplate, context, transferObject);
-        if (resolvedFileName == null || resolvedFileName.isBlank()) {
+        if (resolvedFileName == null || resolvedFileName.trim().isEmpty()) {
             resolvedFileName = transferObject.originalName();
         }
         return directory.resolve(resolvedFileName).normalize();
     }
 
     private String expandHomeDirectory(String pathText) {
-        if (pathText == null || pathText.isBlank()) {
+        if (pathText == null || pathText.trim().isEmpty()) {
             return pathText;
         }
         if ("~".equals(pathText)) {
@@ -124,7 +124,7 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
     }
 
     private String resolveTemplate(String template, TransferContext context, TransferObject transferObject) {
-        if (template == null || template.isBlank()) {
+        if (template == null || template.trim().isEmpty()) {
             return template;
         }
         Map<String, String> variables = new LinkedHashMap<>();
@@ -153,7 +153,7 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
             return routeText(context, key);
         }
         Object raw = context.attributes().get(key);
-        if (raw != null && !String.valueOf(raw).isBlank()) {
+        if (raw != null && !String.valueOf(raw).trim().isEmpty()) {
             return String.valueOf(raw);
         }
         return routeText(context, key);
@@ -163,10 +163,10 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
         if (context == null || context.transferRoute() == null) {
             return targetText(context, key);
         }
-        if (TransferConfigKeys.TARGET_PATH.equals(key) && context.transferRoute().targetPath() != null && !context.transferRoute().targetPath().isBlank()) {
+        if (TransferConfigKeys.TARGET_PATH.equals(key) && context.transferRoute().targetPath() != null && !context.transferRoute().targetPath().trim().isEmpty()) {
             return context.transferRoute().targetPath();
         }
-        if (TransferConfigKeys.RENAME_PATTERN.equals(key) && context.transferRoute().renamePattern() != null && !context.transferRoute().renamePattern().isBlank()) {
+        if (TransferConfigKeys.RENAME_PATTERN.equals(key) && context.transferRoute().renamePattern() != null && !context.transferRoute().renamePattern().trim().isEmpty()) {
             return context.transferRoute().renamePattern();
         }
         return targetText(context, key);
@@ -178,7 +178,7 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
         }
         if (TransferConfigKeys.TARGET_PATH.equals(key)
                 && context.transferTarget().targetPathTemplate() != null
-                && !context.transferTarget().targetPathTemplate().isBlank()) {
+                && !context.transferTarget().targetPathTemplate().trim().isEmpty()) {
             return context.transferTarget().targetPathTemplate();
         }
         return null;
@@ -186,7 +186,7 @@ public class LocalDirectoryTargetConnector implements TargetConnector {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value;
             }
         }

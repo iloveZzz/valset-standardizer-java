@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -50,12 +51,12 @@ public class YssFilesysTargetConnector implements TargetConnector {
     public TransferResult send(TransferContext context) {
         FilesysTargetConfig config = FilesysTargetConfig.from(context, properties.getDefaultChunkSize());
         TransferObject transferObject = context.transferObject();
-        if (transferObject.localTempPath() == null || transferObject.localTempPath().isBlank()) {
-            return new TransferResult(false, null, List.of("未找到待上传文件路径"));
+        if (transferObject.localTempPath() == null || transferObject.localTempPath().trim().isEmpty()) {
+            return new TransferResult(false, null, java.util.Arrays.asList("未找到待上传文件路径"));
         }
-        Path localFile = Path.of(transferObject.localTempPath());
+        Path localFile = Paths.get(transferObject.localTempPath());
         if (!Files.isRegularFile(localFile)) {
-            return new TransferResult(false, null, List.of("未找到待上传文件: " + transferObject.localTempPath()));
+            return new TransferResult(false, null, java.util.Arrays.asList("未找到待上传文件: " + transferObject.localTempPath()));
         }
 
         try {
@@ -95,14 +96,14 @@ public class YssFilesysTargetConnector implements TargetConnector {
                 context.transferRoute() == null ? null : context.transferRoute().targetPath(),
                 context.transferTarget() == null ? null : context.transferTarget().targetPathTemplate()
         );
-        if (configuredPath != null && !configuredPath.isBlank()) {
+        if (configuredPath != null && !configuredPath.trim().isEmpty()) {
             return resolveTemplate(configuredPath, context);
         }
         return LocalDate.now(ZoneId.systemDefault()).format(DateTimeFormatter.BASIC_ISO_DATE);
     }
 
     private String resolveTemplate(String template, TransferContext context) {
-        if (template == null || template.isBlank()) {
+        if (template == null || template.trim().isEmpty()) {
             return template;
         }
         TransferObject transferObject = context.transferObject();
@@ -124,7 +125,7 @@ public class YssFilesysTargetConnector implements TargetConnector {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value;
             }
         }

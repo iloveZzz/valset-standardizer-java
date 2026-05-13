@@ -41,11 +41,13 @@ public final class WorkflowContextPayloadSupport {
             return flattened;
         }
         Object commonContext = payload.get(WorkflowContextKeys.COMMON_CONTEXT);
-        if (commonContext instanceof Map<?, ?> commonMap) {
+        if (commonContext instanceof Map<?, ?>) {
+            Map<?, ?> commonMap = (Map<?, ?>) commonContext;
             commonMap.forEach((key, value) -> flattened.put(String.valueOf(key), value));
         }
         Object businessContext = payload.get(WorkflowContextKeys.BUSINESS_CONTEXT);
-        if (businessContext instanceof Map<?, ?> businessMap) {
+        if (businessContext instanceof Map<?, ?>) {
+            Map<?, ?> businessMap = (Map<?, ?>) businessContext;
             businessMap.forEach((key, value) -> flattened.put(String.valueOf(key), value));
         }
         payload.forEach((key, value) -> {
@@ -67,7 +69,8 @@ public final class WorkflowContextPayloadSupport {
             return section;
         }
         Object value = payload.get(sectionKey);
-        if (value instanceof Map<?, ?> map) {
+        if (value instanceof Map<?, ?>) {
+            Map<?, ?> map = (Map<?, ?>) value;
             map.forEach((key, nestedValue) -> section.put(String.valueOf(key), nestedValue));
         }
         return section;

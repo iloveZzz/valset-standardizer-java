@@ -19,15 +19,13 @@ public interface ParseQueueRepository extends BasePlusRepository<ParseQueuePO> {
      *
      * @return 受影响行数，1 表示接管成功，0 表示已被其他实例接管或状态已变化
      */
-    @Update("""
-            UPDATE t_parse_queue
-            SET parse_status = 'PARSING',
-                claimed_by = #{subscribedBy},
-                claimed_at = #{subscribedAt},
-                updated_at = #{updatedAt}
-            WHERE queue_id = #{queueId}
-              AND parse_status = 'PENDING'
-            """)
+    @Update("UPDATE t_parse_queue\n" +
+            "SET parse_status = 'PARSING',\n" +
+            "    claimed_by = #{subscribedBy},\n" +
+            "    claimed_at = #{subscribedAt},\n" +
+            "    updated_at = #{updatedAt}\n" +
+            "WHERE queue_id = #{queueId}\n" +
+            "  AND parse_status = 'PENDING'")
     int subscribeIfPending(@Param("queueId") Long queueId,
                            @Param("subscribedBy") String subscribedBy,
                            @Param("subscribedAt") LocalDateTime subscribedAt,

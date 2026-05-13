@@ -1,6 +1,6 @@
 package com.yss.valset.task.application.command;
 
-import jakarta.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotEmpty;
 import lombok.Data;
 
 import java.util.List;

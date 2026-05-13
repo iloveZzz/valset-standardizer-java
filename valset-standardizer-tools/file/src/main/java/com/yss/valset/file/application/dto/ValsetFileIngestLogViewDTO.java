@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class ValsetFileIngestLogViewDTO {
+public class ValsetFileIngestLogViewDTO implements java.io.Serializable{
     private String ingestId;
     private String fileId;
     private String sourceChannel;

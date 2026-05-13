@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class TransferRunLogCleanupResponse {
+public class TransferRunLogCleanupResponse implements java.io.Serializable{
 
     /**
      * 清理日期。

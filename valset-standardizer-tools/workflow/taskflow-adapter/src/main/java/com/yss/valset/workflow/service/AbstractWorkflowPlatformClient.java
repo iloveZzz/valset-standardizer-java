@@ -22,7 +22,7 @@ import com.yss.valset.workflow.model.WorkflowStopRequest;
 import com.yss.valset.workflow.model.WorkflowTriggerRequest;
 import com.yss.valset.workflow.model.WorkflowTriggerMode;
 import com.yss.valset.workflow.spi.WorkflowPlatformClient;
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -60,7 +60,7 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
                                                              WorkflowInstanceQueryRequest request) {
         int pageIndex = request == null || request.getPageIndex() == null ? 0 : Math.max(request.getPageIndex(), 0);
         int pageSize = request == null || request.getPageSize() == null ? 20 : Math.max(request.getPageSize(), 1);
-        return PageResult.of(List.of(), 0L, pageSize, pageIndex);
+        return PageResult.of(java.util.Arrays.asList(), 0L, pageSize, pageIndex);
     }
 
     @Override
@@ -113,7 +113,7 @@ public abstract class AbstractWorkflowPlatformClient implements WorkflowPlatform
                 .rawStatus(instance == null ? null : instance.getRawStatus())
                 .message(instance == null ? null : instance.getMessage())
                 .payload(buildPayload(definition, instance, buildCommand(WorkflowOperationType.QUERY, definition, instance, (WorkflowTriggerRequest) null)))
-                .stageLogs(instance == null ? List.of() : snapshotLogs(definition, instance))
+                .stageLogs(instance == null ? java.util.Arrays.asList() : snapshotLogs(definition, instance))
                 .build();
     }
 

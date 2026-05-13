@@ -16,7 +16,7 @@ public class FileProbePluginRegistry {
     private final List<FileProbePlugin> plugins;
 
     public FileProbePluginRegistry(List<FileProbePlugin> plugins) {
-        this.plugins = List.copyOf(plugins);
+        this.plugins = java.util.Collections.unmodifiableList(new java.util.ArrayList<>(plugins));
     }
 
     public FileProbePlugin getRequired(RecognitionContext context) {

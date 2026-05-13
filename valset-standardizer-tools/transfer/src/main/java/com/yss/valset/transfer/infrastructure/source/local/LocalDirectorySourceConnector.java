@@ -58,15 +58,15 @@ public class LocalDirectorySourceConnector implements SourceConnector {
                     .filter(Files::isRegularFile)
                     .filter(path -> includeHidden(config, path))
                     .sorted(Comparator.comparing(Path::toString))
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             SourceFetchLogSupport.logStart(log, "本地目录", source, "directory", directory, "文件总数", visibleFiles.size());
             Stream<Path> fileStream = visibleFiles.stream();
             if (config.limit() > 0) {
                 fileStream = fileStream.limit(config.limit());
             }
             List<RecognitionContext> contexts = new ArrayList<>();
-            boolean seenCursor = cursor == null || cursor.isBlank();
-            for (Path path : fileStream.toList()) {
+            boolean seenCursor = cursor == null || cursor.trim().isEmpty();
+            for (Path path : fileStream.collect(java.util.stream.Collectors.toList())) {
                 if (shouldStop(source)) {
                     break;
                 }
@@ -86,7 +86,7 @@ public class LocalDirectorySourceConnector implements SourceConnector {
         long size = Files.size(path);
         long lastModified = Files.getLastModifiedTime(path).toMillis();
         String checkpointKey = buildCheckpointKey(path, lastModified, size);
-        if (cursor != null && !cursor.isBlank() && !seenCursor && !cursor.equals(checkpointKey)) {
+        if (cursor != null && !cursor.trim().isEmpty() && !seenCursor && !cursor.equals(checkpointKey)) {
             return null;
         }
         if (source.sourceId() != null && transferSourceCheckpointGateway.existsProcessedItem(source.sourceId(), checkpointKey)) {
@@ -127,7 +127,7 @@ public class LocalDirectorySourceConnector implements SourceConnector {
         }
         return transferSourceCheckpointGateway.findCheckpoint(source.sourceId(), TransferConfigKeys.CHECKPOINT_SCAN_CURSOR)
                 .map(checkpoint -> checkpoint.checkpointValue())
-                .filter(value -> value != null && !value.isBlank())
+                .filter(value -> value != null && !value.trim().isEmpty())
                 .orElse(null);
     }
 
@@ -137,7 +137,7 @@ public class LocalDirectorySourceConnector implements SourceConnector {
 
     private Path resolveDirectory(LocalDirectorySourceConfig config) {
         String directoryText = config.directory();
-        if (directoryText == null || directoryText.isBlank()) {
+        if (directoryText == null || directoryText.trim().isEmpty()) {
             throw new IllegalArgumentException("本地目录来源缺少 " + TransferConfigKeys.DIRECTORY + " 配置");
         }
         Path directory = Paths.get(directoryText);

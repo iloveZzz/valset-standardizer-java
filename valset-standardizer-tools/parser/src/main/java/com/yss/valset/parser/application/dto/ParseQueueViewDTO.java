@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class ParseQueueViewDTO {
+public class ParseQueueViewDTO implements java.io.Serializable {
 
     private String queueId;
 

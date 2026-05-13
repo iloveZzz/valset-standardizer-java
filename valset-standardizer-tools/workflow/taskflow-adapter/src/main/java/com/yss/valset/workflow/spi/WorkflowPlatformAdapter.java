@@ -15,7 +15,7 @@ import com.yss.valset.workflow.model.WorkflowResumeRequest;
 import com.yss.valset.workflow.model.WorkflowStopRequest;
 import com.yss.valset.workflow.model.WorkflowTriggerRequest;
 import com.yss.valset.workflow.model.EtlPlatformType;
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 
 import java.util.List;
 
@@ -40,7 +40,7 @@ public interface WorkflowPlatformAdapter {
                                                               WorkflowInstanceQueryRequest request) {
         int pageIndex = request == null || request.getPageIndex() == null ? 0 : Math.max(request.getPageIndex(), 0);
         int pageSize = request == null || request.getPageSize() == null ? 20 : Math.max(request.getPageSize(), 1);
-        return PageResult.of(List.of(), 0L, pageSize, pageIndex);
+        return PageResult.of(java.util.Arrays.asList(), 0L, pageSize, pageIndex);
     }
 
     WorkflowPlatformExecutionResult trigger(WorkflowDefinitionDTO definition,
@@ -87,7 +87,7 @@ public interface WorkflowPlatformAdapter {
     default List<WorkflowPlatformExecutionResult> queryLogs(WorkflowDefinitionDTO definition,
                                                             WorkflowInstanceDTO instance,
                                                             WorkflowLogQueryRequest request) {
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     default WorkflowTaskListDTO queryTasks(WorkflowDefinitionDTO definition,

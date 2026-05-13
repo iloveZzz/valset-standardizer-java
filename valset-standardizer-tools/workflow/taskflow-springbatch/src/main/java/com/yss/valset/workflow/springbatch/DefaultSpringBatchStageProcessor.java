@@ -73,8 +73,8 @@ public class DefaultSpringBatchStageProcessor implements SpringBatchStageProcess
         put(input, SpringBatchStagePayloadKeys.STAGE_ORDER, stage == null ? null : stage.getStageOrder());
         put(input, WorkflowContextKeys.RETRYABLE, stage != null && stage.isRetryable());
         put(input, WorkflowContextKeys.TIMEOUT_SECONDS, stage == null ? null : stage.getTimeoutSeconds());
-        put(input, WorkflowContextKeys.CONTEXT, command == null ? Map.of() : command.getContext());
-        put(input, WorkflowContextKeys.PARAMETERS, command == null ? Map.of() : command.getParameters());
+        put(input, WorkflowContextKeys.CONTEXT, command == null ? java.util.Collections.emptyMap() : command.getContext());
+        put(input, WorkflowContextKeys.PARAMETERS, command == null ? java.util.Collections.emptyMap() : command.getParameters());
         return input;
     }
 

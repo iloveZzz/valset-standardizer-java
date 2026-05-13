@@ -1,6 +1,6 @@
 package com.yss.valset.transfer.web.controller;
 
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.transfer.application.dto.TransferDeliveryRecordSummaryViewDTO;
 import com.yss.valset.transfer.application.service.TransferDeliveryRecordQueryService;
 import io.swagger.v3.oas.annotations.Operation;

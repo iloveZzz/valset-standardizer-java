@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -191,10 +192,10 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
         if (transferObject == null) {
             throw new IllegalStateException("文件对象为空，无法落盘");
         }
-        if (transferObject.localTempPath() != null && !transferObject.localTempPath().isBlank()) {
+        if (transferObject.localTempPath() != null && !transferObject.localTempPath().trim().isEmpty()) {
             return transferObject;
         }
-        if (transferObject.sourceId() == null || transferObject.sourceId().isBlank()) {
+        if (transferObject.sourceId() == null || transferObject.sourceId().trim().isEmpty()) {
             throw new IllegalStateException("文件对象缺少 sourceId，无法按需落盘");
         }
         TransferSource source = transferSourceGateway.findById(transferObject.sourceId())
@@ -211,7 +212,7 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
         if (tempPath == null) {
             throw new IllegalStateException("文件对象按需落盘失败，未获得临时文件路径，transferId=" + transferObject.transferId());
         }
-        Path directory = Path.of(uploadRoot).toAbsolutePath().resolve(LocalDate.now().toString());
+        Path directory = Paths.get(uploadRoot).toAbsolutePath().resolve(LocalDate.now().toString());
         try {
             Files.createDirectories(directory);
             Path storedPath = directory.resolve(resolveStoredFilename(transferObject.originalName()));
@@ -228,7 +229,7 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
     }
 
     private String resolveStoredFilename(String originalFilename) {
-        if (originalFilename == null || originalFilename.isBlank()) {
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
             return "transfer-file";
         }
         String sanitized = originalFilename.trim();
@@ -237,18 +238,18 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
             sanitized = sanitized.substring(lastSlash + 1);
         }
         sanitized = sanitized.replaceAll("[\\p{Cntrl}]", "_").trim();
-        return sanitized.isBlank() ? "transfer-file" : sanitized;
+        return sanitized.trim().isEmpty() ? "transfer-file" : sanitized;
     }
 
     private String resolveUploadRoot(String configuredUploadRoot) {
-        if (configuredUploadRoot != null && !configuredUploadRoot.isBlank()) {
+        if (configuredUploadRoot != null && !configuredUploadRoot.trim().isEmpty()) {
             return configuredUploadRoot;
         }
-        return Path.of(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
+        return Paths.get(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
     }
 
     private RecognitionContext toRecognitionContext(TransferObject transferObject) {
-        Map<String, Object> fileMeta = transferObject.fileMeta() == null ? Map.of() : transferObject.fileMeta();
+        Map<String, Object> fileMeta = transferObject.fileMeta() == null ? java.util.Collections.emptyMap() : transferObject.fileMeta();
         return new RecognitionContext(
                 resolveSourceType(transferObject, fileMeta),
                 resolveSourceCode(transferObject, fileMeta),
@@ -273,7 +274,7 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
         if (transferObject != null && transferObject.probeResult() != null) {
             return transferObject.probeResult();
         }
-        Map<String, Object> fileMeta = context == null || context.attributes() == null ? Map.of() : context.attributes();
+        Map<String, Object> fileMeta = context == null || context.attributes() == null ? java.util.Collections.emptyMap() : context.attributes();
         Object detectedFlag = fileMeta.get(TransferConfigKeys.PROBE_DETECTED);
         Object detectedType = fileMeta.get(TransferConfigKeys.PROBE_DETECTED_TYPE);
         Object probeAttributes = fileMeta.get(TransferConfigKeys.PROBE_ATTRIBUTES);
@@ -290,20 +291,21 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
     @SuppressWarnings("unchecked")
     private Map<String, Object> asAttributesMap(Object value) {
         if (value == null) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
-        if (value instanceof Map<?, ?> map) {
+        if (value instanceof Map<?, ?>) {
+            Map<?, ?> map = (Map<?, ?>) value;
             Map<String, Object> result = new java.util.LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 result.put(String.valueOf(entry.getKey()), entry.getValue());
             }
             return result;
         }
-        return Map.of();
+        return java.util.Collections.emptyMap();
     }
 
     private SourceType resolveSourceType(TransferObject transferObject, Map<String, Object> fileMeta) {
-        if (transferObject.sourceType() != null && !transferObject.sourceType().isBlank()) {
+        if (transferObject.sourceType() != null && !transferObject.sourceType().trim().isEmpty()) {
             try {
                 return SourceType.valueOf(transferObject.sourceType());
             } catch (IllegalArgumentException ignored) {
@@ -322,7 +324,7 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
     }
 
     private String resolveSourceCode(TransferObject transferObject, Map<String, Object> fileMeta) {
-        if (transferObject.sourceCode() != null && !transferObject.sourceCode().isBlank()) {
+        if (transferObject.sourceCode() != null && !transferObject.sourceCode().trim().isEmpty()) {
             return transferObject.sourceCode();
         }
         Object raw = fileMeta.get(TransferConfigKeys.SOURCE_CODE);
@@ -331,7 +333,7 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
 
     private String resolveTriggerType(Map<String, Object> fileMeta) {
         Object raw = fileMeta == null ? null : fileMeta.get(TransferConfigKeys.TRIGGER_TYPE);
-        if (raw == null || String.valueOf(raw).isBlank()) {
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             return null;
         }
         return String.valueOf(raw).trim().toUpperCase();
@@ -392,7 +394,7 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
                 builder.append(" -> ");
             }
             builder.append(current.getClass().getSimpleName());
-            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+            if (current.getMessage() != null && !current.getMessage().trim().isEmpty()) {
                 builder.append(": ").append(current.getMessage());
             }
             current = current.getCause();

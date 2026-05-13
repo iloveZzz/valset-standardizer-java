@@ -3,6 +3,7 @@ package com.yss.valset.parser.application.impl.stream;
 import com.yss.valset.parser.application.service.ParseLifecycleEventStreamAppService;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import jakarta.annotation.PreDestroy;
+import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -108,12 +109,21 @@ public class DefaultParseLifecycleEventStreamAppService implements ParseLifecycl
         return value.trim();
     }
 
-    private record Subscriber(SseEmitter emitter,
-                              String source,
-                              String queueId,
-                              String transferId,
-                              Long taskId,
-                              String stage) {
+    @Value
+    private class Subscriber {
+        SseEmitter emitter;
+        String source;
+        String queueId;
+        String transferId;
+        Long taskId;
+        String stage;
+
+        public SseEmitter emitter() { return emitter; }
+        public String source() { return source; }
+        public String queueId() { return queueId; }
+        public String transferId() { return transferId; }
+        public Long taskId() { return taskId; }
+        public String stage() { return stage; }
 
         private boolean matches(ParseLifecycleEvent event) {
             if (event == null) {

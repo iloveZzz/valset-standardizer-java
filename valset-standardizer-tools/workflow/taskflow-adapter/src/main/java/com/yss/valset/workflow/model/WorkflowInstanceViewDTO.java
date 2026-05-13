@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowInstanceViewDTO {
+public class WorkflowInstanceViewDTO implements java.io.Serializable {
 
     private String instanceId;
 

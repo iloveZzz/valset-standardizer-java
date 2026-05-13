@@ -107,7 +107,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
     @Override
     public List<WorkflowScheduleDTO> querySchedules(WorkflowScheduleDTO schedule) {
         if (remoteApi == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         if (schedule != null && schedule.getWorkflowDefinitionCode() != null) {
@@ -124,13 +124,13 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         List<Map<String, Object>> items = extractScheduleItems(response);
         return items.stream()
                 .map(item -> mapSchedule(schedule, item))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
     public List<String> previewSchedule(WorkflowSchedulePreviewRequest request) {
         if (remoteApi == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         if (request == null || request.getProjectCode() == null) {
             throw new IllegalArgumentException("DolphinScheduler 调度预览需要配置项目编码");
@@ -139,7 +139,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
         params.add("schedule", request.getScheduleJson());
         JsonNode response = responseSupport.toJsonNode(remoteApi.previewSchedule(request.getProjectCode(), params));
         List<String> items = extractPreviewItems(response);
-        return items.isEmpty() ? List.of() : items;
+        return items.isEmpty() ? java.util.Arrays.asList() : items;
     }
 
     private MultiValueMap<String, String> buildScheduleParams(WorkflowScheduleDTO schedule) {
@@ -161,7 +161,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
 
     private WorkflowScheduleDTO mergeRemoteSchedule(WorkflowScheduleDTO request, JsonNode response) {
         Map<String, Object> payload = response == null || !response.hasNonNull("data")
-                ? Map.of()
+                ? java.util.Collections.emptyMap()
                 : responseSupport.getObjectMapper().convertValue(response.get("data"), Map.class);
         return mapSchedule(request, payload).toBuilder()
                 .message(stringValue(payload.get("message"), payload.get("msg"), request == null ? null : request.getMessage()))
@@ -171,7 +171,7 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
 
     private WorkflowScheduleDTO mapSchedule(WorkflowScheduleDTO base, Map<String, Object> payload) {
         if (payload == null) {
-            payload = Map.of();
+            payload = java.util.Collections.emptyMap();
         }
         WorkflowScheduleDTO.WorkflowScheduleDTOBuilder builder = (base == null ? WorkflowScheduleDTO.builder() : base.toBuilder());
         builder.scheduleId(longValue(payload.get("id"), payload.get("scheduleId"), payload.get("code")));
@@ -193,25 +193,25 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
 
     private List<Map<String, Object>> extractScheduleItems(JsonNode response) {
         if (response == null || !response.hasNonNull("data")) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         JsonNode data = response.get("data");
         if (data.isArray()) {
             return responseSupport.getObjectMapper().convertValue(data,
                     responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
         }
-        for (String key : List.of("dataList", "totalList", "records", "items")) {
+        for (String key : java.util.Arrays.asList("dataList", "totalList", "records", "items")) {
             if (data.has(key) && data.get(key).isArray()) {
                 return responseSupport.getObjectMapper().convertValue(data.get(key),
                         responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
             }
         }
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     private List<String> extractPreviewItems(JsonNode response) {
         if (response == null || !response.hasNonNull("data")) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         JsonNode data = response.get("data");
         if (data.isArray()) {
@@ -219,14 +219,14 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
                     responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, String.class));
         }
         if (data.isObject()) {
-            for (String key : List.of("dataList", "totalList", "records", "items")) {
+            for (String key : java.util.Arrays.asList("dataList", "totalList", "records", "items")) {
                 if (data.has(key) && data.get(key).isArray()) {
                     return responseSupport.getObjectMapper().convertValue(data.get(key),
                             responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, String.class));
                 }
             }
         }
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     private Map<String, String> normalizeQueryParams(MultiValueMap<String, String> queryParams) {
@@ -257,8 +257,8 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
             if (value == null) {
                 continue;
             }
-            if (value instanceof Number number) {
-                return number.longValue();
+            if (value instanceof Number) {
+                return ((Number) value).longValue();
             }
             try {
                 return Long.parseLong(String.valueOf(value));
@@ -273,8 +273,8 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
             if (value == null) {
                 continue;
             }
-            if (value instanceof Number number) {
-                return number.intValue();
+            if (value instanceof Number) {
+                return ((Number) value).intValue();
             }
             try {
                 return Integer.parseInt(String.valueOf(value));
@@ -289,8 +289,8 @@ public class DolphinSchedulerWorkflowSchedulePlatformClient extends AbstractWork
             if (value == null) {
                 continue;
             }
-            if (value instanceof Boolean bool) {
-                return bool;
+            if (value instanceof Boolean) {
+                return (Boolean) value;
             }
             String string = String.valueOf(value);
             if (StringUtils.hasText(string)) {

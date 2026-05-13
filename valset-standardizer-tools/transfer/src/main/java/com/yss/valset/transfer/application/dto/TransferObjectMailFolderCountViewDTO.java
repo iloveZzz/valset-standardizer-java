@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferObjectMailFolderCountViewDTO {
+public class TransferObjectMailFolderCountViewDTO implements java.io.Serializable {
 
     /**
      * 邮件文件夹。

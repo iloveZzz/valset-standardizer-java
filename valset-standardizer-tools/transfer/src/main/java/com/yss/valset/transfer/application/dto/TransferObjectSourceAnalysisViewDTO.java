@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferObjectSourceAnalysisViewDTO {
+public class TransferObjectSourceAnalysisViewDTO implements java.io.Serializable {
 
     /**
      * 来源类型。

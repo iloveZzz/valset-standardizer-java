@@ -9,7 +9,6 @@ import type { SseEmitterErrorCallback } from "./sseEmitterErrorCallback";
 import type { SseEmitterFailure } from "./sseEmitterFailure";
 import type { SseEmitterHandler } from "./sseEmitterHandler";
 import type { SseEmitterTimeoutCallback } from "./sseEmitterTimeoutCallback";
-import type { SseEmitterWriteLock } from "./sseEmitterWriteLock";
 
 export interface SseEmitter {
   /** No comments found. */
@@ -25,9 +24,9 @@ export interface SseEmitter {
   /** No comments found.(object) */
   handler?: SseEmitterHandler;
   /** No comments found. */
+  sendFailed?: boolean;
+  /** No comments found. */
   timeout?: number;
   /** No comments found.(object) */
   timeoutCallback?: SseEmitterTimeoutCallback;
-  /** No comments found.(object) */
-  writeLock?: SseEmitterWriteLock;
 }

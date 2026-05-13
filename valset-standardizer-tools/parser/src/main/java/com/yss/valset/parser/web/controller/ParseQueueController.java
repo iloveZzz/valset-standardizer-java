@@ -1,8 +1,8 @@
 package com.yss.valset.parser.web.controller;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.PageResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.PageResult;
+import com.yss.cloud.dto.result.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.parser.application.command.ParseQueueBackfillCommand;
 import com.yss.valset.parser.application.command.ParseQueueCompleteCommand;
 import com.yss.valset.parser.application.command.ParseQueueFailCommand;
@@ -13,7 +13,7 @@ import com.yss.valset.parser.application.command.ParseQueueSubscribeCommand;
 import com.yss.valset.parser.application.dto.ParseQueueViewDTO;
 import com.yss.valset.parser.application.service.ParseQueueManagementAppService;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;

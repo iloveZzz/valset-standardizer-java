@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferDeliveryRecordSummaryViewDTO {
+public class TransferDeliveryRecordSummaryViewDTO implements java.io.Serializable{
 
     /**
      * 今日投递总数。

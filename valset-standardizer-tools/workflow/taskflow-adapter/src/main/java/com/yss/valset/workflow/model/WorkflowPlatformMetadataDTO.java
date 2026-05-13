@@ -15,7 +15,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowPlatformMetadataDTO {
+public class WorkflowPlatformMetadataDTO implements java.io.Serializable {
 
     private EtlPlatformType platformType;
 

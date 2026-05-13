@@ -1,5 +1,6 @@
 package com.yss.valset;
 
+import com.yss.cloud.EnableDistributedId;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
@@ -14,6 +15,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableDiscoveryClient
 @EnableAspectJAutoProxy
+@EnableDistributedId
 @EnableScheduling
 @EnableFeignClients(basePackages = "com.yss.valset.workflow.dolphinscheduler")
 @SpringBootApplication(scanBasePackages = {"com.yss"})

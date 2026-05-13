@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferRunLogAnalysisViewDTO {
+public class TransferRunLogAnalysisViewDTO implements java.io.Serializable {
 
     /**
      * 日志总数。

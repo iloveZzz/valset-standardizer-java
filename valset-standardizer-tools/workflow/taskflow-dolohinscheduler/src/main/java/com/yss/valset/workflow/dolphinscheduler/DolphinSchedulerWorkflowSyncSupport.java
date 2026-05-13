@@ -73,7 +73,7 @@ public class DolphinSchedulerWorkflowSyncSupport {
 
         WorkflowEngineBindingDTO binding = definition.getEngineBinding();
         Map<String, Object> attributes = new LinkedHashMap<>(
-                binding.getAttributes() == null ? Map.of() : binding.getAttributes());
+                binding.getAttributes() == null ? java.util.Collections.emptyMap() : binding.getAttributes());
         Map<String, Object> syncState = asMap(attributes.get(SYNC_STATE_KEY));
         if (syncState == null) {
             syncState = new LinkedHashMap<>();
@@ -172,7 +172,7 @@ public class DolphinSchedulerWorkflowSyncSupport {
             return;
         }
         Map<String, Object> attributes = definition.getEngineBinding().getAttributes() == null
-                ? Map.of()
+                ? java.util.Collections.emptyMap()
                 : definition.getEngineBinding().getAttributes();
         Map<String, Object> syncState = asMap(attributes.get(SYNC_STATE_KEY));
         long projectCode = resolveProjectCodeForDelete(definition, syncState);
@@ -464,10 +464,10 @@ public class DolphinSchedulerWorkflowSyncSupport {
         task.put("description", StringUtils.hasText(stage.getDescription()) ? stage.getDescription() : taskName);
         task.put("projectCode", projectCode);
         task.put("taskType", "SHELL");
-        task.put("taskParams", Map.of(
+        task.put("taskParams", com.yss.valset.common.support.Java8Maps.of(
                 "rawScript", rawScript,
-                "resourceList", List.of(),
-                "localParams", List.of()));
+                "resourceList", java.util.Arrays.asList(),
+                "localParams", java.util.Arrays.asList()));
         task.put("flag", "YES");
         task.put("taskPriority", "MEDIUM");
         task.put("workerGroup", defaultWorkerGroup(definition));
@@ -501,9 +501,9 @@ public class DolphinSchedulerWorkflowSyncSupport {
         task.put("description", StringUtils.hasText(stage.getDescription()) ? stage.getDescription() : stage.getStageName());
         task.put("projectCode", projectCode);
         task.put("taskType", "SUB_WORKFLOW");
-        task.put("taskParams", Map.of(
+        task.put("taskParams", com.yss.valset.common.support.Java8Maps.of(
                 "workflowDefinitionCode", childWorkflowCode == null ? 0L : childWorkflowCode,
-                "localParams", List.of()));
+                "localParams", java.util.Arrays.asList()));
         task.put("flag", "YES");
         task.put("taskPriority", "MEDIUM");
         task.put("workerGroup", defaultWorkerGroup(definition));
@@ -602,7 +602,7 @@ public class DolphinSchedulerWorkflowSyncSupport {
 
     private List<WorkflowStageDTO> orderedStages(WorkflowDefinitionDTO definition) {
         List<WorkflowStageDTO> stages = new ArrayList<>(
-                definition.getStages() == null ? List.of() : definition.getStages());
+                definition.getStages() == null ? java.util.Arrays.asList() : definition.getStages());
         stages.sort(Comparator.comparing(stage -> stage.getStageOrder() == null ? Integer.MAX_VALUE : stage.getStageOrder()));
         return stages;
     }
@@ -773,11 +773,11 @@ public class DolphinSchedulerWorkflowSyncSupport {
 
     private List<Long> collectChildWorkflowCodes(Map<String, Object> syncState) {
         if (syncState == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Map<String, Object> stageStates = asMap(syncState.get(STAGES_STATE_KEY));
         if (stageStates == null || stageStates.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<Long> codes = new ArrayList<>();
         for (Object state : stageStates.values()) {
@@ -819,9 +819,11 @@ public class DolphinSchedulerWorkflowSyncSupport {
     }
 
     private static Map<String, Object> asMap(Object value) {
-        if (value instanceof Map<?, ?> map) {
+        if (value instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<Object, Object> rawMap = (Map<Object, Object>) value;
             Map<String, Object> result = new LinkedHashMap<>();
-            map.forEach((key, item) -> result.put(String.valueOf(key), item));
+            rawMap.forEach((key, item) -> result.put(String.valueOf(key), item));
             return result;
         }
         return null;
@@ -849,8 +851,8 @@ public class DolphinSchedulerWorkflowSyncSupport {
         if (value == null) {
             return null;
         }
-        if (value instanceof Number number) {
-            return number.longValue();
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
         }
         String text = String.valueOf(value).trim();
         if (!StringUtils.hasText(text)) {
@@ -867,8 +869,8 @@ public class DolphinSchedulerWorkflowSyncSupport {
         if (value == null) {
             return null;
         }
-        if (value instanceof Number number) {
-            return number.intValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
         }
         String text = valueOf(value);
         if (!StringUtils.hasText(text)) {
@@ -968,7 +970,7 @@ public class DolphinSchedulerWorkflowSyncSupport {
         snapshot.put("workflowVersionNo", definition.getWorkflowVersionNo());
         snapshot.put("description", definition.getDescription());
         snapshot.put("childWorkflowCodes", childWorkflowCodes);
-        snapshot.put("stageCodes", orderedStages(definition).stream().map(WorkflowStageDTO::getStageCode).toList());
+        snapshot.put("stageCodes", orderedStages(definition).stream().map(WorkflowStageDTO::getStageCode).collect(java.util.stream.Collectors.toList()));
         return responseSupport.getObjectMapper().valueToTree(snapshot).toString();
     }
 
@@ -1019,8 +1021,8 @@ public class DolphinSchedulerWorkflowSyncSupport {
             Map<String, Object> storedTaskCodes = state == null ? null : asMap(state.get(TASK_CODES_KEY));
             if (storedTaskCodes != null) {
                 storedTaskCodes.forEach((key, value) -> {
-                    if (value instanceof Number number) {
-                        taskCodes.put(String.valueOf(key), number.longValue());
+                    if (value instanceof Number) {
+                        taskCodes.put(String.valueOf(key), ((Number) value).longValue());
                     } else if (value != null) {
                         taskCodes.put(String.valueOf(key), Long.parseLong(String.valueOf(value)));
                     }

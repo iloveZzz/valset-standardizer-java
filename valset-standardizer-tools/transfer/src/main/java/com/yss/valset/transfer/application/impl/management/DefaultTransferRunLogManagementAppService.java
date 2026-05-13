@@ -132,13 +132,13 @@ public class DefaultTransferRunLogManagementAppService implements TransferRunLog
 
     private List<String> normalizeIds(List<String> runLogIds) {
         if (runLogIds == null || runLogIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return runLogIds.stream()
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private TransferRunLogRedeliverItemViewDTO buildItem(String runLogId,

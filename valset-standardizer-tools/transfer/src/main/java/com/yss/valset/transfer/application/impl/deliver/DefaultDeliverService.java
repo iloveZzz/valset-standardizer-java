@@ -166,7 +166,7 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
     }
 
     private TransferObject persistStoragePath(TransferObject transferObject, TransferResult result) {
-        if (transferObject == null || result == null || result.storagePath() == null || result.storagePath().isBlank()) {
+        if (transferObject == null || result == null || result.storagePath() == null || result.storagePath().trim().isEmpty()) {
             return transferObject;
         }
         TransferObject updated = transferObject.withRealStoragePath(result.storagePath());
@@ -174,7 +174,7 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
     }
 
     private void updateFileInfoPaths(TransferObject transferObject) {
-        if (transferObject == null || transferObject.fingerprint() == null || transferObject.fingerprint().isBlank()) {
+        if (transferObject == null || transferObject.fingerprint() == null || transferObject.fingerprint().trim().isEmpty()) {
             return;
         }
         try {
@@ -387,7 +387,7 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
             return null;
         }
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value.trim();
             }
         }
@@ -447,7 +447,7 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
 
     private String resolveTriggerType(Map<String, Object> routeMeta) {
         Object raw = routeMeta == null ? null : routeMeta.get(TransferConfigKeys.TRIGGER_TYPE);
-        if (raw == null || String.valueOf(raw).isBlank()) {
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             return null;
         }
         return String.valueOf(raw).trim().toUpperCase();
@@ -508,7 +508,7 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
                 builder.append(" -> ");
             }
             builder.append(current.getClass().getSimpleName());
-            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+            if (current.getMessage() != null && !current.getMessage().trim().isEmpty()) {
                 builder.append(": ").append(current.getMessage());
             }
             current = current.getCause();

@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferRunLogStatusCountViewDTO {
+public class TransferRunLogStatusCountViewDTO implements java.io.Serializable {
 
     /**
      * 运行状态。

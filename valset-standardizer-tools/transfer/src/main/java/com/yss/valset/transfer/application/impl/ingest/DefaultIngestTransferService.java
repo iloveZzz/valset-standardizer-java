@@ -42,10 +42,10 @@ import java.time.LocalDateTime;
 import java.time.Instant;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -159,7 +159,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                     progressMessage = "附件抽取失败，已记录日志：" + safeFileName(context);
                 }
                 String fingerprint = fingerprint(context);
-                var existingTransfer = transferObjectGateway.findByFingerprint(fingerprint);
+                java.util.Optional<TransferObject> existingTransfer = transferObjectGateway.findByFingerprint(fingerprint);
                 if (existingTransfer.isPresent()) {
                     duplicateCount++;
                     saveRunLog(
@@ -411,9 +411,9 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                 source.sourceCode(),
                 source.sourceType() == null ? null : source.sourceType().name(),
                 triggerType,
-                command.ingestLockToken() != null && !command.ingestLockToken().isBlank());
+                command.ingestLockToken() != null && !command.ingestLockToken().trim().isEmpty());
         String ingestLockToken = command.ingestLockToken();
-        if (ingestLockToken != null && !ingestLockToken.isBlank()) {
+        if (ingestLockToken != null && !ingestLockToken.trim().isEmpty()) {
             return resumeExistingIngest(source, ingestLockToken);
         }
         return acquireIngestLockForSource(source, triggerType);
@@ -480,14 +480,14 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     }
 
     private java.util.Optional<TransferSource> refreshSource(String sourceId) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             return java.util.Optional.empty();
         }
         return transferSourceGateway.findById(sourceId);
     }
 
     private void releaseIngestLock(IngestExecutionContext executionContext) {
-        if (executionContext == null || executionContext.lockToken() == null || executionContext.lockToken().isBlank()) {
+        if (executionContext == null || executionContext.lockToken() == null || executionContext.lockToken().trim().isEmpty()) {
             return;
         }
         Instant finishedAt = Instant.now();
@@ -510,24 +510,63 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         }
     }
 
-    private record IngestExecutionContext(
-            TransferSource source,
-            String lockToken,
-            Instant startedAt,
-            boolean acquired
-    ) {
+    private static final class IngestExecutionContext {
+        private final TransferSource source;
+        private final String lockToken;
+        private final Instant startedAt;
+        private final boolean acquired;
+
+        private IngestExecutionContext(TransferSource source, String lockToken, Instant startedAt, boolean acquired) {
+            this.source = source;
+            this.lockToken = lockToken;
+            this.startedAt = startedAt;
+            this.acquired = acquired;
+        }
+
+        TransferSource source() {
+            return source;
+        }
+
+        String lockToken() {
+            return lockToken;
+        }
+
+        Instant startedAt() {
+            return startedAt;
+        }
+
+        boolean acquired() {
+            return acquired;
+        }
     }
 
-    private record IngestStartContext(
-            TransferSource source,
-            SourceConnector connector,
-            String startedAtText
-    ) {
+    private static final class IngestStartContext {
+        private final TransferSource source;
+        private final SourceConnector connector;
+        private final String startedAtText;
+
+        private IngestStartContext(TransferSource source, SourceConnector connector, String startedAtText) {
+            this.source = source;
+            this.connector = connector;
+            this.startedAtText = startedAtText;
+        }
+
+        TransferSource source() {
+            return source;
+        }
+
+        SourceConnector connector() {
+            return connector;
+        }
+
+        String startedAtText() {
+            return startedAtText;
+        }
     }
 
     private TransferSource resolveSource(IngestTransferSourceCommand command) {
         TransferSource persisted = resolvePersistedSource(command);
-        Map<String, Object> incomingParameters = command.parameters() == null ? Map.of() : command.parameters();
+        Map<String, Object> incomingParameters = command.parameters() == null ? java.util.Collections.emptyMap() : command.parameters();
         if (persisted == null) {
             return createTransientSource(command, incomingParameters);
         }
@@ -544,7 +583,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                 return byId;
             }
         }
-        if (command.sourceCode() != null && !command.sourceCode().isBlank()) {
+        if (command.sourceCode() != null && !command.sourceCode().trim().isEmpty()) {
             return transferSourceGateway.findBySourceCode(command.sourceCode()).orElse(null);
         }
         return null;
@@ -562,7 +601,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                 true,
                 null,
                 resolveTransientConnectionConfig(incomingParameters),
-                Map.of(),
+                java.util.Collections.emptyMap(),
                 null,
                 null,
                 null,
@@ -651,10 +690,10 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
 
     private String buildSourceRef(TransferSource source, RecognitionContext context) {
         String stableSourceRef = stableSourceRefFromAttributes(source, context);
-        if (stableSourceRef != null && !stableSourceRef.isBlank()) {
+        if (stableSourceRef != null && !stableSourceRef.trim().isEmpty()) {
             return compactSourceRef(source, stableSourceRef);
         }
-        if (context.mailId() != null && !context.mailId().isBlank()) {
+        if (context.mailId() != null && !context.mailId().trim().isEmpty()) {
             String raw = source.sourceType() + ":" + Objects.toString(source.sourceCode(), "") + ":" + context.mailId() + ":" + Objects.toString(context.fileName(), "")
                     + ":" + Objects.toString(attributeValue(context, TransferConfigKeys.ATTACHMENT_INDEX), "");
             return compactSourceRef(source, raw);
@@ -665,13 +704,13 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     private String stableSourceRefFromAttributes(TransferSource source, RecognitionContext context) {
         if (context.attributes() != null) {
             Object remotePath = context.attributes().get(TransferConfigKeys.REMOTE_PATH);
-            if (remotePath != null && !String.valueOf(remotePath).isBlank()) {
+            if (remotePath != null && !String.valueOf(remotePath).trim().isEmpty()) {
                 return String.valueOf(remotePath);
             }
             Object objectKey = context.attributes().get(TransferConfigKeys.OBJECT_KEY);
-            if (objectKey != null && !String.valueOf(objectKey).isBlank()) {
+            if (objectKey != null && !String.valueOf(objectKey).trim().isEmpty()) {
                 Object bucket = context.attributes().get(TransferConfigKeys.BUCKET);
-                if (bucket != null && !String.valueOf(bucket).isBlank()) {
+                if (bucket != null && !String.valueOf(bucket).trim().isEmpty()) {
                     return bucket + ":" + objectKey;
                 }
                 return String.valueOf(objectKey);
@@ -697,7 +736,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     }
 
     private String extensionOf(String fileName) {
-        if (fileName == null || fileName.isBlank()) {
+        if (fileName == null || fileName.trim().isEmpty()) {
             return null;
         }
         int dotIndex = fileName.lastIndexOf('.');
@@ -732,7 +771,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     private String nameAndSizeFingerprint(RecognitionContext context) {
         String name = context == null ? null : context.fileName();
         Long size = context == null ? null : context.fileSize();
-        if ((name == null || name.isBlank()) && size == null) {
+        if ((name == null || name.trim().isEmpty()) && size == null) {
             throw new IllegalStateException("缺少文件名称和大小，无法计算文件指纹");
         }
         String raw = Objects.toString(name, "attachment") + ":" + Objects.toString(size, "0");
@@ -758,24 +797,24 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
 
     private String stringAttribute(RecognitionContext context, String key) {
         Object value = attributeValue(context, key);
-        if (value == null || String.valueOf(value).isBlank()) {
+        if (value == null || String.valueOf(value).trim().isEmpty()) {
             return null;
         }
         return String.valueOf(value).trim();
     }
 
     private String safeFileName(RecognitionContext context) {
-        if (context == null || context.fileName() == null || context.fileName().isBlank()) {
+        if (context == null || context.fileName() == null || context.fileName().trim().isEmpty()) {
             return "未命名文件";
         }
         return context.fileName();
     }
 
     private Path resolveFilePath(RecognitionContext context) {
-        if (context == null || context.path() == null || context.path().isBlank()) {
+        if (context == null || context.path() == null || context.path().trim().isEmpty()) {
             return null;
         }
-        Path path = Path.of(context.path());
+        Path path = Paths.get(context.path());
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
             throw new IllegalStateException("文件不存在或不是普通文件，path=" + path);
         }
@@ -852,7 +891,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
      * 统一构建最终落盘路径，按照日期目录组织，便于后续排障和归档。
      */
     private Path resolveStoredFilePath(TransferObject transferObject) throws Exception {
-        Path directory = Path.of(uploadRoot).toAbsolutePath().resolve(LocalDate.now().toString());
+        Path directory = Paths.get(uploadRoot).toAbsolutePath().resolve(LocalDate.now().toString());
         Files.createDirectories(directory);
         return directory.resolve(resolveStoredFilename(transferObject.originalName()));
     }
@@ -921,7 +960,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         if (context == null || fileToStore == null) {
             return false;
         }
-        if (context.path() == null || context.path().isBlank()) {
+        if (context.path() == null || context.path().trim().isEmpty()) {
             return true;
         }
         Object materialized = attributeValue(context, "materializedByConnector");
@@ -929,7 +968,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     }
 
     private String resolveStoredFilename(String originalFilename) {
-        if (originalFilename == null || originalFilename.isBlank()) {
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
             return "transfer-file";
         }
         String sanitized = originalFilename.trim();
@@ -938,18 +977,18 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
             sanitized = sanitized.substring(lastSlash + 1);
         }
         sanitized = sanitized.replaceAll("[\\p{Cntrl}]", "_").trim();
-        return sanitized.isBlank() ? "transfer-file" : sanitized;
+        return sanitized.trim().isEmpty() ? "transfer-file" : sanitized;
     }
 
     private String resolveUploadRoot(String configuredUploadRoot) {
-        if (configuredUploadRoot != null && !configuredUploadRoot.isBlank()) {
+        if (configuredUploadRoot != null && !configuredUploadRoot.trim().isEmpty()) {
             return configuredUploadRoot;
         }
-        return Path.of(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
+        return Paths.get(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
     }
 
     private String normalizeTriggerType(String triggerType) {
-        if (triggerType == null || triggerType.isBlank()) {
+        if (triggerType == null || triggerType.trim().isEmpty()) {
             return TransferTriggerType.SYSTEM.name();
         }
         return triggerType.trim().toUpperCase();
@@ -1124,17 +1163,17 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         transferIngestProgressAppService.publishStatus(
                 source == null ? null : source.sourceId(),
                 "failed",
-                exception.getMessage() == null || exception.getMessage().isBlank() ? "来源收取失败" : exception.getMessage(),
+                exception.getMessage() == null || exception.getMessage().trim().isEmpty() ? "来源收取失败" : exception.getMessage(),
                 triggerType,
                 startedAtText
         );
         transferIngestProgressAppService.publishError(
                 source == null ? null : source.sourceId(),
                 "INGEST_FAILED",
-                exception.getMessage() == null || exception.getMessage().isBlank() ? "来源收取失败" : exception.getMessage()
+                exception.getMessage() == null || exception.getMessage().trim().isEmpty() ? "来源收取失败" : exception.getMessage()
         );
-        if (exception instanceof RuntimeException runtimeException) {
-            throw runtimeException;
+        if (exception instanceof RuntimeException) {
+            throw (RuntimeException) exception;
         }
         throw new IllegalStateException(exception.getMessage(), exception);
     }
@@ -1181,7 +1220,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         }
         String fileName = context.fileName();
         Object error = context.attributes() == null ? null : context.attributes().get("attachmentMaterializeError");
-        if (error == null || String.valueOf(error).isBlank()) {
+        if (error == null || String.valueOf(error).trim().isEmpty()) {
             return "邮件附件临时落盘失败，附件名=" + fileName;
         }
         return "邮件附件临时落盘失败，附件名=" + fileName + "，原因=" + error;
@@ -1197,7 +1236,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         }
         // 第 2 步：计算稳定的检查点 key，避免同一对象重复写入检查点。
         String itemKey = resolveCheckpointKey(source, context);
-        if (itemKey == null || itemKey.isBlank()) {
+        if (itemKey == null || itemKey.trim().isEmpty()) {
             return;
         }
         if (!processedCheckpointKeys.add(itemKey)) {
@@ -1242,7 +1281,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
 
     private String resolveCheckpointKey(TransferSource source, RecognitionContext context) {
         Object explicit = attributeValue(context, TransferConfigKeys.CHECKPOINT_KEY);
-        if (explicit != null && !String.valueOf(explicit).isBlank()) {
+        if (explicit != null && !String.valueOf(explicit).trim().isEmpty()) {
             return String.valueOf(explicit);
         }
         SourceType sourceType = source == null ? null : source.sourceType();
@@ -1254,7 +1293,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
 
     private String resolveCheckpointRef(TransferSource source, RecognitionContext context) {
         Object explicit = attributeValue(context, TransferConfigKeys.CHECKPOINT_REF);
-        if (explicit != null && !String.valueOf(explicit).isBlank()) {
+        if (explicit != null && !String.valueOf(explicit).trim().isEmpty()) {
             return String.valueOf(explicit);
         }
         SourceType sourceType = source == null ? null : source.sourceType();
@@ -1266,7 +1305,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
 
     private String resolveCheckpointName(RecognitionContext context) {
         Object explicit = attributeValue(context, TransferConfigKeys.CHECKPOINT_NAME);
-        if (explicit != null && !String.valueOf(explicit).isBlank()) {
+        if (explicit != null && !String.valueOf(explicit).trim().isEmpty()) {
             return String.valueOf(explicit);
         }
         return context.fileName();
@@ -1274,7 +1313,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
 
     private String resolveCheckpointFingerprint(TransferSource source, RecognitionContext context) {
         Object explicit = attributeValue(context, TransferConfigKeys.CHECKPOINT_FINGERPRINT);
-        if (explicit != null && !String.valueOf(explicit).isBlank()) {
+        if (explicit != null && !String.valueOf(explicit).trim().isEmpty()) {
             return String.valueOf(explicit);
         }
         return fingerprint(context);
@@ -1284,7 +1323,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
      * 将检查点明细指纹压缩到固定长度，避免原始路径或长文本写爆数据库列。
      */
     private String normalizeCheckpointFingerprint(String fingerprint) {
-        if (fingerprint == null || fingerprint.isBlank()) {
+        if (fingerprint == null || fingerprint.trim().isEmpty()) {
             return null;
         }
         return shortHash(fingerprint);
@@ -1308,26 +1347,40 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
      * 按来源类型解析检查点 key，把分支判断从主流程中收口出去。
      */
     private String resolveCheckpointKeyBySourceType(SourceType sourceType, RecognitionContext context) {
-        return switch (sourceType) {
-            case EMAIL -> context.mailId();
-            case LOCAL_DIR -> resolveLocalDirectoryCheckpointKey(context);
-            case S3 -> resolveS3CheckpointKey(context);
-            case SFTP -> resolveSftpCheckpointKey(context);
-            case HTTP -> resolveHttpCheckpointKey(context);
-        };
+        switch (sourceType) {
+            case EMAIL:
+                return context.mailId();
+            case LOCAL_DIR:
+                return resolveLocalDirectoryCheckpointKey(context);
+            case S3:
+                return resolveS3CheckpointKey(context);
+            case SFTP:
+                return resolveSftpCheckpointKey(context);
+            case HTTP:
+                return resolveHttpCheckpointKey(context);
+            default:
+                return null;
+        }
     }
 
     /**
      * 按来源类型解析检查点引用，把分支判断从主流程中收口出去。
      */
     private String resolveCheckpointRefBySourceType(SourceType sourceType, RecognitionContext context) {
-        return switch (sourceType) {
-            case EMAIL -> context.mailId();
-            case LOCAL_DIR -> Objects.toString(attributeValue(context, "absolutePath"), context.path());
-            case S3 -> Objects.toString(attributeValue(context, TransferConfigKeys.REMOTE_PATH), context.path());
-            case SFTP -> Objects.toString(attributeValue(context, TransferConfigKeys.REMOTE_PATH), context.path());
-            case HTTP -> resolveHttpCheckpointRef(context);
-        };
+        switch (sourceType) {
+            case EMAIL:
+                return context.mailId();
+            case LOCAL_DIR:
+                return Objects.toString(attributeValue(context, "absolutePath"), context.path());
+            case S3:
+                return Objects.toString(attributeValue(context, TransferConfigKeys.REMOTE_PATH), context.path());
+            case SFTP:
+                return Objects.toString(attributeValue(context, TransferConfigKeys.REMOTE_PATH), context.path());
+            case HTTP:
+                return resolveHttpCheckpointRef(context);
+            default:
+                return null;
+        }
     }
 
     /**
@@ -1385,7 +1438,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         }
         // 第 2 步：确认当前对象确实有可复用的检查点值。
         String checkpointValue = resolveCheckpointKey(source, context);
-        if (checkpointValue == null || checkpointValue.isBlank()) {
+        if (checkpointValue == null || checkpointValue.trim().isEmpty()) {
             return;
         }
         // 第 3 步：将检查点写成游标，供下一轮收取继续从断点恢复。
@@ -1470,7 +1523,7 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                 builder.append(" -> ");
             }
             builder.append(current.getClass().getSimpleName());
-            if (current.getMessage() != null && !current.getMessage().isBlank()) {
+            if (current.getMessage() != null && !current.getMessage().trim().isEmpty()) {
                 builder.append(": ").append(current.getMessage());
             }
             current = current.getCause();

@@ -7,17 +7,101 @@ import java.util.Map;
 /**
  * 本地目录来源配置。
  */
-public record LocalDirectorySourceConfig(
-        String directory,
-        boolean recursive,
-        int limit,
-        boolean includeHidden
-) {
+public class LocalDirectorySourceConfig {
 
-    public static LocalDirectorySourceConfig from(TransferSource source) {
-        Map<String, Object> config = source.connectionConfig() == null ? Map.of() : source.connectionConfig();
+    private final String directory;
+    private final boolean recursive;
+    private final int limit;
+    private final boolean includeHidden;
+
+    public LocalDirectorySourceConfig(String directory, boolean recursive, int limit, boolean includeHidden) {
+        this.directory = directory;
+        this.recursive = recursive;
+        this.limit = limit;
+        this.includeHidden = includeHidden;
+    }
+
+
+
+    public String directory() {
+        return directory;
+    }
+
+    public boolean recursive() {
+        return recursive;
+    }
+
+    public int limit() {
+        return limit;
+    }
+
+    public boolean includeHidden() {
+        return includeHidden;
+    }
+
+
+
+    public String getDirectory() {
+        return directory;
+    }
+
+    public boolean getRecursive() {
+        return recursive;
+    }
+
+    public int getLimit() {
+        return limit;
+    }
+
+    public boolean getIncludeHidden() {
+        return includeHidden;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        LocalDirectorySourceConfig other = (LocalDirectorySourceConfig) o;
+        if (!java.util.Objects.equals(directory, other.directory)) {
+            return false;
+        }
+        if (recursive != other.recursive) {
+            return false;
+        }
+        if (limit != other.limit) {
+            return false;
+        }
+        if (includeHidden != other.includeHidden) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(directory, recursive, limit, includeHidden);
+    }
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("LocalDirectorySourceConfig[");
+        sb.append("directory=").append(directory);
+        sb.append(", recursive=").append(recursive);
+        sb.append(", limit=").append(limit);
+        sb.append(", includeHidden=").append(includeHidden);
+        sb.append(']');
+        return sb.toString();
+    }
+
+
+
+public static LocalDirectorySourceConfig from(TransferSource source) {
+        Map<String, Object> config = source.connectionConfig() == null ? java.util.Collections.emptyMap() : source.connectionConfig();
         String directory = stringValue(config, TransferConfigKeys.DIRECTORY, null);
-        if (directory == null || directory.isBlank()) {
+        if (directory == null || directory.trim().isEmpty()) {
             directory = source.sourceCode();
         }
         if (directory != null) {
@@ -43,9 +127,10 @@ public record LocalDirectorySourceConfig(
 
     private static int intValue(Map<String, Object> config, String key, int defaultValue) {
         Object raw = config.get(key);
-        if (raw == null || String.valueOf(raw).isBlank()) {
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             return defaultValue;
         }
         return Integer.parseInt(String.valueOf(raw));
     }
+
 }

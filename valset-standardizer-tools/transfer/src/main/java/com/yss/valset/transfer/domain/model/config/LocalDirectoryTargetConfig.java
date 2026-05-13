@@ -8,12 +8,70 @@ import java.util.Map;
 /**
  * 本地目录投递配置。
  */
-public record LocalDirectoryTargetConfig(
-        String directory,
-        boolean createParentDirectories
-) {
+public class LocalDirectoryTargetConfig {
 
-    public static LocalDirectoryTargetConfig from(TransferContext context) {
+    private final String directory;
+    private final boolean createParentDirectories;
+
+    public LocalDirectoryTargetConfig(String directory, boolean createParentDirectories) {
+        this.directory = directory;
+        this.createParentDirectories = createParentDirectories;
+    }
+
+
+
+    public String directory() {
+        return directory;
+    }
+
+    public boolean createParentDirectories() {
+        return createParentDirectories;
+    }
+
+
+
+    public String getDirectory() {
+        return directory;
+    }
+
+    public boolean getCreateParentDirectories() {
+        return createParentDirectories;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        LocalDirectoryTargetConfig other = (LocalDirectoryTargetConfig) o;
+        if (!java.util.Objects.equals(directory, other.directory)) {
+            return false;
+        }
+        if (createParentDirectories != other.createParentDirectories) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(directory, createParentDirectories);
+    }
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("LocalDirectoryTargetConfig[");
+        sb.append("directory=").append(directory);
+        sb.append(", createParentDirectories=").append(createParentDirectories);
+        sb.append(']');
+        return sb.toString();
+    }
+
+
+
+public static LocalDirectoryTargetConfig from(TransferContext context) {
         Map<String, Object> config = merge(context);
         String directory = requiredString(config, TransferConfigKeys.DIRECTORY);
         boolean createParentDirectories = booleanValue(config, "createParentDirectories", true);
@@ -44,7 +102,7 @@ public record LocalDirectoryTargetConfig(
 
     private static String requiredString(Map<String, Object> config, String key) {
         Object raw = config.get(key);
-        if (raw == null || String.valueOf(raw).isBlank()) {
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             throw new IllegalArgumentException("本地目录目标缺少必要配置: " + key);
         }
         return String.valueOf(raw);
@@ -54,4 +112,5 @@ public record LocalDirectoryTargetConfig(
         Object raw = config.get(key);
         return raw == null ? defaultValue : Boolean.parseBoolean(String.valueOf(raw));
     }
+
 }

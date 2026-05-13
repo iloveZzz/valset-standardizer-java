@@ -6,7 +6,7 @@ import lombok.Data;
  * 估值表解析任务操作结果。
  */
 @Data
-public class OutsourcedDataTaskActionResultDTO {
+public class OutsourcedDataTaskActionResultDTO implements java.io.Serializable{
 
     private String batchId;
 

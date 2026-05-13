@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.DriverManager;
@@ -37,7 +38,7 @@ public class FileSystemResultExporter implements ResultExporter {
             @Value("${subject.match.output-dir:output}") String outputRoot
     ) {
         this.objectMapper = objectMapper;
-        this.outputRoot = Path.of(outputRoot).toAbsolutePath();
+        this.outputRoot = Paths.get(outputRoot).toAbsolutePath();
     }
 
     /**
@@ -53,7 +54,7 @@ public class FileSystemResultExporter implements ResultExporter {
         writeJson(taskDirectory.resolve("parsed.json"), buildParsedPayload(parsedValuationData, subjectRelations, subjectTree));
         writeCsv(taskDirectory.resolve("subjects.csv"), buildSubjectRows(parsedValuationData.getSubjects()));
         writeCsv(taskDirectory.resolve("subject_relations.csv"), buildSubjectRelationRows(subjectRelations));
-        writeJson(taskDirectory.resolve("subject_tree.json"), Map.of("roots", subjectTree));
+        writeJson(taskDirectory.resolve("subject_tree.json"), com.yss.valset.common.support.Java8Maps.of("roots", subjectTree));
         writeCsv(taskDirectory.resolve("metrics.csv"), buildMetricRows(parsedValuationData));
         writeJson(taskDirectory.resolve("summary.json"), summary);
         writeDuckDb(taskDirectory.resolve("parsed.duckdb"), parsedValuationData, summary, subjectRelations, subjectTree);
@@ -111,7 +112,7 @@ public class FileSystemResultExporter implements ResultExporter {
     }
 
     private List<Map<String, Object>> buildSubjectRows(List<SubjectRecord> subjects) {
-        return subjects == null ? List.of() : subjects.stream()
+        return subjects == null ? java.util.Arrays.asList() : subjects.stream()
                                               .map(subject -> {
                                                   Map<String, Object> row = new LinkedHashMap<>();
                                                   row.put("sheet_name", subject.getSheetName());
@@ -126,11 +127,11 @@ public class FileSystemResultExporter implements ResultExporter {
                                                   row.put("is_leaf", subject.getLeaf());
                                                   return row;
                                               })
-                                              .toList();
+                                              .collect(java.util.stream.Collectors.toList());
     }
 
     private List<Map<String, Object>> buildSubjectRelationRows(List<SubjectRelation> relations) {
-        return relations == null ? List.of() : relations.stream()
+        return relations == null ? java.util.Arrays.asList() : relations.stream()
                                                .map(relation -> {
                                                    Map<String, Object> row = new LinkedHashMap<>();
                                                    row.put("subject_code", relation.getSubjectCode());
@@ -144,12 +145,12 @@ public class FileSystemResultExporter implements ResultExporter {
                                                    row.put("path_codes", relation.getPathCodes());
                                                    return row;
                                                })
-                                               .toList();
+                                               .collect(java.util.stream.Collectors.toList());
     }
 
     private List<Map<String, Object>> buildMetricRows(ParsedValuationData parsedValuationData) {
         if (parsedValuationData == null || parsedValuationData.getMetrics() == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return parsedValuationData.getMetrics().stream()
                 .map(metric -> {
@@ -166,31 +167,31 @@ public class FileSystemResultExporter implements ResultExporter {
                     }
                     return row;
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<HeaderColumnMeta> resolveHeaderColumns(ParsedValuationData parsedValuationData) {
         if (parsedValuationData == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         if (parsedValuationData.getHeaderColumns() != null && !parsedValuationData.getHeaderColumns().isEmpty()) {
             return parsedValuationData.getHeaderColumns();
         }
         if (parsedValuationData.getHeaders() == null || parsedValuationData.getHeaders().isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<HeaderColumnMeta> result = new ArrayList<>(parsedValuationData.getHeaders().size());
         for (int index = 0; index < parsedValuationData.getHeaders().size(); index++) {
             String header = parsedValuationData.getHeaders().get(index);
             List<String> detail = parsedValuationData.getHeaderDetails() != null && index < parsedValuationData.getHeaderDetails().size()
                     ? parsedValuationData.getHeaderDetails().get(index)
-                    : List.of();
+                    : java.util.Arrays.asList();
             result.add(HeaderColumnMeta.builder()
                     .columnIndex(index)
                     .headerName(header)
                     .headerPath(header)
                     .pathSegments(detail)
-                    .blankColumn(header == null || header.isBlank())
+                    .blankColumn(header == null || header.trim().isEmpty())
                     .build());
         }
         return result;
@@ -198,7 +199,7 @@ public class FileSystemResultExporter implements ResultExporter {
 
     private List<Map<String, Object>> buildTop1Rows(List<ValsetMatchResult> results) {
         if (results == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return results.stream()
                 .map(result -> {
@@ -227,12 +228,12 @@ public class FileSystemResultExporter implements ResultExporter {
                     row.put("candidate_count", result.getCandidateCount());
                     return row;
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<Map<String, Object>> buildCandidateRows(List<ValsetMatchResult> results) {
         if (results == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<Map<String, Object>> rows = new java.util.ArrayList<>();
         for (ValsetMatchResult result : results) {
@@ -267,7 +268,7 @@ public class FileSystemResultExporter implements ResultExporter {
 
     private List<Map<String, Object>> buildReviewQueueRows(Long taskId, List<ValsetMatchResult> results) {
         if (results == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<ValsetMatchResult> reviewResults = results.stream()
                 .filter(result -> Boolean.TRUE.equals(result.getNeedsReview()))
@@ -276,7 +277,7 @@ public class FileSystemResultExporter implements ResultExporter {
                         .thenComparing(this::top2Gap, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(ValsetMatchResult::getScore, Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(result -> stringify(result.getExternalSubjectCode())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         List<Map<String, Object>> rows = new java.util.ArrayList<>(reviewResults.size());
         String batchId = "task-" + taskId;
         for (int index = 0; index < reviewResults.size(); index++) {
@@ -372,7 +373,7 @@ public class FileSystemResultExporter implements ResultExporter {
             headers.addAll(row.keySet());
         }
         CSVFormat csvFormat = CSVFormat.DEFAULT.builder()
-                .setHeader(headers.toArray(String[]::new))
+                .setHeader(headers.toArray(new String[0]))
                 .build();
         try {
             Files.createDirectories(outputPath.getParent());
@@ -381,7 +382,7 @@ public class FileSystemResultExporter implements ResultExporter {
                 for (Map<String, Object> row : rows) {
                     List<String> record = headers.stream()
                             .map(header -> stringify(row.get(header)))
-                            .toList();
+                            .collect(java.util.stream.Collectors.toList());
                     printer.printRecord(record);
                 }
             }
@@ -394,8 +395,8 @@ public class FileSystemResultExporter implements ResultExporter {
         if (value == null) {
             return "";
         }
-        if (value instanceof BigDecimal decimal) {
-            return decimal.stripTrailingZeros().toPlainString();
+        if (value instanceof BigDecimal) {
+            return ((BigDecimal) value).stripTrailingZeros().toPlainString();
         }
         if (value instanceof Number || value instanceof Boolean || value instanceof Enum<?>) {
             return String.valueOf(value);
@@ -511,7 +512,7 @@ public class FileSystemResultExporter implements ResultExporter {
                 }
                 for (int columnIndex = 0; columnIndex < detailRow.size(); columnIndex++) {
                     String value = detailRow.get(columnIndex);
-                    if (value == null || value.isBlank()) {
+                    if (value == null || value.trim().isEmpty()) {
                         continue;
                     }
                     statement.setInt(1, rowIndex + 1);
@@ -590,7 +591,7 @@ public class FileSystemResultExporter implements ResultExporter {
             return;
         }
         try (PreparedStatement statement = connection.prepareStatement("insert into metrics values (?, ?, ?, ?, ?, ?)")) {
-            for (var metric : parsedValuationData.getMetrics()) {
+            for (MetricRecord metric : parsedValuationData.getMetrics()) {
                 statement.setString(1, metric.getSheetName());
                 statement.setInt(2, defaultInteger(metric.getRowDataNumber()));
                 statement.setString(3, metric.getMetricName());
@@ -698,9 +699,12 @@ public class FileSystemResultExporter implements ResultExporter {
         if (summary == null || summary.isEmpty()) {
             return;
         }
-        Map<String, Object> distribution = summary.get("confidence_distribution") instanceof Map<?, ?> map
-                ? (Map<String, Object>) map
-                : Map.of();
+        Map<String, Object> distribution;
+        if (summary.get("confidence_distribution") instanceof Map<?, ?>) {
+            distribution = (Map<String, Object>) summary.get("confidence_distribution");
+        } else {
+            distribution = java.util.Collections.emptyMap();
+        }
         try (PreparedStatement statement = connection.prepareStatement("insert into match_summary values (?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             statement.setString(1, stringify(summary.get("workbook_path")));
             statement.setString(2, stringify(summary.get("sheet_name")));
@@ -897,7 +901,11 @@ public class FileSystemResultExporter implements ResultExporter {
     private void insertClusterRows(PreparedStatement statement, String clusterType, List<Object> rows) throws SQLException {
         int rank = 1;
         for (Object rowObject : rows) {
-            if (!(rowObject instanceof List<?> row) || row.isEmpty()) {
+            if (!(rowObject instanceof List<?>)) {
+                continue;
+            }
+            List<?> row = (List<?>) rowObject;
+            if (row.isEmpty()) {
                 continue;
             }
             statement.setString(1, clusterType);
@@ -961,16 +969,16 @@ public class FileSystemResultExporter implements ResultExporter {
         if (value == null) {
             return 0;
         }
-        if (value instanceof Number number) {
-            return number.intValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
         }
         String text = String.valueOf(value).trim();
         return text.isEmpty() ? 0 : Integer.parseInt(text);
     }
 
     private boolean booleanValue(Object value) {
-        if (value instanceof Boolean bool) {
-            return bool;
+        if (value instanceof Boolean) {
+            return ((Boolean) value).booleanValue();
         }
         return Boolean.parseBoolean(String.valueOf(value));
     }
@@ -979,11 +987,11 @@ public class FileSystemResultExporter implements ResultExporter {
         if (value == null) {
             return null;
         }
-        if (value instanceof BigDecimal decimal) {
-            return jdbcDecimal(decimal);
+        if (value instanceof BigDecimal) {
+            return jdbcDecimal((BigDecimal) value);
         }
-        if (value instanceof Number number) {
-            return jdbcDecimal(BigDecimal.valueOf(number.doubleValue()));
+        if (value instanceof Number) {
+            return jdbcDecimal(BigDecimal.valueOf(((Number) value).doubleValue()));
         }
         String text = String.valueOf(value).trim();
         if (text.isEmpty()) {
@@ -994,29 +1002,34 @@ public class FileSystemResultExporter implements ResultExporter {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> mapValue(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            return (Map<String, Object>) map;
+        if (value instanceof Map<?, ?>) {
+            return (Map<String, Object>) value;
         }
-        return Map.of();
+        return java.util.Collections.emptyMap();
     }
 
     @SuppressWarnings("unchecked")
     private List<Object> listValue(Object value) {
-        if (value instanceof List<?> list) {
-            return (List<Object>) list;
+        if (value instanceof List<?>) {
+            return (List<Object>) value;
         }
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     private int reviewPriority(ValsetMatchResult result) {
         if (result == null || result.getConfidenceLevel() == null) {
             return 99;
         }
-        return switch (result.getConfidenceLevel()) {
-            case LOW -> 0;
-            case MEDIUM -> 1;
-            case HIGH -> 2;
-        };
+        switch (result.getConfidenceLevel()) {
+            case LOW:
+                return 0;
+            case MEDIUM:
+                return 1;
+            case HIGH:
+                return 2;
+            default:
+                return 99;
+        }
     }
 
     private BigDecimal top2Gap(ValsetMatchResult result) {

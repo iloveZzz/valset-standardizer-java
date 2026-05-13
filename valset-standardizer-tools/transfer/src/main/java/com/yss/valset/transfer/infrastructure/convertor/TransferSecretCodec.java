@@ -31,7 +31,7 @@ public class TransferSecretCodec {
     private static final int IV_LENGTH = 12;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    private static final List<String> SENSITIVE_KEYS = List.of(
+    private static final List<String> SENSITIVE_KEYS = java.util.Arrays.asList(
             TransferConfigKeys.PASSWORD,
             TransferConfigKeys.ACCESS_KEY,
             TransferConfigKeys.SECRET_KEY,
@@ -41,7 +41,7 @@ public class TransferSecretCodec {
     private final TransferCryptoProperties transferCryptoProperties;
 
     public String encrypt(String plainText) {
-        if (plainText == null || plainText.isBlank() || isEncrypted(plainText)) {
+        if (plainText == null || plainText.trim().isEmpty() || isEncrypted(plainText)) {
             return plainText;
         }
         try {
@@ -60,7 +60,7 @@ public class TransferSecretCodec {
     }
 
     public String decrypt(String cipherText) {
-        if (cipherText == null || cipherText.isBlank() || !isEncrypted(cipherText)) {
+        if (cipherText == null || cipherText.trim().isEmpty() || !isEncrypted(cipherText)) {
             return cipherText;
         }
         try {
@@ -97,12 +97,12 @@ public class TransferSecretCodec {
         for (Map.Entry<String, Object> entry : source.entrySet()) {
             String key = entry.getKey();
             Object value = entry.getValue();
-            if (value instanceof Map<?, ?> nestedMap) {
-                target.put(key, transformMap(castMap(nestedMap), encrypt, mask));
+            if (value instanceof Map<?, ?>) {
+                target.put(key, transformMap(castMap((Map<?, ?>) value), encrypt, mask));
                 continue;
             }
-            if (value instanceof List<?> list) {
-                target.put(key, transformList(list, encrypt, mask));
+            if (value instanceof List<?>) {
+                target.put(key, transformList((List<?>) value, encrypt, mask));
                 continue;
             }
             if (isSensitiveKey(key)) {
@@ -125,10 +125,10 @@ public class TransferSecretCodec {
     private List<Object> transformList(List<?> source, boolean encrypt, boolean mask) {
         List<Object> target = new ArrayList<>(source.size());
         for (Object item : source) {
-            if (item instanceof Map<?, ?> nestedMap) {
-                target.add(transformMap(castMap(nestedMap), encrypt, mask));
-            } else if (item instanceof List<?> nestedList) {
-                target.add(transformList(nestedList, encrypt, mask));
+            if (item instanceof Map<?, ?>) {
+                target.add(transformMap(castMap((Map<?, ?>) item), encrypt, mask));
+            } else if (item instanceof List<?>) {
+                target.add(transformList((List<?>) item, encrypt, mask));
             } else {
                 target.add(item);
             }

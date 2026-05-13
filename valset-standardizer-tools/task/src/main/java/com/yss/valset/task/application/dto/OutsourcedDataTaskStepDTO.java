@@ -6,7 +6,7 @@ import lombok.Data;
  * 估值表解析任务步骤明细。
  */
 @Data
-public class OutsourcedDataTaskStepDTO {
+public class OutsourcedDataTaskStepDTO implements java.io.Serializable{
 
     private String stepId;
 

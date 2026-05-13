@@ -32,7 +32,7 @@ public final class JjhzgzbStandardizationSupport {
 
     public static List<TrDwdJjhzgzbPO> buildRows(ParsedValuationData standardizedValuationData, String sourceTp, String sourceSign) {
         if (standardizedValuationData == null || standardizedValuationData.getSubjects() == null || standardizedValuationData.getSubjects().isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<TrDwdJjhzgzbPO> result = new ArrayList<>();
         int droppedSubjectEmpty = 0;
@@ -52,7 +52,7 @@ public final class JjhzgzbStandardizationSupport {
 
     private static TrDwdJjhzgzbPO buildRow(SubjectRecord subject, Map<String, String> basicInfo, String sourceTp, String sourceSign) {
         Map<String, Object> standardValues = subject == null || subject.getStandardValues() == null
-                ? Map.of()
+                ? java.util.Collections.emptyMap()
                 : new LinkedHashMap<>(subject.getStandardValues());
 
         TrDwdJjhzgzbPO row = new TrDwdJjhzgzbPO();
@@ -99,8 +99,8 @@ public final class JjhzgzbStandardizationSupport {
         row.setSn(subject.getRowDataNumber());
         row.setDataDt(normalizeDateValue(firstNonBlank(stringValue(standardValues, "data_dt"), row.getBizDate())));
         row.setIsinCd(stringValue(standardValues, "isin_cd"));
-        if ((row.getSubjectCd() == null || row.getSubjectCd().isBlank())
-                && (row.getSubjectNm() == null || row.getSubjectNm().isBlank())) {
+        if ((row.getSubjectCd() == null || row.getSubjectCd().trim().isEmpty())
+                && (row.getSubjectNm() == null || row.getSubjectNm().trim().isEmpty())) {
             return null;
         }
         return row;
@@ -111,11 +111,11 @@ public final class JjhzgzbStandardizationSupport {
             return null;
         }
         for (String key : keys) {
-            if (key == null || key.isBlank()) {
+            if (key == null || key.trim().isEmpty()) {
                 continue;
             }
             String value = basicInfo.get(key);
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value.trim();
             }
         }
@@ -127,7 +127,7 @@ public final class JjhzgzbStandardizationSupport {
             return null;
         }
         String raw = basicInfo.get(key);
-        if (raw == null || raw.isBlank()) {
+        if (raw == null || raw.trim().isEmpty()) {
             return null;
         }
         String compact = raw.replaceAll("[^0-9]", "");
@@ -138,7 +138,7 @@ public final class JjhzgzbStandardizationSupport {
     }
 
     private static String extractBizDate(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String compact = text.replaceAll("[^0-9]", "");
@@ -149,7 +149,7 @@ public final class JjhzgzbStandardizationSupport {
     }
 
     private static String normalizeDateValue(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String compact = text.replaceAll("[^0-9]", "");
@@ -169,7 +169,7 @@ public final class JjhzgzbStandardizationSupport {
             return null;
         }
         for (String candidate : candidates) {
-            if (candidate != null && !candidate.isBlank()) {
+            if (candidate != null && !candidate.trim().isEmpty()) {
                 return candidate.trim();
             }
         }
@@ -196,11 +196,11 @@ public final class JjhzgzbStandardizationSupport {
         if (value == null) {
             return null;
         }
-        if (value instanceof LocalDateTime dateTime) {
-            return dateTime;
+        if (value instanceof LocalDateTime) {
+            return (LocalDateTime) value;
         }
         String text = ExcelParsingSupport.normalizeText(value).trim();
-        if (text.isBlank()) {
+        if (text.trim().isEmpty()) {
             return null;
         }
         try {

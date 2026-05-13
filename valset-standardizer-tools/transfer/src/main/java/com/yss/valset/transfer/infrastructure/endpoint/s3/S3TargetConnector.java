@@ -67,12 +67,12 @@ public class S3TargetConnector implements TargetConnector {
 
     private AmazonS3 buildClient(S3TargetConfig config) {
         AmazonS3ClientBuilder builder = AmazonS3ClientBuilder.standard();
-        if (config.accessKey() != null && !config.accessKey().isBlank() && config.secretKey() != null && !config.secretKey().isBlank()) {
+        if (config.accessKey() != null && !config.accessKey().trim().isEmpty() && config.secretKey() != null && !config.secretKey().trim().isEmpty()) {
             builder.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(config.accessKey(), config.secretKey())));
         }
-        if (config.endpointUrl() != null && !config.endpointUrl().isBlank()) {
+        if (config.endpointUrl() != null && !config.endpointUrl().trim().isEmpty()) {
             builder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(config.endpointUrl(), config.region()));
-        } else if (config.region() != null && !config.region().isBlank()) {
+        } else if (config.region() != null && !config.region().trim().isEmpty()) {
             builder.withRegion(config.region());
         }
         if (config.usePathStyle()) {
@@ -92,7 +92,7 @@ public class S3TargetConnector implements TargetConnector {
         );
         String fileName = firstNonBlank(transferObject.originalName(), "transfer-file");
         String resolvedBasePath = resolveTemplate(basePath, context, transferObject);
-        if (resolvedBasePath == null || resolvedBasePath.isBlank()) {
+        if (resolvedBasePath == null || resolvedBasePath.trim().isEmpty()) {
             return fileName;
         }
         return joinPath(resolvedBasePath, fileName);
@@ -100,7 +100,7 @@ public class S3TargetConnector implements TargetConnector {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value;
             }
         }
@@ -108,7 +108,7 @@ public class S3TargetConnector implements TargetConnector {
     }
 
     private String joinPath(String basePath, String fileName) {
-        if (basePath == null || basePath.isBlank()) {
+        if (basePath == null || basePath.trim().isEmpty()) {
             return fileName;
         }
         String normalizedBasePath = basePath.endsWith("/") && basePath.length() > 1
@@ -121,7 +121,7 @@ public class S3TargetConnector implements TargetConnector {
     }
 
     private String resolveTemplate(String template, TransferContext context, TransferObject transferObject) {
-        if (template == null || template.isBlank()) {
+        if (template == null || template.trim().isEmpty()) {
             return template;
         }
         Map<String, String> variables = new LinkedHashMap<>();

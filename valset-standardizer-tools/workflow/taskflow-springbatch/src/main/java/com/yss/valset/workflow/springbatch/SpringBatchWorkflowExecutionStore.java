@@ -78,7 +78,7 @@ public class SpringBatchWorkflowExecutionStore {
 
     public List<WorkflowStageLogDTO> listStageLogs(Long executionId, String stageCode) {
         // 支持按阶段码过滤，方便前端只查看某个步骤的日志。
-        List<WorkflowStageLogDTO> logs = stageLogs.getOrDefault(executionId, List.of());
+        List<WorkflowStageLogDTO> logs = stageLogs.getOrDefault(executionId, java.util.Arrays.asList());
         if (!StringUtils.hasText(stageCode)) {
             return new ArrayList<>(logs);
         }

@@ -29,9 +29,9 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
 
     @Override
     public List<RuleDefinition> listRules(String ruleCode, String ruleName, Boolean enabled, Integer limit) {
-        var query = Wrappers.lambdaQuery(TransferRulePO.class)
-                .like(ruleCode != null && !ruleCode.isBlank(), TransferRulePO::getRuleCode, ruleCode)
-                .like(ruleName != null && !ruleName.isBlank(), TransferRulePO::getRuleName, ruleName)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TransferRulePO> query = Wrappers.lambdaQuery(TransferRulePO.class)
+                .like(ruleCode != null && !ruleCode.trim().isEmpty(), TransferRulePO::getRuleCode, ruleCode)
+                .like(ruleName != null && !ruleName.trim().isEmpty(), TransferRulePO::getRuleName, ruleName)
                 .eq(enabled != null, TransferRulePO::getEnabled, enabled)
                 .orderByAsc(TransferRulePO::getPriority)
                 .orderByAsc(TransferRulePO::getRuleId);
@@ -41,7 +41,7 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
         return transferRuleRepository.selectList(query)
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -61,7 +61,7 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
                 )
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -104,7 +104,7 @@ public class TransferRuleGatewayImpl implements TransferRuleGateway {
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);

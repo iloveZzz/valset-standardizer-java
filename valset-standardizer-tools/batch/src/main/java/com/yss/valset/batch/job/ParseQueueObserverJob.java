@@ -189,7 +189,7 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
             try {
                 parseQueueManagementAppService.subscribeQueue(queueId, buildSubscribeCommand());
             } catch (ResponseStatusException exception) {
-                if (exception.getStatusCode().value() == HttpStatus.CONFLICT.value()) {
+                if (exception.getStatus().value() == HttpStatus.CONFLICT.value()) {
                     log.info("待解析事件已被其他观察者接管，queueId={}", queueId);
                     return ProcessOutcome.SKIPPED;
                 }
@@ -364,11 +364,11 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
             @SuppressWarnings("unchecked")
             Map<String, Object> request = objectMapper.readValue(queue.parseRequestJson(), Map.class);
             Object forceRebuild = request == null ? null : request.get("forceRebuild");
-            if (forceRebuild instanceof Boolean value) {
-                return value;
+            if (forceRebuild instanceof Boolean) {
+                return (Boolean) forceRebuild;
             }
-            if (forceRebuild instanceof String text) {
-                return Boolean.parseBoolean(text);
+            if (forceRebuild instanceof String) {
+                return Boolean.parseBoolean((String) forceRebuild);
             }
         } catch (Exception exception) {
             log.warn("解析待解析事件重建标记失败，queueId={}", queue.queueId(), exception);

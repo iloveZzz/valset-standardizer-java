@@ -3,12 +3,14 @@ package com.yss.valset.knowledge;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 知识库导入返回结果。
  */
 @Data
 @Builder
-public class KnowledgeImportResponse {
+public class KnowledgeImportResponse implements Serializable {
     /**
      * 目标落地表。
      */

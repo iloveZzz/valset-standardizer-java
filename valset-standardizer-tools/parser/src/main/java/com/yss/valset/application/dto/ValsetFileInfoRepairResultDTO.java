@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class ValsetFileInfoRepairResultDTO {
+public class ValsetFileInfoRepairResultDTO implements java.io.Serializable{
 
     /**
      * 是否预览模式。

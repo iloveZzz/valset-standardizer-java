@@ -18,7 +18,7 @@ import java.util.Map;
  * </ul>
  */
 @Data
-public class WorkflowExecutionContextDTO {
+public class WorkflowExecutionContextDTO implements java.io.Serializable {
 
     /** 工作流唯一标识。 */
     private String workflowId;

@@ -16,6 +16,7 @@ import com.yss.valset.extract.rule.ParseRuleExpressions;
 import com.yss.valset.extract.rule.ParseRuleSupport;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
@@ -47,7 +48,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private static final String DEFAULT_SHEET_NAME = "ODS_RAW_DATA";
     private static final String DEFAULT_CSV_SHEET_NAME = "CSV_RAW_DATA";
-    private static final List<String> FOOTER_KEYWORDS = List.of("制表", "复核", "打印", "备注");
+    private static final List<String> FOOTER_KEYWORDS = java.util.Arrays.asList("制表", "复核", "打印", "备注");
 
     private final ObjectMapper objectMapper;
     private final QlexpressParseRuleEngine parseRuleEngine;
@@ -79,12 +80,12 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     .workbookPath(config.getSourceUri())
                     .sheetName(defaultSheetName(config))
                     .title("")
-                    .basicInfo(Map.of())
-                    .headers(List.of())
-                    .headerDetails(List.of())
-                    .headerColumns(List.of())
-                    .subjects(List.of())
-                    .metrics(List.of())
+                    .basicInfo(java.util.Collections.emptyMap())
+                    .headers(java.util.Arrays.asList())
+                    .headerDetails(java.util.Arrays.asList())
+                    .headerColumns(java.util.Arrays.asList())
+                    .subjects(java.util.Arrays.asList())
+                    .metrics(java.util.Arrays.asList())
                     .build();
         }
 
@@ -133,7 +134,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private Path resolveSourcePath(DataSourceConfig config) {
-        if (config == null || config.getSourceUri() == null || config.getSourceUri().isBlank()) {
+        if (config == null || config.getSourceUri() == null || config.getSourceUri().trim().isEmpty()) {
             throw new IllegalStateException("估值表解析需要提供 sourceUri");
         }
         Path sourcePath = Paths.get(config.getSourceUri()).toAbsolutePath().normalize();
@@ -257,7 +258,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         Map<String, Integer> headerIndex = new LinkedHashMap<>();
         for (int index = 0; index < headers.size(); index++) {
             String header = headers.get(index);
-            if (!header.isBlank()) {
+            if (!header.trim().isEmpty()) {
                 headerIndex.putIfAbsent(header, index);
             }
         }
@@ -278,7 +279,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private HeaderLayout buildHeaderLayout(List<List<String>> headerBlockRows) {
         if (headerBlockRows.isEmpty()) {
-            return new HeaderLayout(List.of(), List.of(), List.of());
+            return new HeaderLayout(java.util.Arrays.asList(), java.util.Arrays.asList(), java.util.Arrays.asList());
         }
         int columnCount = headerBlockRows.stream().mapToInt(List::size).max().orElse(0);
         List<String> headers = new ArrayList<>(columnCount);
@@ -291,7 +292,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     continue;
                 }
                 String segment = headerRow.get(columnIndex);
-                if (!segment.isBlank()) {
+                if (!segment.trim().isEmpty()) {
                     pathSegments.add(segment);
                 }
             }
@@ -303,7 +304,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     .headerName(headerPath)
                     .headerPath(headerPath)
                     .pathSegments(pathSegments)
-                    .blankColumn(headerPath.isBlank())
+                    .blankColumn(headerPath.trim().isEmpty())
                     .build());
         }
         return new HeaderLayout(headers, headerDetails, headerColumns);
@@ -313,7 +314,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         List<String> normalized = new ArrayList<>(rowTexts.size());
         String carry = "";
         for (String text : rowTexts) {
-            if (text == null || text.isBlank()) {
+            if (text == null || text.trim().isEmpty()) {
                 normalized.add(carry);
                 continue;
             }
@@ -324,7 +325,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private boolean isBlankRow(List<?> rowValues) {
-        return rowValues == null || rowValues.stream().allMatch(value -> value == null || ExcelParsingSupport.normalizeText(value).isBlank());
+        return rowValues == null || rowValues.stream().allMatch(value -> value == null || ExcelParsingSupport.normalizeText(value).trim().isEmpty());
     }
 
     private TitleAndInfo extractTitleAndBasicInfo(List<List<Object>> rows, int headerRowIndex) {
@@ -332,7 +333,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         List<String> titleCandidates = new ArrayList<>();
         for (int rowIndex = 0; rowIndex < headerRowIndex; rowIndex++) {
             List<String> rowTexts = toRowTexts(rows.get(rowIndex));
-            List<String> nonEmptyTexts = rowTexts.stream().filter(text -> !text.isBlank()).toList();
+            List<String> nonEmptyTexts = rowTexts.stream().filter(text -> !text.trim().isEmpty()).collect(java.util.stream.Collectors.toList());
             if (nonEmptyTexts.isEmpty()) {
                 continue;
             }
@@ -348,10 +349,10 @@ public class OdsValuationDataParser implements ValuationDataParser {
                 String[] parts = text.split(delimiter, 2);
                 String key = stripTrailingPunctuation(parts[0]);
                 String value = parts.length > 1 ? parts[1].trim() : "";
-                if (value.isBlank()) {
+                if (value.trim().isEmpty()) {
                     value = findNextMeaningfulText(rowTexts, cellIndex + 1);
                 }
-                if (!key.isBlank()) {
+                if (!key.trim().isEmpty()) {
                     basicInfo.put(key, stripTrailingPunctuation(value));
                 }
             }
@@ -401,11 +402,11 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
         if (parseRuleTemplateResolver == null) {
-            return List.of("科目代码", "科目名称", "币种");
+            return java.util.Arrays.asList("科目代码", "科目名称", "币种");
         }
         List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
         return requiredHeaders == null || requiredHeaders.isEmpty()
-                ? List.of("科目代码", "科目名称", "币种")
+                ? java.util.Arrays.asList("科目代码", "科目名称", "币种")
                 : requiredHeaders;
     }
 
@@ -471,13 +472,13 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     .metricName(metricName)
                     .metricType("metric_data")
                     .value(toTextValue(rawValue))
-                    .rawValues(Map.of("value", normalizeMetricValue(rawValue)))
+                    .rawValues(com.yss.valset.common.support.Java8Maps.of("value", normalizeMetricValue(rawValue)))
                     .build();
         }
 
         Map<String, Object> rawValues = new LinkedHashMap<>();
         for (String header : headers) {
-            if (header == null || header.isBlank()) {
+            if (header == null || header.trim().isEmpty()) {
                 continue;
             }
             Integer columnIndex = headerIndex.get(header);
@@ -486,7 +487,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
             }
             rawValues.put(header, normalizeMetricValue(ExcelParsingSupport.valueAt(rowValues, columnIndex)));
         }
-        if (!rawValues.containsKey("科目名称") || rawValues.get("科目名称") == null || rawValues.get("科目名称").toString().isBlank()) {
+        if (!rawValues.containsKey("科目名称") || rawValues.get("科目名称") == null || rawValues.get("科目名称").toString().trim().isEmpty()) {
             rawValues.put("科目名称", metricName);
         }
 
@@ -542,7 +543,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private boolean headerMatches(String header, String headerName) {
-        if (header == null || header.isBlank() || headerName == null || headerName.isBlank()) {
+        if (header == null || header.trim().isEmpty() || headerName == null || headerName.trim().isEmpty()) {
             return false;
         }
         if (header.equals(headerName)) {
@@ -574,7 +575,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         }
         for (int index = startIndex; index < rowTexts.size(); index++) {
             String text = rowTexts.get(index);
-            if (text != null && !text.isBlank()) {
+            if (text != null && !text.trim().isEmpty()) {
                 return text;
             }
         }
@@ -597,7 +598,7 @@ public class OdsValuationDataParser implements ValuationDataParser {
         for (int index = labelIndex + 1; index < rowValues.size(); index++) {
             Object value = ExcelParsingSupport.valueAt(rowValues, index);
             String text = ExcelParsingSupport.textAt(rowValues, index);
-            if (text.isBlank() || "-".equals(text)) {
+            if (text.trim().isEmpty() || "-".equals(text)) {
                 continue;
             }
             return value;
@@ -606,12 +607,12 @@ public class OdsValuationDataParser implements ValuationDataParser {
     }
 
     private boolean containsAnySegment(String header, String... excludedTokens) {
-        if (header == null || header.isBlank() || excludedTokens == null || excludedTokens.length == 0) {
+        if (header == null || header.trim().isEmpty() || excludedTokens == null || excludedTokens.length == 0) {
             return false;
         }
         String[] segments = header.split("\\|");
         for (String excludedToken : excludedTokens) {
-            if (excludedToken == null || excludedToken.isBlank()) {
+            if (excludedToken == null || excludedToken.trim().isEmpty()) {
                 continue;
             }
             for (String segment : segments) {
@@ -630,7 +631,8 @@ public class OdsValuationDataParser implements ValuationDataParser {
 
     private String toTextValue(Object rawValue) {
         Object normalizedValue = normalizeMetricValue(rawValue);
-        if (normalizedValue instanceof BigDecimal decimal) {
+        if (normalizedValue instanceof BigDecimal) {
+            BigDecimal decimal = (BigDecimal) normalizedValue;
             return decimal.stripTrailingZeros().toPlainString();
         }
         return normalizedValue == null ? "" : String.valueOf(normalizedValue);
@@ -641,21 +643,43 @@ public class OdsValuationDataParser implements ValuationDataParser {
             if (value == null) {
                 continue;
             }
-            if (value instanceof String text && text.isBlank()) {
-                continue;
+            if (value instanceof String) {
+                if (((String) value).trim().isEmpty()) {
+                    continue;
+                }
             }
             return value;
         }
         return null;
     }
 
-    private record TitleAndInfo(String title, Map<String, String> basicInfo) {
+    @Value
+    private static class TitleAndInfo {
+        String title;
+        Map<String, String> basicInfo;
+
+        public String title() { return title; }
+        public Map<String, String> basicInfo() { return basicInfo; }
     }
 
-    private record HeaderLayout(List<String> headers, List<List<String>> headerDetails, List<HeaderColumnMeta> headerColumns) {
+    @Value
+    private static class HeaderLayout {
+        List<String> headers;
+        List<List<String>> headerDetails;
+        List<HeaderColumnMeta> headerColumns;
+
+        public List<String> headers() { return headers; }
+        public List<List<String>> headerDetails() { return headerDetails; }
+        public List<HeaderColumnMeta> headerColumns() { return headerColumns; }
     }
 
-    private record SplitResult(List<SubjectRecord> subjects, List<MetricRecord> metrics) {
+    @Value
+    private static class SplitResult {
+        List<SubjectRecord> subjects;
+        List<MetricRecord> metrics;
+
+        public List<SubjectRecord> subjects() { return subjects; }
+        public List<MetricRecord> metrics() { return metrics; }
     }
 
     private String defaultSheetName(DataSourceConfig config) {

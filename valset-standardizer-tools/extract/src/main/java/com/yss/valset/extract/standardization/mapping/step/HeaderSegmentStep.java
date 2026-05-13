@@ -20,16 +20,16 @@ public class HeaderSegmentStep implements HeaderMappingStep {
             return null;
         }
         List<String> candidates = new ArrayList<>();
-        if (input.headerText() != null && !input.headerText().isBlank()) {
+        if (input.headerText() != null && !input.headerText().trim().isEmpty()) {
             for (String segment : input.headerText().split("\\|")) {
-                if (segment != null && !segment.isBlank()) {
+                if (segment != null && !segment.trim().isEmpty()) {
                     candidates.add(segment.trim());
                 }
             }
         }
         if (input.segments() != null) {
             for (String segment : input.segments()) {
-                if (segment != null && !segment.isBlank()) {
+                if (segment != null && !segment.trim().isEmpty()) {
                     candidates.add(segment.trim());
                 }
             }

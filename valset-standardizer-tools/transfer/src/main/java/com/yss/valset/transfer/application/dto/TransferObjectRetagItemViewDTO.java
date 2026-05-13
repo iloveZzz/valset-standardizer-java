@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferObjectRetagItemViewDTO {
+public class TransferObjectRetagItemViewDTO implements java.io.Serializable {
 
     /**
      * 文件主键。

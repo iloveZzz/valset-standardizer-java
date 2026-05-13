@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferMailInfoViewDTO {
+public class TransferMailInfoViewDTO implements java.io.Serializable {
 
     /**
      * 文件主键。

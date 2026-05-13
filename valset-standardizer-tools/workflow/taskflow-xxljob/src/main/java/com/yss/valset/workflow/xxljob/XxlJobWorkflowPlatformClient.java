@@ -48,7 +48,7 @@ public class XxlJobWorkflowPlatformClient extends AbstractWorkflowPlatformClient
         payload.put("executorRouteStrategy", "FIRST");
         payload.put("jobDesc", definition == null ? null : definition.getWorkflowName());
         payload.put("stageCode", command == null ? null : command.getStageCode());
-        payload.put("context", command == null ? Map.of() : command.getContext());
+        payload.put("context", command == null ? java.util.Collections.emptyMap() : command.getContext());
         payload.put("operationType", command == null || command.getOperationType() == null ? null : command.getOperationType().name());
         payload.put("canonicalStatus", WorkflowStatus.fromRawStatus(instance == null ? null : instance.getRawStatus()).name());
         return payload;

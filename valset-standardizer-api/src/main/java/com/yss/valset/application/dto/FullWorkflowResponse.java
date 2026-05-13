@@ -3,12 +3,14 @@ package com.yss.valset.application.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 全流程执行结果。
  */
 @Data
 @Builder
-public class FullWorkflowResponse {
+public class FullWorkflowResponse implements Serializable {
     /**
      * 文件主键。
      */

@@ -86,7 +86,7 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
         context.put(TRACE_TYPE_KEY, TRACE_TYPE_HEADER);
         context.put(TRACE_STEP_KEY, "STRATEGY");
 
-        String strategy = evaluateString(strategyExpr == null || strategyExpr.isBlank() ? HeaderMappingExpressions.STRATEGY_EXPR : strategyExpr, context);
+        String strategy = evaluateString(strategyExpr == null || strategyExpr.trim().isEmpty() ? HeaderMappingExpressions.STRATEGY_EXPR : strategyExpr, context);
         if ("exact_header".equals(strategy) && exactCandidate != null) {
             context.put(TRACE_STEP_KEY, "EXACT_MATCH");
             return buildDecision(input, exactCandidate, strategy, context);
@@ -115,7 +115,7 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
         Double confidence = evaluateConfidence(context);
         context.put(TRACE_STEP_KEY, "REASON");
         String reason = evaluateString(HeaderMappingExpressions.REASON_EXPR, context);
-        if (reason == null || reason.isBlank()) {
+        if (reason == null || reason.trim().isEmpty()) {
             reason = "表头映射成功";
         }
         String matchedText = resolvedCandidate.matchedText() == null ? input.headerText() : resolvedCandidate.matchedText();
@@ -135,15 +135,15 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
 
     private Double evaluateConfidence(Map<String, Object> context) {
         Object result = evaluate(HeaderMappingExpressions.CONFIDENCE_EXPR, context);
-        if (result instanceof Number number) {
-            return number.doubleValue();
+        if (result instanceof Number) {
+            return ((Number) result).doubleValue();
         }
         return 0D;
     }
 
     private Object evaluate(String expression, Map<String, Object> context) {
         long startedAt = System.currentTimeMillis();
-        Map<String, Object> safeContext = context == null ? Map.of() : new HashMap<>(context);
+        Map<String, Object> safeContext = context == null ? java.util.Collections.emptyMap() : new HashMap<>(context);
         try {
             Object result = runner.execute(expression, safeContext, QLOptions.DEFAULT_OPTIONS).getResult();
             recordTraceIfNeeded(expression, safeContext, result, null, true, System.currentTimeMillis() - startedAt);
@@ -193,7 +193,7 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
                     .reason("映射查找器不可用")
                     .build();
         }
-        Map<Integer, MappingDecision> legacy = legacyEngine.map(List.of(input), lookup);
+        Map<Integer, MappingDecision> legacy = legacyEngine.map(java.util.Arrays.asList(input), lookup);
         MappingDecision decision = legacy.get(input.columnIndex());
         if (decision != null) {
             return decision;
@@ -255,7 +255,7 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
             return defaultValue;
         }
         String text = String.valueOf(value);
-        return text.isBlank() ? defaultValue : text;
+        return text.trim().isEmpty() ? defaultValue : text;
     }
 
     private String asString(Object[] params, int index, String defaultValue) {
@@ -268,15 +268,16 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
     @SuppressWarnings("unchecked")
     private List<String> asStringList(Object[] params, int index) {
         if (params == null || index < 0 || index >= params.length) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Object value = params[index];
-        if (value instanceof List<?> list) {
-            return list.stream().map(item -> item == null ? "" : String.valueOf(item)).toList();
+        if (value instanceof List<?>) {
+            List<?> list = (List<?>) value;
+            return list.stream().map(item -> item == null ? "" : String.valueOf(item)).collect(java.util.stream.Collectors.toList());
         }
         if (value == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
-        return List.of(String.valueOf(value));
+        return java.util.Arrays.asList(String.valueOf(value));
     }
 }

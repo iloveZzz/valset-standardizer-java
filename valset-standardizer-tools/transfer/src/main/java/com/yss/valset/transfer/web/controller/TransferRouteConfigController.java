@@ -1,13 +1,13 @@
 package com.yss.valset.transfer.web.controller;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.transfer.application.command.TransferRouteUpsertCommand;
 import com.yss.valset.transfer.application.dto.TransferRouteMutationResponse;
 import com.yss.valset.transfer.application.dto.TransferRouteViewDTO;
 import com.yss.valset.transfer.application.service.TransferRouteManagementAppService;
 import io.swagger.v3.oas.annotations.Operation;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;

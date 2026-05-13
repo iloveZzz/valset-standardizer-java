@@ -38,13 +38,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -143,12 +137,12 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.QUERY_LOGS, definition, instance, request);
         JobExecution execution = locateExecution(instance).orElse(null);
         if (execution == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<WorkflowStageLogDTO> stageLogs = executionStore.listStageLogs(execution.getId(),
                 request == null ? null : request.getStageCode());
         if (CollectionUtils.isEmpty(stageLogs)) {
-            return List.of(buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业日志"));
+            return java.util.Arrays.asList(buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业日志"));
         }
         return stageLogs.stream()
                 .map(stageLog -> WorkflowPlatformExecutionResult.builder()
@@ -158,9 +152,9 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                         .rawStatus(stageLog.getRawStatus())
                         .message(stageLog.getMessage())
                         .payload(buildLogPayload(definition, instance, execution, stageLog, command))
-                        .stageLogs(List.of(stageLog))
+                        .stageLogs(java.util.Arrays.asList(stageLog))
                         .build())
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -221,17 +215,17 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                          WorkflowTriggerRequest request) {
         // 每个工作流阶段都会转换成一个 Step，按 stageOrder 串联成顺序作业。
         String jobName = resolveJobName(definition);
-        List<WorkflowStageDTO> stages = definition.getStages() == null ? List.of() : definition.getStages().stream()
+        List<WorkflowStageDTO> stages = definition.getStages() == null ? java.util.Arrays.asList() : definition.getStages().stream()
                 .sorted(Comparator.comparing(WorkflowStageDTO::getStageOrder, Comparator.nullsLast(Integer::compareTo)))
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
         if (stages.isEmpty()) {
-            stages = List.of(WorkflowStageDTO.builder()
+            stages = java.util.Arrays.asList(WorkflowStageDTO.builder()
                     .stageCode("DEFAULT")
                     .stageName("默认步骤")
                     .stageOrder(1)
                     .build());
         }
-        JobBuilder jobBuilder = new JobBuilder(jobName, jobRepository);
+        JobBuilder jobBuilder = new JobBuilder(jobName);
         SimpleJobBuilder simpleJobBuilder = jobBuilder.start(buildStep(definition, instance, request, stages.get(0)));
         for (int index = 1; index < stages.size(); index++) {
             simpleJobBuilder = simpleJobBuilder.next(buildStep(definition, instance, request, stages.get(index)));
@@ -287,8 +281,8 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
             executionStore.saveStageLog(executionId, stageLog);
             return RepeatStatus.FINISHED;
         };
-        return new StepBuilder(stepName, jobRepository)
-                .tasklet(tasklet, springBatchTransactionManager)
+        return new StepBuilder(stepName)
+                .tasklet(tasklet)
                 .build();
     }
 
@@ -305,7 +299,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         }
         builder.addString("instanceId", instance == null ? null : instance.getInstanceId(), true);
         builder.addString("externalWorkflowId", resolveExternalWorkflowId(definition, instance), true);
-        builder.addLocalDateTime("triggerTime", LocalDateTime.now(), true);
+        builder.addDate("triggerTime", new Date(), true);
         if (request != null && request.getContext() != null) {
             request.getContext().forEach((key, value) -> {
                 if (value != null) {
@@ -323,7 +317,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                                                                  String defaultMessage) {
         // 统一构建查询/触发/停止/重试的返回结构，保证控制层看到一致的响应形态。
         List<WorkflowStageLogDTO> stageLogs = execution == null
-                ? List.of()
+                ? java.util.Arrays.asList()
                 : executionStore.listStageLogs(execution.getId(), null);
         return WorkflowPlatformExecutionResult.builder()
                 .platformType(platformType())
@@ -346,7 +340,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         payload.put("jobExecutionId", execution == null || execution.getId() == null ? null : execution.getId());
         payload.put("batchStatus", execution == null ? null : execution.getStatus().name());
         payload.put("exitStatus", execution == null || execution.getExitStatus() == null ? null : execution.getExitStatus().getExitCode());
-        payload.put("jobParameters", execution == null ? Map.of() : toParameterMap(execution.getJobParameters()));
+        payload.put("jobParameters", execution == null ? java.util.Collections.emptyMap() : toParameterMap(execution.getJobParameters()));
         payload.put("stepCount", execution == null ? 0 : execution.getStepExecutions().size());
         return payload;
     }
@@ -377,9 +371,9 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         payload.put("filterCount", stepExecution == null ? null : stepExecution.getFilterCount());
         payload.put("exitStatus", stepExecution == null || stepExecution.getExitStatus() == null ? null : stepExecution.getExitStatus().getExitCode());
         payload.put("summary", stepExecution == null ? null : stepExecution.getSummary());
-        payload.put("input", stageExecutionResult == null ? Map.of() : stageExecutionResult.getInput());
-        payload.put("output", stageExecutionResult == null ? Map.of() : stageExecutionResult.getOutput());
-        payload.put("metadata", stageExecutionResult == null ? Map.of() : stageExecutionResult.getMetadata());
+        payload.put("input", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getInput());
+        payload.put("output", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getOutput());
+        payload.put("metadata", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getMetadata());
         payload.put("executionMessage", stageExecutionResult == null ? null : stageExecutionResult.getMessage());
         payload.put("executionRawStatus", stageExecutionResult == null ? null : stageExecutionResult.getRawStatus());
         payload.put("executionStatus", stageExecutionResult == null || stageExecutionResult.getStatus() == null ? null : stageExecutionResult.getStatus().name());

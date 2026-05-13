@@ -9,14 +9,14 @@ import com.yss.valset.transfer.domain.model.TransferSourceCheckpoint;
 import com.yss.valset.transfer.domain.model.config.EmailSourceConfig;
 import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
 import com.yss.valset.transfer.infrastructure.source.support.SourceFetchLogSupport;
-import jakarta.mail.Folder;
-import jakarta.mail.Message;
-import jakarta.mail.Session;
-import jakarta.mail.Store;
-import jakarta.mail.UIDFolder;
-import jakarta.mail.search.ComparisonTerm;
-import jakarta.mail.search.ReceivedDateTerm;
-import jakarta.mail.search.SearchTerm;
+import javax.mail.Folder;
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Store;
+import javax.mail.UIDFolder;
+import javax.mail.search.ComparisonTerm;
+import javax.mail.search.ReceivedDateTerm;
+import javax.mail.search.SearchTerm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -108,7 +108,7 @@ public class EmailMailScanner {
         int limit = config.effectiveLimit();
         int batchSize = config.effectiveScanBatchSize();
         int emailSequence = 0;
-        boolean seenCursor = cursorState.uid() != null || cursorState.mailId() == null || cursorState.mailId().isBlank();
+        boolean seenCursor = cursorState.uid() != null || cursorState.mailId() == null || cursorState.mailId().trim().isEmpty();
 
         if (uidFolder != null && cursorState.uid() != null && cursorState.uid() > 0) {
             long lastUid = Math.max(0L, uidFolder.getUIDNext() - 1);
@@ -178,7 +178,7 @@ public class EmailMailScanner {
                 && cursorState != null
                 && cursorState.uid() == null
                 && cursorState.messageNumber() == null
-                && (cursorState.mailId() == null || cursorState.mailId().isBlank());
+                && (cursorState.mailId() == null || cursorState.mailId().trim().isEmpty());
     }
 
     private Message[] loadCandidateMessagesByTimeSearch(Folder folder, Instant mailTimeLowerBound) throws Exception {
@@ -280,7 +280,7 @@ public class EmailMailScanner {
         String subject = safeSubject(message);
         if (source.sourceId() != null && transferSourceCheckpointGateway.existsProcessedItem(source.sourceId(), mailId)) {
             log.info("收取邮件第{}封已处理过，mailId={}，主题={}", emailSequence, mailId, subject);
-            return new MailProcessingResult(List.of(), "已处理");
+            return new MailProcessingResult(java.util.Arrays.asList(), "已处理");
         }
         log.info("收取邮件第{}封，mailId={}，主题={}", emailSequence, mailId, subject);
         processedInThisRun.add(mailId);
@@ -320,7 +320,7 @@ public class EmailMailScanner {
      * 记录扫描游标，用于下次任务从当前邮件继续扫描。
      */
     private void recordScanCursor(TransferSource source, EmailSourceConfig config, MailScanReference reference) {
-        if (source == null || source.sourceId() == null || reference == null || reference.mailId() == null || reference.mailId().isBlank()) {
+        if (source == null || source.sourceId() == null || reference == null || reference.mailId() == null || reference.mailId().trim().isEmpty()) {
             return;
         }
         Map<String, Object> checkpointMeta = new LinkedHashMap<>();
@@ -444,7 +444,7 @@ public class EmailMailScanner {
      */
     private String resolveMailId(Message message, EmailSourceConfig config, UIDFolder uidFolder) throws Exception {
         String[] header = message.getHeader("Message-ID");
-        if (header != null && header.length > 0 && header[0] != null && !header[0].isBlank()) {
+        if (header != null && header.length > 0 && header[0] != null && !header[0].trim().isEmpty()) {
             return header[0];
         }
         Long uid = resolveMailUid(message, uidFolder);
@@ -475,7 +475,7 @@ public class EmailMailScanner {
         if (checkpoint == null) {
             return new CursorState(null, null, null);
         }
-        Map<String, Object> checkpointMeta = checkpoint.checkpointMeta() == null ? Map.of() : checkpoint.checkpointMeta();
+        Map<String, Object> checkpointMeta = checkpoint.checkpointMeta() == null ? java.util.Collections.emptyMap() : checkpoint.checkpointMeta();
         String mailId = checkpoint.checkpointValue();
         Long mailUid = parseLongValue(checkpointMeta.get(TransferConfigKeys.MAIL_UID));
         if (mailUid == null) {
@@ -492,7 +492,7 @@ public class EmailMailScanner {
     }
 
     private Long parseTrailingLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         if (value.contains("@")) {
@@ -541,10 +541,71 @@ public class EmailMailScanner {
                 + "，" + suggestion;
     }
 
-    private record CursorState(String mailId, Long uid, Integer messageNumber) {
+    private static final class CursorState {
+        private final String mailId;
+        private final Long uid;
+        private final Integer messageNumber;
+
+        private CursorState(String mailId, Long uid, Integer messageNumber) {
+            this.mailId = mailId;
+            this.uid = uid;
+            this.messageNumber = messageNumber;
+        }
+
+        String mailId() {
+            return mailId;
+        }
+
+        Long uid() {
+            return uid;
+        }
+
+        Integer messageNumber() {
+            return messageNumber;
+        }
     }
 
-    private record MailScanReference(String mailId, Long mailUid, Integer messageNumber, int emailSequence, String subject, String reason) {
+    private static final class MailScanReference {
+        private final String mailId;
+        private final Long mailUid;
+        private final Integer messageNumber;
+        private final int emailSequence;
+        private final String subject;
+        private final String reason;
+
+        private MailScanReference(String mailId, Long mailUid, Integer messageNumber, int emailSequence, String subject, String reason) {
+            this.mailId = mailId;
+            this.mailUid = mailUid;
+            this.messageNumber = messageNumber;
+            this.emailSequence = emailSequence;
+            this.subject = subject;
+            this.reason = reason;
+        }
+
+        String mailId() {
+            return mailId;
+        }
+
+        Long mailUid() {
+            return mailUid;
+        }
+
+        Integer messageNumber() {
+            return messageNumber;
+        }
+
+        int emailSequence() {
+            return emailSequence;
+        }
+
+        String subject() {
+            return subject;
+        }
+
+        String reason() {
+            return reason;
+        }
+
         MailScanReference withEmailSequence(int emailSequence) {
             return new MailScanReference(mailId, mailUid, messageNumber, emailSequence, subject, reason);
         }
@@ -554,10 +615,57 @@ public class EmailMailScanner {
         }
     }
 
-    private record MailProcessingResult(List<RecognitionContext> contexts, String reason) {
+    private static final class MailProcessingResult {
+        private final List<RecognitionContext> contexts;
+        private final String reason;
+
+        private MailProcessingResult(List<RecognitionContext> contexts, String reason) {
+            this.contexts = contexts;
+            this.reason = reason;
+        }
+
+        List<RecognitionContext> contexts() {
+            return contexts;
+        }
+
+        String reason() {
+            return reason;
+        }
     }
 
-    private record ScanBatchResult(List<RecognitionContext> contexts, int emailSequence, boolean seenCursor,
-                                   MailScanReference latestCursorReference, boolean stopped) {
+    private static final class ScanBatchResult {
+        private final List<RecognitionContext> contexts;
+        private final int emailSequence;
+        private final boolean seenCursor;
+        private final MailScanReference latestCursorReference;
+        private final boolean stopped;
+
+        private ScanBatchResult(List<RecognitionContext> contexts, int emailSequence, boolean seenCursor, MailScanReference latestCursorReference, boolean stopped) {
+            this.contexts = contexts;
+            this.emailSequence = emailSequence;
+            this.seenCursor = seenCursor;
+            this.latestCursorReference = latestCursorReference;
+            this.stopped = stopped;
+        }
+
+        List<RecognitionContext> contexts() {
+            return contexts;
+        }
+
+        int emailSequence() {
+            return emailSequence;
+        }
+
+        boolean seenCursor() {
+            return seenCursor;
+        }
+
+        MailScanReference latestCursorReference() {
+            return latestCursorReference;
+        }
+
+        boolean stopped() {
+            return stopped;
+        }
     }
 }

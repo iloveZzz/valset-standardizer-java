@@ -1,6 +1,7 @@
 package com.yss.valset.transfer.scheduler;
 
 import com.github.kagkarlsson.scheduler.SchedulerClient;
+import com.github.kagkarlsson.scheduler.exceptions.TaskInstanceCurrentlyExecutingException;
 import com.github.kagkarlsson.scheduler.exceptions.TaskInstanceNotFoundException;
 import com.github.kagkarlsson.scheduler.task.SchedulableInstance;
 import com.github.kagkarlsson.scheduler.task.schedule.Schedules;
@@ -45,6 +46,9 @@ public class TransferObjectRedeliverBootstrapRunner implements ApplicationRunner
             rescheduled = schedulerClient.reschedule(schedulableInstance);
         } catch (TaskInstanceNotFoundException exception) {
             rescheduled = false;
+        } catch (TaskInstanceCurrentlyExecutingException exception) {
+            // 任务正在执行中，跳过本次调度，等待下次执行
+            return;
         }
         if (!rescheduled) {
             schedulerClient.scheduleIfNotExists(schedulableInstance);

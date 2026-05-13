@@ -3,12 +3,14 @@ package com.yss.valset.application.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 上传估值表并完成 ODS 提取后的返回结果。
  */
 @Data
 @Builder
-public class UploadValuationFileResponse {
+public class UploadValuationFileResponse implements Serializable {
     /**
      * 文件主键。
      */

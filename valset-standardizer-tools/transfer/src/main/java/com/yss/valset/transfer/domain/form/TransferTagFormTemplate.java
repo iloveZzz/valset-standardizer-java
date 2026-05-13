@@ -14,16 +14,14 @@ import java.util.Map;
 @Component
 public class TransferTagFormTemplate extends FormTemplate {
 
-    private static final String DEFAULT_VALUATION_TABLE_SCRIPT = """
-            String source = hasText(filePath) ? filePath : path;
-            if (!hasText(source)) {
-                return false;
-            }
-            if (!(isExcelFile(source) || isCsvFile(source))) {
-                return false;
-            }
-            return isValuationTableByMeta(source, tagMeta);
-            """;
+    private static final String DEFAULT_VALUATION_TABLE_SCRIPT = "String source = hasText(filePath) ? filePath : path;\n"
+            + "if (!hasText(source)) {\n"
+            + "    return false;\n"
+            + "}\n"
+            + "if (!(isExcelFile(source) || isCsvFile(source))) {\n"
+            + "    return false;\n"
+            + "}\n"
+            + "return isValuationTableByMeta(source, tagMeta);";
 
     @Override
     public String getName() {
@@ -41,7 +39,7 @@ public class TransferTagFormTemplate extends FormTemplate {
         values.put("defaultTag", Boolean.FALSE);
         Map<String, Object> tagMeta = new LinkedHashMap<>();
         tagMeta.put("scanLimit", 100);
-        tagMeta.put("headerKeywords", java.util.List.of("科目代码", "科目名称"));
+        tagMeta.put("headerKeywords", java.util.Arrays.asList("科目代码", "科目名称"));
         values.put("tagMeta", tagMeta);
         return values;
     }

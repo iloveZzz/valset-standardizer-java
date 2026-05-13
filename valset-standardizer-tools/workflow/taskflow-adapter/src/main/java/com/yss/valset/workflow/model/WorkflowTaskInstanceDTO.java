@@ -14,7 +14,7 @@ import java.util.Map;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowTaskInstanceDTO {
+public class WorkflowTaskInstanceDTO implements java.io.Serializable {
 
     private Long id;
 

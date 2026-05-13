@@ -101,7 +101,7 @@ public class ExtractDataExecutionAppServiceImpl implements ExtractDataExecutionU
     }
 
     private DataSourceType resolveDataSourceType(String rawType) {
-        if (rawType == null || rawType.isBlank()) {
+        if (rawType == null || rawType.trim().isEmpty()) {
             return DataSourceType.EXCEL;
         }
         try {

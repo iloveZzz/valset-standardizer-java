@@ -25,7 +25,7 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
 
     @Override
     public SseEmitter subscribe(String sourceId) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             throw new IllegalArgumentException("来源主键不能为空");
         }
         SseEmitter emitter = new SseEmitter();
@@ -65,7 +65,7 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
     }
 
     private void send(String sourceId, String type, Object data) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             return;
         }
         Set<SseEmitter> emitters = emitterRegistry.get(sourceId);
@@ -95,7 +95,7 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
     }
 
     private void removeEmitter(String sourceId, SseEmitter emitter) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             return;
         }
         Set<SseEmitter> emitters = emitterRegistry.get(sourceId);
@@ -109,29 +109,129 @@ public class DefaultTransferIngestProgressAppService implements TransferIngestPr
     }
 
     private String normalizeStatus(String status) {
-        if (status == null || status.isBlank()) {
+        if (status == null || status.trim().isEmpty()) {
             return "idle";
         }
         return status.trim().toLowerCase();
     }
 
-    private record TransferSseMessage<T>(String type, String taskId, T data) {
+    private static final class TransferSseMessage<T> {
+        private final String type;
+        private final String taskId;
+        private final T data;
+
+        private TransferSseMessage(String type, String taskId, T data) {
+            this.type = type;
+            this.taskId = taskId;
+            this.data = data;
+        }
+
+        String type() {
+            return type;
+        }
+
+        String taskId() {
+            return taskId;
+        }
+
+        T data() {
+            return data;
+        }
     }
 
-    private record ProgressData(long processedCount,
-                                long totalCount,
-                                String message) {
+    private static final class ProgressData {
+        private final long processedCount;
+        private final long totalCount;
+        private final String message;
+
+        private ProgressData(long processedCount, long totalCount, String message) {
+            this.processedCount = processedCount;
+            this.totalCount = totalCount;
+            this.message = message;
+        }
+
+        long processedCount() {
+            return processedCount;
+        }
+
+        long totalCount() {
+            return totalCount;
+        }
+
+        String message() {
+            return message;
+        }
     }
 
-    private record MessageData(String message) {
+    private static final class MessageData {
+        private final String message;
+
+        private MessageData(String message) {
+            this.message = message;
+        }
+
+        String message() {
+            return message;
+        }
     }
 
-    private record StatusData(String status, String message, String triggerType, String triggeredAt) {
+    private static final class StatusData {
+        private final String status;
+        private final String message;
+        private final String triggerType;
+        private final String triggeredAt;
+
+        private StatusData(String status, String message, String triggerType, String triggeredAt) {
+            this.status = status;
+            this.message = message;
+            this.triggerType = triggerType;
+            this.triggeredAt = triggeredAt;
+        }
+
+        String status() {
+            return status;
+        }
+
+        String message() {
+            return message;
+        }
+
+        String triggerType() {
+            return triggerType;
+        }
+
+        String triggeredAt() {
+            return triggeredAt;
+        }
     }
 
-    private record CompleteData(String message) {
+    private static final class CompleteData {
+        private final String message;
+
+        private CompleteData(String message) {
+            this.message = message;
+        }
+
+        String message() {
+            return message;
+        }
     }
 
-    private record ErrorData(String code, String message) {
+    private static final class ErrorData {
+        private final String code;
+        private final String message;
+
+        private ErrorData(String code, String message) {
+            this.code = code;
+            this.message = message;
+        }
+
+        String code() {
+            return code;
+        }
+
+        String message() {
+            return message;
+        }
     }
 }

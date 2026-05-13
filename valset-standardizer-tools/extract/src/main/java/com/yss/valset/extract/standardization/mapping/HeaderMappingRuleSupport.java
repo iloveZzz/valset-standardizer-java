@@ -1,5 +1,6 @@
 package com.yss.valset.extract.standardization.mapping;
 
+import lombok.Value;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ public final class HeaderMappingRuleSupport {
      */
     public static List<String> normalizeSegments(List<String> segments) {
         if (CollectionUtils.isEmpty(segments)) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> normalized = new ArrayList<>(segments.size());
         for (String segment : segments) {
@@ -26,18 +27,18 @@ public final class HeaderMappingRuleSupport {
                 continue;
             }
             String text = segment.trim();
-            if (!text.isBlank()) {
+            if (!text.trim().isEmpty()) {
                 normalized.add(text);
             }
         }
-        return List.copyOf(normalized);
+        return java.util.Collections.unmodifiableList(new java.util.ArrayList<>(normalized));
     }
 
     /**
      * 解析精确表头候选。
      */
     public static ResolvedHeaderCandidate resolveExactCandidate(HeaderMappingInput input, HeaderMappingLookup lookup) {
-        if (input == null || lookup == null || input.headerText() == null || input.headerText().isBlank()) {
+        if (input == null || lookup == null || input.headerText() == null || input.headerText().trim().isEmpty()) {
             return null;
         }
         String headerText = input.headerText().trim();
@@ -56,9 +57,9 @@ public final class HeaderMappingRuleSupport {
             return null;
         }
         List<String> candidates = new ArrayList<>();
-        if (input.headerText() != null && !input.headerText().isBlank()) {
+        if (input.headerText() != null && !input.headerText().trim().isEmpty()) {
             for (String segment : input.headerText().split("\\|")) {
-                if (segment != null && !segment.isBlank()) {
+                if (segment != null && !segment.trim().isEmpty()) {
                     candidates.add(segment.trim());
                 }
             }
@@ -79,7 +80,7 @@ public final class HeaderMappingRuleSupport {
      * 解析别名候选。
      */
     public static ResolvedHeaderCandidate resolveAliasCandidate(HeaderMappingInput input, HeaderMappingLookup lookup) {
-        if (input == null || lookup == null || input.headerText() == null || input.headerText().isBlank()) {
+        if (input == null || lookup == null || input.headerText() == null || input.headerText().trim().isEmpty()) {
             return null;
         }
         String headerText = input.headerText().trim();
@@ -94,11 +95,11 @@ public final class HeaderMappingRuleSupport {
      * 判断表头文本是否命中任意分段关键词。
      */
     public static boolean headerContainsAnySegment(String headerText, List<String> keywords) {
-        if (headerText == null || headerText.isBlank() || CollectionUtils.isEmpty(keywords)) {
+        if (headerText == null || headerText.trim().isEmpty() || CollectionUtils.isEmpty(keywords)) {
             return false;
         }
         for (String segment : normalizeSegments(keywords)) {
-            if (segment == null || segment.isBlank()) {
+            if (segment == null || segment.trim().isEmpty()) {
                 continue;
             }
             if (headerText.contains(segment) || segment.contains(headerText.trim())) {
@@ -112,11 +113,11 @@ public final class HeaderMappingRuleSupport {
      * 判断表头文本是否同时命中全部分段关键词。
      */
     public static boolean headerContainsAllSegments(String headerText, List<String> keywords) {
-        if (headerText == null || headerText.isBlank() || CollectionUtils.isEmpty(keywords)) {
+        if (headerText == null || headerText.trim().isEmpty() || CollectionUtils.isEmpty(keywords)) {
             return false;
         }
         for (String segment : normalizeSegments(keywords)) {
-            if (segment == null || segment.isBlank()) {
+            if (segment == null || segment.trim().isEmpty()) {
                 continue;
             }
             if (!(headerText.contains(segment) || segment.contains(headerText.trim()))) {
@@ -129,6 +130,12 @@ public final class HeaderMappingRuleSupport {
     /**
      * 已解析的候选对象。
      */
-    public record ResolvedHeaderCandidate(HeaderMappingCandidate candidate, String matchedText) {
+    @Value
+    public static class ResolvedHeaderCandidate {
+        HeaderMappingCandidate candidate;
+        String matchedText;
+
+        public HeaderMappingCandidate candidate() { return candidate; }
+        public String matchedText() { return matchedText; }
     }
 }

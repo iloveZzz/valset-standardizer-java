@@ -67,7 +67,7 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
 
     @Override
     public long countByTargetCode(String targetCode) {
-        if (targetCode == null || targetCode.isBlank()) {
+        if (targetCode == null || targetCode.trim().isEmpty()) {
             return 0L;
         }
         return transferRouteRepository.selectCount(
@@ -91,18 +91,18 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
         List<TransferRoute> routes = transferRouteRepository.selectList(
                         Wrappers.lambdaQuery(TransferRoutePO.class)
                                 .eq(sourceIdValue != null, TransferRoutePO::getSourceId, sourceIdValue)
-                                .eq(sourceType != null && !sourceType.isBlank(), TransferRoutePO::getSourceType, sourceType)
-                                .eq(sourceCode != null && !sourceCode.isBlank(), TransferRoutePO::getSourceCode, sourceCode)
+                                .eq(sourceType != null && !sourceType.trim().isEmpty(), TransferRoutePO::getSourceType, sourceType)
+                                .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferRoutePO::getSourceCode, sourceCode)
                                 .eq(ruleIdValue != null, TransferRoutePO::getRuleId, ruleIdValue)
-                                .eq(targetType != null && !targetType.isBlank(), TransferRoutePO::getTargetType, targetType)
-                                .eq(targetCode != null && !targetCode.isBlank(), TransferRoutePO::getTargetCode, targetCode)
+                                .eq(targetType != null && !targetType.trim().isEmpty(), TransferRoutePO::getTargetType, targetType)
+                                .eq(targetCode != null && !targetCode.trim().isEmpty(), TransferRoutePO::getTargetCode, targetCode)
                                 .eq(enabled != null, TransferRoutePO::getEnabled, enabled)
-                                .eq(routeStatus != null && !routeStatus.isBlank(), TransferRoutePO::getRouteStatus, routeStatus)
+                                .eq(routeStatus != null && !routeStatus.trim().isEmpty(), TransferRoutePO::getRouteStatus, routeStatus)
                                 .orderByDesc(TransferRoutePO::getRouteId)
                 )
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (limit == null || limit <= 0 || routes.size() <= limit) {
             return routes;
         }
@@ -126,7 +126,7 @@ public class TransferRouteGatewayImpl implements TransferRouteGateway {
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);

@@ -32,7 +32,7 @@ public class MatchResultGatewayImpl implements MatchResultGateway {
         }
         List<ValsetMatchResultPO> poList = results.stream()
                 .map(result -> subjectMatchResultConvertor.toPO(taskId, fileId, result))
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
         subjectMatchResultRepository.insertBatchSomeColumn(poList);
     }
 
@@ -49,6 +49,6 @@ public class MatchResultGatewayImpl implements MatchResultGateway {
         );
         return poList.stream()
                 .map(subjectMatchResultConvertor::toDomain)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 }

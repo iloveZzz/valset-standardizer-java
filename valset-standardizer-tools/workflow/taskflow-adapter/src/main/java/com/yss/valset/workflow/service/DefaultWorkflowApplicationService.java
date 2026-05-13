@@ -1,6 +1,6 @@
 package com.yss.valset.workflow.service;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.workflow.model.EtlPlatformType;
 import com.yss.valset.workflow.model.WorkflowCallbackRequest;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
@@ -58,7 +58,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
     public DefaultWorkflowApplicationService(WorkflowRuntimeStore runtimeStore,
                                              List<WorkflowPlatformAdapter> adapters) {
         this.runtimeStore = runtimeStore;
-        this.adapters = adapters == null ? List.of() : adapters;
+        this.adapters = adapters == null ? java.util.Arrays.asList() : adapters;
     }
 
     @Override
@@ -166,7 +166,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
                         .requiredBindingFields(resolveRequiredBindingFields(adapter.platformType()))
                         .supportedOperations(resolveSupportedOperations(adapter.platformType()))
                         .build())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -226,7 +226,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
     @Override
     public Optional<WorkflowInstanceDTO> findInstance(String instanceId) {
         Optional<WorkflowInstanceDTO> local = runtimeStore.findInstance(instanceId);
-        if (local.isEmpty()) {
+        if (local.isPresent()) {
             return local;
         }
         WorkflowInstanceDTO instance = local.get();
@@ -334,7 +334,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
     @Override
     public List<WorkflowStageLogDTO> listStageLogs(WorkflowLogQueryRequest request) {
         if (request == null || !StringUtils.hasText(request.getInstanceId())) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         WorkflowInstanceDTO instance = loadInstance(request.getInstanceId());
         WorkflowDefinitionDTO definition = loadDefinition(instance);
@@ -342,7 +342,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
             List<WorkflowPlatformExecutionResult> results = resolveAdapter(definition.getPlatformType())
                     .queryLogs(definition, instance, request);
             if (CollectionUtils.isEmpty(results)) {
-                return List.of();
+                return java.util.Arrays.asList();
             }
             List<WorkflowStageLogDTO> logs = new ArrayList<>();
             for (WorkflowPlatformExecutionResult result : results) {
@@ -358,7 +358,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
             return logs;
         } catch (RuntimeException ex) {
             log.warn("加载工作流实例阶段日志失败，继续返回空结果：{}", ex.getMessage());
-            return List.of();
+            return java.util.Arrays.asList();
         }
     }
 
@@ -456,7 +456,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
     }
 
     private WorkflowDefinitionDTO normalizeDefinition(WorkflowDefinitionDTO definition) {
-        List<WorkflowStageDTO> stages = new ArrayList<>(definition.getStages() == null ? List.of() : definition.getStages());
+        List<WorkflowStageDTO> stages = new ArrayList<>(definition.getStages() == null ? java.util.Arrays.asList() : definition.getStages());
         stages.sort(Comparator.comparing(WorkflowStageDTO::getStageOrder));
         return definition.toBuilder()
                 .stages(stages)
@@ -516,43 +516,63 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
         if (platformType == null) {
             return null;
         }
-        return switch (platformType) {
-            case SPRING_BATCH -> "Spring Batch";
-            case DOLPHIN_SCHEDULER -> "DolphinScheduler";
-            case XXL_JOB -> "XXL-JOB";
-        };
+        switch (platformType) {
+            case SPRING_BATCH:
+                return "Spring Batch";
+            case DOLPHIN_SCHEDULER:
+                return "DolphinScheduler";
+            case XXL_JOB:
+                return "XXL-JOB";
+            default:
+                return null;
+        }
     }
 
     private String resolvePlatformDescription(EtlPlatformType platformType) {
         if (platformType == null) {
             return null;
         }
-        return switch (platformType) {
-            case SPRING_BATCH -> "基于 Spring Batch 的批处理执行平台";
-            case DOLPHIN_SCHEDULER -> "基于 DolphinScheduler 的 DAG 调度平台";
-            case XXL_JOB -> "基于 XXL-JOB 的轻量任务调度平台";
-        };
+        switch (platformType) {
+            case SPRING_BATCH:
+                return "基于 Spring Batch 的批处理执行平台";
+            case DOLPHIN_SCHEDULER:
+                return "基于 DolphinScheduler 的 DAG 调度平台";
+            case XXL_JOB:
+                return "基于 XXL-JOB 的轻量任务调度平台";
+            default:
+                return null;
+        }
     }
 
     private List<String> resolveRequiredBindingFields(EtlPlatformType platformType) {
         if (platformType == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
-        return switch (platformType) {
-            case SPRING_BATCH -> List.of("externalWorkflowId");
-            case DOLPHIN_SCHEDULER -> List.of("externalProjectCode", "externalWorkflowId");
-            case XXL_JOB -> List.of("externalJobGroup", "externalJobHandler");
-        };
+        switch (platformType) {
+            case SPRING_BATCH:
+                return java.util.Arrays.asList("externalWorkflowId");
+            case DOLPHIN_SCHEDULER:
+                return java.util.Arrays.asList("externalProjectCode", "externalWorkflowId");
+            case XXL_JOB:
+                return java.util.Arrays.asList("externalJobGroup", "externalJobHandler");
+            default:
+                return java.util.Arrays.asList();
+        }
     }
 
     private List<String> resolveSupportedOperations(EtlPlatformType platformType) {
         if (platformType == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
-        return switch (platformType) {
-            case SPRING_BATCH -> List.of("RUN", "TRIGGER", "STOP", "PAUSE", "RETRY", "QUERY", "QUERY_LOGS");
-            case DOLPHIN_SCHEDULER, XXL_JOB -> List.of("RUN", "TRIGGER", "STOP", "PAUSE", "RETRY", "QUERY", "QUERY_LOGS", "SYNC", "ONLINE", "OFFLINE");
-        };
+        switch (platformType) {
+            case SPRING_BATCH:
+                return java.util.Arrays.asList("RUN", "TRIGGER", "STOP", "PAUSE", "RETRY", "QUERY", "QUERY_LOGS");
+            case DOLPHIN_SCHEDULER:
+            case XXL_JOB:
+                return java.util.Arrays.asList("RUN", "TRIGGER", "STOP", "PAUSE", "RETRY", "QUERY", "QUERY_LOGS", "SYNC", "ONLINE", "OFFLINE");
+            default:
+                return java.util.Arrays.asList();
+        }
     }
 
     private WorkflowDefinitionDTO normalizeDefinitionForSync(WorkflowDefinitionDTO definition) {
@@ -644,7 +664,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
         if (definition.getDescription() != null && definition.getDescription().length() > 500) {
             throw new IllegalArgumentException("工作流描述过长");
         }
-        List<WorkflowStageDTO> stages = definition.getStages() == null ? List.of() : definition.getStages();
+        List<WorkflowStageDTO> stages = definition.getStages() == null ? java.util.Arrays.asList() : definition.getStages();
         java.util.Set<String> stageCodes = new java.util.HashSet<>();
         java.util.Set<Integer> stageOrders = new java.util.HashSet<>();
         for (WorkflowStageDTO stage : stages) {

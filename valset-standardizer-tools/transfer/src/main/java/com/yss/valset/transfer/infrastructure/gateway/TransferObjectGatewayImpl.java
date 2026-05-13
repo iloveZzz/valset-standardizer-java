@@ -105,14 +105,14 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 new Page<>(current, size),
                 Wrappers.lambdaQuery(TransferObjectPO.class)
                         .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
-                        .eq(sourceType != null && !sourceType.isBlank(), TransferObjectPO::getSourceType, sourceType)
-                        .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
-                        .like(originalName != null && !originalName.isBlank(), TransferObjectPO::getOriginalName, originalName)
-                        .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
+                        .eq(sourceType != null && !sourceType.trim().isEmpty(), TransferObjectPO::getSourceType, sourceType)
+                        .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
+                        .like(originalName != null && !originalName.trim().isEmpty(), TransferObjectPO::getOriginalName, originalName)
+                        .eq(status != null && !status.trim().isEmpty(), TransferObjectPO::getStatus, status)
                         .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                         .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                         .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
-                        .eq(fingerprint != null && !fingerprint.isBlank(), TransferObjectPO::getFingerprint, fingerprint)
+                        .eq(fingerprint != null && !fingerprint.trim().isEmpty(), TransferObjectPO::getFingerprint, fingerprint)
                         .eq(routeIdValue != null, TransferObjectPO::getRouteId, routeIdValue)
                         .inSql(tagFilterSql != null, TransferObjectPO::getTransferId, tagFilterSql)
                         .orderByDesc(TransferObjectPO::getReceivedAt)
@@ -121,7 +121,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         List<TransferObject> records = page.getRecords() == null ? Collections.emptyList() : page.getRecords().stream()
                 .map(this::toDomain)
                 .map(this::hydrateMailInfo)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         return new TransferObjectPage(records, page.getTotal(), page.getCurrent() - 1, page.getSize());
     }
 
@@ -131,21 +131,21 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         List<TransferObject> objects = transferObjectRepository.selectList(
                         Wrappers.lambdaQuery(TransferObjectPO.class)
                                 .eq(TransferObjectPO::getSourceType, "EMAIL")
-                                .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
+                                .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
                                 .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
                                 .orderByDesc(TransferObjectPO::getReceivedAt)
                                 .orderByDesc(TransferObjectPO::getTransferId)
                 )
                 .stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (objects.isEmpty()) {
             return objects;
         }
         List<String> transferIds = objects.stream()
                 .map(TransferObject::transferId)
                 .filter(this::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
             return objects;
         }
@@ -164,7 +164,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                     TransferMailInfo mailInfo = mailInfoMap.get(object.transferId());
                     return mailInfo == null ? object : object.withMailInfo(mailInfo);
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -177,10 +177,10 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         Long sourceIdValue = parseLong(sourceId);
         Long routeIdValue = parseLong(routeId);
         String deliveryFilterSql = buildDeliveryFilterSql(deliveryStatus);
-        var query = Wrappers.lambdaQuery(TransferObjectPO.class)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TransferObjectPO> query = Wrappers.lambdaQuery(TransferObjectPO.class)
                 .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
-                .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
-                .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
+                .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
+                .eq(status != null && !status.trim().isEmpty(), TransferObjectPO::getStatus, status)
                 .eq(routeIdValue != null, TransferObjectPO::getRouteId, routeIdValue)
                 .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                 .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
@@ -193,7 +193,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 .stream()
                 .map(this::toDomain)
                 .map(this::hydrateMailInfo)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -217,14 +217,14 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         List<TransferObject> objects = transferObjectRepository.selectList(
                         Wrappers.lambdaQuery(TransferObjectPO.class)
                         .eq(sourceIdValue != null, TransferObjectPO::getSourceId, sourceIdValue)
-                        .eq(sourceType != null && !sourceType.isBlank(), TransferObjectPO::getSourceType, sourceType)
-                        .eq(sourceCode != null && !sourceCode.isBlank(), TransferObjectPO::getSourceCode, sourceCode)
-                        .like(originalName != null && !originalName.isBlank(), TransferObjectPO::getOriginalName, originalName)
-                        .eq(status != null && !status.isBlank(), TransferObjectPO::getStatus, status)
+                        .eq(sourceType != null && !sourceType.trim().isEmpty(), TransferObjectPO::getSourceType, sourceType)
+                        .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
+                        .like(originalName != null && !originalName.trim().isEmpty(), TransferObjectPO::getOriginalName, originalName)
+                        .eq(status != null && !status.trim().isEmpty(), TransferObjectPO::getStatus, status)
                                 .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                                 .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                                 .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
-                                .eq(fingerprint != null && !fingerprint.isBlank(), TransferObjectPO::getFingerprint, fingerprint)
+                                .eq(fingerprint != null && !fingerprint.trim().isEmpty(), TransferObjectPO::getFingerprint, fingerprint)
                                 .eq(routeIdValue != null, TransferObjectPO::getRouteId, routeIdValue)
                                 .inSql(tagFilterSql != null, TransferObjectPO::getTransferId, tagFilterSql)
                                 .orderByDesc(TransferObjectPO::getReceivedAt)
@@ -233,14 +233,14 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 .stream()
                 .map(this::toDomain)
                 .map(this::hydrateMailInfo)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         long taggedCount = countTaggedObjects(objects);
         long untaggedCount = Math.max(0L, objects.size() - taggedCount);
         Map<String, List<TransferObject>> sourceGroups = objects.stream()
                 .collect(Collectors.groupingBy(
                         item -> normalizeSourceTypeKey(item.sourceType()),
                         java.util.LinkedHashMap::new,
-                        Collectors.toList()
+                        java.util.stream.Collectors.toList()
                 ));
         List<TransferObjectSourceAnalysis> sourceAnalyses = sourceGroups.entrySet().stream()
                 .map(entry -> {
@@ -279,7 +279,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                     }
                     return String.valueOf(left.sourceType()).compareToIgnoreCase(String.valueOf(right.sourceType()));
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         return new TransferObjectAnalysis(
                 (long) objects.size(),
                 taggedCount,
@@ -305,13 +305,13 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     public List<DefaultTransferObjectQueryService.InboxMailGroup> loadMailInboxGroups(String sourceCode, String mailId, String deliveryStatus, Integer offset, Integer limit) {
         List<MailInboxGroupDTO> dtoList = transferObjectMybatisMapper.loadMailInboxGroups(sourceCode, mailId, deliveryStatus, offset, limit);
         if (dtoList.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Map<String, List<MailInboxGroupDTO>> groupedMap = dtoList.stream()
                 .collect(Collectors.groupingBy(
                         dto -> normalizeMailGroupKey(dto.getMailKey(), dto.getMailId(), dto.getTransferId()),
                         LinkedHashMap::new,
-                        Collectors.toList()
+                        java.util.stream.Collectors.toList()
                 ));
         List<DefaultTransferObjectQueryService.InboxMailGroup> groups = new ArrayList<>();
         for (Map.Entry<String, List<MailInboxGroupDTO>> entry : groupedMap.entrySet()) {
@@ -328,11 +328,11 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
             TransferObject representative = toDomainFromDto(representativeDto);
             List<TransferObject> attachments = items.stream()
                     .map(this::toDomainFromDto)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             List<String> transferIds = items.stream()
                     .map(MailInboxGroupDTO::getTransferId)
                     .filter(this::hasText)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             boolean delivered = items.stream().allMatch(dto -> dto.getDelivered() != null && dto.getDelivered() == 1);
             boolean tagged = items.stream().anyMatch(dto -> dto.getTagged() != null && dto.getTagged() == 1);
 
@@ -373,7 +373,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     }
 
     private void saveMailInfo(String transferId, TransferObject transferObject) {
-        if (transferObject == null || transferId == null || transferId.isBlank()) {
+        if (transferObject == null || transferId == null || transferId.trim().isEmpty()) {
             return;
         }
         TransferMailInfo mailInfo = new TransferMailInfo(
@@ -396,7 +396,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     }
 
     private String resolveTransferId(TransferObjectPO po, TransferObject transferObject) {
-        if (po != null && po.getTransferId() != null && !po.getTransferId().isBlank()) {
+        if (po != null && po.getTransferId() != null && !po.getTransferId().trim().isEmpty()) {
             return po.getTransferId();
         }
         return transferObject == null ? null : transferObject.transferId();
@@ -415,21 +415,21 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     }
 
     private boolean hasText(String value) {
-        return value != null && !value.isBlank();
+        return value != null && !value.trim().isEmpty();
     }
 
     private String buildTagFilterSql(String tagId, String tagCode, String tagValue) {
         StringBuilder sql = new StringBuilder("select transfer_id from t_transfer_object_tag where 1 = 1");
         boolean hasFilter = false;
-        if (tagId != null && !tagId.isBlank()) {
+        if (tagId != null && !tagId.trim().isEmpty()) {
             sql.append(" and tag_id = '").append(escapeSql(tagId.trim())).append("'");
             hasFilter = true;
         }
-        if (tagCode != null && !tagCode.isBlank()) {
+        if (tagCode != null && !tagCode.trim().isEmpty()) {
             sql.append(" and tag_code = '").append(escapeSql(tagCode.trim())).append("'");
             hasFilter = true;
         }
-        if (tagValue != null && !tagValue.isBlank()) {
+        if (tagValue != null && !tagValue.trim().isEmpty()) {
             sql.append(" and tag_value = '").append(escapeSql(tagValue.trim())).append("'");
             hasFilter = true;
         }
@@ -444,20 +444,20 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     }
 
     private String buildMailFilterSql(String mailId) {
-        if (mailId == null || mailId.isBlank()) {
+        if (mailId == null || mailId.trim().isEmpty()) {
             return null;
         }
         return "select transfer_id from t_transfer_mail_info where mail_id = '" + escapeSql(mailId.trim()) + "'";
     }
 
     private Set<String> loadDeliveredTransferIds(List<TransferObject> objects) {
-        List<String> transferIds = objects == null ? List.of() : objects.stream()
+        List<String> transferIds = objects == null ? java.util.Arrays.asList() : objects.stream()
                 .map(TransferObject::transferId)
                 .filter(java.util.Objects::nonNull)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         return transferDeliveryGateway.listRecordsByTransferIds(transferIds, "SUCCESS").stream()
                 .map(TransferDeliveryRecord::transferId)
@@ -470,7 +470,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);
@@ -487,7 +487,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                     return new TransferObjectStatusCount(status.name(), count);
                 })
                 .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<TransferObjectMailFolderCount> orderMailFolderCounts(Map<String, Long> mailFolderCountMap) {
@@ -500,7 +500,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                     }
                     return String.valueOf(left.mailFolder()).compareToIgnoreCase(String.valueOf(right.mailFolder()));
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private TransferObjectSizeAnalysis buildSizeAnalysis(List<TransferObject> objects) {
@@ -522,7 +522,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                     }
                     return String.valueOf(left.extension()).compareToIgnoreCase(String.valueOf(right.extension()));
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         return new TransferObjectSizeAnalysis((long) objects.size(), totalSizeBytes, extensionCounts);
     }
 
@@ -533,7 +533,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         List<String> transferIds = objects.stream()
                 .map(TransferObject::transferId)
                 .filter(org.springframework.util.StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
             return 0L;
         }
@@ -672,7 +672,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         return new ProbeResult(
                 detectedRaw == null || Boolean.parseBoolean(String.valueOf(detectedRaw)),
                 detectedTypeRaw == null ? null : String.valueOf(detectedTypeRaw),
-                attributesRaw instanceof Map<?, ?> map ? safeMap(castMap(map)) : Map.of()
+                attributesRaw instanceof Map<?, ?> ? safeMap(castMap((Map<?, ?>) attributesRaw)) : java.util.Collections.emptyMap()
         );
     }
 
@@ -699,7 +699,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
 
     private Map<String, Object> safeMap(Map<String, Object> source) {
         if (source == null) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         return source;
     }

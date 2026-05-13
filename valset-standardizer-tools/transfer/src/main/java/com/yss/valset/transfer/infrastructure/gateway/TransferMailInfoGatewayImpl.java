@@ -27,7 +27,7 @@ public class TransferMailInfoGatewayImpl implements TransferMailInfoGateway {
 
     @Override
     public Optional<TransferMailInfo> findByTransferId(String transferId) {
-        if (transferId == null || transferId.isBlank()) {
+        if (transferId == null || transferId.trim().isEmpty()) {
             return Optional.empty();
         }
         TransferMailInfoPO po = transferMailInfoRepository.selectById(transferId);
@@ -42,12 +42,12 @@ public class TransferMailInfoGatewayImpl implements TransferMailInfoGateway {
         return transferMailInfoRepository.selectList(
                 Wrappers.lambdaQuery(TransferMailInfoPO.class)
                         .in(TransferMailInfoPO::getTransferId, transferIds)
-        ).stream().map(transferMailInfoMapper::toDomain).toList();
+        ).stream().map(transferMailInfoMapper::toDomain).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
     public TransferMailInfo save(TransferMailInfo mailInfo) {
-        if (mailInfo == null || mailInfo.transferId() == null || mailInfo.transferId().isBlank() || !hasAnyMailField(mailInfo)) {
+        if (mailInfo == null || mailInfo.transferId() == null || mailInfo.transferId().trim().isEmpty() || !hasAnyMailField(mailInfo)) {
             return mailInfo;
         }
         TransferMailInfoPO po = transferMailInfoMapper.toPO(mailInfo);
@@ -61,7 +61,7 @@ public class TransferMailInfoGatewayImpl implements TransferMailInfoGateway {
 
     @Override
     public void deleteByTransferId(String transferId) {
-        if (transferId == null || transferId.isBlank()) {
+        if (transferId == null || transferId.trim().isEmpty()) {
             return;
         }
         transferMailInfoRepository.deleteById(transferId);
@@ -80,6 +80,6 @@ public class TransferMailInfoGatewayImpl implements TransferMailInfoGateway {
     }
 
     private boolean hasText(String value) {
-        return value != null && !value.isBlank();
+        return value != null && !value.trim().isEmpty();
     }
 }

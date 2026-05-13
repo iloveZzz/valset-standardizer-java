@@ -9,6 +9,7 @@ import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.WorkflowTask;
 import com.yss.valset.domain.model.TaskType;
+import lombok.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
@@ -145,7 +146,7 @@ public class DefaultTaskDispatcher implements TaskDispatcher {
     }
 
     private JsonNode readJson(String payload) {
-        if (payload == null || payload.isBlank()) {
+        if (payload == null || payload.trim().isEmpty()) {
             return null;
         }
         try {
@@ -156,7 +157,7 @@ public class DefaultTaskDispatcher implements TaskDispatcher {
     }
 
     private String summarizePayload(String payload) {
-        if (payload == null || payload.isBlank()) {
+        if (payload == null || payload.trim().isEmpty()) {
             return null;
         }
         String normalized = payload.replaceAll("\\s+", " ").trim();
@@ -164,7 +165,7 @@ public class DefaultTaskDispatcher implements TaskDispatcher {
     }
 
     private static void putText(Map<String, Object> attributes, String key, String value) {
-        if (value != null && !value.isBlank()) {
+        if (value != null && !value.trim().isEmpty()) {
             attributes.put(key, value.trim());
         }
     }
@@ -185,7 +186,7 @@ public class DefaultTaskDispatcher implements TaskDispatcher {
         if (value.isNumber()) {
             return value.asLong();
         }
-        if (value.isTextual() && !value.asText().isBlank()) {
+        if (value.isTextual() && !value.asText().trim().isEmpty()) {
             try {
                 return Long.parseLong(value.asText().trim());
             } catch (NumberFormatException ignored) {
@@ -212,17 +213,25 @@ public class DefaultTaskDispatcher implements TaskDispatcher {
             return null;
         }
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value.trim();
             }
         }
         return null;
     }
 
-    private record TaskEventContext(Long fileId,
-                                    String businessKey,
-                                    String inputSummary,
-                                    String outputSummary,
-                                    Map<String, Object> attributes) {
+    @Value
+    private static class TaskEventContext {
+        Long fileId;
+        String businessKey;
+        String inputSummary;
+        String outputSummary;
+        Map<String, Object> attributes;
+
+        public Long fileId() { return fileId; }
+        public String businessKey() { return businessKey; }
+        public String inputSummary() { return inputSummary; }
+        public String outputSummary() { return outputSummary; }
+        public Map<String, Object> attributes() { return attributes; }
     }
 }

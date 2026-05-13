@@ -4,6 +4,7 @@ import com.yss.valset.domain.matcher.EmbeddingProvider;
 import com.yss.valset.domain.matcher.ValsetMatcher;
 import com.yss.valset.domain.model.*;
 import com.yss.valset.extract.support.MatchTextSupport;
+import lombok.Value;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -96,8 +97,8 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         }
 
         String matchReason = String.join("; ", best.getReasons());
-        if (!overrideResult.reason().isBlank()) {
-            matchReason = matchReason.isBlank() ? overrideResult.reason()
+        if (!overrideResult.reason().trim().isEmpty()) {
+            matchReason = matchReason.trim().isEmpty() ? overrideResult.reason()
                     : matchReason + "; " + overrideResult.reason();
         }
 
@@ -152,13 +153,13 @@ public class SimpleValsetMatcher implements ValsetMatcher {
                 .needsReview(Boolean.TRUE)
                 .matchReason("No standard subject candidate available")
                 .candidateCount(0)
-                .topCandidates(List.of())
+                .topCandidates(java.util.Arrays.asList())
                 .build();
     }
 
     private MatchingState prepareState(MatchContext context) {
         List<StandardSubject> standardSubjects = context == null || context.getStandardSubjects() == null
-                ? List.of()
+                ? java.util.Arrays.asList()
                 : context.getStandardSubjects();
         Map<String, StandardSubject> standardByCode = new LinkedHashMap<>();
         Map<String, List<StandardSubject>> standardByRoot = new LinkedHashMap<>();
@@ -199,7 +200,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         if (shouldEnableEmbedding(context)) {
             List<String> texts = standardSubjects.stream()
                     .map(StandardSubject::getPathText)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toList());
             List<float[]> embeddings = embeddingProvider.encodeDocuments(texts, runtimeConfig(context));
             for (int index = 0; index < Math.min(standardSubjects.size(), embeddings.size()); index++) {
                 standardEmbeddings.put(standardSubjects.get(index).getStandardCode(), embeddings.get(index));
@@ -226,14 +227,14 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         }
         List<SubjectRecord> lineage = buildLineage(subject, subjectMap);
         if (lineage.isEmpty()) {
-            return new AnchorSelection(subject, List.of(subject.getSubjectName()), subject.getSubjectName(),
+            return new AnchorSelection(subject, java.util.Arrays.asList(subject.getSubjectName()), subject.getSubjectName(),
                     "fallback_self");
         }
         for (int index = lineage.size() - 1; index >= 0; index--) {
             SubjectRecord candidate = lineage.get(index);
             if (MatchTextSupport.isBusinessLikeName(candidate.getSubjectName()) && !shouldSkipAnchor(candidate)) {
                 List<String> pathNames = lineage.subList(0, index + 1).stream().map(SubjectRecord::getSubjectName)
-                        .toList();
+                        .collect(java.util.stream.Collectors.toList());
                 return new AnchorSelection(candidate, pathNames, MatchTextSupport.buildPathText(pathNames),
                         "first_business_node_from_leaf");
             }
@@ -242,13 +243,13 @@ public class SimpleValsetMatcher implements ValsetMatcher {
             SubjectRecord candidate = lineage.get(index);
             if (!MatchTextSupport.isInstanceLikeName(candidate.getSubjectName())) {
                 List<String> pathNames = lineage.subList(0, index + 1).stream().map(SubjectRecord::getSubjectName)
-                        .toList();
+                        .collect(java.util.stream.Collectors.toList());
                 return new AnchorSelection(candidate, pathNames, MatchTextSupport.buildPathText(pathNames),
                         "fallback_non_instance_parent");
             }
         }
         SubjectRecord root = lineage.get(0);
-        return new AnchorSelection(root, List.of(root.getSubjectName()), root.getSubjectName(), "fallback_root");
+        return new AnchorSelection(root, java.util.Arrays.asList(root.getSubjectName()), root.getSubjectName(), "fallback_root");
     }
 
     private List<SubjectRecord> buildLineage(SubjectRecord subject, Map<String, SubjectRecord> subjectMap) {
@@ -265,7 +266,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         if (MatchTextSupport.isInstanceLikeName(candidate.getSubjectName())) {
             return true;
         }
-        return Set.of("上交所", "深交所", "银行间").contains(candidate.getSubjectName());
+        return new java.util.LinkedHashSet<>(java.util.Arrays.asList("上交所", "深交所", "银行间")).contains(candidate.getSubjectName());
     }
 
     private List<CandidateSource> recallCandidates(
@@ -323,7 +324,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
             List<StandardSubject> fallbackPool = state.standardByRoot()
                     .getOrDefault(extractRootKey(anchorSubject.getSubjectCode()), state.standardSubjects());
             for (StandardSubject standardSubject : fallbackPool) {
-                candidateSources.put(standardSubject.getStandardCode(), new HashSet<>(Set.of("fallback")));
+                candidateSources.put(standardSubject.getStandardCode(), new HashSet<>(new java.util.LinkedHashSet<>(java.util.Arrays.asList("fallback"))));
             }
         }
 
@@ -350,24 +351,24 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         Map<String, Integer> sourcePriority = new LinkedHashMap<>();
         Set<String> candidateCodes = new HashSet<>();
 
-        for (StandardSubject standardSubject : state.standardByRoot().getOrDefault(rootKey, List.of())) {
+        for (StandardSubject standardSubject : state.standardByRoot().getOrDefault(rootKey, java.util.Arrays.asList())) {
             candidateCodes.add(standardSubject.getStandardCode());
             sourcePriority.merge(standardSubject.getStandardCode(), 4, Math::max);
         }
         for (String keyword : anchorKeywords) {
-            for (String standardCode : state.standardCodesByKeyword().getOrDefault(keyword, Set.of())) {
+            for (String standardCode : state.standardCodesByKeyword().getOrDefault(keyword, new java.util.LinkedHashSet<>(java.util.Arrays.asList()))) {
                 candidateCodes.add(standardCode);
                 sourcePriority.merge(standardCode, 3, Math::max);
             }
         }
         for (String token : anchorNameCounter.keySet()) {
-            for (String standardCode : state.standardCodesByNameToken().getOrDefault(token, Set.of())) {
+            for (String standardCode : state.standardCodesByNameToken().getOrDefault(token, new java.util.LinkedHashSet<>(java.util.Arrays.asList()))) {
                 candidateCodes.add(standardCode);
                 sourcePriority.merge(standardCode, 2, Math::max);
             }
         }
         for (String token : anchorPathCounter.keySet()) {
-            for (String standardCode : state.standardCodesByPathToken().getOrDefault(token, Set.of())) {
+            for (String standardCode : state.standardCodesByPathToken().getOrDefault(token, new java.util.LinkedHashSet<>(java.util.Arrays.asList()))) {
                 candidateCodes.add(standardCode);
                 sourcePriority.merge(standardCode, 1, Math::max);
             }
@@ -390,16 +391,16 @@ public class SimpleValsetMatcher implements ValsetMatcher {
                 return Integer.compare(rightPriority, leftPriority);
             }
             int leftOverlap = MatchTextSupport
-                    .intersection(anchorKeywords, state.keywordSets().getOrDefault(left, Set.of())).size();
+                    .intersection(anchorKeywords, state.keywordSets().getOrDefault(left, new java.util.LinkedHashSet<>(java.util.Arrays.asList()))).size();
             int rightOverlap = MatchTextSupport
-                    .intersection(anchorKeywords, state.keywordSets().getOrDefault(right, Set.of())).size();
+                    .intersection(anchorKeywords, state.keywordSets().getOrDefault(right, new java.util.LinkedHashSet<>(java.util.Arrays.asList()))).size();
             if (leftOverlap != rightOverlap) {
                 return Integer.compare(rightOverlap, leftOverlap);
             }
             double leftScore = MatchTextSupport.cosineSimilarity(anchorNameCounter,
-                    state.nameCounters().getOrDefault(left, Map.of()));
+                    state.nameCounters().getOrDefault(left, java.util.Collections.emptyMap()));
             double rightScore = MatchTextSupport.cosineSimilarity(anchorNameCounter,
-                    state.nameCounters().getOrDefault(right, Map.of()));
+                    state.nameCounters().getOrDefault(right, java.util.Collections.emptyMap()));
             if (Double.compare(leftScore, rightScore) != 0) {
                 return Double.compare(rightScore, leftScore);
             }
@@ -488,7 +489,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
             if (Math.abs(ruleAdjustment) > 0.000001D) {
                 reasons.add("rule_adjustment=" + formatScore(ruleAdjustment));
             }
-            if (!historyScore.reason().isBlank()) {
+            if (!historyScore.reason().trim().isEmpty()) {
                 reasons.add(historyScore.reason());
             }
             if (Boolean.TRUE.equals(standard.getPlaceholder())) {
@@ -505,7 +506,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
                     .scoreCode(decimal(scoreCode))
                     .scoreHistory(decimal(historyScore.score()))
                     .scoreEmbedding(decimal(scoreEmbedding))
-                    .matchedByHistory(!historyScore.reason().isBlank())
+                    .matchedByHistory(!historyScore.reason().trim().isEmpty())
                     .candidateSources(candidateSource.sources())
                     .reasons(reasons)
                     .build());
@@ -533,7 +534,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         }
         double gate = 1D;
         Set<String> sourceSet = new HashSet<>(candidateSources);
-        if (MatchTextSupport.intersection(sourceSet, Set.of("name", "path", "keyword", "history", "code")).isEmpty()) {
+        if (MatchTextSupport.intersection(sourceSet, new java.util.LinkedHashSet<>(java.util.Arrays.asList("name", "path", "keyword", "history", "code"))).isEmpty()) {
             gate *= 0D;
         }
         if (scorePath < 0.45D && scoreKeyword < 0.40D) {
@@ -550,17 +551,17 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         }
         Set<String> anchorSignals = MatchTextSupport.domainSignalSet(anchorPathText);
         Set<String> standardSignals = new HashSet<>(
-                state.keywordSets().getOrDefault(standard.getStandardCode(), Set.of()));
+                state.keywordSets().getOrDefault(standard.getStandardCode(), new java.util.LinkedHashSet<>(java.util.Arrays.asList())));
         standardSignals.addAll(MatchTextSupport.domainSignalSet(standard.getPathText()));
-        for (List<String> conflict : List.of(
-                List.of("交易手续费", "结算服务费"),
-                List.of("结算服务费", "交易手续费"),
-                List.of("场外", "深交所"),
-                List.of("场外", "上交所"),
-                List.of("深交所", "场外"),
-                List.of("上交所", "场外"),
-                List.of("网上", "网下"),
-                List.of("网下", "网上"))) {
+        for (List<String> conflict : java.util.Arrays.asList(
+                java.util.Arrays.asList("交易手续费", "结算服务费"),
+                java.util.Arrays.asList("结算服务费", "交易手续费"),
+                java.util.Arrays.asList("场外", "深交所"),
+                java.util.Arrays.asList("场外", "上交所"),
+                java.util.Arrays.asList("深交所", "场外"),
+                java.util.Arrays.asList("上交所", "场外"),
+                java.util.Arrays.asList("网上", "网下"),
+                java.util.Arrays.asList("网下", "网上"))) {
             if (anchorSignals.contains(conflict.get(0)) && standardSignals.contains(conflict.get(1))) {
                 gate *= 0D;
                 break;
@@ -572,11 +573,11 @@ public class SimpleValsetMatcher implements ValsetMatcher {
     private Set<String> embeddingCandidateCodes(String anchorPathText, MatchingState state,
             MatchRuntimeConfig runtimeConfig) {
         if (!shouldEnableEmbeddingForRecall(state)) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         float[] queryEmbedding = embeddingProvider.encodeQuery(anchorPathText, runtimeConfig);
         if (queryEmbedding.length == 0) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         int limit = runtimeConfig.getEmbeddingTopK() == null ? 80 : Math.max(1, runtimeConfig.getEmbeddingTopK());
         List<Map.Entry<String, float[]>> ranked = new ArrayList<>(state.standardEmbeddings().entrySet());
@@ -631,7 +632,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
 
     private Set<String> historyBoostCodes(MappingHintIndex mappingHintIndex, String subjectCode, String subjectName) {
         if (mappingHintIndex == null) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         Set<String> codes = new HashSet<>();
         for (MappingHint hint : mappingHintIndex.findCodeHints(subjectCode)) {
@@ -658,13 +659,13 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         }
         List<SubjectRecord> childSubjects = allSubjects.stream()
                 .filter(item -> Objects.equals(item.getParentCode(), subject.getSubjectCode()))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (childSubjects.isEmpty()) {
             return new OverrideResult(null, "");
         }
         List<String> childNames = childSubjects.stream()
                 .map(item -> MatchTextSupport.normalizeMatchText(item.getSubjectName()))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         String subjectName = MatchTextSupport.normalizeMatchText(subject.getSubjectName());
 
         String overrideCode = "";
@@ -672,7 +673,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         if ("应付银行间交易费用".equals(subjectName)) {
             overrideCode = "2209.02";
             overrideScore = 0.90D;
-        } else if (Set.of("中债登手续费", "上清所手续费").contains(subjectName)) {
+        } else if (new java.util.LinkedHashSet<>(java.util.Arrays.asList("中债登手续费", "上清所手续费")).contains(subjectName)) {
             boolean hasTrade = childNames.stream().anyMatch(name -> name.contains("交易手续费"));
             boolean hasSettlement = childNames.stream().anyMatch(name -> name.contains("结算服务费"));
             if (hasTrade && hasSettlement) {
@@ -683,7 +684,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
                 overrideScore = 0.88D;
             }
         }
-        if (overrideCode.isBlank()) {
+        if (overrideCode.trim().isEmpty()) {
             return new OverrideResult(null, "");
         }
         StandardSubject standardSubject = state.standardByCode().get(overrideCode);
@@ -695,7 +696,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
                 .filter(candidate -> Objects.equals(candidate.getStandardCode(), finalOverrideCode))
                 .findFirst()
                 .orElse(null);
-        List<String> reasons = existing == null ? new ArrayList<>(List.of("hierarchy_override"))
+        List<String> reasons = existing == null ? new ArrayList<>(java.util.Arrays.asList("hierarchy_override"))
                 : new ArrayList<>(existing.getReasons());
         reasons.add("hierarchy_children=" + childSubjects.size());
         MatchCandidate overridden = MatchCandidate.builder()
@@ -709,7 +710,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
                 .scoreHistory(existing == null ? BigDecimal.ZERO : existing.getScoreHistory())
                 .scoreEmbedding(existing == null ? BigDecimal.ZERO : existing.getScoreEmbedding())
                 .matchedByHistory(existing != null && Boolean.TRUE.equals(existing.getMatchedByHistory()))
-                .candidateSources(existing == null ? List.of("hierarchy_override") : existing.getCandidateSources())
+                .candidateSources(existing == null ? java.util.Arrays.asList("hierarchy_override") : existing.getCandidateSources())
                 .reasons(reasons)
                 .build();
         return new OverrideResult(overridden, "hierarchy_override=" + overrideCode);
@@ -798,10 +799,10 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         double score = union == 0 ? 0D : (double) overlap / union;
 
         double conflictPenalty = 0D;
-        for (List<String> conflict : List.of(
-                List.of("成本", "估值增值"),
-                List.of("利息", "成本"),
-                List.of("应收", "应付"))) {
+        for (List<String> conflict : java.util.Arrays.asList(
+                java.util.Arrays.asList("成本", "估值增值"),
+                java.util.Arrays.asList("利息", "成本"),
+                java.util.Arrays.asList("应收", "应付"))) {
             String leftKeyword = conflict.get(0);
             String rightKeyword = conflict.get(1);
             if ((leftKeywords.contains(leftKeyword) && rightKeywords.contains(rightKeyword))
@@ -810,11 +811,11 @@ public class SimpleValsetMatcher implements ValsetMatcher {
             }
         }
 
-        Set<String> criticalTerms = Set.of(
+        Set<String> criticalTerms = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
                 "成本", "估值增值", "利息", "应收", "应付", "收入", "期货", "期权", "科创板", "创业板",
                 "网下", "网上", "锁定", "货币", "暂估", "信用账户", "银行间", "交易手续费", "结算服务费",
-                "场外", "开放式");
-        List<String> directionalTerms = List.of(
+                "场外", "开放式"));
+        List<String> directionalTerms = java.util.Arrays.asList(
                 "减值", "利息", "应收", "应付", "收入", "管理费", "托管费", "手续费", "佣金", "估值", "回购",
                 "返售", "债券", "期货", "期权", "科创板", "创业板", "网下", "网上", "锁定", "信用账户", "备付金",
                 "暂估", "货币", "银行间", "交易手续费", "结算服务费", "场外", "开放式");
@@ -833,14 +834,14 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         }
 
         double signalConflictPenalty = 0D;
-        for (List<String> conflict : List.of(
-                List.of("期货", "期权"),
-                List.of("科创板", "创业板"),
-                List.of("网上", "网下"),
-                List.of("锁定", "非公开发行"),
-                List.of("信用账户", "备付金"),
-                List.of("应收", "收入"),
-                List.of("应付", "收入"))) {
+        for (List<String> conflict : java.util.Arrays.asList(
+                java.util.Arrays.asList("期货", "期权"),
+                java.util.Arrays.asList("科创板", "创业板"),
+                java.util.Arrays.asList("网上", "网下"),
+                java.util.Arrays.asList("锁定", "非公开发行"),
+                java.util.Arrays.asList("信用账户", "备付金"),
+                java.util.Arrays.asList("应收", "收入"),
+                java.util.Arrays.asList("应付", "收入"))) {
             String leftSignal = conflict.get(0);
             String rightSignal = conflict.get(1);
             if ((leftSignals.contains(leftSignal) && rightSignals.contains(rightSignal))
@@ -876,7 +877,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
     private double codeSimilarity(String leftCode, String rightCode) {
         String left = leftCode == null ? "" : leftCode.trim();
         String right = rightCode == null ? "" : rightCode.trim();
-        if (left.isBlank() || right.isBlank()) {
+        if (left.trim().isEmpty() || right.trim().isEmpty()) {
             return 0D;
         }
         if (left.equals(right)) {
@@ -901,7 +902,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
 
     private String extractRootKey(String subjectCode) {
         String code = subjectCode == null ? "" : subjectCode.trim();
-        if (code.isBlank()) {
+        if (code.trim().isEmpty()) {
             return "";
         }
         if (code.contains(".")) {
@@ -924,9 +925,9 @@ public class SimpleValsetMatcher implements ValsetMatcher {
     }
 
     private int missingCriticalSignalCount(String leftText, String rightText) {
-        Set<String> criticalSignals = Set.of(
+        Set<String> criticalSignals = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
                 "成本", "估值增值", "货币", "利息", "期货", "期权", "科创板", "创业板",
-                "网下", "网上", "锁定", "暂估", "信用账户", "银行间", "交易手续费", "结算服务费", "场外", "开放式");
+                "网下", "网上", "锁定", "暂估", "信用账户", "银行间", "交易手续费", "结算服务费", "场外", "开放式"));
         Set<String> leftSignals = new HashSet<>(MatchTextSupport.domainSignalSet(leftText));
         leftSignals.retainAll(criticalSignals);
         Set<String> rightSignals = MatchTextSupport.domainSignalSet(rightText);
@@ -935,9 +936,9 @@ public class SimpleValsetMatcher implements ValsetMatcher {
     }
 
     private int extraCriticalSignalCount(String leftText, String rightText) {
-        Set<String> criticalSignals = Set.of(
+        Set<String> criticalSignals = new java.util.LinkedHashSet<>(java.util.Arrays.asList(
                 "货币", "利息", "期货", "期权", "科创板", "创业板", "网下", "网上",
-                "锁定", "暂估", "信用账户", "成本", "估值增值", "银行间");
+                "锁定", "暂估", "信用账户", "成本", "估值增值", "银行间"));
         Set<String> rightSignals = new HashSet<>(MatchTextSupport.domainSignalSet(rightText));
         rightSignals.retainAll(criticalSignals);
         rightSignals.removeAll(MatchTextSupport.domainSignalSet(leftText));
@@ -1025,14 +1026,14 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         if ("应付银行间交易费用".equals(externalNormalized)) {
             if ("2209.02".equals(standardCode)) {
                 adjustment += 0.30D;
-            } else if (Set.of("2209.02.01", "2209.02.02").contains(standardCode)) {
+            } else if (new java.util.LinkedHashSet<>(java.util.Arrays.asList("2209.02.01", "2209.02.02")).contains(standardCode)) {
                 adjustment += 0.18D;
             } else if (standardCode.startsWith("2209.02.01.") || standardCode.startsWith("2209.02.02.")) {
                 adjustment -= 0.12D;
             }
         }
-        if (Set.of("中债登手续费", "上清所手续费").contains(externalNormalized)) {
-            if (Set.of("2209.02.01", "2209.02.02").contains(standardCode)) {
+        if (new java.util.LinkedHashSet<>(java.util.Arrays.asList("中债登手续费", "上清所手续费")).contains(externalNormalized)) {
+            if (new java.util.LinkedHashSet<>(java.util.Arrays.asList("2209.02.01", "2209.02.02")).contains(standardCode)) {
                 adjustment += 0.18D;
             } else if ("2209.02".equals(standardCode)) {
                 adjustment += 0.10D;
@@ -1050,7 +1051,7 @@ public class SimpleValsetMatcher implements ValsetMatcher {
             }
         }
         if ("2209.02.01".equals(standardCode)
-                && !Set.of("中债登手续费", "上清所手续费", "应付银行间交易费用").contains(externalNormalized)) {
+                && !new java.util.LinkedHashSet<>(java.util.Arrays.asList("中债登手续费", "上清所手续费", "应付银行间交易费用")).contains(externalNormalized)) {
             adjustment -= 0.32D;
         }
         if ((externalCode == null ? "" : externalCode).startsWith("220981") && "2209.02.01.02".equals(standardCode)) {
@@ -1119,29 +1120,68 @@ public class SimpleValsetMatcher implements ValsetMatcher {
         return BigDecimal.valueOf(value).setScale(scale, RoundingMode.HALF_UP).toPlainString();
     }
 
-    private record MatchingState(
-            List<StandardSubject> standardSubjects,
-            Map<String, StandardSubject> standardByCode,
-            Map<String, List<StandardSubject>> standardByRoot,
-            Map<String, Set<String>> standardCodesByKeyword,
-            Map<String, Set<String>> standardCodesByNameToken,
-            Map<String, Set<String>> standardCodesByPathToken,
-            Map<String, Map<String, Integer>> nameCounters,
-            Map<String, Map<String, Integer>> pathCounters,
-            Map<String, Set<String>> keywordSets,
-            Map<String, float[]> standardEmbeddings) {
+    @Value
+    private static class MatchingState {
+        List<StandardSubject> standardSubjects;
+        Map<String, StandardSubject> standardByCode;
+        Map<String, List<StandardSubject>> standardByRoot;
+        Map<String, Set<String>> standardCodesByKeyword;
+        Map<String, Set<String>> standardCodesByNameToken;
+        Map<String, Set<String>> standardCodesByPathToken;
+        Map<String, Map<String, Integer>> nameCounters;
+        Map<String, Map<String, Integer>> pathCounters;
+        Map<String, Set<String>> keywordSets;
+        Map<String, float[]> standardEmbeddings;
+
+        public List<StandardSubject> standardSubjects() { return standardSubjects; }
+        public Map<String, StandardSubject> standardByCode() { return standardByCode; }
+        public Map<String, List<StandardSubject>> standardByRoot() { return standardByRoot; }
+        public Map<String, Set<String>> standardCodesByKeyword() { return standardCodesByKeyword; }
+        public Map<String, Set<String>> standardCodesByNameToken() { return standardCodesByNameToken; }
+        public Map<String, Set<String>> standardCodesByPathToken() { return standardCodesByPathToken; }
+        public Map<String, Map<String, Integer>> nameCounters() { return nameCounters; }
+        public Map<String, Map<String, Integer>> pathCounters() { return pathCounters; }
+        public Map<String, Set<String>> keywordSets() { return keywordSets; }
+        public Map<String, float[]> standardEmbeddings() { return standardEmbeddings; }
     }
 
-    private record CandidateSource(StandardSubject standardSubject, List<String> sources) {
+    @Value
+    private static class CandidateSource {
+        StandardSubject standardSubject;
+        List<String> sources;
+
+        public StandardSubject standardSubject() { return standardSubject; }
+        public List<String> sources() { return sources; }
     }
 
-    private record AnchorSelection(SubjectRecord anchorSubject, List<String> anchorPathNames, String anchorPathText,
-            String reason) {
+    @Value
+    private static class AnchorSelection {
+        SubjectRecord anchorSubject;
+        List<String> anchorPathNames;
+        String anchorPathText;
+        String reason;
+
+        public SubjectRecord anchorSubject() { return anchorSubject; }
+        public List<String> anchorPathNames() { return anchorPathNames; }
+        public String anchorPathText() { return anchorPathText; }
+        public String reason() { return reason; }
     }
 
-    private record HistoryScore(double score, String reason) {
+    @Value
+    private static class HistoryScore {
+        double score;
+        String reason;
+
+        public double score() { return score; }
+        public String reason() { return reason; }
     }
 
-    private record OverrideResult(MatchCandidate candidate, String reason) {
+    @Value
+    private static class OverrideResult {
+        MatchCandidate candidate;
+        String reason;
+
+        public MatchCandidate candidate() { return candidate; }
+        public String reason() { return reason; }
     }
 }

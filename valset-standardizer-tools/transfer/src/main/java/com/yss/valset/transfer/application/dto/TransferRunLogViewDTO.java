@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class TransferRunLogViewDTO {
+public class TransferRunLogViewDTO implements java.io.Serializable {
 
     /**
      * 运行日志主键。

@@ -10,7 +10,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TransferRouteViewDTO {
+public class TransferRouteViewDTO implements java.io.Serializable {
 
     /**
      * 路由主键。

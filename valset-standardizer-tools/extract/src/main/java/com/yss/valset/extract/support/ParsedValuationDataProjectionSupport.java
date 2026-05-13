@@ -17,7 +17,7 @@ public final class ParsedValuationDataProjectionSupport {
      */
     public static List<SubjectRelation> buildSubjectRelations(List<SubjectRecord> subjects) {
         if (subjects == null || subjects.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Map<String, String> subjectNameMap = new LinkedHashMap<>();
         for (SubjectRecord subject : subjects) {
@@ -49,7 +49,7 @@ public final class ParsedValuationDataProjectionSupport {
      */
     public static List<SubjectTreeNode> buildSubjectTree(List<SubjectRecord> subjects) {
         if (subjects == null || subjects.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Map<String, SubjectTreeNode> nodeMap = new LinkedHashMap<>();
         for (SubjectRecord subject : subjects) {
@@ -87,8 +87,8 @@ public final class ParsedValuationDataProjectionSupport {
         if (parsedValuationData == null) {
             return WorkbookSummary.builder().build();
         }
-        List<SubjectRecord> subjects = parsedValuationData.getSubjects() == null ? List.of() : parsedValuationData.getSubjects();
-        List<MetricRecord> metrics = parsedValuationData.getMetrics() == null ? List.of() : parsedValuationData.getMetrics();
+        List<SubjectRecord> subjects = parsedValuationData.getSubjects() == null ? java.util.Arrays.asList() : parsedValuationData.getSubjects();
+        List<MetricRecord> metrics = parsedValuationData.getMetrics() == null ? java.util.Arrays.asList() : parsedValuationData.getMetrics();
 
         int leafCount = 0;
         int metricRowCount = 0;
@@ -102,7 +102,7 @@ public final class ParsedValuationDataProjectionSupport {
             if (Boolean.TRUE.equals(subject.getLeaf())) {
                 leafCount++;
             }
-            if (subject.getRootCode() != null && !subject.getRootCode().isBlank()) {
+            if (subject.getRootCode() != null && !subject.getRootCode().trim().isEmpty()) {
                 rootCodes.add(subject.getRootCode());
             }
             duplicateCounter.merge(subject.getSubjectCode(), 1, Integer::sum);
@@ -123,7 +123,7 @@ public final class ParsedValuationDataProjectionSupport {
                 .filter(entry -> entry.getValue() > 1)
                 .map(Map.Entry::getKey)
                 .sorted()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         Map<Integer, Integer> sortedLevelDistribution = new LinkedHashMap<>();
         levelDistribution.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())

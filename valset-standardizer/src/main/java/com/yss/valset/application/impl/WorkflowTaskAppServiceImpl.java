@@ -207,36 +207,36 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     }
 
     private String resolveExtractFileFingerprint(ExtractDataTaskCommand command) {
-        if (command.getFileFingerprint() != null && !command.getFileFingerprint().isBlank()) {
+        if (command.getFileFingerprint() != null && !command.getFileFingerprint().trim().isEmpty()) {
             return command.getFileFingerprint().trim().toLowerCase();
         }
         Path workbookPath = Paths.get(command.getWorkbookPath());
         if (!Files.exists(workbookPath) || !Files.isReadable(workbookPath)) {
             throw new IllegalStateException("原始文件不存在或不可读，无法计算文件指纹: " + command.getWorkbookPath());
         }
-        try (var inputStream = Files.newInputStream(workbookPath)) {
+        try (java.io.InputStream inputStream = Files.newInputStream(workbookPath)) {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            try (var digestInputStream = new java.security.DigestInputStream(inputStream, digest)) {
+            try (java.security.DigestInputStream digestInputStream = new java.security.DigestInputStream(inputStream, digest)) {
                 byte[] buffer = new byte[8192];
                 while (digestInputStream.read(buffer) != -1) {
                     // 仅用于驱动摘要计算
                 }
             }
-            return java.util.HexFormat.of().formatHex(digest.digest());
+            return toHex(digest.digest());
         } catch (Exception exception) {
             throw new IllegalStateException("计算原始文件指纹失败", exception);
         }
     }
 
     private boolean isForceRebuild(Object command) {
-        if (command instanceof ParseTaskCommand parseTaskCommand) {
-            return Boolean.TRUE.equals(parseTaskCommand.getForceRebuild());
+        if (command instanceof ParseTaskCommand) {
+            return Boolean.TRUE.equals(((ParseTaskCommand) command).getForceRebuild());
         }
-        if (command instanceof MatchTaskCommand matchTaskCommand) {
-            return Boolean.TRUE.equals(matchTaskCommand.getForceRebuild());
+        if (command instanceof MatchTaskCommand) {
+            return Boolean.TRUE.equals(((MatchTaskCommand) command).getForceRebuild());
         }
-        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
-            return Boolean.TRUE.equals(extractDataTaskCommand.getForceRebuild());
+        if (command instanceof ExtractDataTaskCommand) {
+            return Boolean.TRUE.equals(((ExtractDataTaskCommand) command).getForceRebuild());
         }
         return false;
     }
@@ -245,20 +245,20 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
         if (command == null || executionContext == null) {
             return;
         }
-        if (command instanceof ParseTaskCommand parseTaskCommand) {
-            applyWorkflowContext(parseTaskCommand, executionContext);
+        if (command instanceof ParseTaskCommand) {
+            applyWorkflowContext((ParseTaskCommand) command, executionContext);
             return;
         }
-        if (command instanceof MatchTaskCommand matchTaskCommand) {
-            applyWorkflowContext(matchTaskCommand, executionContext);
+        if (command instanceof MatchTaskCommand) {
+            applyWorkflowContext((MatchTaskCommand) command, executionContext);
             return;
         }
-        if (command instanceof EvaluateMappingTaskCommand evaluateMappingTaskCommand) {
-            applyWorkflowContext(evaluateMappingTaskCommand, executionContext);
+        if (command instanceof EvaluateMappingTaskCommand) {
+            applyWorkflowContext((EvaluateMappingTaskCommand) command, executionContext);
             return;
         }
-        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
-            applyWorkflowContext(extractDataTaskCommand, executionContext);
+        if (command instanceof ExtractDataTaskCommand) {
+            applyWorkflowContext((ExtractDataTaskCommand) command, executionContext);
         }
     }
 
@@ -278,49 +278,60 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
         Map<String, Object> businessContext = buildBusinessContext(command);
         executionContext.setBusinessContext(businessContext);
         executionContext.setBusinessContextJson(writeWorkflowContextJson(commonContext, businessContext));
-        if (command instanceof ParseTaskCommand parseTaskCommand) {
-            parseTaskCommand.setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
+        if (command instanceof ParseTaskCommand) {
+            ((ParseTaskCommand) command).setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
             return;
         }
-        if (command instanceof MatchTaskCommand matchTaskCommand) {
-            matchTaskCommand.setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
+        if (command instanceof MatchTaskCommand) {
+            ((MatchTaskCommand) command).setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
             return;
         }
-        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
-            extractDataTaskCommand.setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
+        if (command instanceof ExtractDataTaskCommand) {
+            ((ExtractDataTaskCommand) command).setWorkflowEngineConfigJson(executionContext.getBusinessContextJson());
         }
     }
 
     private Map<String, Object> buildCommonContext(Object command) {
-        if (command instanceof ParseTaskCommand parseTaskCommand) {
-            return workflowCommonContextBuilder.build(parseTaskCommand);
+        if (command instanceof ParseTaskCommand) {
+            return workflowCommonContextBuilder.build((ParseTaskCommand) command);
         }
-        if (command instanceof MatchTaskCommand matchTaskCommand) {
-            return workflowCommonContextBuilder.build(matchTaskCommand);
+        if (command instanceof MatchTaskCommand) {
+            return workflowCommonContextBuilder.build((MatchTaskCommand) command);
         }
-        if (command instanceof EvaluateMappingTaskCommand evaluateMappingTaskCommand) {
-            return workflowCommonContextBuilder.build(evaluateMappingTaskCommand);
+        if (command instanceof EvaluateMappingTaskCommand) {
+            return workflowCommonContextBuilder.build((EvaluateMappingTaskCommand) command);
         }
-        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
-            return workflowCommonContextBuilder.build(extractDataTaskCommand);
+        if (command instanceof ExtractDataTaskCommand) {
+            return workflowCommonContextBuilder.build((ExtractDataTaskCommand) command);
         }
         return new java.util.LinkedHashMap<>();
     }
 
     private Map<String, Object> buildBusinessContext(Object command) {
-        if (command instanceof ParseTaskCommand parseTaskCommand) {
-            return workflowBusinessContextBuilder.build(parseTaskCommand);
+        if (command instanceof ParseTaskCommand) {
+            return workflowBusinessContextBuilder.build((ParseTaskCommand) command);
         }
-        if (command instanceof MatchTaskCommand matchTaskCommand) {
-            return workflowBusinessContextBuilder.build(matchTaskCommand);
+        if (command instanceof MatchTaskCommand) {
+            return workflowBusinessContextBuilder.build((MatchTaskCommand) command);
         }
-        if (command instanceof EvaluateMappingTaskCommand evaluateMappingTaskCommand) {
-            return workflowBusinessContextBuilder.build(evaluateMappingTaskCommand);
+        if (command instanceof EvaluateMappingTaskCommand) {
+            return workflowBusinessContextBuilder.build((EvaluateMappingTaskCommand) command);
         }
-        if (command instanceof ExtractDataTaskCommand extractDataTaskCommand) {
-            return workflowBusinessContextBuilder.build(extractDataTaskCommand);
+        if (command instanceof ExtractDataTaskCommand) {
+            return workflowBusinessContextBuilder.build((ExtractDataTaskCommand) command);
         }
         return new java.util.LinkedHashMap<>();
+    }
+
+    private String toHex(byte[] bytes) {
+        char[] digits = "0123456789abcdef".toCharArray();
+        char[] result = new char[bytes.length * 2];
+        for (int i = 0; i < bytes.length; i++) {
+            int value = bytes[i] & 0xFF;
+            result[i * 2] = digits[value >>> 4];
+            result[i * 2 + 1] = digits[value & 0x0F];
+        }
+        return new String(result);
     }
 
     private String writeWorkflowContextJson(Map<String, Object> commonContext, Map<String, Object> businessContext) {
@@ -386,7 +397,7 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     }
 
     private String normalizeDataSourceType(String dataSourceType) {
-        if (dataSourceType == null || dataSourceType.isBlank()) {
+        if (dataSourceType == null || dataSourceType.trim().isEmpty()) {
             return "EXCEL";
         }
         return dataSourceType.trim().toUpperCase();
@@ -396,11 +407,15 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
         if (taskType == null) {
             return TaskStage.OTHER;
         }
-        return switch (taskType) {
-            case EXTRACT_DATA -> TaskStage.EXTRACT;
-            case PARSE_WORKBOOK -> TaskStage.PARSE;
-            case MATCH_SUBJECT -> TaskStage.MATCH;
-            default -> TaskStage.OTHER;
-        };
+        switch (taskType) {
+            case EXTRACT_DATA:
+                return TaskStage.EXTRACT;
+            case PARSE_WORKBOOK:
+                return TaskStage.PARSE;
+            case MATCH_SUBJECT:
+                return TaskStage.MATCH;
+            default:
+                return TaskStage.OTHER;
+        }
     }
 }

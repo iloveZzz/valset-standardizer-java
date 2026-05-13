@@ -6,7 +6,7 @@ import lombok.Data;
  * 估值内部流程绑定视图。
  */
 @Data
-public class WorkflowExecutorBindingDTO {
+public class WorkflowExecutorBindingDTO implements java.io.Serializable{
 
     private String bindingId;
     private String workflowId;

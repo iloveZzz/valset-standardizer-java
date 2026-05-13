@@ -17,7 +17,7 @@ import com.yss.valset.workflow.model.WorkflowStopRequest;
 import com.yss.valset.workflow.model.WorkflowTriggerRequest;
 import com.yss.valset.workflow.spi.WorkflowPlatformAdapter;
 import com.yss.valset.workflow.spi.WorkflowPlatformClient;
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 
 /**
  * 平台适配器委派壳。

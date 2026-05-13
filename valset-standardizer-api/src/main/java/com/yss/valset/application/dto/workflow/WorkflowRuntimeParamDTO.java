@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
  * 工作流运行参数视图。
  */
 @Data
-public class WorkflowRuntimeParamDTO {
+public class WorkflowRuntimeParamDTO implements java.io.Serializable {
 
     private String runtimeParamId;
     private String paramNamespace;

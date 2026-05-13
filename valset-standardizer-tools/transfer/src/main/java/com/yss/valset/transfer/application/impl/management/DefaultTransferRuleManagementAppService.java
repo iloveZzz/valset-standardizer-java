@@ -32,7 +32,7 @@ public class DefaultTransferRuleManagementAppService implements TransferRuleMana
         return transferRuleGateway.listRules(ruleCode, ruleName, enabled, limit)
                 .stream()
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -122,7 +122,7 @@ public class DefaultTransferRuleManagementAppService implements TransferRuleMana
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "规则配置不能为空");
         }
         String ruleCode = command.getRuleCode() == null ? null : command.getRuleCode().trim();
-        if (ruleCode == null || ruleCode.isBlank()) {
+        if (ruleCode == null || ruleCode.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "规则编码不能为空");
         }
         transferRuleGateway.findByRuleCode(ruleCode)

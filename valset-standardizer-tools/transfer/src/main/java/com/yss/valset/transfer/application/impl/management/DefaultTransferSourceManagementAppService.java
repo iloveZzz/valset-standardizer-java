@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
@@ -64,7 +65,7 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
         return transferSourceGateway.listSources(sourceType, sourceCode, sourceName, enabled, limit)
                 .stream()
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -286,16 +287,16 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
         return transferSourceCheckpointGateway.listCheckpointsBySourceId(sourceId, limit)
                 .stream()
                 .map(this::toCheckpointView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<MultipartFile> normalizeUploadFiles(List<MultipartFile> files) {
         if (files == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return files.stream()
                 .filter(file -> file != null && !file.isEmpty())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<Path> storeHttpFiles(TransferSource source, List<MultipartFile> files) {
@@ -344,37 +345,53 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
     }
 
     private Path resolveHttpSourceUploadDirectory(String sourceId) {
-        return Path.of(resolveUploadRoot(uploadRoot))
+        return Paths.get(resolveUploadRoot(uploadRoot))
                 .resolve("http")
                 .resolve(sourceId);
     }
 
     private String resolveUploadRoot(String configuredUploadRoot) {
-        if (configuredUploadRoot != null && !configuredUploadRoot.isBlank()) {
+        if (configuredUploadRoot != null && !configuredUploadRoot.trim().isEmpty()) {
             return configuredUploadRoot;
         }
-        return Path.of(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
+        return Paths.get(System.getProperty("user.home"), ".tmp", "valset-standardizer", "uploads").toString();
     }
 
     private String sanitizeFileName(String fileName) {
-        if (fileName == null || fileName.isBlank()) {
+        if (fileName == null || fileName.trim().isEmpty()) {
             return "upload-file";
         }
         String sanitized = fileName.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
-        return sanitized.isBlank() ? "upload-file" : sanitized;
+        return sanitized.trim().isEmpty() ? "upload-file" : sanitized;
     }
 
-    private record HttpSourceUploadConfig(boolean allowMultipleFiles, int limit) {
+    private static final class HttpSourceUploadConfig {
+        private final boolean allowMultipleFiles;
+        private final int limit;
+
+        private HttpSourceUploadConfig(boolean allowMultipleFiles, int limit) {
+            this.allowMultipleFiles = allowMultipleFiles;
+            this.limit = limit;
+        }
+
         static HttpSourceUploadConfig from(TransferSource source) {
-            Map<String, Object> config = source.connectionConfig() == null ? Map.of() : source.connectionConfig();
+            Map<String, Object> config = source.connectionConfig() == null ? java.util.Collections.emptyMap() : source.connectionConfig();
             boolean allowMultipleFiles = booleanValue(config, TransferConfigKeys.ALLOW_MULTIPLE_FILES, true);
             int limit = intValue(config, TransferConfigKeys.LIMIT, 0);
             return new HttpSourceUploadConfig(allowMultipleFiles, limit);
         }
 
+        boolean allowMultipleFiles() {
+            return allowMultipleFiles;
+        }
+
+        int limit() {
+            return limit;
+        }
+
         private static int intValue(Map<String, Object> config, String key, int defaultValue) {
             Object raw = config.get(key);
-            if (raw == null || String.valueOf(raw).isBlank()) {
+            if (raw == null || String.valueOf(raw).trim().isEmpty()) {
                 return defaultValue;
             }
             return Integer.parseInt(String.valueOf(raw));
@@ -466,9 +483,9 @@ public class DefaultTransferSourceManagementAppService implements TransferSource
         if (existing == null || existing.isEmpty() || incoming == null || incoming.isEmpty()) {
             return merged;
         }
-        for (String key : List.of("password", "accessKey", "secretKey", "passphrase")) {
+        for (String key : java.util.Arrays.asList("password", "accessKey", "secretKey", "passphrase")) {
             Object incomingValue = incoming.get(key);
-            if (incomingValue == null || String.valueOf(incomingValue).isBlank()) {
+            if (incomingValue == null || String.valueOf(incomingValue).trim().isEmpty()) {
                 Object existingValue = existing.get(key);
                 if (existingValue != null) {
                     merged.put(key, existingValue);

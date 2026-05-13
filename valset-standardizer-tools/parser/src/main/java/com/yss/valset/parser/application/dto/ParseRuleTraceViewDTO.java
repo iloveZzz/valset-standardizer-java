@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class ParseRuleTraceViewDTO {
+public class ParseRuleTraceViewDTO implements java.io.Serializable {
     /**
      * 追踪主键。
      */

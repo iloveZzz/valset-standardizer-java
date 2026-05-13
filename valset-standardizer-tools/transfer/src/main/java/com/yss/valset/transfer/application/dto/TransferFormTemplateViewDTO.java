@@ -12,7 +12,7 @@ import com.yss.valset.transfer.domain.form.model.YssFormDefinition;
  */
 @Data
 @Builder
-public class TransferFormTemplateViewDTO {
+public class TransferFormTemplateViewDTO implements java.io.Serializable {
 
     /**
      * 模板名称。

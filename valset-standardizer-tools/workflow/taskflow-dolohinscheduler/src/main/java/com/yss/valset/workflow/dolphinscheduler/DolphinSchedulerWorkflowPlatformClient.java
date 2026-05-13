@@ -18,7 +18,7 @@ import com.yss.valset.workflow.model.WorkflowTaskInstanceDTO;
 import com.yss.valset.workflow.model.WorkflowTaskListDTO;
 import com.yss.valset.workflow.model.WorkflowTriggerMode;
 import com.yss.valset.workflow.service.AbstractWorkflowPlatformClient;
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import org.springframework.stereotype.Component;
 import org.springframework.lang.Nullable;
 import org.springframework.util.LinkedMultiValueMap;
@@ -115,7 +115,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         List<WorkflowInstanceViewDTO> records = extractInstanceItems(response).stream()
                 .map(item -> mapInstanceView(definition, request, item))
                 .filter(item -> matchesInstance(item, request))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         long total = extractTotalCount(response, records.size());
         return PageResult.of(records, total, pageSize, pageIndex);
     }
@@ -213,14 +213,14 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                 resolveWorkflowInstanceId(instance)));
         List<Map<String, Object>> taskItems = extractTaskItems(response);
         if (CollectionUtils.isEmpty(taskItems)) {
-            return List.of(WorkflowPlatformExecutionResult.builder()
+            return java.util.Arrays.asList(WorkflowPlatformExecutionResult.builder()
                     .platformType(platformType())
                     .externalWorkflowId(resolveExternalWorkflowId(definition, instance))
                     .externalInstanceId(resolveExternalInstanceId(definition, instance))
                     .rawStatus(instance == null ? null : instance.getRawStatus())
                     .message("任务日志为空")
                     .payload(buildRemotePayload(definition, instance, response))
-                    .stageLogs(List.of())
+                    .stageLogs(java.util.Arrays.asList())
                     .build());
         }
         return taskItems.stream()
@@ -235,7 +235,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                         .payload(item)
                         .stageLogs(remoteStageLogs(definition, instance, item))
                         .build())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -250,7 +250,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         List<Map<String, Object>> taskItems = extractTaskItems(response);
         return WorkflowTaskListDTO.builder()
                 .workflowInstanceState(extractString(extractPrimaryResponseData(response), "workflowInstanceState", "state"))
-                .taskList(taskItems.stream().map(this::mapTaskInstance).toList())
+                .taskList(taskItems.stream().map(this::mapTaskInstance).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 
@@ -269,7 +269,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                 .sorted(Comparator.comparing(
                         WorkflowTaskInstanceDTO::getId,
                         Comparator.nullsLast(Long::compareTo)))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         long total = extractTotalCount(response, taskList.size());
         return WorkflowTaskInstancePageDTO.builder()
                 .workflowInstanceState(extractString(extractPrimaryResponseData(response), "workflowInstanceState", "state"))
@@ -351,7 +351,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         payload.put("submitUser", definition == null ? null : definition.getWorkflowCode());
         payload.put("taskDefinitionCode", instance == null ? null : instance.getInstanceId());
         payload.put("stageCode", command == null ? null : command.getStageCode());
-        payload.put("context", command == null ? Map.of() : command.getContext());
+        payload.put("context", command == null ? java.util.Collections.emptyMap() : command.getContext());
         payload.put("operationType", command == null || command.getOperationType() == null ? null : command.getOperationType().name());
         payload.put("canonicalStatus", WorkflowStatus.fromRawStatus(instance == null ? null : instance.getRawStatus()).name());
         return payload;
@@ -489,20 +489,20 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
 
     private List<Map<String, Object>> extractInstanceItems(JsonNode response) {
         if (response == null || !response.hasNonNull("data")) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         JsonNode data = response.get("data");
         if (data.isArray()) {
             return responseSupport.getObjectMapper().convertValue(data,
                     responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
         }
-        for (String key : List.of("records", "dataList", "totalList", "items")) {
+        for (String key : java.util.Arrays.asList("records", "dataList", "totalList", "items")) {
             if (data.has(key) && data.get(key).isArray()) {
                 return responseSupport.getObjectMapper().convertValue(data.get(key),
                         responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
             }
         }
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     private long extractTotalCount(JsonNode response, int fallback) {
@@ -510,7 +510,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
             return fallback;
         }
         JsonNode data = response.get("data");
-        for (String key : List.of("totalCount", "total", "totalSize")) {
+        for (String key : java.util.Arrays.asList("totalCount", "total", "totalSize")) {
             JsonNode node = data.get(key);
             if (node != null && node.canConvertToLong()) {
                 return node.asLong();
@@ -630,8 +630,10 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                 && definition.getEngineBinding() != null
                 && definition.getEngineBinding().getAttributes() != null) {
             Object sync = definition.getEngineBinding().getAttributes().get("dolphinschedulerSync");
-            if (sync instanceof Map<?, ?> map) {
-                Object storedProjectName = map.get("projectName");
+            if (sync instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> syncMap = (Map<String, Object>) sync;
+                Object storedProjectName = syncMap.get("projectName");
                 String storedText = stringValue(storedProjectName);
                 if (StringUtils.hasText(storedText)) {
                     return storedText;
@@ -806,7 +808,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         payload.put("projectCode", resolveProjectCode(definition));
         payload.put("workflowDefinitionCode", resolveWorkflowDefinitionCode(definition));
         payload.put("workflowInstanceId", resolveWorkflowInstanceId(instance));
-        payload.put("response", response == null ? Map.of() : responseSupport.getObjectMapper().convertValue(response, Map.class));
+        payload.put("response", response == null ? java.util.Collections.emptyMap() : responseSupport.getObjectMapper().convertValue(response, Map.class));
         return payload;
     }
 
@@ -818,7 +820,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         payload.put("projectCode", resolveProjectCode(definition));
         payload.put("workflowDefinitionCode", resolveWorkflowDefinitionCode(definition));
         payload.put("workflowInstanceId", resolveWorkflowInstanceId(instance));
-        payload.put("response", response == null ? Map.of() : response);
+        payload.put("response", response == null ? java.util.Collections.emptyMap() : response);
         return payload;
     }
 
@@ -837,7 +839,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                 .message(extractString(payload, "message", "stateDesc"))
                 .payload(payload)
                 .build();
-        return List.of(log);
+        return java.util.Arrays.asList(log);
     }
 
     private List<com.yss.valset.workflow.model.WorkflowStageLogDTO> remoteStageLogs(WorkflowDefinitionDTO definition,
@@ -850,7 +852,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
 
     private List<Map<String, Object>> extractTaskItems(JsonNode response) {
         if (response == null || !response.hasNonNull("data")) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         JsonNode data = response.get("data");
         if (data.isArray()) {
@@ -859,7 +861,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         if (data.isObject() && data.has("taskList") && data.get("taskList").isArray()) {
             return responseSupport.getObjectMapper().convertValue(data.get("taskList"), responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
         }
-        for (String key : List.of("dataList", "totalList", "records", "items")) {
+        for (String key : java.util.Arrays.asList("dataList", "totalList", "records", "items")) {
             if (data.has(key) && data.get(key).isArray()) {
                 return responseSupport.getObjectMapper().convertValue(data.get(key), responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
             }
@@ -872,7 +874,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
                 return responseSupport.getObjectMapper().convertValue(data.get("totalList"), responseSupport.getObjectMapper().getTypeFactory().constructCollectionType(List.class, Map.class));
             }
         }
-        return List.of();
+        return java.util.Arrays.asList();
     }
 
     private WorkflowTaskInstanceDTO mapTaskInstance(Map<String, Object> item) {
@@ -965,7 +967,7 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
 
     private Map<String, Object> extractPrimaryResponseData(JsonNode response) {
         if (response == null || !response.hasNonNull("data")) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         JsonNode data = response.get("data");
         if (data.isObject()) {
@@ -976,12 +978,12 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
             if (first.isObject()) {
                 return responseSupport.getObjectMapper().convertValue(first, Map.class);
             }
-            return Map.of("data", first.asText());
+            return com.yss.valset.common.support.Java8Maps.of("data", first.asText());
         }
         if (data.isNumber() || data.isTextual() || data.isBoolean()) {
-            return Map.of("data", data.asText());
+            return com.yss.valset.common.support.Java8Maps.of("data", data.asText());
         }
-        return Map.of();
+        return java.util.Collections.emptyMap();
     }
 
     private String extractTaskLogMessage(JsonNode response) {
@@ -1012,8 +1014,8 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         if (value == null) {
             return null;
         }
-        if (value instanceof Number number) {
-            return number.longValue();
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
         }
         try {
             return Long.parseLong(String.valueOf(value));
@@ -1026,8 +1028,8 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
         if (value == null) {
             return null;
         }
-        if (value instanceof Number number) {
-            return number.intValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
         }
         try {
             return Integer.parseInt(String.valueOf(value));
@@ -1038,8 +1040,8 @@ public class DolphinSchedulerWorkflowPlatformClient extends AbstractWorkflowPlat
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> castMap(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            return (Map<String, Object>) map;
+        if (value instanceof Map) {
+            return (Map<String, Object>) value;
         }
         return null;
     }

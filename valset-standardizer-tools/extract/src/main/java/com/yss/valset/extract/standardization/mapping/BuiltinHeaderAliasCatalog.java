@@ -38,14 +38,14 @@ public final class BuiltinHeaderAliasCatalog {
         mapping.put("停牌信息", "susp_info");
         mapping.put("估值权益", "valuat_equity");
         mapping.put("权益信息|本币", "valuat_equity");
-        ALIAS_TO_STANDARD_CODE = Map.copyOf(mapping);
+        ALIAS_TO_STANDARD_CODE = java.util.Collections.unmodifiableMap(new java.util.HashMap<>(mapping));
     }
 
     private BuiltinHeaderAliasCatalog() {
     }
 
     public static HeaderMappingCandidate matchByContains(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String candidateText = canonicalize(text);
@@ -53,7 +53,7 @@ public final class BuiltinHeaderAliasCatalog {
         String bestCode = null;
         for (Map.Entry<String, String> entry : ALIAS_TO_STANDARD_CODE.entrySet()) {
             String alias = entry.getKey();
-            if (alias == null || alias.isBlank() || alias.length() < 2) {
+            if (alias == null || alias.trim().isEmpty() || alias.length() < 2) {
                 continue;
             }
             String normalizedAlias = canonicalize(alias);
@@ -65,7 +65,7 @@ public final class BuiltinHeaderAliasCatalog {
                 bestCode = entry.getValue();
             }
         }
-        if (bestCode == null || bestCode.isBlank()) {
+        if (bestCode == null || bestCode.trim().isEmpty()) {
             return null;
         }
         return new HeaderMappingCandidate(null, null, bestCode);

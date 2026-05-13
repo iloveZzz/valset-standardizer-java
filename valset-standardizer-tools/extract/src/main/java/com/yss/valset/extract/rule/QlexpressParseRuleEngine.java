@@ -49,7 +49,7 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
 
     @Override
     public Object evaluate(String expression, Map<String, Object> context) {
-        if (expression == null || expression.isBlank()) {
+        if (expression == null || expression.trim().isEmpty()) {
             return null;
         }
         long startedAt = System.currentTimeMillis();
@@ -68,13 +68,13 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
     @Override
     public boolean evaluateBoolean(String expression, Map<String, Object> context) {
         Object result = evaluate(expression, context);
-        if (result instanceof Boolean bool) {
-            return bool;
+        if (result instanceof Boolean) {
+            return ((Boolean) result).booleanValue();
         }
-        if (result instanceof Number number) {
-            return number.intValue() != 0;
+        if (result instanceof Number) {
+            return ((Number) result).intValue() != 0;
         }
-        return result != null && !String.valueOf(result).isBlank() && !"false".equalsIgnoreCase(String.valueOf(result));
+        return result != null && !String.valueOf(result).trim().isEmpty() && !"false".equalsIgnoreCase(String.valueOf(result));
     }
 
     @Override
@@ -99,7 +99,7 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
         context.put("requiredHeaders", ParseRuleSupport.normalizeKeywords(requiredHeaders));
         context.put(TRACE_TYPE_KEY, TRACE_TYPE_PARSER);
         context.put(TRACE_STEP_KEY, "HEADER_ROW");
-        return evaluateBoolean(expression == null || expression.isBlank() ? ParseRuleExpressions.HEADER_ROW_EXPR : expression, context);
+        return evaluateBoolean(expression == null || expression.trim().isEmpty() ? ParseRuleExpressions.HEADER_ROW_EXPR : expression, context);
     }
 
     /**
@@ -117,7 +117,7 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
         context.put("row", rowValues);
         context.put(TRACE_TYPE_KEY, TRACE_TYPE_PARSER);
         context.put(TRACE_STEP_KEY, "DATA_START");
-        return evaluateBoolean(expression == null || expression.isBlank() ? ParseRuleExpressions.DATA_START_EXPR : expression, context);
+        return evaluateBoolean(expression == null || expression.trim().isEmpty() ? ParseRuleExpressions.DATA_START_EXPR : expression, context);
     }
 
     /**
@@ -144,7 +144,7 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
         context.put("subjectCodePattern", subjectCodePattern == null ? null : subjectCodePattern.pattern());
         context.put(TRACE_TYPE_KEY, TRACE_TYPE_PARSER);
         context.put(TRACE_STEP_KEY, "ROW_CLASSIFY");
-        return evaluateString(expression == null || expression.isBlank() ? ParseRuleExpressions.ROW_CLASSIFY_EXPR : expression, context);
+        return evaluateString(expression == null || expression.trim().isEmpty() ? ParseRuleExpressions.ROW_CLASSIFY_EXPR : expression, context);
     }
 
     /**
@@ -244,7 +244,7 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
     }
 
     private Map<String, Object> safeContext(Map<String, Object> context) {
-        return context == null ? Map.of() : new HashMap<>(context);
+        return context == null ? java.util.Collections.emptyMap() : new HashMap<>(context);
     }
 
     private void recordTraceIfNeeded(String expression,
@@ -294,7 +294,7 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
             return defaultValue;
         }
         String text = String.valueOf(value);
-        return text.isBlank() ? defaultValue : text;
+        return text.trim().isEmpty() ? defaultValue : text;
     }
 
     private String asString(Object[] params, int index, String defaultValue) {
@@ -307,28 +307,29 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
     @SuppressWarnings("unchecked")
     private List<Object> asRow(Object[] params, int index) {
         if (params == null || index < 0 || index >= params.length) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Object value = params[index];
-        if (value instanceof List<?> list) {
-            return (List<Object>) list;
+        if (value instanceof List<?>) {
+            return (List<Object>) value;
         }
-        return List.of(value);
+        return java.util.Arrays.asList(value);
     }
 
     @SuppressWarnings("unchecked")
     private List<String> asStringList(Object[] params, int index) {
         if (params == null || index < 0 || index >= params.length) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         Object value = params[index];
-        if (value instanceof List<?> list) {
-            return list.stream().map(item -> item == null ? "" : String.valueOf(item)).toList();
+        if (value instanceof List<?>) {
+            List<?> list = (List<?>) value;
+            return list.stream().map(item -> item == null ? "" : String.valueOf(item)).collect(java.util.stream.Collectors.toList());
         }
         if (value == null) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
-        return List.of(String.valueOf(value));
+        return java.util.Arrays.asList(String.valueOf(value));
     }
 
     private int asInt(Object[] params, int index) {
@@ -336,8 +337,8 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
             return -1;
         }
         Object value = params[index];
-        if (value instanceof Number number) {
-            return number.intValue();
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
         }
         try {
             return Integer.parseInt(String.valueOf(value));
@@ -357,11 +358,11 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
         }
         Object value = params[index];
         try {
-            if (value instanceof Pattern pattern) {
-                return pattern;
+            if (value instanceof Pattern) {
+                return (Pattern) value;
             }
             String text = String.valueOf(value).trim();
-            if (text.isBlank()) {
+            if (text.trim().isEmpty()) {
                 return null;
             }
             return Pattern.compile(text);

@@ -1,6 +1,6 @@
 package com.yss.valset.task.application.port;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
 import com.yss.valset.application.event.lifecycle.WorkflowTaskLifecycleEvent;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;

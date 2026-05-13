@@ -10,14 +10,12 @@
     </option>
     <option name="enabledProfiles">
       <list>
+        <option value="internal-only" />
+        <option value="SpringCloud.2021.0.9" />
+        <option value="aliyun-only" />
         <option value="nacos" />
       </list>
     </option>
-    <option name="disabledProfiles">
-      <list>
-        <option value="internal-only" />
-      </list>
-    </option>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="corretto-17" project-jdk-type="JavaSDK" />
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" default="true" project-jdk-name="corretto-1.8" project-jdk-type="JavaSDK" />
 </project>

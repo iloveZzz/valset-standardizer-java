@@ -4,6 +4,7 @@ import com.yss.valset.domain.model.ValsetMatchResult;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -11,7 +12,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class MatchResultViewDTO {
+public class MatchResultViewDTO implements Serializable {
     /**
      * 文件主键。
      */

@@ -15,7 +15,7 @@ import java.util.List;
 @Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class WorkflowTaskListDTO {
+public class WorkflowTaskListDTO implements java.io.Serializable {
 
     @Builder.Default
     private List<WorkflowTaskInstanceDTO> taskList = new ArrayList<>();

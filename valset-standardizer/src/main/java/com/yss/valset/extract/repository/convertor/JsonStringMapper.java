@@ -31,10 +31,12 @@ public class JsonStringMapper {
         if (value == null) {
             return null;
         }
-        if (value instanceof CharSequence charSequence) {
+        if (value instanceof CharSequence) {
+            CharSequence charSequence = (CharSequence) value;
             return normalizeString(charSequence.toString());
         }
-        if (value instanceof Enum<?> enumValue) {
+        if (value instanceof Enum<?>) {
+            Enum<?> enumValue = (Enum<?>) value;
             return enumValue.name();
         }
         try {
@@ -94,7 +96,7 @@ public class JsonStringMapper {
     }
 
     private <T> T read(String value, TypeReference<T> typeReference) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         try {

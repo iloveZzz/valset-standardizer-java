@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class ValuationSheetStyleViewDTO {
+public class ValuationSheetStyleViewDTO implements java.io.Serializable{
     private String id;
     private String taskId;
     private String fileId;

@@ -1,8 +1,8 @@
 package com.yss.valset.workflow.web;
 
-import com.yss.cloud.dto.response.PageResult;
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.PageResult;
+import com.yss.cloud.dto.result.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.workflow.model.WorkflowCallbackRequest;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
@@ -19,7 +19,7 @@ import com.yss.valset.workflow.model.WorkflowTaskListDTO;
 import com.yss.valset.workflow.model.WorkflowStopRequest;
 import com.yss.valset.workflow.model.WorkflowTriggerRequest;
 import com.yss.valset.workflow.spi.WorkflowApplicationService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -233,7 +233,7 @@ public class WorkflowController {
     }
 
     private com.yss.valset.workflow.model.EtlPlatformType parsePlatformType(String platformType) {
-        if (platformType == null || platformType.isBlank()) {
+        if (platformType == null || platformType.trim().isEmpty()) {
             return null;
         }
         try {

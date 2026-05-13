@@ -42,7 +42,7 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
         return transferRouteGateway.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, enabled, routeStatus, limit)
                 .stream()
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -176,18 +176,18 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
     }
 
     private SourceType parseSourceType(String value, TransferRoute existing) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return existing == null ? null : existing.sourceType();
         }
         return SourceType.valueOf(value);
     }
 
     private TargetType parseTargetType(String value) {
-        return value == null || value.isBlank() ? null : TargetType.valueOf(value);
+        return value == null || value.trim().isEmpty() ? null : TargetType.valueOf(value);
     }
 
     private TransferStatus parseStatus(String value, TransferRoute existing) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return existing == null ? TransferStatus.PENDING : existing.routeStatus();
         }
         return TransferStatus.valueOf(value);
@@ -201,7 +201,7 @@ public class DefaultTransferRouteManagementAppService implements TransferRouteMa
     }
 
     private String normalizePollCron(String value, TransferRoute existing) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return existing == null ? null : existing.pollCron();
         }
         return value.trim();

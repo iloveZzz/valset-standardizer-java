@@ -32,7 +32,7 @@ public class DefaultTransferRouteQueryService implements TransferRouteQueryServi
         return transferRouteGateway.listRoutes(sourceId, sourceType, sourceCode, ruleId, targetType, targetCode, enabled, null, limit)
                 .stream()
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override

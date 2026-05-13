@@ -5,12 +5,70 @@ import java.util.Map;
 /**
  * 文件投递重试策略。
  */
-public record TransferRetryPolicy(
-        int maxRetryCount,
-        int retryDelaySeconds
-) {
+public class TransferRetryPolicy {
 
-    public static TransferRetryPolicy from(Map<String, Object> routeMeta) {
+    private final int maxRetryCount;
+    private final int retryDelaySeconds;
+
+    public TransferRetryPolicy(int maxRetryCount, int retryDelaySeconds) {
+        this.maxRetryCount = maxRetryCount;
+        this.retryDelaySeconds = retryDelaySeconds;
+    }
+
+
+
+    public int maxRetryCount() {
+        return maxRetryCount;
+    }
+
+    public int retryDelaySeconds() {
+        return retryDelaySeconds;
+    }
+
+
+
+    public int getMaxRetryCount() {
+        return maxRetryCount;
+    }
+
+    public int getRetryDelaySeconds() {
+        return retryDelaySeconds;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        TransferRetryPolicy other = (TransferRetryPolicy) o;
+        if (maxRetryCount != other.maxRetryCount) {
+            return false;
+        }
+        if (retryDelaySeconds != other.retryDelaySeconds) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(maxRetryCount, retryDelaySeconds);
+    }
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("TransferRetryPolicy[");
+        sb.append("maxRetryCount=").append(maxRetryCount);
+        sb.append(", retryDelaySeconds=").append(retryDelaySeconds);
+        sb.append(']');
+        return sb.toString();
+    }
+
+
+
+public static TransferRetryPolicy from(Map<String, Object> routeMeta) {
         return new TransferRetryPolicy(
                 intValue(routeMeta, TransferConfigKeys.MAX_RETRY_COUNT, 3),
                 intValue(routeMeta, TransferConfigKeys.RETRY_DELAY_SECONDS, 60)
@@ -22,7 +80,7 @@ public record TransferRetryPolicy(
             return defaultValue;
         }
         Object raw = routeMeta.get(key);
-        if (raw == null || String.valueOf(raw).isBlank()) {
+        if (raw == null || String.valueOf(raw).trim().isEmpty()) {
             return defaultValue;
         }
         try {
@@ -31,4 +89,5 @@ public record TransferRetryPolicy(
             return defaultValue;
         }
     }
+
 }

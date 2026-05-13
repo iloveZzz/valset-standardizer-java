@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class ParseRuleValidationViewDTO {
+public class ParseRuleValidationViewDTO implements java.io.Serializable {
     /**
      * 模板主键。
      */

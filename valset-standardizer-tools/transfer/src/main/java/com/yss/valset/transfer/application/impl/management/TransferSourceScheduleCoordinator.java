@@ -49,7 +49,7 @@ public class TransferSourceScheduleCoordinator {
             return;
         }
         String pollCron = resolvePollCron(source);
-        if (!source.enabled() || pollCron == null || pollCron.isBlank()) {
+        if (!source.enabled() || pollCron == null || pollCron.trim().isEmpty()) {
             transferJobScheduler.unscheduleIngest(source.sourceId());
             return;
         }
@@ -63,7 +63,7 @@ public class TransferSourceScheduleCoordinator {
     }
 
     public void syncSourceScheduleBySourceId(String sourceId) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             return;
         }
         transferSourceGateway.findById(sourceId).ifPresent(this::syncSourceSchedule);
@@ -92,6 +92,6 @@ public class TransferSourceScheduleCoordinator {
     }
 
     private boolean hasText(String value) {
-        return value != null && !value.isBlank();
+        return value != null && !value.trim().isEmpty();
     }
 }

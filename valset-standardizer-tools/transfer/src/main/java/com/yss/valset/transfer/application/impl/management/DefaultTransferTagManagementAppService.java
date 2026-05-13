@@ -1,6 +1,6 @@
 package com.yss.valset.transfer.application.impl.management;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.transfer.application.command.TransferTagTestCommand;
 import com.yss.valset.transfer.application.command.TransferTagUpsertCommand;
 import com.yss.valset.transfer.application.dto.TransferTagMutationResponse;
@@ -33,7 +33,7 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
     @Override
     public PageResult<TransferTagViewDTO> pageTags(String tagCode, String tagName, String matchStrategy, Boolean enabled, Integer pageIndex, Integer pageSize) {
         TransferTagPage page = transferTagGateway.pageTags(tagCode, tagName, matchStrategy, enabled, pageIndex, pageSize);
-        return PageResult.of(page.records().stream().map(this::toView).toList(),
+        return PageResult.of(page.records().stream().map(this::toView).collect(java.util.stream.Collectors.toList()),
                 page.total(),
                 page.pageSize(),
                 page.pageIndex());
@@ -118,11 +118,11 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
                         throw new ResponseStatusException(HttpStatus.CONFLICT, "标签编码已存在，tagCode=" + command.getTagCode());
                     }
                 });
-        if (matchStrategy.contains("SCRIPT") && (command.getScriptBody() == null || command.getScriptBody().isBlank())) {
+        if (matchStrategy.contains("SCRIPT") && (command.getScriptBody() == null || command.getScriptBody().trim().isEmpty())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "脚本匹配策略下脚本内容不能为空");
         }
         if (matchStrategy.contains("REGEX")) {
-            if (command.getRegexPattern() == null || command.getRegexPattern().isBlank()) {
+            if (command.getRegexPattern() == null || command.getRegexPattern().trim().isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "正则匹配策略下正则表达式不能为空");
             }
             try {
@@ -168,12 +168,12 @@ public class DefaultTransferTagManagementAppService implements TransferTagManage
             return false;
         }
         Object defaultTag = tagMeta.get("defaultTag");
-        if (defaultTag instanceof Boolean booleanValue) {
-            return booleanValue;
+        if (defaultTag instanceof Boolean) {
+            return ((Boolean) defaultTag).booleanValue();
         }
         Object isDefaultTag = tagMeta.get("isDefaultTag");
-        if (isDefaultTag instanceof Boolean booleanValue) {
-            return booleanValue;
+        if (isDefaultTag instanceof Boolean) {
+            return ((Boolean) isDefaultTag).booleanValue();
         }
         return "true".equalsIgnoreCase(String.valueOf(defaultTag)) || "true".equalsIgnoreCase(String.valueOf(isDefaultTag));
     }

@@ -12,6 +12,7 @@ import org.springframework.util.StringUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -98,7 +99,7 @@ public class DefaultTransferObjectBusinessFieldProjectionService implements Tran
                 transferObject.mailSubject(),
                 transferObject.originalName()
         );
-        return normalizeText(candidate).isBlank() ? transferObject.businessId() : normalizeText(candidate);
+        return normalizeText(candidate).trim().isEmpty() ? transferObject.businessId() : normalizeText(candidate);
     }
 
     private LocalDate resolveReceiveDate(TransferObject transferObject) {
@@ -148,10 +149,10 @@ public class DefaultTransferObjectBusinessFieldProjectionService implements Tran
             return null;
         }
         if (StringUtils.hasText(transferObject.localTempPath())) {
-            return Path.of(transferObject.localTempPath());
+            return Paths.get(transferObject.localTempPath());
         }
         if (StringUtils.hasText(transferObject.realStoragePath())) {
-            return Path.of(transferObject.realStoragePath());
+            return Paths.get(transferObject.realStoragePath());
         }
         return null;
     }
@@ -195,14 +196,14 @@ public class DefaultTransferObjectBusinessFieldProjectionService implements Tran
 
     private LocalDate parseBusinessDate(String candidate) {
         String text = normalizeText(candidate);
-        if (text.isBlank()) {
+        if (text.trim().isEmpty()) {
             return null;
         }
         LocalDate direct = tryParseExact(text);
         if (isValidBusinessDate(direct)) {
             return direct;
         }
-        for (Pattern pattern : List.of(BASIC_ISO_DATE_PATTERN, DASH_DATE_PATTERN, SLASH_DATE_PATTERN, CN_DATE_PATTERN)) {
+        for (Pattern pattern : java.util.Arrays.asList(BASIC_ISO_DATE_PATTERN, DASH_DATE_PATTERN, SLASH_DATE_PATTERN, CN_DATE_PATTERN)) {
             Matcher matcher = pattern.matcher(text);
             if (!matcher.find()) {
                 continue;
@@ -253,7 +254,7 @@ public class DefaultTransferObjectBusinessFieldProjectionService implements Tran
             return "";
         }
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value.trim();
             }
         }

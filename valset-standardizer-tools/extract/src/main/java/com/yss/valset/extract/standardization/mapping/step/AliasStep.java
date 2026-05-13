@@ -13,7 +13,7 @@ public class AliasStep implements HeaderMappingStep {
 
     @Override
     public MappingDecision map(HeaderMappingInput input, HeaderMappingLookup lookup) {
-        if (input == null || input.headerText() == null || input.headerText().isBlank()) {
+        if (input == null || input.headerText() == null || input.headerText().trim().isEmpty()) {
             return null;
         }
         HeaderMappingCandidate candidate = lookup.findAliasContains(input.headerText().trim());

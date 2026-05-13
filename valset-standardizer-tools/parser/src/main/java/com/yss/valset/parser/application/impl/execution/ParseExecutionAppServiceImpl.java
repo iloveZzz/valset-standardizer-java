@@ -22,8 +22,6 @@ import com.yss.valset.domain.parser.ValuationDataParserProvider;
 import com.yss.valset.domain.rule.ParseRuleTraceContext;
 import com.yss.valset.domain.rule.ParseRuleTraceContextHolder;
 import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
-import io.micrometer.tracing.Span;
-import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +50,6 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final ExternalValuationStandardizationService standardizationService;
     private final ObjectMapper objectMapper;
-    private final Tracer tracer;
     private final ParseLifecycleEventPublisher parseLifecycleEventPublisher;
 
     public ParseExecutionAppServiceImpl(
@@ -65,7 +62,6 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             ValsetFileInfoGateway subjectMatchFileInfoGateway,
             ExternalValuationStandardizationService standardizationService,
             ObjectMapper objectMapper,
-            Tracer tracer,
             ParseLifecycleEventPublisher parseLifecycleEventPublisher
     ) {
         this.taskGateway = taskGateway;
@@ -77,7 +73,6 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.standardizationService = standardizationService;
         this.objectMapper = objectMapper;
-        this.tracer = tracer;
         this.parseLifecycleEventPublisher = parseLifecycleEventPublisher;
     }
 
@@ -87,129 +82,107 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void execute(Long taskId) {
-        Span rootSpan = tracer.nextSpan().name("workflow.parse.execute").tag("task.id", String.valueOf(taskId)).start();
-        try (Tracer.SpanInScope ws = tracer.withSpan(rootSpan)) {
-            WorkflowTask workflowTask = taskGateway.findById(taskId);
-            ParseRuleTraceContext traceContext = ParseRuleTraceContext.builder()
-                    .profileId(null)
-                    .profileCode("runtime")
-                    .version("runtime")
-                    .fileId(workflowTask == null ? null : workflowTask.getFileId())
-                    .taskId(taskId)
-                    .traceEnabled(Boolean.FALSE)
-                    .traceScope("RUNTIME_PARSE")
-                    .build();
-            try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
-                ParseTaskCommand command = null;
-                ParseLifecycleStage currentStage = ParseLifecycleStage.FILE_PARSE;
-                try {
-                    long startedAt = System.currentTimeMillis();
-                    log.info("开始执行估值数据解析任务，taskId={}", taskId);
-                    command = objectMapper.readValue(workflowTask.getInputPayload(), ParseTaskCommand.class);
+        WorkflowTask workflowTask = taskGateway.findById(taskId);
+        ParseRuleTraceContext traceContext = ParseRuleTraceContext.builder()
+                .profileId(null)
+                .profileCode("runtime")
+                .version("runtime")
+                .fileId(workflowTask == null ? null : workflowTask.getFileId())
+                .taskId(taskId)
+                .traceEnabled(Boolean.FALSE)
+                .traceScope("RUNTIME_PARSE")
+                .build();
+        try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
+            ParseTaskCommand command = null;
+            ParseLifecycleStage currentStage = ParseLifecycleStage.FILE_PARSE;
+            try {
+                long startedAt = System.currentTimeMillis();
+                log.info("开始执行估值数据解析任务，taskId={}", taskId);
+                command = objectMapper.readValue(workflowTask.getInputPayload(), ParseTaskCommand.class);
 
-                    String sourceTypeStr = command.getDataSourceType();
-                    DataSourceType type = DataSourceType.EXCEL;
-                    if (sourceTypeStr != null && !sourceTypeStr.isBlank()) {
-                        type = DataSourceType.valueOf(sourceTypeStr.toUpperCase());
-                    }
-
-                    DataSourceConfig config = buildAnalysisConfig(type, resolveAnalysisWorkbookPath(command), command.getFileId());
-
-                    ValuationDataParser parser = parserProvider.getParser(type);
-                    log.debug("解析任务 {} 使用分析器 {}，sourceType={}, sourceUri={}, fileId={}",
-                            taskId,
-                            parser.getClass().getSimpleName(),
-                            type,
-                            config.getSourceUri(),
-                            command.getFileId());
-
-                    long parseStartedAt = System.currentTimeMillis();
-                    ParsedValuationData parsedValuationData = traceSpan("workflow.parse.raw_parse", () -> parser.parse(config));
-                    long parseFinishedAt = System.currentTimeMillis();
-                    validateParsedValuationData(parsedValuationData, command);
-                    String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-                    parsedValuationData = parsedValuationData.toBuilder()
-                            .fileNameOriginal(fileNameOriginal)
-                            .build();
-                    final ParsedValuationData parsedValuationDataFinal = parsedValuationData;
-
-                    traceSpan("workflow.parse.persist_raw_dwd", () ->
-                            dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), parsedValuationDataFinal));
-                    publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
-
-                    long standardizeStartedAt = System.currentTimeMillis();
-                    currentStage = ParseLifecycleStage.STRUCTURE_STANDARDIZE;
-                    ParsedValuationData standardizedValuationData = traceSpan("workflow.parse.standardize",
-                            () -> standardizationService.standardize(parsedValuationDataFinal));
-                    long standardizeFinishedAt = System.currentTimeMillis();
-                    standardizedValuationData = standardizedValuationData == null ? null : standardizedValuationData.toBuilder()
-                            .fileNameOriginal(fileNameOriginal)
-                            .build();
-                    publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
-
-                    String sourceSign = fileNameOriginal;
-                    String sourceTypeName = type.name();
-                    ParsedValuationData finalStandardizedValuationData = standardizedValuationData;
-                    currentStage = ParseLifecycleStage.STANDARD_LANDING;
-                    traceSpan("workflow.parse.persist_standardized", () -> {
-                        standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), finalStandardizedValuationData);
-                        dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-                        trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-                    });
-                    long persistFinishedAt = System.currentTimeMillis();
-
-                    long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
-                    taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
-                    String resultPayload = buildResultPayload(parsedValuationDataFinal);
-                    taskGateway.markSuccess(taskId, resultPayload);
-                    publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
-                    log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
-                            taskId,
-                            parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
-                            parsedValuationDataFinal.getMetrics() == null ? 0 : parsedValuationDataFinal.getMetrics().size());
-                    log.info("解析流程耗时统计，taskId={}, totalMs={}, parseMs={}, standardizeMs={}, persistMs={}",
-                            taskId,
-                            System.currentTimeMillis() - startedAt,
-                            parseFinishedAt - parseStartedAt,
-                            standardizeFinishedAt - standardizeStartedAt,
-                            persistFinishedAt - standardizeFinishedAt);
-                } catch (Exception e) {
-                    rootSpan.error(e);
-                    publishLifecycleEvent(currentStage, taskId, command, "解析任务执行失败", Map.of(
-                            "errorMessage", e.getMessage() == null ? e.getClass().getName() : e.getMessage(),
-                            "errorType", e.getClass().getName()
-                    ));
-                    log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
-                    throw new IllegalStateException("Failed to execute parse task " + taskId, e);
+                String sourceTypeStr = command.getDataSourceType();
+                DataSourceType type = DataSourceType.EXCEL;
+                if (sourceTypeStr != null && !sourceTypeStr.trim().isEmpty()) {
+                    type = DataSourceType.valueOf(sourceTypeStr.toUpperCase());
                 }
+
+                DataSourceConfig config = buildAnalysisConfig(type, resolveAnalysisWorkbookPath(command), command.getFileId());
+
+                ValuationDataParser parser = parserProvider.getParser(type);
+                log.debug("解析任务 {} 使用分析器 {}，sourceType={}, sourceUri={}, fileId={}",
+                        taskId,
+                        parser.getClass().getSimpleName(),
+                        type,
+                        config.getSourceUri(),
+                        command.getFileId());
+
+                long parseStartedAt = System.currentTimeMillis();
+                ParsedValuationData parsedValuationData = traceSpan("workflow.parse.raw_parse", () -> parser.parse(config));
+                long parseFinishedAt = System.currentTimeMillis();
+                validateParsedValuationData(parsedValuationData, command);
+                String fileNameOriginal = resolveFileNameOriginal(workflowTask);
+                parsedValuationData = parsedValuationData.toBuilder()
+                        .fileNameOriginal(fileNameOriginal)
+                        .build();
+                final ParsedValuationData parsedValuationDataFinal = parsedValuationData;
+
+                traceSpan("workflow.parse.persist_raw_dwd", () ->
+                        dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), parsedValuationDataFinal));
+                publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
+
+                long standardizeStartedAt = System.currentTimeMillis();
+                currentStage = ParseLifecycleStage.STRUCTURE_STANDARDIZE;
+                ParsedValuationData standardizedValuationData = traceSpan("workflow.parse.standardize",
+                        () -> standardizationService.standardize(parsedValuationDataFinal));
+                long standardizeFinishedAt = System.currentTimeMillis();
+                standardizedValuationData = standardizedValuationData == null ? null : standardizedValuationData.toBuilder()
+                        .fileNameOriginal(fileNameOriginal)
+                        .build();
+                publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
+
+                String sourceSign = fileNameOriginal;
+                String sourceTypeName = type.name();
+                ParsedValuationData finalStandardizedValuationData = standardizedValuationData;
+                currentStage = ParseLifecycleStage.STANDARD_LANDING;
+                traceSpan("workflow.parse.persist_standardized", () -> {
+                    standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), finalStandardizedValuationData);
+                    dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
+                    trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
+                });
+                long persistFinishedAt = System.currentTimeMillis();
+
+                long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
+                taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
+                String resultPayload = buildResultPayload(parsedValuationDataFinal);
+                taskGateway.markSuccess(taskId, resultPayload);
+                publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
+                log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
+                        taskId,
+                        parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
+                        parsedValuationDataFinal.getMetrics() == null ? 0 : parsedValuationDataFinal.getMetrics().size());
+                log.info("解析流程耗时统计，taskId={}, totalMs={}, parseMs={}, standardizeMs={}, persistMs={}",
+                        taskId,
+                        System.currentTimeMillis() - startedAt,
+                        parseFinishedAt - parseStartedAt,
+                        standardizeFinishedAt - standardizeStartedAt,
+                        persistFinishedAt - standardizeFinishedAt);
+            } catch (Exception e) {
+                publishLifecycleEvent(currentStage, taskId, command, "解析任务执行失败", com.yss.valset.common.support.Java8Maps.of(
+                        "errorMessage", e.getMessage() == null ? e.getClass().getName() : e.getMessage(),
+                        "errorType", e.getClass().getName()
+                ));
+                log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
+                throw new IllegalStateException("Failed to execute parse task " + taskId, e);
             }
-        } finally {
-            rootSpan.end();
         }
     }
 
     private <T> T traceSpan(String spanName, Supplier<T> supplier) {
-        Span span = tracer.nextSpan().name(spanName).start();
-        try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
-            return supplier.get();
-        } catch (RuntimeException exception) {
-            span.error(exception);
-            throw exception;
-        } finally {
-            span.end();
-        }
+        return supplier.get();
     }
 
     private void traceSpan(String spanName, Runnable runnable) {
-        Span span = tracer.nextSpan().name(spanName).start();
-        try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
-            runnable.run();
-        } catch (RuntimeException exception) {
-            span.error(exception);
-            throw exception;
-        } finally {
-            span.end();
-        }
+        runnable.run();
     }
 
     private String resolveFileNameOriginal(WorkflowTask workflowTask) {
@@ -224,7 +197,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             return null;
         }
         for (String candidate : candidates) {
-            if (candidate != null && !candidate.isBlank()) {
+            if (candidate != null && !candidate.trim().isEmpty()) {
                 return candidate.trim();
             }
         }
@@ -257,7 +230,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             return null;
         }
         for (String candidate : candidates) {
-            if (candidate == null || candidate.isBlank()) {
+            if (candidate == null || candidate.trim().isEmpty()) {
                 continue;
             }
             try {
@@ -302,7 +275,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
     }
 
     private void publishLifecycleEvent(ParseLifecycleStage stage, Long taskId, ParseTaskCommand command, String message) {
-        publishLifecycleEvent(stage, taskId, command, message, Map.of());
+        publishLifecycleEvent(stage, taskId, command, message, java.util.Collections.emptyMap());
     }
 
     private void publishLifecycleEvent(ParseLifecycleStage stage, Long taskId, ParseTaskCommand command, String message, Map<String, Object> attributes) {
@@ -325,7 +298,7 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             }
             builder.attributes(mergedAttributes);
         } else if (command != null && command.getForceRebuild() != null) {
-            builder.attributes(Map.of("forceRebuild", command.getForceRebuild()));
+            builder.attributes(com.yss.valset.common.support.Java8Maps.of("forceRebuild", command.getForceRebuild()));
         }
         parseLifecycleEventPublisher.publish(builder.build());
     }

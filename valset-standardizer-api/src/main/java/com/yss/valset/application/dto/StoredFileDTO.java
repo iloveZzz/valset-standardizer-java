@@ -3,12 +3,14 @@ package com.yss.valset.application.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 上传文件落盘后的描述信息。
  */
 @Data
 @Builder
-public class StoredFileDTO {
+public class StoredFileDTO implements Serializable {
     /**
      * 原始文件名。
      */

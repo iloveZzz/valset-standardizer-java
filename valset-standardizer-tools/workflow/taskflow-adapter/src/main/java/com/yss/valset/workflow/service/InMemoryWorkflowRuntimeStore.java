@@ -1,6 +1,6 @@
 package com.yss.valset.workflow.service;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowInstanceQueryRequest;
 import com.yss.valset.workflow.model.WorkflowInstanceDTO;
@@ -65,9 +65,8 @@ public class InMemoryWorkflowRuntimeStore implements WorkflowRuntimeStore {
         if (!StringUtils.hasText(workflowCode) || workflowVersionNo == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(definitions.get(workflowCode))
+        return Optional.ofNullable(definitions.get(workflowCode)).get()
                 .stream()
-                .flatMap(List::stream)
                 .filter(item -> workflowVersionNo.equals(item.getWorkflowVersionNo()))
                 .findFirst()
                 .map(item -> item.toBuilder().build());

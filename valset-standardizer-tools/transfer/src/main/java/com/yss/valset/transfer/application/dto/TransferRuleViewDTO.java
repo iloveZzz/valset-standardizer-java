@@ -12,7 +12,7 @@ import java.util.Map;
  */
 @Data
 @Builder
-public class TransferRuleViewDTO {
+public class TransferRuleViewDTO implements java.io.Serializable {
 
     /**
      * 规则主键。

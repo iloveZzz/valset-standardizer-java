@@ -86,7 +86,7 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
         return fileInfos.stream()
                 .limit(maxSize)
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -95,7 +95,7 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
         if (ingestLogs.isEmpty()) {
             return Collections.emptyList();
         }
-        return ingestLogs.stream().map(this::toView).toList();
+        return ingestLogs.stream().map(this::toView).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -118,7 +118,7 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
         }
         return stylePOs.stream()
                 .map(this::toView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -193,8 +193,8 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     }
 
     private Map<String, Object> parseMap(String json) {
-        if (json == null || json.isBlank()) {
-            return Map.of();
+        if (json == null || json.trim().isEmpty()) {
+            return java.util.Collections.emptyMap();
         }
         try {
             return objectMapper.readValue(json, new TypeReference<LinkedHashMap<String, Object>>() {
@@ -207,8 +207,12 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> extractRows(Map<String, Object> parsed) {
         Object cellData = parsed.get("cellData");
-        if (!(cellData instanceof Map<?, ?> cellDataMap) || cellDataMap.isEmpty()) {
-            return List.of();
+        if (!(cellData instanceof Map<?, ?>)) {
+            return java.util.Arrays.asList();
+        }
+        Map<?, ?> cellDataMap = (Map<?, ?>) cellData;
+        if (cellDataMap.isEmpty()) {
+            return java.util.Arrays.asList();
         }
         return cellDataMap.entrySet().stream()
                 .map(entry -> {
@@ -218,33 +222,37 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
                     row.put("texts", extractRowTexts(entry.getValue()));
                     return row;
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<Map<String, Object>> extractTitleRows(List<Map<String, Object>> rows) {
         return rows.stream()
                 .filter(this::isTitleRow)
                 .map(this::copyRow)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<Map<String, Object>> extractHeaderRows(List<Map<String, Object>> rows) {
         return rows.stream()
                 .filter(this::isHeaderRow)
                 .map(this::copyRow)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<Map<String, Object>> extractMergeAreas(Map<String, Object> parsed) {
         Object mergeData = parsed.get("mergeData");
-        if (!(mergeData instanceof List<?> mergeList) || mergeList.isEmpty()) {
-            return List.of();
+        if (!(mergeData instanceof List<?>)) {
+            return java.util.Arrays.asList();
+        }
+        List<?> mergeList = (List<?>) mergeData;
+        if (mergeList.isEmpty()) {
+            return java.util.Arrays.asList();
         }
         return mergeList.stream()
                 .filter(Map.class::isInstance)
                 .map(item -> (Map<String, Object>) item)
                 .map(this::copyMap)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private boolean isTitleRow(Map<String, Object> row) {
@@ -256,25 +264,33 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     }
 
     private Map<String, Object> copyRow(Map<String, Object> row) {
-        return row == null ? Map.of() : new LinkedHashMap<>(row);
+        return row == null ? java.util.Collections.emptyMap() : new LinkedHashMap<>(row);
     }
 
     private Map<String, Object> copyMap(Map<String, Object> value) {
-        return value == null ? Map.of() : new LinkedHashMap<>(value);
+        return value == null ? java.util.Collections.emptyMap() : new LinkedHashMap<>(value);
     }
 
     private List<String> extractRowTexts(Object cells) {
-        if (!(cells instanceof Map<?, ?> cellMap) || cellMap.isEmpty()) {
-            return List.of();
+        if (!(cells instanceof Map<?, ?>)) {
+            return java.util.Arrays.asList();
+        }
+        Map<?, ?> cellMap = (Map<?, ?>) cells;
+        if (cellMap.isEmpty()) {
+            return java.util.Arrays.asList();
         }
         return cellMap.values().stream()
                 .map(this::extractCellText)
-                .filter(text -> text != null && !text.isBlank())
-                .toList();
+                .filter(text -> text != null && !text.trim().isEmpty())
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private String extractCellText(Object cell) {
-        if (!(cell instanceof Map<?, ?> cellMap) || cellMap.isEmpty()) {
+        if (!(cell instanceof Map<?, ?>)) {
+            return null;
+        }
+        Map<?, ?> cellMap = (Map<?, ?>) cell;
+        if (cellMap.isEmpty()) {
             return null;
         }
         Object value = cellMap.get("v");
@@ -293,7 +309,7 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     }
 
     private ValsetFileInfo resolveFileInfoByPath(String path) {
-        if (path == null || path.isBlank()) {
+        if (path == null || path.trim().isEmpty()) {
             throw new ResponseStatusException(BAD_REQUEST, "path 不能为空");
         }
         String normalized = normalizePath(path);
@@ -314,7 +330,7 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     }
 
     private ValsetFileSourceChannel parseSourceChannel(String sourceChannel) {
-        if (sourceChannel == null || sourceChannel.isBlank()) {
+        if (sourceChannel == null || sourceChannel.trim().isEmpty()) {
             return null;
         }
         try {
@@ -325,7 +341,7 @@ public class DefaultFileManagementQueryAppService implements FileManagementQuery
     }
 
     private ValsetFileStatus parseFileStatus(String fileStatus) {
-        if (fileStatus == null || fileStatus.isBlank()) {
+        if (fileStatus == null || fileStatus.trim().isEmpty()) {
             return null;
         }
         try {

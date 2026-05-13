@@ -27,7 +27,9 @@ class XxlJobWorkflowPlatformAdapterTest {
                 .platformType(EtlPlatformType.XXL_JOB)
                 .externalWorkflowId("xxl-flow")
                 .rawStatus("RUNNING")
-                .context(Map.of("businessKey", "bk-1"))
+                .context(new java.util.HashMap<String, Object>() {{
+                    put("businessKey", "bk-1");
+                }})
                 .build();
 
         assertThat(adapter.trigger(definition, instance, null).getPayload())
@@ -50,7 +52,7 @@ class XxlJobWorkflowPlatformAdapterTest {
                         .externalJobGroup("group-a")
                         .externalJobHandler("handler-a")
                         .build())
-                .stages(List.of(
+                .stages(java.util.Arrays.asList(
                         WorkflowStageDTO.builder().stageCode("BEGIN").stageName("开始").stageOrder(1).build(),
                         WorkflowStageDTO.builder().stageCode("END").stageName("结束").stageOrder(2).build()))
                 .build();

@@ -29,9 +29,9 @@ public class MappingHintGatewayImpl implements MappingHintGateway {
                         .orderByAsc(MappingHintPO::getStandardCode)
         );
         if (poList == null || poList.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
-        return poList.stream().map(mappingHintConvertor::toDomain).toList();
+        return poList.stream().map(mappingHintConvertor::toDomain).collect(java.util.stream.Collectors.toList());
     }
 
     @Override

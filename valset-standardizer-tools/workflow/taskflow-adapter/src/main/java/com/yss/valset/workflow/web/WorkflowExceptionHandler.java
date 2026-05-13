@@ -1,6 +1,6 @@
 package com.yss.valset.workflow.web;
 
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.workflow.model.WorkflowErrorDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

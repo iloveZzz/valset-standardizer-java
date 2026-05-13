@@ -1,6 +1,6 @@
 package com.yss.valset.transfer.application.command;
 
-import jakarta.validation.constraints.NotBlank;
+import javax.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.time.LocalDateTime;

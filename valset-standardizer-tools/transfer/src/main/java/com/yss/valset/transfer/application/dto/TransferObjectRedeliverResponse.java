@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferObjectRedeliverResponse {
+public class TransferObjectRedeliverResponse implements java.io.Serializable{
 
     /**
      * 请求数量。

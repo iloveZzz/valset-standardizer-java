@@ -31,11 +31,32 @@ public final class SpreadsheetXmlSupport {
     }
 
     /**
+     * Java 8 兼容的 readNBytes 方法。
+     */
+    private static byte[] readNBytes(InputStream inputStream, int length) throws IOException {
+        byte[] buffer = new byte[length];
+        int totalRead = 0;
+        while (totalRead < length) {
+            int read = inputStream.read(buffer, totalRead, length - totalRead);
+            if (read == -1) {
+                break;
+            }
+            totalRead += read;
+        }
+        if (totalRead < length) {
+            byte[] result = new byte[totalRead];
+            System.arraycopy(buffer, 0, result, 0, totalRead);
+            return result;
+        }
+        return buffer;
+    }
+
+    /**
      * 判断文件是否是 SpreadsheetML。
      */
     public static boolean isSpreadsheetXml(Path filePath) throws IOException {
         try (InputStream inputStream = Files.newInputStream(filePath)) {
-            byte[] headerBytes = inputStream.readNBytes(HEADER_PROBE_SIZE);
+            byte[] headerBytes = readNBytes(inputStream, HEADER_PROBE_SIZE);
             return isSpreadsheetXml(headerBytes);
         }
     }
@@ -96,7 +117,7 @@ public final class SpreadsheetXmlSupport {
     public static List<List<String>> readFirstSheetRows(Path filePath) throws IOException {
         SpreadsheetXmlWorkbook workbook = read(filePath);
         if (workbook.sheets().isEmpty()) {
-            return List.of();
+            return java.util.Collections.emptyList();
         }
         return workbook.sheets().get(0).rows();
     }
@@ -107,7 +128,7 @@ public final class SpreadsheetXmlSupport {
     public static List<List<String>> readFirstSheetRows(byte[] bytes) {
         SpreadsheetXmlWorkbook workbook = read(bytes);
         if (workbook.sheets().isEmpty()) {
-            return List.of();
+            return java.util.Collections.emptyList();
         }
         return workbook.sheets().get(0).rows();
     }
@@ -125,16 +146,17 @@ public final class SpreadsheetXmlSupport {
         NodeList childNodes = table.getChildNodes();
         for (int childIndex = 0; childIndex < childNodes.getLength(); childIndex++) {
             Node node = childNodes.item(childIndex);
-            if (!(node instanceof Element rowElement) || !"Row".equals(rowElement.getTagName())) {
+            if (!(node instanceof Element) || !"Row".equals(((Element) node).getTagName())) {
                 continue;
             }
+            Element rowElement = (Element) node;
 
             int targetRowIndex = rows.size();
             String rowIndexAttr = rowElement.getAttribute("ss:Index");
-            if (rowIndexAttr != null && !rowIndexAttr.isBlank()) {
+            if (rowIndexAttr != null && !rowIndexAttr.trim().isEmpty()) {
                 targetRowIndex = parseIndex(rowIndexAttr) - 1;
                 while (rows.size() < targetRowIndex) {
-                    rows.add(List.of());
+                    rows.add(java.util.Arrays.asList());
                 }
             }
 
@@ -143,12 +165,13 @@ public final class SpreadsheetXmlSupport {
             NodeList cellNodes = rowElement.getChildNodes();
             for (int cellNodeIndex = 0; cellNodeIndex < cellNodes.getLength(); cellNodeIndex++) {
                 Node cellNode = cellNodes.item(cellNodeIndex);
-                if (!(cellNode instanceof Element cellElement) || !"Cell".equals(cellElement.getTagName())) {
+                if (!(cellNode instanceof Element) || !"Cell".equals(((Element) cellNode).getTagName())) {
                     continue;
                 }
+                Element cellElement = (Element) cellNode;
 
                 String cellIndexAttr = cellElement.getAttribute("ss:Index");
-                if (cellIndexAttr != null && !cellIndexAttr.isBlank()) {
+                if (cellIndexAttr != null && !cellIndexAttr.trim().isEmpty()) {
                     nextCellIndex = parseIndex(cellIndexAttr) - 1;
                 }
                 while (rowValues.size() < nextCellIndex) {
@@ -181,10 +204,10 @@ public final class SpreadsheetXmlSupport {
 
     private static String resolveSheetName(Element worksheet, int sheetIndex) {
         String sheetName = worksheet.getAttribute("ss:Name");
-        if (sheetName == null || sheetName.isBlank()) {
+        if (sheetName == null || sheetName.trim().isEmpty()) {
             sheetName = worksheet.getAttribute("Name");
         }
-        if (sheetName == null || sheetName.isBlank()) {
+        if (sheetName == null || sheetName.trim().isEmpty()) {
             sheetName = "Sheet" + (sheetIndex + 1);
         }
         return sheetName;
@@ -212,7 +235,7 @@ public final class SpreadsheetXmlSupport {
     }
 
     private static int parseOptionalIndex(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return 0;
         }
         return parseIndex(value);
@@ -221,32 +244,80 @@ public final class SpreadsheetXmlSupport {
     /**
      * SpreadsheetML 工作簿。
      */
-    public record SpreadsheetXmlWorkbook(List<SpreadsheetXmlSheet> sheets) {
+    public static final class SpreadsheetXmlWorkbook {
+        private final List<SpreadsheetXmlSheet> sheets;
 
-        public SpreadsheetXmlWorkbook {
-            sheets = sheets == null ? List.of() : List.copyOf(sheets);
+        public SpreadsheetXmlWorkbook(List<SpreadsheetXmlSheet> sheets) {
+            this.sheets = sheets == null ? java.util.Collections.<SpreadsheetXmlSheet>emptyList()
+                    : Collections.unmodifiableList(new ArrayList<>(sheets));
+        }
+
+        public List<SpreadsheetXmlSheet> sheets() {
+            return sheets;
         }
     }
 
     /**
      * SpreadsheetML 工作表。
      */
-    public record SpreadsheetXmlSheet(String sheetName,
-                                      List<List<String>> rows,
-                                      List<SpreadsheetXmlMergeRegion> mergeRegions) {
+    public static final class SpreadsheetXmlSheet {
+        private final String sheetName;
+        private final List<List<String>> rows;
+        private final List<SpreadsheetXmlMergeRegion> mergeRegions;
 
-        public SpreadsheetXmlSheet {
-            rows = rows == null ? List.of() : Collections.unmodifiableList(new ArrayList<>(rows));
-            mergeRegions = mergeRegions == null ? List.of() : Collections.unmodifiableList(new ArrayList<>(mergeRegions));
+        public SpreadsheetXmlSheet(String sheetName,
+                                   List<List<String>> rows,
+                                   List<SpreadsheetXmlMergeRegion> mergeRegions) {
+            this.sheetName = sheetName;
+            this.rows = rows == null ? java.util.Collections.<List<String>>emptyList()
+                    : Collections.unmodifiableList(new ArrayList<>(rows));
+            this.mergeRegions = mergeRegions == null ? java.util.Collections.<SpreadsheetXmlMergeRegion>emptyList()
+                    : Collections.unmodifiableList(new ArrayList<>(mergeRegions));
+        }
+
+        public String sheetName() {
+            return sheetName;
+        }
+
+        public List<List<String>> rows() {
+            return rows;
+        }
+
+        public List<SpreadsheetXmlMergeRegion> mergeRegions() {
+            return mergeRegions;
         }
     }
 
     /**
      * SpreadsheetML 合并区域。
      */
-    public record SpreadsheetXmlMergeRegion(int startRow,
-                                            int startColumn,
-                                            int endRow,
-                                            int endColumn) {
+    public static final class SpreadsheetXmlMergeRegion {
+        private final int startRow;
+        private final int startColumn;
+        private final int endRow;
+        private final int endColumn;
+
+        public SpreadsheetXmlMergeRegion(int startRow, int startColumn, int endRow, int endColumn) {
+            this.startRow = startRow;
+            this.startColumn = startColumn;
+            this.endRow = endRow;
+            this.endColumn = endColumn;
+        }
+
+        public int startRow() {
+            return startRow;
+        }
+
+        public int startColumn() {
+            return startColumn;
+        }
+
+        public int endRow() {
+            return endRow;
+        }
+
+        public int endColumn() {
+            return endColumn;
+        }
     }
 }

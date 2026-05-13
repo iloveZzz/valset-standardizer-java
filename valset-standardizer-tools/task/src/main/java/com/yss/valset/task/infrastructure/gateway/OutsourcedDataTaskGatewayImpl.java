@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.application.event.lifecycle.WorkflowTaskLifecycleEvent;
@@ -93,8 +93,8 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                         .orderByDesc(OutsourcedDataTaskBatchPO::getStartedAt)
                         .orderByDesc(OutsourcedDataTaskBatchPO::getBatchId));
         List<OutsourcedDataTaskBatchDTO> records = page.getRecords() == null
-                ? List.of()
-                : page.getRecords().stream().map(this::toBatchDTO).toList();
+                ? java.util.Arrays.asList()
+                : page.getRecords().stream().map(this::toBatchDTO).collect(java.util.stream.Collectors.toList());
         return PageResult.of(records, page.getTotal(), page.getSize(), page.getCurrent());
     }
 
@@ -106,13 +106,13 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 .stream()
                 .map(item -> textValue(mapValue(item, "batch_id")))
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (batchIds.isEmpty()) {
             WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
             OutsourcedDataTaskSummaryDTO summary = new OutsourcedDataTaskSummaryDTO();
             summary.setStepSummaries(runtimeCatalog.stageSequence().stream()
-                    .map(stage -> toStageSummary(stage.name(), Map.of()))
-                    .toList());
+                    .map(stage -> toStageSummary(stage.name(), java.util.Collections.emptyMap()))
+                    .collect(java.util.stream.Collectors.toList()));
             summary.setStageCatalog(summary.getStepSummaries());
             fillWorkflowMetadata(summary);
             return summary;
@@ -152,8 +152,8 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 + statusCountMap.getOrDefault(OutsourcedDataTaskStatus.BLOCKED.name(), 0L));
         WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
         summary.setStepSummaries(runtimeCatalog.stageSequence().stream()
-                .map(stage -> toStageSummary(stage.name(), stageStatusCountMap.getOrDefault(stage.name(), Map.of())))
-                .toList());
+                .map(stage -> toStageSummary(stage.name(), stageStatusCountMap.getOrDefault(stage.name(), java.util.Collections.emptyMap())))
+                .collect(java.util.stream.Collectors.toList()));
         summary.setStageCatalog(summary.getStepSummaries());
         fillWorkflowMetadata(summary);
         return summary;
@@ -167,7 +167,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                         .orderByDesc(OutsourcedDataTaskBatchPO::getBatchId))
                 .stream()
                 .map(this::toBatchDTO)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -182,7 +182,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     @Override
     public List<OutsourcedDataTaskStepDTO> listSteps(String batchId) {
         if (!StringUtils.hasText(batchId)) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         OutsourcedDataTaskBatchPO batch = batchRepository.selectById(batchId);
         List<OutsourcedDataTaskStepDTO> currentSteps = stepRepository.selectList(
@@ -195,7 +195,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 .stream()
                 .map(this::toStepDTO)
                 .sorted((left, right) -> Integer.compare(stageOrder(left.getStage()), stageOrder(right.getStage())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (batch == null) {
             return currentSteps;
         }
@@ -349,15 +349,17 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
             return;
         }
         WorkflowRuntimeCatalog runtimeCatalog = stageCatalog();
-        runtimeCatalog.activeWorkflowDefinition().ifPresentOrElse(definition -> {
+        Optional<com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog.ActiveWorkflowDefinition> definitionOpt = runtimeCatalog.activeWorkflowDefinition();
+        if (definitionOpt.isPresent()) {
+            com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog.ActiveWorkflowDefinition definition = definitionOpt.get();
             summary.setWorkflowCode(definition.getWorkflowCode());
             summary.setWorkflowId(definition.getWorkflowId());
             summary.setVersionNo(definition.getVersionNo());
-        }, () -> {
+        } else {
             summary.setWorkflowCode(runtimeCatalog.activeWorkflowCode());
             summary.setWorkflowId(runtimeCatalog.activeWorkflowId());
             summary.setVersionNo(runtimeCatalog.activeWorkflowVersionNo());
-        });
+        }
     }
 
     private OutsourcedDataTaskBatchDTO toBatchDTO(OutsourcedDataTaskBatchPO po) {
@@ -471,7 +473,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                 .map(OutsourcedDataTaskStepPO::getBatchId)
                 .filter(StringUtils::hasText)
                 .distinct()
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private void upsertBatch(ParseLifecycleEvent event,
@@ -811,7 +813,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                                 Comparator.nullsFirst(Comparator.naturalOrder()))
                         .thenComparing(OutsourcedDataTaskStepPO::getStepId,
                                 Comparator.nullsFirst(Comparator.naturalOrder())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         int latestObservedStageOrder = orderedSteps.stream()
                 .map(OutsourcedDataTaskStepPO::getStage)
                 .mapToInt(this::stageOrder)
@@ -972,12 +974,19 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         if (stage == null) {
             return null;
         }
-        return switch (stage) {
-            case FILE_PARSE -> OutsourcedDataTaskStage.FILE_PARSE;
-            case STRUCTURE_STANDARDIZE -> OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE;
-            case STANDARD_LANDING -> OutsourcedDataTaskStage.STANDARD_LANDING;
-            case FAILED, SKIPPED -> null;
-        };
+        switch (stage) {
+            case FILE_PARSE:
+                return OutsourcedDataTaskStage.FILE_PARSE;
+            case STRUCTURE_STANDARDIZE:
+                return OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE;
+            case STANDARD_LANDING:
+                return OutsourcedDataTaskStage.STANDARD_LANDING;
+            case FAILED:
+            case SKIPPED:
+                return null;
+            default:
+                return null;
+        }
     }
 
     private OutsourcedDataTaskStatus mapParseStatus(ParseLifecycleEvent event) {
@@ -1064,8 +1073,8 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     }
 
     private static long longValue(Object value) {
-        if (value instanceof Number number) {
-            return number.longValue();
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
         }
         if (value == null) {
             return 0L;
@@ -1264,7 +1273,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
     private List<OutsourcedDataTaskStepDTO> mergeStepsWithBatch(OutsourcedDataTaskBatchPO batch,
             List<OutsourcedDataTaskStepDTO> currentSteps) {
         Map<String, OutsourcedDataTaskStepDTO> stepsByStage = currentSteps == null
-                ? Map.of()
+                ? java.util.Collections.emptyMap()
                 : currentSteps.stream()
                         .filter(step -> StringUtils.hasText(step.getStage()))
                         .collect(Collectors.toMap(
@@ -1283,7 +1292,7 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
                     return buildSyntheticStep(batch, stage, batchStage, batchStatus);
                 })
                 .sorted((left, right) -> Integer.compare(stageOrder(left.getStage()), stageOrder(right.getStage())))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private OutsourcedDataTaskStepDTO buildSyntheticStep(OutsourcedDataTaskBatchPO batch,

@@ -37,7 +37,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
 
     @Override
     public boolean existsProcessedItem(String sourceId, String itemKey) {
-        if (sourceId == null || sourceId.isBlank() || itemKey == null || itemKey.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty() || itemKey == null || itemKey.trim().isEmpty()) {
             return false;
         }
         return transferSourceCheckpointItemRepository.selectCount(
@@ -49,7 +49,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
 
     @Override
     public Optional<TransferSourceCheckpointItem> findProcessedItem(String sourceId, String itemKey) {
-        if (sourceId == null || sourceId.isBlank() || itemKey == null || itemKey.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty() || itemKey == null || itemKey.trim().isEmpty()) {
             return Optional.empty();
         }
         return Optional.ofNullable(transferSourceCheckpointItemRepository.selectOne(
@@ -103,7 +103,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
 
     @Override
     public void deleteProcessedItemsBySourceId(String sourceId) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             return;
         }
         transferSourceCheckpointItemRepository.delete(
@@ -114,7 +114,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
 
     @Override
     public void deleteCheckpointsBySourceId(String sourceId) {
-        if (sourceId == null || sourceId.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty()) {
             return;
         }
         transferSourceCheckpointRepository.delete(
@@ -125,7 +125,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
 
     @Override
     public Optional<TransferSourceCheckpoint> findCheckpoint(String sourceId, String checkpointKey) {
-        if (sourceId == null || sourceId.isBlank() || checkpointKey == null || checkpointKey.isBlank()) {
+        if (sourceId == null || sourceId.trim().isEmpty() || checkpointKey == null || checkpointKey.trim().isEmpty()) {
             return Optional.empty();
         }
         return Optional.ofNullable(transferSourceCheckpointRepository.selectOne(
@@ -176,10 +176,10 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
 
     @Override
     public List<TransferSourceCheckpoint> listCheckpointsBySourceId(String sourceId, Integer limit) {
-        if (sourceId == null || sourceId.isBlank()) {
-            return List.of();
+        if (sourceId == null || sourceId.trim().isEmpty()) {
+            return java.util.Arrays.asList();
         }
-        var query = Wrappers.lambdaQuery(TransferSourceCheckpointPO.class)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<TransferSourceCheckpointPO> query = Wrappers.lambdaQuery(TransferSourceCheckpointPO.class)
                 .eq(TransferSourceCheckpointPO::getSourceId, sourceId)
                 .orderByDesc(TransferSourceCheckpointPO::getUpdatedAt);
         if (limit != null && limit > 0) {
@@ -187,7 +187,7 @@ public class TransferSourceCheckpointGatewayImpl implements TransferSourceCheckp
         }
         return transferSourceCheckpointRepository.selectList(query).stream()
                 .map(this::toDomain)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private TransferSourceCheckpointItemPO toPO(TransferSourceCheckpointItem item) {

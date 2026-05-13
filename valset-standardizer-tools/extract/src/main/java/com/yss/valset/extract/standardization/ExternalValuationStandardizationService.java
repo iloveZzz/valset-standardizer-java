@@ -23,6 +23,7 @@ import com.yss.valset.extract.standardization.mapping.HeaderMappingLookup;
 import com.yss.valset.extract.standardization.mapping.QlexpressHeaderMappingEngine;
 import com.yss.valset.extract.support.MatchTextSupport;
 import lombok.Getter;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -97,8 +98,8 @@ public class ExternalValuationStandardizationService {
         }
         long startedAt = System.currentTimeMillis();
         Dictionary dictionary = dictionary();
-        List<String> headers = parsedValuationData.getHeaders() == null ? List.of() : parsedValuationData.getHeaders();
-        List<HeaderColumnMeta> headerColumns = parsedValuationData.getHeaderColumns() == null ? List.of() : parsedValuationData.getHeaderColumns();
+        List<String> headers = parsedValuationData.getHeaders() == null ? java.util.Arrays.asList() : parsedValuationData.getHeaders();
+        List<HeaderColumnMeta> headerColumns = parsedValuationData.getHeaderColumns() == null ? java.util.Arrays.asList() : parsedValuationData.getHeaderColumns();
 
         // Step 1: 对外部表头进行标准字段映射，输出映射决策明细
         String fileScene = resolveFileScene(parsedValuationData);
@@ -109,7 +110,7 @@ public class ExternalValuationStandardizationService {
         Map<Integer, MappingDecision> mappingDecisionByIndex = resolveHeaderMappingDecisionByIndex(headers, headerColumns, dictionary, fieldMapExpr);
         Map<Integer, String> standardColumnByIndex = mappingDecisionByIndex.entrySet().stream()
                 .filter(entry -> Boolean.TRUE.equals(entry.getValue().getMatched()))
-                .filter(entry -> entry.getValue().getStandardCode() != null && !entry.getValue().getStandardCode().isBlank())
+                .filter(entry -> entry.getValue().getStandardCode() != null && !entry.getValue().getStandardCode().trim().isEmpty())
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         entry -> entry.getValue().getStandardCode(),
@@ -121,15 +122,15 @@ public class ExternalValuationStandardizationService {
 
         // Step 2: 标准化科目与指标，补齐标准字段和映射元信息
         List<SubjectRecord> standardizedSubjects = parsedValuationData.getSubjects() == null
-                ? List.of()
+                ? java.util.Arrays.asList()
                 : parsedValuationData.getSubjects().stream()
                 .map(subject -> standardizeSubject(subject, headers, standardColumnByIndex, mappingDecisionByIndex, dictionary))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         List<MetricRecord> standardizedMetrics = parsedValuationData.getMetrics() == null
-                ? List.of()
+                ? java.util.Arrays.asList()
                 : parsedValuationData.getMetrics().stream()
                 .map(metric -> standardizeMetric(metric, dictionary))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         logSubjectMetricMappingSummary(standardizedSubjects, standardizedMetrics);
 
         // Step 3: 汇总质量报告，便于后续监控与回放补规则
@@ -141,7 +142,7 @@ public class ExternalValuationStandardizationService {
         List<MappingDecision> headerMappingDecisions = mappingDecisionByIndex.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .map(Map.Entry::getValue)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
 
         log.info(
                 "外部估值标准化完成，headerMapped={}/{}, subjectMapped={}/{}, metricMapped={}/{}, elapsedMs={}",
@@ -189,7 +190,7 @@ public class ExternalValuationStandardizationService {
                 .filter(Objects::nonNull)
                 .filter(decision -> Boolean.TRUE.equals(decision.getMatched()))
                 .map(MappingDecision::getStrategy)
-                .filter(strategy -> strategy != null && !strategy.isBlank())
+                .filter(strategy -> strategy != null && !strategy.trim().isEmpty())
                 .collect(Collectors.groupingBy(strategy -> strategy, LinkedHashMap::new, Collectors.counting()));
         if (!strategyCounter.isEmpty()) {
             log.info("外部估值表头映射策略分布，strategies={}", strategyCounter);
@@ -205,7 +206,7 @@ public class ExternalValuationStandardizationService {
     ) {
         Map<String, Object> standardValues = new LinkedHashMap<>();
         List<MappingDecision> matchedDecisions = new java.util.ArrayList<>();
-        List<Object> rawValues = subject.getRawValues() == null ? List.of() : subject.getRawValues();
+        List<Object> rawValues = subject.getRawValues() == null ? java.util.Arrays.asList() : subject.getRawValues();
         for (int index = 0; index < Math.min(headers.size(), rawValues.size()); index++) {
             MappingDecision decision = mappingDecisionByIndex.get(index);
             if (decision == null || !Boolean.TRUE.equals(decision.getMatched())) {
@@ -293,7 +294,7 @@ public class ExternalValuationStandardizationService {
             metric.setMappingStatus("MAPPED");
             metric.setMappingReason("Matched builtin metric alias for " + metric.getMetricName());
             metric.setMappingConfidence(0.75D);
-        } else if ("passthrough".equals(metricStrategy) && metric.getMetricName() != null && !metric.getMetricName().isBlank()) {
+        } else if ("passthrough".equals(metricStrategy) && metric.getMetricName() != null && !metric.getMetricName().trim().isEmpty()) {
             metric.setMappingStatus("MAPPED");
             metric.setMappingReason("Fallback passthrough metric name");
             metric.setMappingConfidence(0.55D);
@@ -316,15 +317,15 @@ public class ExternalValuationStandardizationService {
             if (meta == null || meta.getColumnIndex() == null) {
                 continue;
             }
-            segmentsByIndex.put(meta.getColumnIndex(), meta.getPathSegments() == null ? List.of() : meta.getPathSegments());
+            segmentsByIndex.put(meta.getColumnIndex(), meta.getPathSegments() == null ? java.util.Arrays.asList() : meta.getPathSegments());
         }
         List<HeaderMappingInput> inputs = new java.util.ArrayList<>();
         for (int index = 0; index < headers.size(); index++) {
             String header = headers.get(index);
-            if (header == null || header.isBlank()) {
+            if (header == null || header.trim().isEmpty()) {
                 continue;
             }
-            inputs.add(new HeaderMappingInput(index, header, segmentsByIndex.getOrDefault(index, List.of())));
+            inputs.add(new HeaderMappingInput(index, header, segmentsByIndex.getOrDefault(index, java.util.Arrays.asList())));
         }
 
         HeaderMappingLookup lookup = new HeaderMappingLookup() {
@@ -350,7 +351,7 @@ public class ExternalValuationStandardizationService {
     }
 
     private ParseSourceEntry resolveSource(String text, Dictionary dictionary) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String trimmedText = text.trim();
@@ -364,11 +365,11 @@ public class ExternalValuationStandardizationService {
     }
 
     private ParseSourceEntry resolveSourceExact(String text, Dictionary dictionary) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
-        Map<String, ParseSourceEntry> sourceByCode = dictionary == null ? Map.of() : dictionary.sourceByCode();
-        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? Map.of() : dictionary.sourceByAlias();
+        Map<String, ParseSourceEntry> sourceByCode = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByCode();
+        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByAlias();
         ParseSourceEntry entry = sourceByCode.get(text);
         if (entry != null) {
             return entry;
@@ -377,12 +378,12 @@ public class ExternalValuationStandardizationService {
     }
 
     private ParseSourceEntry resolveSourceBySegments(String text, Dictionary dictionary) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         for (String segment : text.split("\\|")) {
             String segmentText = segment == null ? "" : segment.trim();
-            if (segmentText.isBlank()) {
+            if (segmentText.trim().isEmpty()) {
                 continue;
             }
             ParseSourceEntry entry = resolveSourceExact(segmentText, dictionary);
@@ -394,16 +395,16 @@ public class ExternalValuationStandardizationService {
     }
 
     private ParseSourceEntry resolveAliasContains(String text, Dictionary dictionary) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String trimmedText = text.trim();
-        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? Map.of() : dictionary.sourceByAlias();
+        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByAlias();
         String bestAlias = null;
         ParseSourceEntry bestEntry = null;
         for (Map.Entry<String, ParseSourceEntry> entry : sourceByAlias.entrySet()) {
             String alias = entry.getKey();
-            if (alias == null || alias.isBlank() || alias.length() < 2) {
+            if (alias == null || alias.trim().isEmpty() || alias.length() < 2) {
                 continue;
             }
             if (trimmedText.contains(alias)) {
@@ -453,13 +454,13 @@ public class ExternalValuationStandardizationService {
 
     private HeaderQualitySummary logHeaderMappingSummary(List<String> headers, Map<Integer, MappingDecision> mappingDecisionByIndex) {
         if (headers == null || headers.isEmpty()) {
-            return new HeaderQualitySummary(0, 0, List.of());
+            return new HeaderQualitySummary(0, 0, java.util.Arrays.asList());
         }
         int mappedCount = 0;
         List<String> unmappedHeaders = new java.util.ArrayList<>();
         for (int index = 0; index < headers.size(); index++) {
             String header = headers.get(index);
-            if (header == null || header.isBlank()) {
+            if (header == null || header.trim().isEmpty()) {
                 continue;
             }
             MappingDecision decision = mappingDecisionByIndex.get(index);
@@ -477,7 +478,7 @@ public class ExternalValuationStandardizationService {
                     mappedCount,
                     total,
                     String.format(java.util.Locale.ROOT, "%.2f", ratio),
-                    unmappedHeaders.stream().limit(5).toList()
+                    unmappedHeaders.stream().limit(5).collect(java.util.stream.Collectors.toList())
             );
             return new HeaderQualitySummary(total, mappedCount, unmappedHeaders);
         }
@@ -566,7 +567,7 @@ public class ExternalValuationStandardizationService {
                 .headerTotal(headerSummary.total())
                 .headerMapped(headerSummary.mapped())
                 .headerUnmapped(Math.max(0, headerSummary.total() - headerSummary.mapped()))
-                .headerUnmappedTop(headerSummary.unmappedHeaders().stream().limit(5).toList())
+                .headerUnmappedTop(headerSummary.unmappedHeaders().stream().limit(5).collect(java.util.stream.Collectors.toList()))
                 .subjectTotal(subjectTotal)
                 .subjectMapped(subjectMapped)
                 .subjectUnmapped(Math.max(0, subjectTotal - subjectMapped))
@@ -577,7 +578,7 @@ public class ExternalValuationStandardizationService {
     }
 
     private String extractUnit(String text) {
-        if (text == null || text.isBlank()) {
+        if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String normalized = MatchTextSupport.normalizeMatchText(text);
@@ -594,12 +595,18 @@ public class ExternalValuationStandardizationService {
     }
 
     private boolean isBlankValue(Object value) {
-        return value == null || (value instanceof String text && text.isBlank());
+        if (value == null) {
+            return true;
+        }
+        if (value instanceof String) {
+            return ((String) value).trim().isEmpty();
+        }
+        return false;
     }
 
     private Object normalizeValue(Object value) {
-        if (value instanceof BigDecimal decimal) {
-            return decimal.stripTrailingZeros();
+        if (value instanceof BigDecimal) {
+            return ((BigDecimal) value).stripTrailingZeros();
         }
         return value;
     }
@@ -608,11 +615,11 @@ public class ExternalValuationStandardizationService {
         if (value == null) {
             return null;
         }
-        if (value instanceof BigDecimal decimal) {
-            return decimal.stripTrailingZeros();
+        if (value instanceof BigDecimal) {
+            return ((BigDecimal) value).stripTrailingZeros();
         }
         String text = String.valueOf(value).trim();
-        if (text.isBlank()) {
+        if (text.trim().isEmpty()) {
             return null;
         }
         try {
@@ -643,7 +650,7 @@ public class ExternalValuationStandardizationService {
             List<ParseRuleEntry> rules = loadRules(parseRuleRepository);
             Map<String, ParseRuleEntry> ruleByCode = new LinkedHashMap<>();
             for (ParseRuleEntry rule : rules) {
-                if (rule == null || rule.getId() == null || rule.getColumnMap() == null || rule.getColumnMap().isBlank()) {
+                if (rule == null || rule.getId() == null || rule.getColumnMap() == null || rule.getColumnMap().trim().isEmpty()) {
                     continue;
                 }
                 ruleByCode.putIfAbsent(rule.getColumnMap().trim(), rule);
@@ -662,7 +669,7 @@ public class ExternalValuationStandardizationService {
             return new Dictionary(sourceByCode, sourceByAlias);
         } catch (Exception exception) {
             log.warn("加载外部估值标准字典失败，将使用空字典", exception);
-            return new Dictionary(Map.of(), Map.of());
+            return new Dictionary(java.util.Collections.emptyMap(), java.util.Collections.emptyMap());
         }
     }
 
@@ -689,7 +696,7 @@ public class ExternalValuationStandardizationService {
                 .filter(this::isEnabled)
                 .map(ParseRuleEntry::from)
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<ParseSourceEntry> loadSources(
@@ -703,7 +710,7 @@ public class ExternalValuationStandardizationService {
                 .filter(this::isEnabled)
                 .map(source -> ParseSourceEntry.from(source, ruleByCode))
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private void registerSourceAlias(
@@ -712,7 +719,7 @@ public class ExternalValuationStandardizationService {
             String alias,
             ParseSourceEntry source
     ) {
-        if (alias == null || alias.isBlank() || source == null) {
+        if (alias == null || alias.trim().isEmpty() || source == null) {
             return;
         }
         String trimmedAlias = alias.trim();
@@ -720,16 +727,24 @@ public class ExternalValuationStandardizationService {
         sourceByAlias.putIfAbsent(trimmedAlias, source);
     }
 
-    private record Dictionary(
-            Map<String, ParseSourceEntry> sourceByCode,
-            Map<String, ParseSourceEntry> sourceByAlias
-    ) {
+    @Value
+    private static class Dictionary {
+        Map<String, ParseSourceEntry> sourceByCode;
+        Map<String, ParseSourceEntry> sourceByAlias;
+
+        public Map<String, ParseSourceEntry> sourceByCode() { return sourceByCode; }
+        public Map<String, ParseSourceEntry> sourceByAlias() { return sourceByAlias; }
     }
-    private record HeaderQualitySummary(
-            int total,
-            int mapped,
-            List<String> unmappedHeaders
-    ) {
+
+    @Value
+    private static class HeaderQualitySummary {
+        int total;
+        int mapped;
+        List<String> unmappedHeaders;
+
+        public int total() { return total; }
+        public int mapped() { return mapped; }
+        public List<String> unmappedHeaders() { return unmappedHeaders; }
     }
 
     @Getter
@@ -796,7 +811,7 @@ public class ExternalValuationStandardizationService {
                 return null;
             }
             ParseRuleEntry rule = null;
-            if (rule == null && po.getColumnMap() != null && !po.getColumnMap().isBlank()) {
+            if (rule == null && po.getColumnMap() != null && !po.getColumnMap().trim().isEmpty()) {
                 rule = ruleByCode.get(po.getColumnMap().trim());
             }
             if (rule == null) {

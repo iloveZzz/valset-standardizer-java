@@ -62,7 +62,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.HexFormat;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -78,7 +77,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class DefaultParseRuleManagementAppService implements ParseRuleManagementAppService {
 
     private static final int DEFAULT_LIMIT = 50;
-    private static final List<String> DEFAULT_REQUIRED_HEADERS = List.of("科目代码", "科目名称", "币种");
+    private static final List<String> DEFAULT_REQUIRED_HEADERS = java.util.Arrays.asList("科目代码", "科目名称", "币种");
     private static final String DEFAULT_SUBJECT_CODE_PATTERN = "^\\d{4}[A-Za-z0-9]*$";
 
     private final ParseRuleProfileRepository profileRepository;
@@ -124,14 +123,14 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                                 .orderByDesc(ParseRuleProfilePO::getModifyTime)
                                 .orderByDesc(ParseRuleProfilePO::getId)
                 ).stream()
-                .filter(profile -> status == null || status.isBlank() || Objects.equals(normalize(status), normalize(profile.getStatus())))
-                .filter(profile -> profileCode == null || profileCode.isBlank() || containsIgnoreCase(profile.getProfileCode(), profileCode))
+                .filter(profile -> status == null || status.trim().isEmpty() || Objects.equals(normalize(status), normalize(profile.getStatus())))
+                .filter(profile -> profileCode == null || profileCode.trim().isEmpty() || containsIgnoreCase(profile.getProfileCode(), profileCode))
                 .limit(limit == null || limit <= 0 ? DEFAULT_LIMIT : limit)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (profiles.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
-        return profiles.stream().map(this::toProfileView).toList();
+        return profiles.stream().map(this::toProfileView).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -139,9 +138,9 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         ParseRuleProfilePO profile = getProfilePO(profileId);
         return ParseRuleBundleViewDTO.builder()
                 .profile(toProfileView(profile))
-                .rules(loadRules(profileId).stream().map(this::toRuleView).toList())
-                .cases(loadCases(profileId).stream().map(this::toCaseView).toList())
-                .publishLogs(loadPublishLogs(profileId).stream().map(this::toPublishLogView).toList())
+                .rules(loadRules(profileId).stream().map(this::toRuleView).collect(java.util.stream.Collectors.toList()))
+                .cases(loadCases(profileId).stream().map(this::toCaseView).collect(java.util.stream.Collectors.toList()))
+                .publishLogs(loadPublishLogs(profileId).stream().map(this::toPublishLogView).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 
@@ -156,9 +155,9 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 .bundleVersion("1")
                 .exportedAt(LocalDateTime.now())
                 .profile(toProfileUpsertCommand(profile))
-                .rules(rules.stream().map(this::toRuleUpsertCommand).toList())
-                .cases(cases.stream().map(this::toCaseUpsertCommand).toList())
-                .publishLogs(publishLogs.stream().map(this::toPublishLogView).toList())
+                .rules(rules.stream().map(this::toRuleUpsertCommand).collect(java.util.stream.Collectors.toList()))
+                .cases(cases.stream().map(this::toCaseUpsertCommand).collect(java.util.stream.Collectors.toList()))
+                .publishLogs(publishLogs.stream().map(this::toPublishLogView).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 
@@ -179,8 +178,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
             }
             ParseRuleProfileUpsertCommand command = bundle.getProfile();
             command.setId(overwriteProfileId);
-            command.setRules(bundle.getRules() == null ? List.of() : bundle.getRules());
-            command.setCases(bundle.getCases() == null ? List.of() : bundle.getCases());
+            command.setRules(bundle.getRules() == null ? java.util.Arrays.asList() : bundle.getRules());
+            command.setCases(bundle.getCases() == null ? java.util.Arrays.asList() : bundle.getCases());
             command.setCreatedBy(firstNonBlank(command.getCreatedBy(), "system"));
             command.setModifiedBy(firstNonBlank(command.getModifiedBy(), command.getCreatedBy(), "system"));
             if (isBlank(command.getStatus())) {
@@ -199,8 +198,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
     @Transactional(rollbackFor = Exception.class)
     public ParseRuleMutationResponse upsertProfile(ParseRuleProfileUpsertCommand command) {
         ParseRuleProfilePO profile = upsertProfilePO(command);
-        replaceRules(profile.getId(), command == null ? List.of() : command.getRules());
-        replaceCases(profile.getId(), command == null ? List.of() : command.getCases());
+        replaceRules(profile.getId(), command == null ? java.util.Arrays.asList() : command.getRules());
+        replaceCases(profile.getId(), command == null ? java.util.Arrays.asList() : command.getCases());
         standardizationService.refreshDictionaryCache();
         ParseRuleValidationViewDTO validation = validateProfile(profile.getId());
         return ParseRuleMutationResponse.builder()
@@ -272,7 +271,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                     .totalCases(0)
                     .passedCases(0)
                     .issues(issues)
-                    .caseResults(List.of())
+                    .caseResults(java.util.Arrays.asList())
                     .build();
         }
 
@@ -316,14 +315,14 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                         .eq(profileId != null, ParseRuleTracePO::getProfileId, profileId)
                         .eq(fileId != null, ParseRuleTracePO::getFileId, fileId)
                         .eq(taskId != null, ParseRuleTracePO::getTaskId, taskId)
-                        .eq(traceType != null && !traceType.isBlank(), ParseRuleTracePO::getTraceType, traceType.trim())
+                        .eq(traceType != null && !traceType.trim().isEmpty(), ParseRuleTracePO::getTraceType, traceType.trim())
                         .orderByDesc(ParseRuleTracePO::getTraceTime)
                         .orderByDesc(ParseRuleTracePO::getId)
                         .last(databaseDialectSupport.limitClause(safeLimit)))
                 .stream()
                 .filter(Objects::nonNull)
-                .toList();
-        return traces.stream().map(this::toTraceView).toList();
+                .collect(java.util.stream.Collectors.toList());
+        return traces.stream().map(this::toTraceView).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -436,7 +435,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 .map(command -> toRulePO(profileId, command))
                 .filter(Objects::nonNull)
                 .sorted(Comparator.comparing(ParseRuleDefinitionPO::getPriority, Comparator.nullsLast(Integer::compareTo)))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (!definitions.isEmpty()) {
             definitionRepository.insert(definitions);
         }
@@ -451,7 +450,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         List<ParseRuleCasePO> cases = commands.stream()
                 .map(command -> toCasePO(profileId, command))
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (!cases.isEmpty()) {
             caseRepository.insert(cases);
         }
@@ -464,7 +463,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                         .orderByAsc(ParseRuleDefinitionPO::getId))
                 .stream()
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<ParseRuleCasePO> loadCases(Long profileId) {
@@ -473,7 +472,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                         .orderByAsc(ParseRuleCasePO::getId))
                 .stream()
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<ParseRulePublishLogPO> loadPublishLogs(Long profileId) {
@@ -483,7 +482,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                         .orderByDesc(ParseRulePublishLogPO::getId))
                 .stream()
                 .filter(Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private ParseRuleProfilePO getProfilePO(Long profileId) {
@@ -705,8 +704,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
             ParsedValuationData standardizedValuationData = standardizationService.standardize(parsedValuationData);
             String actualHash = buildRegressionHash(standardizedValuationData);
             String expectedHash = normalize(parseCase.getExpectedOutputHash());
-            boolean passed = !expectedHash.isBlank() && expectedHash.equalsIgnoreCase(actualHash);
-            String reason = passed ? "回归通过" : (expectedHash.isBlank() ? "缺少预期输出哈希" : "输出摘要哈希不一致");
+            boolean passed = !expectedHash.trim().isEmpty() && expectedHash.equalsIgnoreCase(actualHash);
+            String reason = passed ? "回归通过" : (expectedHash.trim().isEmpty() ? "缺少预期输出哈希" : "输出摘要哈希不一致");
             if (!passed) {
                 issues.add("样例回归未通过，caseId=" + parseCase.getId() + ", reason=" + reason);
             }
@@ -750,7 +749,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
             issues.add("规则表达式不能为空，stepName=" + rule.getStepName());
             return;
         }
-        if (rule.getExprLang() != null && !rule.getExprLang().isBlank() && !"qlexpress4".equalsIgnoreCase(rule.getExprLang().trim())) {
+        if (rule.getExprLang() != null && !rule.getExprLang().trim().isEmpty() && !"qlexpress4".equalsIgnoreCase(rule.getExprLang().trim())) {
             issues.add("规则表达式语言不支持，stepName=" + rule.getStepName() + ", exprLang=" + rule.getExprLang());
         }
         if (parseRuleEngine != null) {
@@ -802,7 +801,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         if (isBlank(bundle.getProfile().getVersion())) {
             issues.add("模板版本不能为空");
         }
-        List<ParseRuleDefinitionUpsertCommand> rules = bundle.getRules() == null ? List.of() : bundle.getRules();
+        List<ParseRuleDefinitionUpsertCommand> rules = bundle.getRules() == null ? java.util.Arrays.asList() : bundle.getRules();
         if (rules.isEmpty()) {
             issues.add("模板包至少需要一条规则步骤");
         }
@@ -820,11 +819,11 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
             if (isBlank(rule.getExprText())) {
                 issues.add("模板包规则表达式不能为空，stepName=" + rule.getStepName());
             }
-            if (rule.getExprLang() != null && !rule.getExprLang().isBlank() && !"qlexpress4".equalsIgnoreCase(rule.getExprLang().trim())) {
+            if (rule.getExprLang() != null && !rule.getExprLang().trim().isEmpty() && !"qlexpress4".equalsIgnoreCase(rule.getExprLang().trim())) {
                 issues.add("模板包规则表达式语言不支持，stepName=" + rule.getStepName() + ", exprLang=" + rule.getExprLang());
             }
         }
-        List<ParseRuleCaseUpsertCommand> cases = bundle.getCases() == null ? List.of() : bundle.getCases();
+        List<ParseRuleCaseUpsertCommand> cases = bundle.getCases() == null ? java.util.Arrays.asList() : bundle.getCases();
         for (ParseRuleCaseUpsertCommand parseCase : cases) {
             if (parseCase == null) {
                 issues.add("模板包中存在空样例定义");
@@ -844,12 +843,12 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     private Map<String, Object> buildRuleValidationContext(ParseRuleDefinitionPO rule) {
         Map<String, Object> context = new LinkedHashMap<>();
-        context.put("row", List.of());
+        context.put("row", java.util.Arrays.asList());
         context.put("requiredHeaders", DEFAULT_REQUIRED_HEADERS);
-        context.put("footerKeywords", List.of());
+        context.put("footerKeywords", java.util.Arrays.asList());
         context.put("subjectCodePattern", DEFAULT_SUBJECT_CODE_PATTERN);
         context.put("headerText", "");
-        context.put("segments", List.of());
+        context.put("segments", java.util.Arrays.asList());
         context.put("exactCandidate", null);
         context.put("segmentCandidate", null);
         context.put("aliasCandidate", null);
@@ -882,7 +881,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         Set<String> names = new LinkedHashSet<>();
         for (ParseRuleDefinitionPO rule : rules) {
             String name = normalize(rule == null ? null : rule.getStepName());
-            if (name.isBlank()) {
+            if (name.trim().isEmpty()) {
                 continue;
             }
             if (!names.add(name)) {
@@ -913,7 +912,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     private ParseRuleProfilePO resolveRollbackTarget(ParseRuleProfilePO current, ParseRuleRollbackCommand command) {
         if (command != null && !isBlank(command.getRollbackToVersion())) {
-            var query = Wrappers.lambdaQuery(ParseRuleProfilePO.class)
+            com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ParseRuleProfilePO> query = Wrappers.lambdaQuery(ParseRuleProfilePO.class)
                     .eq(ParseRuleProfilePO::getProfileCode, current.getProfileCode())
                     .eq(ParseRuleProfilePO::getVersion, command.getRollbackToVersion())
                     .orderByDesc(ParseRuleProfilePO::getPublishedTime)
@@ -923,7 +922,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                     .findFirst()
                     .orElse(null);
         }
-        var query = Wrappers.lambdaQuery(ParseRuleProfilePO.class)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ParseRuleProfilePO> query = Wrappers.lambdaQuery(ParseRuleProfilePO.class)
                 .eq(ParseRuleProfilePO::getProfileCode, current.getProfileCode())
                 .ne(ParseRuleProfilePO::getId, current.getId())
                 .orderByDesc(ParseRuleProfilePO::getPublishedTime)
@@ -982,8 +981,8 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         command.setTimeoutMs(profile.getTimeoutMs());
         command.setCreatedBy(profile.getCreater());
         command.setModifiedBy(profile.getModifier());
-        command.setRules(loadRules(profile.getId()).stream().map(this::toRuleUpsertCommand).toList());
-        command.setCases(loadCases(profile.getId()).stream().map(this::toCaseUpsertCommand).toList());
+        command.setRules(loadRules(profile.getId()).stream().map(this::toRuleUpsertCommand).collect(java.util.stream.Collectors.toList()));
+        command.setCases(loadCases(profile.getId()).stream().map(this::toCaseUpsertCommand).collect(java.util.stream.Collectors.toList()));
         return command;
     }
 
@@ -1057,12 +1056,12 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
             summary.put("title", parsedValuationData.getTitle());
             summary.put("subjectCount", parsedValuationData.getSubjects() == null ? 0 : parsedValuationData.getSubjects().size());
             summary.put("metricCount", parsedValuationData.getMetrics() == null ? 0 : parsedValuationData.getMetrics().size());
-            summary.put("headers", parsedValuationData.getHeaders() == null ? List.of() : parsedValuationData.getHeaders());
-            summary.put("basicInfo", parsedValuationData.getBasicInfo() == null ? Map.of() : parsedValuationData.getBasicInfo());
+            summary.put("headers", parsedValuationData.getHeaders() == null ? java.util.Arrays.asList() : parsedValuationData.getHeaders());
+            summary.put("basicInfo", parsedValuationData.getBasicInfo() == null ? java.util.Collections.emptyMap() : parsedValuationData.getBasicInfo());
             String payload = objectMapper.writeValueAsString(summary);
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] bytes = digest.digest(payload.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(bytes);
+            return bytesToHex(bytes);
         } catch (Exception exception) {
             throw new IllegalStateException("构建样例回归摘要失败", exception);
         }
@@ -1122,7 +1121,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 copy.setErrorPolicy(rule.getErrorPolicy());
                 copy.setTimeoutMs(rule.getTimeoutMs());
                 return copy;
-            }).toList());
+            }).collect(java.util.stream.Collectors.toList()));
         }
         if (command.getCases() != null) {
             normalized.setCases(command.getCases().stream().map(parseCase -> {
@@ -1141,7 +1140,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 copy.setExpectedOutputHash(parseCase.getExpectedOutputHash());
                 copy.setStatus(parseCase.getStatus());
                 return copy;
-            }).toList());
+            }).collect(java.util.stream.Collectors.toList()));
         }
         return normalized;
     }
@@ -1172,10 +1171,10 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
             return DEFAULT_REQUIRED_HEADERS;
         }
         List<String> normalized = requiredHeaders.stream()
-                .filter(header -> header != null && !header.isBlank())
+                .filter(header -> header != null && !header.trim().isEmpty())
                 .map(String::trim)
                 .distinct()
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         return normalized.isEmpty() ? DEFAULT_REQUIRED_HEADERS : normalized;
     }
 
@@ -1211,7 +1210,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
     }
 
     private boolean isBlank(String text) {
-        return text == null || text.isBlank();
+        return text == null || text.trim().isEmpty();
     }
 
     private String firstNonBlank(String... values) {
@@ -1219,10 +1218,25 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
             return null;
         }
         for (String value : values) {
-            if (value != null && !value.isBlank()) {
+            if (value != null && !value.trim().isEmpty()) {
                 return value.trim();
             }
         }
         return null;
+    }
+
+    /**
+     * Java 8 兼容的字节数组转十六进制方法。
+     */
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder(2 * bytes.length);
+        for (byte b : bytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
     }
 }

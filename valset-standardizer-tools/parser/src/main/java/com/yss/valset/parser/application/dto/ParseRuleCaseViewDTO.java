@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class ParseRuleCaseViewDTO {
+public class ParseRuleCaseViewDTO implements java.io.Serializable {
     /**
      * 样例主键。
      */

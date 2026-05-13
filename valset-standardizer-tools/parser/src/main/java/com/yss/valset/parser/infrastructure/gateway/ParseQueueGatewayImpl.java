@@ -71,7 +71,7 @@ public class ParseQueueGatewayImpl implements ParseQueueGateway {
                         .orderByDesc(ParseQueuePO::getCreatedAt)
                         .orderByDesc(ParseQueuePO::getQueueId)
         );
-        List<ParseQueue> records = page.getRecords() == null ? List.of() : page.getRecords().stream().map(this::toDomain).toList();
+        List<ParseQueue> records = page.getRecords() == null ? java.util.Arrays.asList() : page.getRecords().stream().map(this::toDomain).collect(java.util.stream.Collectors.toList());
         return new ParseQueuePage(records, page.getTotal(), (int) page.getCurrent() - 1, (int) page.getSize());
     }
 
@@ -86,25 +86,25 @@ public class ParseQueueGatewayImpl implements ParseQueueGateway {
                                                String parseStatus,
                                                String triggerMode,
                                                Integer limit) {
-        var query = buildQuery(transferId, businessKey, sourceCode, routeId, tagCode, fileStatus, deliveryStatus, parseStatus, triggerMode)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ParseQueuePO> query = buildQuery(transferId, businessKey, sourceCode, routeId, tagCode, fileStatus, deliveryStatus, parseStatus, triggerMode)
                 .orderByDesc(ParseQueuePO::getCreatedAt)
                 .orderByDesc(ParseQueuePO::getQueueId);
         if (limit != null && limit > 0) {
             query.last(databaseDialectSupport.limitClause(limit));
         }
-        return transferParseQueueRepository.selectList(query).stream().map(this::toDomain).toList();
+        return transferParseQueueRepository.selectList(query).stream().map(this::toDomain).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
     public List<ParseQueue> listPendingQueues(Integer limit) {
-        var query = Wrappers.lambdaQuery(ParseQueuePO.class)
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ParseQueuePO> query = Wrappers.lambdaQuery(ParseQueuePO.class)
                 .eq(ParseQueuePO::getParseStatus, ParseStatus.PENDING.name())
                 .orderByAsc(ParseQueuePO::getCreatedAt)
                 .orderByAsc(ParseQueuePO::getQueueId);
         if (limit != null && limit > 0) {
             query.last(databaseDialectSupport.limitClause(limit));
         }
-        return transferParseQueueRepository.selectList(query).stream().map(this::toDomain).toList();
+        return transferParseQueueRepository.selectList(query).stream().map(this::toDomain).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -156,7 +156,7 @@ public class ParseQueueGatewayImpl implements ParseQueueGateway {
     }
 
     private Long parseLong(String value) {
-        if (value == null || value.isBlank()) {
+        if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return Long.valueOf(value);

@@ -31,10 +31,14 @@ class SpringBatchWorkflowPlatformAdapterTest {
                     .platformType(EtlPlatformType.SPRING_BATCH)
                     .externalWorkflowId("job-a")
                     .rawStatus("RUNNING")
-                    .context(Map.of("input", "demo"))
+                    .context(new java.util.HashMap<String, Object>() {{
+                        put("input", "demo");
+                    }})
                     .build();
 
-            assertThat(adapter.trigger(definition, instance, WorkflowTriggerRequest.builder().context(Map.of("input", "demo")).build())
+            assertThat(adapter.trigger(definition, instance, WorkflowTriggerRequest.builder().context(new java.util.HashMap<String, Object>() {{
+                put("input", "demo");
+            }}).build())
                     .getPayload())
                     .containsEntry("jobName", "spring-batch-v1")
                     .containsEntry("batchInfrastructure", "resourceless")
@@ -72,7 +76,7 @@ class SpringBatchWorkflowPlatformAdapterTest {
                         .platformType(EtlPlatformType.SPRING_BATCH)
                         .externalWorkflowId("job-a")
                         .build())
-                .stages(List.of(
+                .stages(java.util.Arrays.asList(
                         WorkflowStageDTO.builder().stageCode("EXTRACT").stageName("抽取").stageOrder(1).build(),
                         WorkflowStageDTO.builder().stageCode("LOAD").stageName("装载").stageOrder(2).build()))
                 .build();

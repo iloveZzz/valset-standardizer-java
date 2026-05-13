@@ -17,7 +17,7 @@ import java.util.Map;
 @Component
 public class DefaultHeaderMappingEngine implements HeaderMappingEngine {
 
-    private final List<HeaderMappingStep> steps = List.of(
+    private final List<HeaderMappingStep> steps = java.util.Arrays.asList(
             new ExactHeaderStep(),
             new HeaderSegmentStep(),
             new AliasStep(),

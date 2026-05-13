@@ -1,7 +1,7 @@
 package com.yss.valset.transfer.web.controller;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
+import com.yss.cloud.dto.result.SingleResult;
 import com.yss.valset.transfer.application.dto.TransferFormTemplateViewDTO;
 import com.yss.valset.transfer.application.dto.TransferFormTemplateGroupDTO;
 import com.yss.valset.transfer.application.service.TransferFormTemplateQueryService;

@@ -1,11 +1,11 @@
 package com.yss.valset.workflow.web;
 
-import com.yss.cloud.dto.response.MultiResult;
-import com.yss.cloud.dto.response.SingleResult;
+import com.yss.cloud.dto.result.SingleResult;
+import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.workflow.model.WorkflowScheduleDTO;
 import com.yss.valset.workflow.model.WorkflowSchedulePreviewRequest;
 import com.yss.valset.workflow.spi.WorkflowScheduleApplicationService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

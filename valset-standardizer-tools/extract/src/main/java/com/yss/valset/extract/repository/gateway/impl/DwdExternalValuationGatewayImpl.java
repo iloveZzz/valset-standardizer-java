@@ -36,9 +36,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGateway {
 
-    private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<>() {
+    private static final TypeReference<List<String>> STRING_LIST_TYPE = new TypeReference<List<String>>() {
     };
-    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
+    private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<Map<String, Object>>() {
     };
 
     private final DwdExternalValuationRepository valuationRepository;
@@ -147,7 +147,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
             po.setHeaderName(headers.get(index));
             List<String> detail = headerDetails != null && index < headerDetails.size()
                     ? headerDetails.get(index)
-                    : List.of(headers.get(index));
+                    : java.util.Arrays.asList(headers.get(index));
             po.setHeaderDetailJson(writeJson(detail));
             po.setHeaderColumnMetaJson(writeJson(resolveHeaderColumnMeta(index, headers.get(index), detail, headerColumns)));
             poList.add(po);
@@ -176,7 +176,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                     po.setRawValuesJson(writeJson(subject.getRawValues()));
                     return po;
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         subjectRepository.insertBatchSomeColumn(poList);
     }
 
@@ -196,7 +196,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                     po.setRawValuesJson(writeJson(metric.getRawValues()));
                     return po;
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         metricRepository.insertBatchSomeColumn(poList);
     }
 
@@ -220,7 +220,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                                 .orderByAsc(DwdExternalValuationHeaderPO::getColumnIndex)
                 ).stream()
                 .map(DwdExternalValuationHeaderPO::getHeaderName)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<List<String>> loadHeaderDetails(Long valuationId) {
@@ -230,7 +230,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                                 .orderByAsc(DwdExternalValuationHeaderPO::getColumnIndex)
                 ).stream()
                 .map(po -> readJson(po.getHeaderDetailJson(), STRING_LIST_TYPE))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<HeaderColumnMeta> loadHeaderColumns(Long valuationId) {
@@ -240,7 +240,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                         .orderByAsc(DwdExternalValuationHeaderPO::getColumnIndex)
         );
         if (headerPOList == null || headerPOList.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<HeaderColumnMeta> result = new ArrayList<>(headerPOList.size());
         for (DwdExternalValuationHeaderPO po : headerPOList) {
@@ -269,7 +269,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                         }))
                         .leaf(po.getLeaf())
                         .build())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<MetricRecord> loadMetrics(Long valuationId) {
@@ -286,7 +286,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                         .value(po.getMetricValue())
                         .rawValues(readJson(po.getRawValuesJson(), MAP_TYPE))
                         .build())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private String writeJson(Object value) {
@@ -313,7 +313,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                         .pathSegments(headerColumnMeta.getPathSegments() == null ? headerDetail : headerColumnMeta.getPathSegments())
                         .blankColumn(headerColumnMeta.getBlankColumn() != null
                                 ? headerColumnMeta.getBlankColumn()
-                                : headerName == null || headerName.isBlank())
+                                : headerName == null || headerName.trim().isEmpty())
                         .build();
             }
         }
@@ -322,7 +322,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 .headerName(headerName)
                 .headerPath(headerName)
                 .pathSegments(headerDetail)
-                .blankColumn(headerName == null || headerName.isBlank())
+                .blankColumn(headerName == null || headerName.trim().isEmpty())
                 .build();
     }
 
@@ -337,18 +337,18 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 .columnIndex(po.getColumnIndex())
                 .headerName(po.getHeaderName())
                 .headerPath(po.getHeaderName())
-                .pathSegments(detail == null ? List.of() : detail)
-                .blankColumn(po.getHeaderName() == null || po.getHeaderName().isBlank())
+                .pathSegments(detail == null ? java.util.Arrays.asList() : detail)
+                .blankColumn(po.getHeaderName() == null || po.getHeaderName().trim().isEmpty())
                 .build();
     }
 
     private String defaultString(String candidate, String fallback) {
-        return candidate == null || candidate.isBlank() ? fallback : candidate;
+        return candidate == null || candidate.trim().isEmpty() ? fallback : candidate;
     }
 
     private <T> T readJson(String value, TypeReference<T> typeReference) {
         try {
-            if (value == null || value.isBlank()) {
+            if (value == null || value.trim().isEmpty()) {
                 return null;
             }
             return objectMapper.readValue(value, typeReference);

@@ -67,9 +67,9 @@ public class ScriptRouteMatchPlugin implements RouteMatchPlugin {
             }
         }
         if (matchedAnyRule) {
-            return new MatchResult(true, List.of(), "规则已命中，但未找到对应的手动分拣路由配置");
+            return new MatchResult(true, java.util.Arrays.asList(), "规则已命中，但未找到对应的手动分拣路由配置");
         }
-        return new MatchResult(false, List.of(), "未匹配到可用规则");
+        return new MatchResult(false, java.util.Arrays.asList(), "未匹配到可用规则");
     }
 
     private Map<String, Object> buildRuleVariables(RuleDefinition ruleDefinition) {
@@ -78,23 +78,23 @@ public class ScriptRouteMatchPlugin implements RouteMatchPlugin {
             variables.putAll(ruleDefinition.ruleMeta());
             variables.put("ruleMeta", ruleDefinition.ruleMeta());
         } else {
-            variables.put("ruleMeta", Map.of());
+            variables.put("ruleMeta", java.util.Collections.emptyMap());
         }
         return variables;
     }
 
     private RuleEvaluationResult evaluate(RuleDefinition ruleDefinition, RuleContext ruleContext) {
         if (ruleDefinition == null) {
-            return new RuleEvaluationResult(false, List.of(), "规则为空");
+            return new RuleEvaluationResult(false, java.util.Arrays.asList(), "规则为空");
         }
         String matchStrategy = ruleDefinition.matchStrategy();
-        if (matchStrategy == null || matchStrategy.isBlank() || "ALL".equalsIgnoreCase(matchStrategy)) {
-            return new RuleEvaluationResult(true, List.of(), "默认全部命中，跳过规则脚本");
+        if (matchStrategy == null || matchStrategy.trim().isEmpty() || "ALL".equalsIgnoreCase(matchStrategy)) {
+            return new RuleEvaluationResult(true, java.util.Arrays.asList(), "默认全部命中，跳过规则脚本");
         }
         if ("SCRIPT_RULE".equalsIgnoreCase(matchStrategy)) {
             return ruleEngine.evaluate(ruleDefinition, ruleContext);
         }
-        return new RuleEvaluationResult(false, List.of(), "不支持的匹配策略：" + matchStrategy);
+        return new RuleEvaluationResult(false, java.util.Arrays.asList(), "不支持的匹配策略：" + matchStrategy);
     }
 
 }

@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class ParseRuleBundleViewDTO {
+public class ParseRuleBundleViewDTO implements java.io.Serializable {
     /**
      * 模板详情。
      */

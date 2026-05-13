@@ -51,10 +51,10 @@ public class DefaultFileProbePlugin implements FileProbePlugin {
         if (context == null) {
             return "UNKNOWN";
         }
-        if (context.mailId() != null && !context.mailId().isBlank()) {
+        if (context.mailId() != null && !context.mailId().trim().isEmpty()) {
             return "EMAIL_ATTACHMENT";
         }
-        if (context.mimeType() != null && !context.mimeType().isBlank()) {
+        if (context.mimeType() != null && !context.mimeType().trim().isEmpty()) {
             return context.mimeType();
         }
         return context.fileName() == null ? "UNKNOWN" : "FILE";

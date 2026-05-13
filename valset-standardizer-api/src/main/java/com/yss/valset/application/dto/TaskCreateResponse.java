@@ -3,12 +3,14 @@ package com.yss.valset.application.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 任务创建后返回响应。
  */
 @Data
 @Builder
-public class TaskCreateResponse {
+public class TaskCreateResponse implements Serializable {
     /**
      * 唯一的任务标识符。
      */

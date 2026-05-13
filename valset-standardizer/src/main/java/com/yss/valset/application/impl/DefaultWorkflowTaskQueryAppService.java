@@ -62,7 +62,7 @@ public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppS
      * 尝试将负载文本解析为 JSON。
      */
     private Map<String, Object> parsePayload(String payload, boolean failedTask) {
-        if (payload == null || payload.isBlank()) {
+        if (payload == null || payload.trim().isEmpty()) {
             return null;
         }
         try {
@@ -84,14 +84,17 @@ public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppS
             return null;
         }
         Object value = resultData.get(fieldName);
-        if (value instanceof Number number) {
-            return number.longValue();
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
         }
-        if (value instanceof String text && !text.isBlank()) {
-            try {
-                return Long.parseLong(text);
-            } catch (NumberFormatException ignored) {
-                return null;
+        if (value instanceof String) {
+            String text = (String) value;
+            if (!text.trim().isEmpty()) {
+                try {
+                    return Long.parseLong(text);
+                } catch (NumberFormatException ignored) {
+                    return null;
+                }
             }
         }
         return null;

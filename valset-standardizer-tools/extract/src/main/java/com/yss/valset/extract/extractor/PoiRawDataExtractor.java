@@ -80,7 +80,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                         List<List<String>> sheetRows = sheet.rows();
                         for (int rowIndex = 0; rowIndex < sheetRows.size(); rowIndex++) {
                             List<String> rowValues = normalizeSpreadsheetXmlRow(sheetRows.get(rowIndex));
-                            if (rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.isBlank())) {
+                            if (rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.trim().isEmpty())) {
                                 continue;
                             }
                             listener.acceptRow(sheet.sheetName(), rowIndex, rowValues);
@@ -117,7 +117,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
 
     private List<String> normalizeSpreadsheetXmlRow(List<String> rowValues) {
         if (rowValues == null || rowValues.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         List<String> normalized = new ArrayList<>(rowValues.size());
         for (String value : rowValues) {
@@ -178,7 +178,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
         }
 
         private void acceptRow(String sheetName, int sheetRowIndex, List<String> rowValues) {
-            if (rowValues == null || rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.isBlank())) {
+            if (rowValues == null || rowValues.isEmpty() || rowValues.stream().allMatch(value -> value == null || value.trim().isEmpty())) {
                 return;
             }
             if (sheetName == null) {
@@ -348,7 +348,7 @@ public class PoiRawDataExtractor implements RawDataExtractor {
             }
 
             if (maxColumnIndex < 0) {
-                return List.of();
+                return java.util.Arrays.asList();
             }
 
             if (maxColumnIndex + 1 > MAX_COLUMNS) {

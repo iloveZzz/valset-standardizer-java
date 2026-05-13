@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 @Builder
-public class TransferRunLogRedeliverItemViewDTO {
+public class TransferRunLogRedeliverItemViewDTO implements java.io.Serializable {
 
     /**
      * 运行日志主键。

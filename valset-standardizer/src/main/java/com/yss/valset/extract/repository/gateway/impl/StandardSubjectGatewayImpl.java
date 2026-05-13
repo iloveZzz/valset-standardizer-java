@@ -29,9 +29,9 @@ public class StandardSubjectGatewayImpl implements StandardSubjectGateway {
                         .orderByAsc(StandardSubjectPO::getStandardCode)
         );
         if (poList == null || poList.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
-        return poList.stream().map(standardSubjectConvertor::toDomain).toList();
+        return poList.stream().map(standardSubjectConvertor::toDomain).collect(java.util.stream.Collectors.toList());
     }
 
     @Override

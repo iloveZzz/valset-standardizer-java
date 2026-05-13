@@ -27,7 +27,7 @@ public class DefaultWorkflowScheduleApplicationService implements WorkflowSchedu
     public DefaultWorkflowScheduleApplicationService(WorkflowRuntimeStore runtimeStore,
                                                      List<WorkflowSchedulePlatformAdapter> adapters) {
         this.runtimeStore = runtimeStore;
-        this.adapters = adapters == null ? List.of() : adapters;
+        this.adapters = adapters == null ? java.util.Arrays.asList() : adapters;
     }
 
     @Override

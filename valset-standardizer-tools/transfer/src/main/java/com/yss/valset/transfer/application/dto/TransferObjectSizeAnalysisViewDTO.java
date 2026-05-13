@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class TransferObjectSizeAnalysisViewDTO {
+public class TransferObjectSizeAnalysisViewDTO implements java.io.Serializable {
 
     /**
      * 文件总数。

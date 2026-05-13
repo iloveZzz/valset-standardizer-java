@@ -33,7 +33,7 @@ public class DefaultWorkflowEngineDispatchService implements WorkflowEngineDispa
     public DefaultWorkflowEngineDispatchService(SchedulerService schedulerService,
                                                 List<WorkflowEngineAdapter> workflowEngineAdapters) {
         this.schedulerService = schedulerService;
-        this.workflowEngineAdapters = workflowEngineAdapters == null ? List.of() : workflowEngineAdapters;
+        this.workflowEngineAdapters = workflowEngineAdapters == null ? java.util.Arrays.asList() : workflowEngineAdapters;
     }
 
     @Override
@@ -158,13 +158,13 @@ public class DefaultWorkflowEngineDispatchService implements WorkflowEngineDispa
      */
     private Map<String, Object> parseBusinessContext(String configJson) {
         if (!StringUtils.hasText(configJson)) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         try {
             Map<?, ?> raw = objectMapper.readValue(configJson, Map.class);
             return WorkflowContextPayloadSupport.flattenEnvelope(raw);
         } catch (Exception ignored) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
     }
 

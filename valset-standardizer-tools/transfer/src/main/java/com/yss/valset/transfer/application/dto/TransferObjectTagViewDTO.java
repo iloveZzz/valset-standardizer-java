@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Builder
-public class TransferObjectTagViewDTO {
+public class TransferObjectTagViewDTO implements java.io.Serializable {
 
     /**
      * 标签结果主键。

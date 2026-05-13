@@ -10,7 +10,7 @@ import java.util.List;
  */
 @Data
 @Builder
-public class ParseRuleRegressionViewDTO {
+public class ParseRuleRegressionViewDTO implements java.io.Serializable {
     /**
      * 模板主键。
      */

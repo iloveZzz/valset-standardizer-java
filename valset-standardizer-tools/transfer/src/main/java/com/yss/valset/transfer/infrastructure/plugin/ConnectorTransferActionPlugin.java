@@ -39,7 +39,7 @@ public class ConnectorTransferActionPlugin implements TransferActionPlugin {
 
     @Override
     public boolean supports(TransferRoute route) {
-        return route != null && route.targetCode() != null && !route.targetCode().isBlank();
+        return route != null && route.targetCode() != null && !route.targetCode().trim().isEmpty();
     }
 
     @Override

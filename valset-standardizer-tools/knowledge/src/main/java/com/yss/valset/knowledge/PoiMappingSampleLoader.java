@@ -44,7 +44,7 @@ public class PoiMappingSampleLoader {
                     String externalName = ExcelParsingSupport.textAt(rowValues, 3);
                     String standardCode = ExcelParsingSupport.textAt(rowValues, 4);
                     String standardName = ExcelParsingSupport.textAt(rowValues, 5);
-                    if (externalName.isBlank() || standardCode.isBlank() || standardName.isBlank()) {
+                    if (externalName.trim().isEmpty() || standardCode.trim().isEmpty() || standardName.trim().isEmpty()) {
                         continue;
                     }
                     samples.add(MappingSample.builder()
@@ -76,7 +76,7 @@ public class PoiMappingSampleLoader {
             String externalName = ExcelParsingSupport.textAt(rowValues, 3);
             String standardCode = ExcelParsingSupport.textAt(rowValues, 4);
             String standardName = ExcelParsingSupport.textAt(rowValues, 5);
-            if (externalName.isBlank() || standardCode.isBlank() || standardName.isBlank()) {
+            if (externalName.trim().isEmpty() || standardCode.trim().isEmpty() || standardName.trim().isEmpty()) {
                 continue;
             }
             samples.add(MappingSample.builder()

@@ -1,6 +1,6 @@
 package com.yss.valset.transfer.application.impl.query;
 
-import com.yss.cloud.dto.response.PageResult;
+import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.transfer.application.dto.TransferObjectDownloadViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectAnalysisViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectAttachmentViewDTO;
@@ -38,6 +38,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -58,10 +59,10 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     public TransferObjectViewDTO getObject(String transferId) {
         TransferObject transferObject = transferObjectGateway.findById(transferId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "未找到文件主对象，transferId=" + transferId));
-        Map<String, List<TransferObjectTag>> tagMap = loadTags(List.of(transferObject));
-        Map<String, Boolean> deliveryMap = loadDeliveryStatus(List.of(transferObject));
+        Map<String, List<TransferObjectTag>> tagMap = loadTags(java.util.Arrays.asList(transferObject));
+        Map<String, Boolean> deliveryMap = loadDeliveryStatus(java.util.Arrays.asList(transferObject));
         return toView(transferObject,
-                tagMap.getOrDefault(transferObject.transferId(), List.of()),
+                tagMap.getOrDefault(transferObject.transferId(), java.util.Arrays.asList()),
                 deliveryMap.getOrDefault(transferObject.transferId(), Boolean.FALSE));
     }
 
@@ -93,7 +94,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         if (!StringUtils.hasText(localTempPath)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "文件主对象没有可下载的本地临时路径，transferId=" + transferId);
         }
-        Path filePath = Path.of(localTempPath).toAbsolutePath().normalize();
+        Path filePath = Paths.get(localTempPath).toAbsolutePath().normalize();
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "本地临时文件不存在，path=" + filePath);
         }
@@ -143,15 +144,15 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 tagValue,
                 pageIndex,
                 pageSize);
-        List<TransferObject> records = page.records() == null ? List.of() : page.records();
+        List<TransferObject> records = page.records() == null ? java.util.Arrays.asList() : page.records();
         Map<String, List<TransferObjectTag>> tagMap = loadTags(records);
         Map<String, Boolean> deliveryMap = loadDeliveryStatus(records);
         List<TransferObjectViewDTO> data = records.stream()
                 .map(record -> toView(
                         record,
-                        tagMap.getOrDefault(record.transferId(), List.of()),
+                        tagMap.getOrDefault(record.transferId(), java.util.Arrays.asList()),
                         deliveryMap.getOrDefault(record.transferId(), Boolean.FALSE)))
-                .collect(Collectors.toList());
+                .collect(java.util.stream.Collectors.toList());
         return PageResult.of(data,
                         page.total(),
                         page.pageSize(),
@@ -178,7 +179,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         
         List<TransferObjectViewDTO> data = groups.stream()
                 .map(this::toInboxView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         
         return PageResult.of(data, totalCount, size, current);
     }
@@ -202,7 +203,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .totalCount(analysis.totalCount())
                 .taggedCount(analysis.taggedCount())
                 .untaggedCount(analysis.untaggedCount())
-                .sourceAnalyses(analysis.sourceAnalyses() == null ? List.of() : analysis.sourceAnalyses().stream().map(this::toSourceAnalysisView).toList())
+                .sourceAnalyses(analysis.sourceAnalyses() == null ? java.util.Arrays.asList() : analysis.sourceAnalyses().stream().map(this::toSourceAnalysisView).collect(java.util.stream.Collectors.toList()))
                 .sizeAnalysis(analysis.sizeAnalysis() == null ? null : toSizeAnalysisView(analysis.sizeAnalysis()))
                 .build();
     }
@@ -221,7 +222,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .totalCount(totalCount)
                 .taggedCount(taggedCount)
                 .untaggedCount(untaggedCount)
-                .sourceAnalyses(List.of(toSourceAnalysisView(buildInboxSourceAnalysis(groups))))
+                .sourceAnalyses(java.util.Arrays.asList(toSourceAnalysisView(buildInboxSourceAnalysis(groups))))
                 .sizeAnalysis(toSizeAnalysisView(buildInboxSizeAnalysis(groups)))
                 .build();
     }
@@ -242,19 +243,21 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
             return null;
         }
         String value = deliveryStatus.trim().toUpperCase(Locale.ROOT);
-        return switch (value) {
-            case "DELIVERED", "SUCCESS", "已投递" -> "DELIVERED";
-            case "UNDELIVERED", "NOT_DELIVERED", "FAILED", "未投递" -> "UNDELIVERED";
-            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的投递状态: " + deliveryStatus);
-        };
+        if ("DELIVERED".equals(value) || "SUCCESS".equals(value) || "已投递".equals(value)) {
+            return "DELIVERED";
+        }
+        if ("UNDELIVERED".equals(value) || "NOT_DELIVERED".equals(value) || "FAILED".equals(value) || "未投递".equals(value)) {
+            return "UNDELIVERED";
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的投递状态: " + deliveryStatus);
     }
 
     private TransferObjectSourceAnalysisViewDTO toSourceAnalysisView(TransferObjectSourceAnalysis sourceAnalysis) {
         return TransferObjectSourceAnalysisViewDTO.builder()
                 .sourceType(sourceAnalysis.sourceType())
                 .totalCount(sourceAnalysis.totalCount())
-                .statusCounts(sourceAnalysis.statusCounts() == null ? List.of() : sourceAnalysis.statusCounts().stream().map(this::toStatusCountView).toList())
-                .mailFolderCounts(sourceAnalysis.mailFolderCounts() == null ? List.of() : sourceAnalysis.mailFolderCounts().stream().map(this::toMailFolderCountView).toList())
+                .statusCounts(sourceAnalysis.statusCounts() == null ? java.util.Arrays.asList() : sourceAnalysis.statusCounts().stream().map(this::toStatusCountView).collect(java.util.stream.Collectors.toList()))
+                .mailFolderCounts(sourceAnalysis.mailFolderCounts() == null ? java.util.Arrays.asList() : sourceAnalysis.mailFolderCounts().stream().map(this::toMailFolderCountView).collect(java.util.stream.Collectors.toList()))
                 .undeliveredCount(sourceAnalysis.undeliveredCount())
                 .build();
     }
@@ -279,7 +282,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         return TransferObjectSizeAnalysisViewDTO.builder()
                 .totalCount(sizeAnalysis.totalCount())
                 .totalSizeBytes(sizeAnalysis.totalSizeBytes())
-                .extensionCounts(sizeAnalysis.extensionCounts() == null ? List.of() : sizeAnalysis.extensionCounts().stream().map(this::toExtensionCountView).toList())
+                .extensionCounts(sizeAnalysis.extensionCounts() == null ? java.util.Arrays.asList() : sizeAnalysis.extensionCounts().stream().map(this::toExtensionCountView).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 
@@ -295,19 +298,38 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         if (!StringUtils.hasText(status)) {
             return "-";
         }
-        return switch (status.trim().toUpperCase(Locale.ROOT)) {
-            case "PENDING" -> "待处理";
-            case "RECEIVED" -> "已收取";
-            case "IDENTIFIED" -> "已识别";
-            case "ROUTED" -> "已路由";
-            case "DELIVERING" -> "投递中";
-            case "DELIVERED" -> "已投递";
-            case "ARCHIVED" -> "已归档";
-            case "SKIPPED" -> "已跳过";
-            case "QUARANTINED" -> "已隔离";
-            case "FAILED" -> "失败";
-            default -> status;
-        };
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        if ("PENDING".equals(normalized)) {
+            return "待处理";
+        }
+        if ("RECEIVED".equals(normalized)) {
+            return "已收取";
+        }
+        if ("IDENTIFIED".equals(normalized)) {
+            return "已识别";
+        }
+        if ("ROUTED".equals(normalized)) {
+            return "已路由";
+        }
+        if ("DELIVERING".equals(normalized)) {
+            return "投递中";
+        }
+        if ("DELIVERED".equals(normalized)) {
+            return "已投递";
+        }
+        if ("ARCHIVED".equals(normalized)) {
+            return "已归档";
+        }
+        if ("SKIPPED".equals(normalized)) {
+            return "已跳过";
+        }
+        if ("QUARANTINED".equals(normalized)) {
+            return "已隔离";
+        }
+        if ("FAILED".equals(normalized)) {
+            return "失败";
+        }
+        return status;
     }
 
     private String resolveMailFolderLabel(String mailFolder) {
@@ -326,27 +348,27 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     }
 
     private Map<String, List<TransferObjectTag>> loadTags(List<TransferObject> records) {
-        List<String> transferIds = records == null ? List.of() : records.stream()
+        List<String> transferIds = records == null ? java.util.Arrays.asList() : records.stream()
                 .map(TransferObject::transferId)
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         return transferObjectTagGateway.listByTransferIds(transferIds).stream()
                 .collect(Collectors.groupingBy(
                         TransferObjectTag::transferId,
-                        Collectors.toList()
+                        java.util.stream.Collectors.toList()
                 ));
     }
 
     private Map<String, Boolean> loadDeliveryStatus(List<TransferObject> records) {
-        List<String> transferIds = records == null ? List.of() : records.stream()
+        List<String> transferIds = records == null ? java.util.Arrays.asList() : records.stream()
                 .map(TransferObject::transferId)
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         return transferDeliveryGateway.listRecordsByTransferIds(transferIds, "SUCCESS").stream()
                 .map(TransferDeliveryRecord::transferId)
@@ -362,30 +384,30 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                                                List<TransferObject> items,
                                                Set<String> deliveredTransferIds,
                                                Set<String> taggedTransferIds) {
-        List<TransferObject> sortedItems = items == null ? List.of() : items.stream()
+        List<TransferObject> sortedItems = items == null ? java.util.Arrays.asList() : items.stream()
                 .sorted(inboxAttachmentComparator())
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (sortedItems.isEmpty()) {
-            return new InboxMailGroup(mailKey, null, List.of(), List.of(), null, false, false);
+            return new InboxMailGroup(mailKey, null, java.util.Arrays.asList(), java.util.Arrays.asList(), null, false, false);
         }
         TransferObject representative = sortedItems.get(0);
         List<String> transferIds = sortedItems.stream()
                 .map(TransferObject::transferId)
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         boolean delivered = !transferIds.isEmpty() && transferIds.stream().allMatch(deliveredTransferIds::contains);
         boolean tagged = transferIds.stream().anyMatch(taggedTransferIds::contains);
         return new InboxMailGroup(mailKey, representative, sortedItems, transferIds, null, delivered, tagged);
     }
 
     private Map<String, TransferMailInfo> loadMailInfoMap(List<InboxMailGroup> groups) {
-        List<String> representativeIds = groups == null ? List.of() : groups.stream()
+        List<String> representativeIds = groups == null ? java.util.Arrays.asList() : groups.stream()
                 .filter(group -> group != null && group.representative() != null)
                 .map(group -> group.representative().transferId())
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (representativeIds.isEmpty()) {
-            return Map.of();
+            return java.util.Collections.emptyMap();
         }
         return transferMailInfoGateway.listByTransferIds(representativeIds).stream()
                 .collect(Collectors.toMap(
@@ -397,12 +419,12 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     }
 
     private Set<String> loadTaggedTransferIds(List<TransferObject> objects) {
-        List<String> transferIds = objects == null ? List.of() : objects.stream()
+        List<String> transferIds = objects == null ? java.util.Arrays.asList() : objects.stream()
                 .map(TransferObject::transferId)
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         return transferObjectTagGateway.listByTransferIds(transferIds).stream()
                 .map(tag -> tag.transferId() == null ? null : tag.transferId().trim())
@@ -411,12 +433,12 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     }
 
     private Set<String> loadDeliveredTransferIds(List<TransferObject> objects) {
-        List<String> transferIds = objects == null ? List.of() : objects.stream()
+        List<String> transferIds = objects == null ? java.util.Arrays.asList() : objects.stream()
                 .map(TransferObject::transferId)
                 .filter(StringUtils::hasText)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         if (transferIds.isEmpty()) {
-            return Set.of();
+            return new java.util.LinkedHashSet<>(java.util.Arrays.asList());
         }
         return transferDeliveryGateway.listRecordsByTransferIds(transferIds, "SUCCESS").stream()
                 .map(TransferDeliveryRecord::transferId)
@@ -438,7 +460,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     }
 
     private TransferObjectSourceAnalysis buildInboxSourceAnalysis(List<InboxMailGroup> groups) {
-        List<InboxMailGroup> safeGroups = groups == null ? List.of() : groups;
+        List<InboxMailGroup> safeGroups = groups == null ? java.util.Arrays.asList() : groups;
         Map<String, Long> statusCountMap = safeGroups.stream()
                 .collect(Collectors.groupingBy(
                         group -> normalizeStatusKey(group.representative() == null || group.representative().status() == null ? null : group.representative().status().name()),
@@ -461,7 +483,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     }
 
     private TransferObjectSizeAnalysis buildInboxSizeAnalysis(List<InboxMailGroup> groups) {
-        List<InboxMailGroup> safeGroups = groups == null ? List.of() : groups;
+        List<InboxMailGroup> safeGroups = groups == null ? java.util.Arrays.asList() : groups;
         long totalSizeBytes = 0L;
         Map<String, Long> extensionCountMap = new LinkedHashMap<>();
         for (InboxMailGroup group : safeGroups) {
@@ -485,7 +507,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                     }
                     return String.valueOf(left.extension()).compareToIgnoreCase(String.valueOf(right.extension()));
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         return new TransferObjectSizeAnalysis((long) safeGroups.size(), totalSizeBytes, extensionCounts);
     }
 
@@ -527,7 +549,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
     }
 
     private List<TransferObjectStatusCount> orderStatusCounts(Map<String, Long> statusCountMap) {
-        return List.of(TransferStatus.values()).stream()
+        return java.util.Arrays.asList(TransferStatus.values()).stream()
                 .map(status -> {
                     String key = normalizeStatusKey(status.name());
                     Long count = statusCountMap.get(key);
@@ -537,7 +559,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                     return new TransferObjectStatusCount(status.name(), count);
                 })
                 .filter(java.util.Objects::nonNull)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<TransferObjectMailFolderCount> orderMailFolderCounts(Map<String, Long> mailFolderCountMap) {
@@ -550,7 +572,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                     }
                     return String.valueOf(left.mailFolder()).compareToIgnoreCase(String.valueOf(right.mailFolder()));
                 })
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private Comparator<TransferObject> inboxAttachmentComparator() {
@@ -596,7 +618,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .routeId(transferObject.routeId() == null ? null : String.valueOf(transferObject.routeId()))
                 .errorMessage(transferObject.errorMessage())
                 .fileMetaJson(transferJsonMapper.toCompactJson(transferObject.fileMeta()))
-                .tags(tags == null ? List.of() : tags.stream().map(this::toTagView).toList())
+                .tags(tags == null ? java.util.Arrays.asList() : tags.stream().map(this::toTagView).collect(java.util.stream.Collectors.toList()))
                 .build();
     }
 
@@ -608,9 +630,9 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         TransferObject hydrated = group.mailInfo() == null ? representative : representative.withMailInfo(group.mailInfo());
         List<TransferObject> attachments = group.attachments();
         // 通过transferIds查询附件信息
-        List<String> transferIds = group.transferIds() == null ? List.of() : group.transferIds();
+        List<String> transferIds = group.transferIds() == null ? java.util.Arrays.asList() : group.transferIds();
 
-        TransferObjectViewDTO view = toView(hydrated, List.of(), group.delivered());
+        TransferObjectViewDTO view = toView(hydrated, java.util.Arrays.asList(), group.delivered());
         view.setPrimaryTransferId(hydrated.transferId());
         view.setTransferIds(transferIds);
         view.setAttachments(toTransferObjectAttachmentViewDTO(attachments));
@@ -620,25 +642,25 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
 
     private List<TransferObjectAttachmentViewDTO> toTransferObjectAttachmentViewDTO(List<TransferObject> attachments) {
         if (attachments == null || attachments.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         return attachments.stream()
                 .map(this::toAttachmentView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private List<TransferObjectAttachmentViewDTO> loadAttachmentsByTransferIds(List<String> transferIds, String primaryTransferId) {
         if (transferIds == null || transferIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         
         // 过滤出附件的transferIds（排除主对象）
         List<String> attachmentIds = transferIds.stream()
                 .filter(id -> !id.equals(primaryTransferId))
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
         
         if (attachmentIds.isEmpty()) {
-            return List.of();
+            return java.util.Arrays.asList();
         }
         
         // 批量查询附件对象
@@ -647,7 +669,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .map(this::toAttachmentView)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private TransferObjectAttachmentViewDTO toAttachmentView(TransferObject transferObject) {
@@ -698,15 +720,59 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
         }
     }
 
-    public record InboxMailGroup(
-            String mailKey,
-            TransferObject representative,
-            List<TransferObject> attachments,
-            List<String> transferIds,
-            TransferMailInfo mailInfo,
-            boolean delivered,
-            boolean tagged
-    ) {
+    public static final class InboxMailGroup {
+        private final String mailKey;
+        private final TransferObject representative;
+        private final List<TransferObject> attachments;
+        private final List<String> transferIds;
+        private final TransferMailInfo mailInfo;
+        private final boolean delivered;
+        private final boolean tagged;
+
+        public InboxMailGroup(String mailKey,
+                              TransferObject representative,
+                              List<TransferObject> attachments,
+                              List<String> transferIds,
+                              TransferMailInfo mailInfo,
+                              boolean delivered,
+                              boolean tagged) {
+            this.mailKey = mailKey;
+            this.representative = representative;
+            this.attachments = attachments;
+            this.transferIds = transferIds;
+            this.mailInfo = mailInfo;
+            this.delivered = delivered;
+            this.tagged = tagged;
+        }
+
+        public String mailKey() {
+            return mailKey;
+        }
+
+        public TransferObject representative() {
+            return representative;
+        }
+
+        public List<TransferObject> attachments() {
+            return attachments;
+        }
+
+        public List<String> transferIds() {
+            return transferIds;
+        }
+
+        public TransferMailInfo mailInfo() {
+            return mailInfo;
+        }
+
+        public boolean delivered() {
+            return delivered;
+        }
+
+        public boolean tagged() {
+            return tagged;
+        }
+
         private InboxMailGroup withMailInfo(TransferMailInfo mailInfo) {
             return new InboxMailGroup(mailKey, representative, attachments, transferIds, mailInfo, delivered, tagged);
         }
