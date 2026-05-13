@@ -16,7 +16,7 @@
 
     <modules>
         <module>valset-standardizer-api</module>
-        <module>tools</module>
+        <module>valset-standardizer-tools</module>
         <module>valset-standardizer</module>
     </modules>
 
