@@ -21,6 +21,12 @@ public interface TransferDeliveryGateway {
 
     long countByDeliveredAtBetweenAndExecuteStatus(LocalDateTime startInclusive, LocalDateTime endExclusive, String executeStatus);
 
+    long countDistinctTransferIdsByDeliveredAtBetween(LocalDateTime startInclusive, LocalDateTime endExclusive);
+
+    long countDistinctTransferIdsByDeliveredAtBetweenAndExecuteStatus(LocalDateTime startInclusive,
+                                                                     LocalDateTime endExclusive,
+                                                                     String executeStatus);
+
     List<TransferDeliveryRecord> listRecords(String routeId, String transferId, String targetCode, String executeStatus, Integer limit);
 
     List<TransferDeliveryRecord> listRecordsByTransferIds(List<String> transferIds, String executeStatus);

@@ -5,6 +5,7 @@ import com.yss.valset.transfer.application.dto.TransferRunLogViewDTO;
 import com.yss.valset.transfer.application.dto.TransferRunLogAnalysisViewDTO;
 import com.yss.valset.transfer.application.dto.TransferRunLogStageAnalysisViewDTO;
 import com.yss.valset.transfer.application.dto.TransferRunLogStatusCountViewDTO;
+import com.yss.valset.transfer.application.dto.TransferRunLogTrendViewDTO;
 import com.yss.valset.transfer.application.service.TransferRunLogQueryService;
 import com.yss.valset.transfer.domain.gateway.TransferRunLogGateway;
 import com.yss.valset.transfer.domain.gateway.TransferRouteGateway;
@@ -31,6 +32,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 
 /**
  * 默认文件收发运行日志查询服务。
@@ -38,6 +43,8 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class DefaultTransferRunLogQueryService implements TransferRunLogQueryService {
+
+    private static final ZoneId SHANGHAI_ZONE_ID = ZoneId.of("Asia/Shanghai");
 
     private final TransferRunLogGateway transferRunLogGateway;
     private final TransferRouteGateway transferRouteGateway;
@@ -52,11 +59,15 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                                                 String runStage,
                                                 String runStatus,
                                                 String triggerType,
+                                                String taskDate,
                                                 Integer limit) {
         String normalizedStage = normalizeEnum(runStage, TransferRunStage.class, "运行阶段");
         String normalizedStatus = normalizeEnum(runStatus, TransferRunStatus.class, "运行状态");
         String normalizedTriggerType = normalizeEnum(triggerType, TransferTriggerType.class, "触发类型");
-        return transferRunLogGateway.listLogs(sourceId, transferId, routeId, normalizedStage, normalizedStatus, normalizedTriggerType, limit)
+        String normalizedTaskDate = normalizeTaskDate(taskDate);
+        LocalDateTime taskStart = resolveTaskStart(normalizedTaskDate);
+        LocalDateTime taskEnd = resolveTaskEnd(normalizedTaskDate);
+        return transferRunLogGateway.listLogs(sourceId, transferId, routeId, normalizedStage, normalizedStatus, normalizedTriggerType, taskStart, taskEnd, limit)
                 .stream()
                 .map(this::toView)
                 .collect(java.util.stream.Collectors.toList());
@@ -70,11 +81,15 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                                                       String runStatus,
                                                       String triggerType,
                                                       String keyword,
+                                                      String taskDate,
                                                       Integer pageIndex,
                                                       Integer pageSize) {
         String normalizedStage = normalizeEnum(runStage, TransferRunStage.class, "运行阶段");
         String normalizedStatus = normalizeEnum(runStatus, TransferRunStatus.class, "运行状态");
         String normalizedTriggerType = normalizeEnum(triggerType, TransferTriggerType.class, "触发类型");
+        String normalizedTaskDate = normalizeTaskDate(taskDate);
+        LocalDateTime taskStart = resolveTaskStart(normalizedTaskDate);
+        LocalDateTime taskEnd = resolveTaskEnd(normalizedTaskDate);
         TransferRunLogPage page = transferRunLogGateway.pageLogs(
                 sourceId,
                 transferId,
@@ -83,6 +98,8 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                 normalizedStatus,
                 normalizedTriggerType,
                 keyword,
+                taskStart,
+                taskEnd,
                 pageIndex,
                 pageSize
         );
@@ -101,10 +118,14 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                                                      String runStage,
                                                      String runStatus,
                                                      String triggerType,
-                                                     String keyword) {
+                                                     String keyword,
+                                                     String taskDate) {
         String normalizedStage = normalizeEnum(runStage, TransferRunStage.class, "运行阶段");
         String normalizedStatus = normalizeEnum(runStatus, TransferRunStatus.class, "运行状态");
         String normalizedTriggerType = normalizeEnum(triggerType, TransferTriggerType.class, "触发类型");
+        String normalizedTaskDate = normalizeTaskDate(taskDate);
+        LocalDateTime taskStart = resolveTaskStart(normalizedTaskDate);
+        LocalDateTime taskEnd = resolveTaskEnd(normalizedTaskDate);
         TransferRunLogAnalysis analysis = transferRunLogGateway.analyzeLogs(
                 sourceId,
                 transferId,
@@ -112,7 +133,9 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                 normalizedStage,
                 normalizedStatus,
                 normalizedTriggerType,
-                keyword
+                keyword,
+                taskStart,
+                taskEnd
         );
         return TransferRunLogAnalysisViewDTO.builder()
                 .totalCount(analysis.totalCount())
@@ -121,6 +144,55 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
                 .targetCount(stageTotal(analysis, "DELIVER"))
                 .stageAnalyses(analysis.stageAnalyses() == null ? java.util.Arrays.asList() : analysis.stageAnalyses().stream().map(this::toStageView).collect(java.util.stream.Collectors.toList()))
                 .build();
+    }
+
+    @Override
+    public List<TransferRunLogTrendViewDTO> trendLogs(Integer days, String taskDate) {
+        int window = days == null || days <= 0 ? 30 : days;
+        LocalDate endDate = resolveTaskDate(taskDate);
+        LocalDate startDate = endDate.minusDays(Math.max(window, 1) - 1L);
+        LocalDateTime startInclusive = startDate.atStartOfDay();
+        LocalDateTime endExclusive = endDate.plusDays(1L).atStartOfDay();
+        return transferRunLogGateway.trendLogs(startInclusive, endExclusive)
+                .stream()
+                .map(trend -> TransferRunLogTrendViewDTO.builder()
+                        .trendDate(trend.getTrendDate())
+                        .count(trend.getCount())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private LocalDateTime resolveTaskStart(String taskDate) {
+        LocalDate taskDay = resolveTaskDate(taskDate);
+        return taskDay == null ? null : taskDay.atStartOfDay();
+    }
+
+    private LocalDateTime resolveTaskEnd(String taskDate) {
+        LocalDate taskDay = resolveTaskDate(taskDate);
+        return taskDay == null ? null : taskDay.plusDays(1L).atStartOfDay();
+    }
+
+    private LocalDate resolveTaskDate(String taskDate) {
+        if (!StringUtils.hasText(taskDate)) {
+            return LocalDate.now(SHANGHAI_ZONE_ID);
+        }
+        try {
+            return LocalDate.parse(taskDate.trim());
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的任务日期: " + taskDate, exception);
+        }
+    }
+
+    private String normalizeTaskDate(String taskDate) {
+        if (!StringUtils.hasText(taskDate)) {
+            return null;
+        }
+        try {
+            LocalDate.parse(taskDate.trim());
+            return taskDate.trim();
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的任务日期: " + taskDate, exception);
+        }
     }
 
     private String normalizeEnum(String value, Class<? extends Enum<?>> enumType, String fieldName) {

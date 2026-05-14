@@ -179,12 +179,11 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: "/outsourced-data-tasks",
-    name: "outsourced-data-tasks",
-    component: () => import("@/views/TaskManagement/index.vue"),
-    meta: {
-      title: "估值表解析任务",
-      keepAlive: false,
-    },
+    redirect: "/task-management",
+  },
+  {
+    path: "/spring-batch-valuation-tasks",
+    redirect: "/task-management",
   },
   ...transferSectionRoutes,
   {

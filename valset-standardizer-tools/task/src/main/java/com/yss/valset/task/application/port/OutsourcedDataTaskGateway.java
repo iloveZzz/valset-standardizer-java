@@ -1,8 +1,6 @@
 package com.yss.valset.task.application.port;
 
 import com.yss.cloud.dto.result.PageResult;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
-import com.yss.valset.application.event.lifecycle.WorkflowTaskLifecycleEvent;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
@@ -25,8 +23,4 @@ public interface OutsourcedDataTaskGateway {
     Optional<OutsourcedDataTaskBatchDTO> findTask(String batchId);
 
     List<OutsourcedDataTaskStepDTO> listSteps(String batchId);
-
-    void recordParseLifecycleEvent(ParseLifecycleEvent event);
-
-    void recordWorkflowTaskLifecycleEvent(WorkflowTaskLifecycleEvent event);
 }

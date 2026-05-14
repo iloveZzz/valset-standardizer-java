@@ -1,9 +1,14 @@
-import { computed, onMounted, reactive, ref } from "vue";
+import dayjs, { type Dayjs } from "dayjs";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { getJavaSpringBootQuartzApi } from "@/api";
 import {
   getTransferDeliveryRecordSummary,
   type TransferDeliveryRecordSummaryDTO,
 } from "@/api/transferDeliveryRecord";
+import {
+  listTransferRunLogTrends,
+  type TransferRunLogTrendViewDTO,
+} from "@/api/transferRunLog";
 import {
   getOutsourcedDataTaskSummary,
   pageOutsourcedDataTasks,
@@ -12,14 +17,15 @@ import {
   type OutsourcedDataTaskSummaryDTO,
 } from "@/api/outsourcedDataTask";
 import { unwrapMultiResult, unwrapSingleResult } from "@/utils/api-response";
-import { outsourcedDataTaskStageCatalog } from "../../OutsourcedDataTask/constants";
+import {
+  springBatchValuationTaskStageCatalog as outsourcedDataTaskStageCatalog,
+} from "../../SpringBatchValuationTask/constants";
 import { transferSectionOptions } from "../schemas/transferSchemas";
 import type {
-  PageLogsParams,
+  ListLogsParams,
   TransferObjectAnalysisViewDTO,
   TransferRuleViewDTO,
   TransferRunLogAnalysisViewDTO,
-  TransferRunLogViewDTO,
   TransferSourceViewDTO,
   TransferTargetViewDTO,
 } from "@/api/generated/valset/schemas";
@@ -33,38 +39,47 @@ type OverviewHeroStat = {
 };
 
 const api = getJavaSpringBootQuartzApi();
+const TASK_DATE_FORMAT = "YYYY-MM-DD";
 
 export const useTransferPage = () => {
-  const shanghaiDateFormatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
+  const taskDate = ref(dayjs().format(TASK_DATE_FORMAT));
+  const taskDateValue = computed<Dayjs | undefined>({
+    get: () => {
+      const parsed = dayjs(taskDate.value);
+      return parsed.isValid() ? parsed : undefined;
+    },
+    set: (value) => {
+      taskDate.value = value ? value.format(TASK_DATE_FORMAT) : dayjs().format(TASK_DATE_FORMAT);
+    },
   });
-  const formatShanghaiDateKey = (value: Date) =>
-    shanghaiDateFormatter.format(value);
-  const parseShanghaiDateKey = (value?: string) => {
+  const parseTrendDateKey = (value?: string) => {
     if (!value) {
       return "";
     }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
+    const parsed = dayjs(value);
+    if (!parsed.isValid()) {
       return String(value).slice(0, 10);
     }
-    return formatShanghaiDateKey(date);
+    return parsed.format(TASK_DATE_FORMAT);
   };
-  const buildTrendSeries = () => {
+  const buildTrendSeries = (endDateText: string) => {
     const deliveryCounts = new Map<string, number>();
-    runLogRows.value.forEach((item) => {
-      const dateKey = parseShanghaiDateKey(item.createdAt);
+    trendRows.value.forEach((item) => {
+      const dateKey = parseTrendDateKey(item.trendDate);
       if (!dateKey) {
         return;
       }
-      deliveryCounts.set(dateKey, (deliveryCounts.get(dateKey) ?? 0) + 1);
+      deliveryCounts.set(
+        dateKey,
+        (deliveryCounts.get(dateKey) ?? 0) + Number(item.count ?? 0),
+      );
     });
 
-    const today = new Date();
+    const endDate = dayjs(endDateText);
     const series = Array.from({ length: 30 }, (_, index) => {
-      const date = new Date(today);
-      date.setDate(today.getDate() - (29 - index));
-      const label = formatShanghaiDateKey(date);
+      const label = endDate
+        .subtract(29 - index, "day")
+        .format(TASK_DATE_FORMAT);
       return {
         label,
         value: deliveryCounts.get(label) ?? 0,
@@ -95,9 +110,9 @@ export const useTransferPage = () => {
   const rules = ruleRows;
   const logs = ref<any[]>([]);
   const trendWindow = ref<3 | 7 | 30>(3);
+  const trendRows = ref<TransferRunLogTrendViewDTO[]>([]);
   const runLogAnalysis = ref<TransferRunLogAnalysisViewDTO | null>(null);
   const objectAnalysis = ref<TransferObjectAnalysisViewDTO | null>(null);
-  const runLogRows = ref<TransferRunLogViewDTO[]>([]);
   const deliveryRecordSummary = ref<TransferDeliveryRecordSummaryDTO | null>(
     null,
   );
@@ -354,8 +369,8 @@ export const useTransferPage = () => {
     title: "分拣总览",
     subtitle: "让文件分拣态势一眼可见",
     description:
-      "关注当前投递健康度、趋势、异常和快捷入口，快速判断系统是否正常。",
-    lastRefresh: "2026-04-25 19:55",
+      "按任务日期查看投递、分拣对象、解析任务和趋势变化。",
+    taskDateLabel: taskDate.value,
     healthLabel: successRate.value >= 95 ? "稳定运行" : "需要关注",
     healthTone: successRate.value >= 95 ? "green" : "gold",
   }));
@@ -363,16 +378,16 @@ export const useTransferPage = () => {
   const overviewHeroStats = computed<OverviewHeroStat[]>(() => [
     {
       key: "delivery-total",
-      label: "今日投递",
+      label: "文件投递个数",
       value: deliveryCount.value,
-      description: "今日统计的文件投递数量",
+      description: "选中日期统计的文件投递数量",
       tone: "primary",
     },
     {
       key: "success-rate",
       label: "成功率",
       value: `${successRate.value.toFixed(1)}%`,
-      description: "今日成功投递占总投递比例",
+      description: "选中日期成功投递占总投递比例",
       tone: "success",
     },
     {
@@ -410,7 +425,7 @@ export const useTransferPage = () => {
       key: "delivery",
       label: "投递健康",
       value: `${successCount.value}/${deliveryCount.value}`,
-      description: "今日成功投递与总投递的比例关系",
+      description: "选中日期成功投递与总投递的比例关系",
       tone: successRate.value >= 95 ? "success" : "warning",
     },
   ]);
@@ -520,7 +535,7 @@ export const useTransferPage = () => {
     },
   ]);
 
-  const trendSeries = computed(() => buildTrendSeries());
+  const trendSeries = computed(() => buildTrendSeries(taskDate.value));
   const trendData = computed(() => {
     const startIndex = Math.max(
       0,
@@ -881,17 +896,16 @@ export const useTransferPage = () => {
   const formatJson = (value: unknown) => JSON.stringify(value ?? {}, null, 2);
   const paged = <T>(items: T[]) => items;
 
-  const mapRunLogPageQuery = (): PageLogsParams => ({
-    pageIndex: 0,
-    pageSize: 1000,
+  const mapRunLogListQuery = (currentTaskDate: string): ListLogsParams => ({
     runStage: "DELIVER",
+    taskDate: currentTaskDate,
+    limit: 1000,
   });
 
-  const loadOverviewRunLogs = async () => {
+  const loadOverviewRunLogs = async (currentTaskDate = taskDate.value) => {
     try {
-      const res = await api.pageLogs(mapRunLogPageQuery());
-      runLogRows.value = res?.data ?? [];
-      logs.value = runLogRows.value.map((item, index) => ({
+      const res = await api.listLogs(mapRunLogListQuery(currentTaskDate));
+      logs.value = (res?.data ?? []).map((item, index) => ({
         id: item.runLogId || `${index}`,
         fileName: item.originalName || item.transferId || item.runLogId || "-",
         source: item.sourceName || item.sourceCode || item.sourceType || "-",
@@ -922,12 +936,25 @@ export const useTransferPage = () => {
       }));
     } catch (error) {
       console.error("加载总览运行日志失败:", error);
-      runLogRows.value = [];
       logs.value = [];
     }
   };
 
-  const loadOverviewSnapshot = async () => {
+  const loadOverviewTrend = async (currentTaskDate = taskDate.value) => {
+    try {
+      const res = await listTransferRunLogTrends({
+        days: 30,
+        taskDate: currentTaskDate,
+      });
+      trendRows.value = res?.data ?? [];
+    } catch (error) {
+      console.error("加载文件投递趋势失败:", error);
+      trendRows.value = [];
+    }
+  };
+
+  const loadOverviewSnapshot = async (currentTaskDate = taskDate.value) => {
+    loading.value = true;
     try {
       const [
         sources,
@@ -935,7 +962,6 @@ export const useTransferPage = () => {
         rules,
         analysisResult,
         objectAnalysisResult,
-        runLogsPage,
         outsourcedTaskSummaryResult,
         outsourcedTaskFailedPageResult,
         outsourcedTaskBlockedPageResult,
@@ -944,21 +970,24 @@ export const useTransferPage = () => {
         api.listSources(),
         api.listTargets(),
         api.listRules(),
-        api.analyzeLogs(),
-        api.analyzeObjects(),
-        api.pageLogs(mapRunLogPageQuery()),
-        getOutsourcedDataTaskSummary(),
+        api.analyzeLogs({ taskDate: currentTaskDate }),
+        api.analyzeObjects({ taskDate: currentTaskDate }),
+        getOutsourcedDataTaskSummary({ taskDate: currentTaskDate }),
         pageOutsourcedDataTasks({
           status: "FAILED",
+          taskDate: currentTaskDate,
           pageIndex: 1,
           pageSize: 10,
         }),
         pageOutsourcedDataTasks({
           status: "BLOCKED",
+          taskDate: currentTaskDate,
           pageIndex: 1,
           pageSize: 10,
         }),
-        getTransferDeliveryRecordSummary().catch(() => null),
+        getTransferDeliveryRecordSummary({ taskDate: currentTaskDate }).catch(
+          () => null,
+        ),
       ]);
 
       sourceRows.value = unwrapMultiResult(sources);
@@ -968,7 +997,6 @@ export const useTransferPage = () => {
       const analysis = unwrapSingleResult(analysisResult);
       runLogAnalysis.value = analysis ?? null;
       objectAnalysis.value = unwrapSingleResult(objectAnalysisResult) ?? null;
-      runLogRows.value = runLogsPage?.data ?? [];
       outsourcedTaskSummary.value =
         unwrapSingleResult(outsourcedTaskSummaryResult) ?? null;
       outsourcedTaskRows.value = [
@@ -982,35 +1010,6 @@ export const useTransferPage = () => {
       });
       deliveryRecordSummary.value =
         unwrapSingleResult(deliverySummaryResult) ?? null;
-      logs.value = runLogRows.value.map((item, index) => ({
-        id: item.runLogId || `${index}`,
-        fileName: item.originalName || item.transferId || item.runLogId || "-",
-        source: item.sourceName || item.sourceCode || item.sourceType || "-",
-        target: item.targetName || item.routeName || "-",
-        route: item.routeName || item.routeId || "-",
-        status: item.runStatus || "UNKNOWN",
-        deliveredAt: item.createdAt || "",
-        snapshot: {
-          request: {
-            sourceId: item.sourceId,
-            sourceCode: item.sourceCode,
-            sourceName: item.sourceName,
-            sourceType: item.sourceType,
-            transferId: item.transferId,
-            routeId: item.routeId,
-            triggerType: item.triggerType,
-          },
-        },
-        deliveryId: item.runLogId,
-        transferId: item.transferId,
-        routeId: item.routeId,
-        targetCode: item.routeName || item.routeId,
-        targetType: item.sourceType,
-        executeStatus: item.runStatus,
-        executeStatusLabel: item.runStatusLabel || item.runStatus || "未知",
-        errorMessage: item.errorMessage,
-        createdAt: item.createdAt,
-      }));
     } catch (error) {
       console.error("加载分拣总览数据失败:", error);
       logs.value = [];
@@ -1019,15 +1018,31 @@ export const useTransferPage = () => {
       deliveryRecordSummary.value = null;
       outsourcedTaskSummary.value = null;
       outsourcedTaskRows.value = [];
-      await loadOverviewRunLogs();
     } finally {
+      await loadOverviewTrend(currentTaskDate);
       loading.value = false;
     }
   };
 
   onMounted(() => {
-    void loadOverviewSnapshot();
+    void loadOverviewSnapshot(taskDate.value);
   });
+
+  watch(taskDate, (currentTaskDate) => {
+    void loadOverviewSnapshot(currentTaskDate);
+    if (activeSection.value === "run-log") {
+      void loadOverviewRunLogs(currentTaskDate);
+    }
+  });
+
+  watch(
+    () => activeSection.value,
+    (section) => {
+      if (section === "run-log" && !logs.value.length) {
+        void loadOverviewRunLogs(taskDate.value);
+      }
+    },
+  );
 
   const page = reactive({
     activeSection,
@@ -1039,6 +1054,7 @@ export const useTransferPage = () => {
     logs,
     overviewHero,
     overviewHeroStats,
+    taskDateValue,
     pipelineCards,
     anomalyItems,
     overviewMetrics,

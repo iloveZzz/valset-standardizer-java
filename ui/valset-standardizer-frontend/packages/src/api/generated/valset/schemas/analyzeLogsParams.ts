@@ -34,4 +34,8 @@ export type AnalyzeLogsParams = {
    * 关键字
    */
   keyword?: string;
+  /**
+   * 任务日期
+   */
+  taskDate?: string;
 };

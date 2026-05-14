@@ -33,7 +33,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
@@ -92,12 +95,15 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                                           String tagId,
                                           String tagCode,
                                           String tagValue,
+                                          String taskDate,
                                           Integer pageIndex,
                                           Integer pageSize) {
         int current = pageIndex == null || pageIndex < 0 ? 1 : pageIndex + 1;
         int size = pageSize == null || pageSize <= 0 ? DEFAULT_PAGE_SIZE : pageSize;
         Long sourceIdValue = parseLong(sourceId);
         Long routeIdValue = parseLong(routeId);
+        LocalDateTime taskStart = resolveTaskStart(taskDate);
+        LocalDateTime taskEnd = resolveTaskEnd(taskDate);
         String mailFilterSql = buildMailFilterSql(mailId);
         String tagFilterSql = buildTagFilterSql(tagId, tagCode, tagValue);
         String deliveryFilterSql = buildDeliveryFilterSql(deliveryStatus);
@@ -109,6 +115,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                         .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
                         .like(originalName != null && !originalName.trim().isEmpty(), TransferObjectPO::getOriginalName, originalName)
                         .eq(status != null && !status.trim().isEmpty(), TransferObjectPO::getStatus, status)
+                        .ge(taskStart != null, TransferObjectPO::getReceivedAt, taskStart)
+                        .lt(taskEnd != null, TransferObjectPO::getReceivedAt, taskEnd)
                         .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                         .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                         .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
@@ -205,12 +213,15 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                                                  String deliveryStatus,
                                                  String mailId,
                                                  String fingerprint,
-                                                 String routeId,
-                                                 String tagId,
-                                                 String tagCode,
-                                                 String tagValue) {
+                                          String routeId,
+                                          String tagId,
+                                          String tagCode,
+                                          String tagValue,
+                                          String taskDate) {
         Long sourceIdValue = parseLong(sourceId);
         Long routeIdValue = parseLong(routeId);
+        LocalDateTime taskStart = resolveTaskStart(taskDate);
+        LocalDateTime taskEnd = resolveTaskEnd(taskDate);
         String mailFilterSql = buildMailFilterSql(mailId);
         String tagFilterSql = buildTagFilterSql(tagId, tagCode, tagValue);
         String deliveryFilterSql = buildDeliveryFilterSql(deliveryStatus);
@@ -221,6 +232,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                         .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
                         .like(originalName != null && !originalName.trim().isEmpty(), TransferObjectPO::getOriginalName, originalName)
                         .eq(status != null && !status.trim().isEmpty(), TransferObjectPO::getStatus, status)
+                                .ge(taskStart != null, TransferObjectPO::getReceivedAt, taskStart)
+                                .lt(taskEnd != null, TransferObjectPO::getReceivedAt, taskEnd)
                                 .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                                 .notInSql("UNDELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
                                 .inSql(mailFilterSql != null, TransferObjectPO::getTransferId, mailFilterSql)
@@ -474,6 +487,27 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
             return null;
         }
         return Long.valueOf(value);
+    }
+
+    private LocalDateTime resolveTaskStart(String taskDate) {
+        LocalDate taskDay = resolveTaskDate(taskDate);
+        return taskDay == null ? null : taskDay.atStartOfDay();
+    }
+
+    private LocalDateTime resolveTaskEnd(String taskDate) {
+        LocalDate taskDay = resolveTaskDate(taskDate);
+        return taskDay == null ? null : taskDay.plusDays(1).atStartOfDay();
+    }
+
+    private LocalDate resolveTaskDate(String taskDate) {
+        if (taskDate == null || taskDate.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(taskDate.trim());
+        } catch (DateTimeParseException exception) {
+            throw new IllegalArgumentException("不支持的任务日期: " + taskDate, exception);
+        }
     }
 
     private List<TransferObjectStatusCount> orderStatusCounts(Map<String, Long> statusCountMap) {

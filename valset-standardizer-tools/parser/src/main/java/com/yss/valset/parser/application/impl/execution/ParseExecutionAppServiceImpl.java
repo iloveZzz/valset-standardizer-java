@@ -2,304 +2,141 @@ package com.yss.valset.parser.application.impl.execution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.ParseTaskCommand;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
-import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.parser.application.port.ParseExecutionUseCase;
-import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
-import com.yss.valset.domain.gateway.DwdJjhzgzbGateway;
-import com.yss.valset.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
-import com.yss.valset.domain.gateway.TrIndexGateway;
-import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
-import com.yss.valset.domain.model.DataSourceConfig;
-import com.yss.valset.domain.model.DataSourceType;
-import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.WorkflowTask;
-import com.yss.valset.domain.model.ValsetFileInfo;
-import com.yss.valset.domain.parser.ValuationDataParser;
-import com.yss.valset.domain.parser.ValuationDataParserProvider;
-import com.yss.valset.domain.rule.ParseRuleTraceContext;
-import com.yss.valset.domain.rule.ParseRuleTraceContextHolder;
-import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
+import com.yss.valset.common.support.TaskFailureClassifier;
+import com.yss.valset.domain.model.TaskStage;
+import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.beans.factory.annotation.Qualifier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.function.Supplier;
+import org.springframework.util.StringUtils;
 
 /**
  * 解析工作流程实现。
+ *
+ * <p>
+ * 这个应用服务只负责 Spring Batch 的启动编排：
+ * 先补齐作业参数，再提交作业，最后根据执行结果把旧任务状态做兼容回写。
+ * 真正的解析、标准化和落库逻辑都在具体 Step 中完成。
+ * </p>
  */
 @Slf4j
 @Service
 public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
 
     private final WorkflowTaskGateway taskGateway;
-    private final ValuationDataParserProvider parserProvider;
-    private final DwdExternalValuationGateway dwdExternalValuationGateway;
-    private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
-    private final DwdJjhzgzbGateway dwdJjhzgzbGateway;
-    private final TrIndexGateway trIndexGateway;
-    private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
-    private final ExternalValuationStandardizationService standardizationService;
     private final ObjectMapper objectMapper;
-    private final ParseLifecycleEventPublisher parseLifecycleEventPublisher;
+    private final JobLauncher springBatchJobLauncher;
+    private final Job valuationParseJob;
 
     public ParseExecutionAppServiceImpl(
             WorkflowTaskGateway taskGateway,
-            ValuationDataParserProvider parserProvider,
-            DwdExternalValuationGateway dwdExternalValuationGateway,
-            StandardizedExternalValuationGateway standardizedExternalValuationGateway,
-            DwdJjhzgzbGateway dwdJjhzgzbGateway,
-            TrIndexGateway trIndexGateway,
-            ValsetFileInfoGateway subjectMatchFileInfoGateway,
-            ExternalValuationStandardizationService standardizationService,
             ObjectMapper objectMapper,
-            ParseLifecycleEventPublisher parseLifecycleEventPublisher
+            @Qualifier("springBatchJobLauncher") JobLauncher springBatchJobLauncher,
+            @Qualifier("valuationParseJob") Job valuationParseJob
     ) {
         this.taskGateway = taskGateway;
-        this.parserProvider = parserProvider;
-        this.dwdExternalValuationGateway = dwdExternalValuationGateway;
-        this.standardizedExternalValuationGateway = standardizedExternalValuationGateway;
-        this.dwdJjhzgzbGateway = dwdJjhzgzbGateway;
-        this.trIndexGateway = trIndexGateway;
-        this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
-        this.standardizationService = standardizationService;
         this.objectMapper = objectMapper;
-        this.parseLifecycleEventPublisher = parseLifecycleEventPublisher;
+        this.springBatchJobLauncher = springBatchJobLauncher;
+        this.valuationParseJob = valuationParseJob;
     }
 
     /**
-     * 执行任务 ID 的解析工作流程。
+     * 启动估值表解析作业。
+     *
+     * <p>
+     * 这里不直接执行业务逻辑，而是把任务信息封装成 JobParameters 交给 Spring Batch，
+     * 由 Job 内部的三个 Step 依次完成。
+     * </p>
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public void execute(Long taskId) {
         WorkflowTask workflowTask = taskGateway.findById(taskId);
-        ParseRuleTraceContext traceContext = ParseRuleTraceContext.builder()
-                .profileId(null)
-                .profileCode("runtime")
-                .version("runtime")
-                .fileId(workflowTask == null ? null : workflowTask.getFileId())
-                .taskId(taskId)
-                .traceEnabled(Boolean.FALSE)
-                .traceScope("RUNTIME_PARSE")
-                .build();
-        try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
-            ParseTaskCommand command = null;
-            ParseLifecycleStage currentStage = ParseLifecycleStage.FILE_PARSE;
-            try {
-                long startedAt = System.currentTimeMillis();
-                log.info("开始执行估值数据解析任务，taskId={}", taskId);
-                command = objectMapper.readValue(workflowTask.getInputPayload(), ParseTaskCommand.class);
-
-                String sourceTypeStr = command.getDataSourceType();
-                DataSourceType type = DataSourceType.EXCEL;
-                if (sourceTypeStr != null && !sourceTypeStr.trim().isEmpty()) {
-                    type = DataSourceType.valueOf(sourceTypeStr.toUpperCase());
-                }
-
-                DataSourceConfig config = buildAnalysisConfig(type, resolveAnalysisWorkbookPath(command), command.getFileId());
-
-                ValuationDataParser parser = parserProvider.getParser(type);
-                log.debug("解析任务 {} 使用分析器 {}，sourceType={}, sourceUri={}, fileId={}",
-                        taskId,
-                        parser.getClass().getSimpleName(),
-                        type,
-                        config.getSourceUri(),
-                        command.getFileId());
-
-                long parseStartedAt = System.currentTimeMillis();
-                ParsedValuationData parsedValuationData = traceSpan("workflow.parse.raw_parse", () -> parser.parse(config));
-                long parseFinishedAt = System.currentTimeMillis();
-                validateParsedValuationData(parsedValuationData, command);
-                String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-                parsedValuationData = parsedValuationData.toBuilder()
-                        .fileNameOriginal(fileNameOriginal)
-                        .build();
-                final ParsedValuationData parsedValuationDataFinal = parsedValuationData;
-
-                traceSpan("workflow.parse.persist_raw_dwd", () ->
-                        dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), parsedValuationDataFinal));
-                publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
-
-                long standardizeStartedAt = System.currentTimeMillis();
-                currentStage = ParseLifecycleStage.STRUCTURE_STANDARDIZE;
-                ParsedValuationData standardizedValuationData = traceSpan("workflow.parse.standardize",
-                        () -> standardizationService.standardize(parsedValuationDataFinal));
-                long standardizeFinishedAt = System.currentTimeMillis();
-                standardizedValuationData = standardizedValuationData == null ? null : standardizedValuationData.toBuilder()
-                        .fileNameOriginal(fileNameOriginal)
-                        .build();
-                publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
-
-                String sourceSign = fileNameOriginal;
-                String sourceTypeName = type.name();
-                ParsedValuationData finalStandardizedValuationData = standardizedValuationData;
-                currentStage = ParseLifecycleStage.STANDARD_LANDING;
-                traceSpan("workflow.parse.persist_standardized", () -> {
-                    standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), finalStandardizedValuationData);
-                    dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-                    trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-                });
-                long persistFinishedAt = System.currentTimeMillis();
-
-                long standardizeDurationMs = standardizeFinishedAt - standardizeStartedAt;
-                taskGateway.updateTaskTimings(taskId, null, standardizeDurationMs, null);
-                String resultPayload = buildResultPayload(parsedValuationDataFinal);
-                taskGateway.markSuccess(taskId, resultPayload);
-                publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
-                log.info("估值数据解析任务执行完成，taskId={}, subjectCount={}, metricCount={}",
-                        taskId,
-                        parsedValuationDataFinal.getSubjects() == null ? 0 : parsedValuationDataFinal.getSubjects().size(),
-                        parsedValuationDataFinal.getMetrics() == null ? 0 : parsedValuationDataFinal.getMetrics().size());
-                log.info("解析流程耗时统计，taskId={}, totalMs={}, parseMs={}, standardizeMs={}, persistMs={}",
-                        taskId,
-                        System.currentTimeMillis() - startedAt,
-                        parseFinishedAt - parseStartedAt,
-                        standardizeFinishedAt - standardizeStartedAt,
-                        persistFinishedAt - standardizeFinishedAt);
-            } catch (Exception e) {
-                publishLifecycleEvent(currentStage, taskId, command, "解析任务执行失败", com.yss.valset.common.support.Java8Maps.of(
-                        "errorMessage", e.getMessage() == null ? e.getClass().getName() : e.getMessage(),
-                        "errorType", e.getClass().getName()
-                ));
-                log.error("执行估值数据解析任务失败，taskId={}", taskId, e);
-                throw new IllegalStateException("Failed to execute parse task " + taskId, e);
+        if (workflowTask == null) {
+            throw new IllegalStateException("未找到解析任务，taskId=" + taskId);
+        }
+        log.info("开始执行 Spring Batch 估值解析任务，taskId={}", taskId);
+        taskGateway.markRunning(taskId, TaskStage.PARSE.name(), java.time.LocalDateTime.now());
+        String inputPayload = workflowTask.getInputPayload();
+        JobParameters jobParameters = new JobParametersBuilder()
+                .addLong("taskId", taskId, true)
+                .addString("taskType", workflowTask.getTaskType() == null ? null : workflowTask.getTaskType().name(), true)
+                .addString("taskStage", workflowTask.getTaskStage() == null ? null : workflowTask.getTaskStage().name(), true)
+                .addString("businessKey", workflowTask.getBusinessKey(), false)
+                .addLong("fileId", workflowTask.getFileId(), false)
+                .addString("inputPayload", StringUtils.hasText(inputPayload) ? inputPayload : null, false)
+                .addDate("triggerTime", new java.util.Date(), false)
+                .toJobParameters();
+        try {
+            JobExecution jobExecution = springBatchJobLauncher.run(valuationParseJob, jobParameters);
+            updateLegacyTaskResult(taskId, jobExecution);
+            if (jobExecution == null || jobExecution.getStatus() == null || jobExecution.getStatus().isUnsuccessful()) {
+                String failureMessage = resolveFailureMessage(jobExecution, taskId);
+                taskGateway.markFailed(taskId, failureMessage);
+                throw new IllegalStateException(failureMessage);
             }
+            log.info("Spring Batch 估值解析任务执行完成，taskId={}, jobExecutionId={}, status={}",
+                    taskId,
+                    jobExecution.getId(),
+                    jobExecution.getStatus());
+        } catch (Exception exception) {
+            String failureMessage = TaskFailureClassifier.resolveReadableMessage(exception);
+            taskGateway.markFailed(taskId, failureMessage);
+            log.error("Spring Batch 估值解析任务执行失败，taskId={}", taskId, exception);
+            throw new IllegalStateException("Failed to execute parse task " + taskId, exception);
         }
-    }
-
-    private <T> T traceSpan(String spanName, Supplier<T> supplier) {
-        return supplier.get();
-    }
-
-    private void traceSpan(String spanName, Runnable runnable) {
-        runnable.run();
-    }
-
-    private String resolveFileNameOriginal(WorkflowTask workflowTask) {
-        ValsetFileInfo fileInfo = workflowTask == null || workflowTask.getFileId() == null
-                ? null
-                : subjectMatchFileInfoGateway.findById(workflowTask.getFileId());
-        return fileInfo == null ? null : fileInfo.getFileNameOriginal();
-    }
-
-    private String firstNonBlank(String... candidates) {
-        if (candidates == null) {
-            return null;
-        }
-        for (String candidate : candidates) {
-            if (candidate != null && !candidate.trim().isEmpty()) {
-                return candidate.trim();
-            }
-        }
-        return null;
-    }
-
-    private DataSourceConfig buildAnalysisConfig(DataSourceType type, String sourceUri, Long fileId) {
-        return DataSourceConfig.builder()
-                .sourceType(type)
-                .sourceUri(sourceUri)
-                .additionalParams(fileId == null ? null : String.valueOf(fileId))
-                .build();
-    }
-
-    private String resolveAnalysisWorkbookPath(ParseTaskCommand command) {
-        String commandPath = command == null ? null : command.getWorkbookPath();
-        Long fileId = command == null ? null : command.getFileId();
-        ValsetFileInfo fileInfo = fileId == null ? null : subjectMatchFileInfoGateway.findById(fileId);
-        String tempPath = fileInfo == null ? null : fileInfo.getLocalTempPath();
-        String realPath = fileInfo == null ? null : fileInfo.getRealStoragePath();
-        String selectedPath = firstReadablePath(commandPath, tempPath, realPath);
-        if (selectedPath != null) {
-            return selectedPath;
-        }
-        return commandPath;
-    }
-
-    private String firstReadablePath(String... candidates) {
-        if (candidates == null) {
-            return null;
-        }
-        for (String candidate : candidates) {
-            if (candidate == null || candidate.trim().isEmpty()) {
-                continue;
-            }
-            try {
-                Path path = Paths.get(candidate.trim());
-                if (Files.exists(path) && Files.isReadable(path)) {
-                    return path.toString();
-                }
-            } catch (InvalidPathException ignored) {
-                log.warn("解析任务文件路径无效，已跳过，path={}", candidate);
-            }
-        }
-        return null;
     }
 
     /**
-     * 为解析任务构建结构化结果有效负载。
+     * 将 Spring Batch 的执行结果同步回旧任务模型，保证迁移期页面和接口还能读到结果。
      */
-    private String buildResultPayload(ParsedValuationData parsedValuationData) {
-        try {
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("workbookPath", parsedValuationData.getWorkbookPath());
-            payload.put("sheetName", parsedValuationData.getSheetName());
-            payload.put("fileNameOriginal", parsedValuationData.getFileNameOriginal());
-            payload.put("subjectCount", parsedValuationData.getSubjects() == null ? 0 : parsedValuationData.getSubjects().size());
-            payload.put("metricCount", parsedValuationData.getMetrics() == null ? 0 : parsedValuationData.getMetrics().size());
-            return objectMapper.writeValueAsString(payload);
-        } catch (Exception exception) {
-            return "Parsed workbook: " + parsedValuationData.getWorkbookPath();
-        }
-    }
-
-    private void validateParsedValuationData(ParsedValuationData parsedValuationData, ParseTaskCommand command) {
-        if (parsedValuationData == null) {
-            throw new IllegalStateException("解析失败，未返回结构化数据，fileId=" + (command == null ? null : command.getFileId()));
-        }
-        if (parsedValuationData.getHeaderRowNumber() == null || parsedValuationData.getDataStartRowNumber() == null) {
-            throw new IllegalStateException("解析失败，未识别表头行号或数据起始行号，fileId="
-                    + (command == null ? null : command.getFileId())
-                    + ", headerRowNumber=" + parsedValuationData.getHeaderRowNumber()
-                    + ", dataStartRowNumber=" + parsedValuationData.getDataStartRowNumber());
-        }
-    }
-
-    private void publishLifecycleEvent(ParseLifecycleStage stage, Long taskId, ParseTaskCommand command, String message) {
-        publishLifecycleEvent(stage, taskId, command, message, java.util.Collections.emptyMap());
-    }
-
-    private void publishLifecycleEvent(ParseLifecycleStage stage, Long taskId, ParseTaskCommand command, String message, Map<String, Object> attributes) {
-        if (parseLifecycleEventPublisher == null || stage == null) {
+    private void updateLegacyTaskResult(Long taskId, JobExecution jobExecution) {
+        if (jobExecution == null) {
             return;
         }
-        ParseLifecycleEvent.ParseLifecycleEventBuilder builder = ParseLifecycleEvent.builder()
-                .stage(stage)
-                .source("parse-execution")
-                .taskId(taskId)
-                .message(message);
-        if (command != null) {
-            builder.fileId(command.getFileId())
-                    .dataSourceType(command.getDataSourceType());
+        long fileParseMs = readExecutionContextLong(jobExecution, com.yss.valset.parser.application.support.ParseBatchStepSupport.JOB_CONTEXT_FILE_PARSE_MS);
+        long standardizeMs = readExecutionContextLong(jobExecution, com.yss.valset.parser.application.support.ParseBatchStepSupport.JOB_CONTEXT_STANDARDIZE_MS);
+        if (fileParseMs > 0 || standardizeMs > 0) {
+            taskGateway.updateTaskTimings(taskId, fileParseMs, standardizeMs, null);
         }
-        if (attributes != null && !attributes.isEmpty()) {
-            LinkedHashMap<String, Object> mergedAttributes = new LinkedHashMap<>(attributes);
-            if (command != null && command.getForceRebuild() != null) {
-                mergedAttributes.put("forceRebuild", command.getForceRebuild());
+        if (BatchStatus.COMPLETED.equals(jobExecution.getStatus())) {
+            String resultPayload = jobExecution.getExecutionContext().getString(
+                    com.yss.valset.parser.application.support.ParseBatchStepSupport.JOB_CONTEXT_RESULT_PAYLOAD,
+                    null);
+            if (resultPayload != null) {
+                taskGateway.markSuccess(taskId, resultPayload);
             }
-            builder.attributes(mergedAttributes);
-        } else if (command != null && command.getForceRebuild() != null) {
-            builder.attributes(com.yss.valset.common.support.Java8Maps.of("forceRebuild", command.getForceRebuild()));
         }
-        parseLifecycleEventPublisher.publish(builder.build());
+    }
+
+    /**
+     * 从作业上下文读取耗时字段，避免步骤间重复计算。
+     */
+    private long readExecutionContextLong(JobExecution jobExecution, String key) {
+        if (jobExecution == null || jobExecution.getExecutionContext() == null) {
+            return 0L;
+        }
+        return jobExecution.getExecutionContext().getLong(key, 0L);
+    }
+
+    /**
+     * 归一化作业失败消息，优先返回真正的异常信息。
+     */
+    private String resolveFailureMessage(JobExecution jobExecution, Long taskId) {
+        if (jobExecution == null) {
+            return "Spring Batch 解析任务失败，taskId=" + taskId;
+        }
+        if (jobExecution.getAllFailureExceptions() != null && !jobExecution.getAllFailureExceptions().isEmpty()) {
+            Throwable throwable = jobExecution.getAllFailureExceptions().get(0);
+            return TaskFailureClassifier.resolveReadableMessage(throwable);
+        }
+        return "Spring Batch 解析任务失败，taskId=" + taskId + ", status=" + jobExecution.getStatus();
     }
 }

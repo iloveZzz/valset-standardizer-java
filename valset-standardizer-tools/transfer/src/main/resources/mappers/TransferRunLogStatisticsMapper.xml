@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.valset.transfer.infrastructure.mapper.TransferRunLogStatisticsMapper">
+
+    <select id="selectDeliverTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO" databaseId="MySQL">
+        SELECT
+            DATE_FORMAT(created_at, '%Y-%m-%d') AS trend_date,
+            COUNT(1) AS count
+        FROM t_transfer_run_log
+        WHERE run_stage = 'DELIVER'
+          AND created_at <![CDATA[>=]]> #{startInclusive}
+          AND created_at <![CDATA[<]]> #{endExclusive}
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+        ORDER BY trend_date
+    </select>
+
+    <select id="selectDeliverTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO" databaseId="PostgreSQL">
+        SELECT
+            TO_CHAR(created_at, 'YYYY-MM-DD') AS trend_date,
+            COUNT(1) AS count
+        FROM t_transfer_run_log
+        WHERE run_stage = 'DELIVER'
+          AND created_at <![CDATA[>=]]> #{startInclusive}
+          AND created_at <![CDATA[<]]> #{endExclusive}
+        GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+        ORDER BY trend_date
+    </select>
+
+    <select id="selectDeliverTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO" databaseId="Oracle">
+        SELECT
+            TO_CHAR(created_at, 'YYYY-MM-DD') AS trend_date,
+            COUNT(1) AS count
+        FROM t_transfer_run_log
+        WHERE run_stage = 'DELIVER'
+          AND created_at <![CDATA[>=]]> #{startInclusive}
+          AND created_at <![CDATA[<]]> #{endExclusive}
+        GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+        ORDER BY trend_date
+    </select>
+
+</mapper>

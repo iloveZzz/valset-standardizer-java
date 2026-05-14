@@ -325,7 +325,12 @@ onBeforeUnmount(() => {
                   {{ page.overviewHero.title }}
                 </div>
                 <div class="overview-hero-head-right">
-                  <strong>{{ page.overviewHero.lastRefresh }}</strong>
+                  <span class="overview-task-date-label">任务日期</span>
+                  <a-date-picker
+                    v-model:value="page.taskDateValue"
+                    :allowClear="false"
+                    format="YYYY-MM-DD"
+                  />
                   <a-tag :color="page.overviewHero.healthTone">
                     {{ page.overviewHero.healthLabel }}
                   </a-tag>
@@ -655,7 +660,7 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-else-if="page.activeSection === 'log'"
+          v-else-if="page.activeSection === 'run-log'"
           class="workspace-section"
         >
           <div class="section-title"><h3>运行日志</h3></div>

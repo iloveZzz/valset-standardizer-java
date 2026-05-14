@@ -54,4 +54,8 @@ export type AnalyzeObjectsParams = {
    * 标签值
    */
   tagValue?: string;
+  /**
+   * 任务日期
+   */
+  taskDate?: string;
 };

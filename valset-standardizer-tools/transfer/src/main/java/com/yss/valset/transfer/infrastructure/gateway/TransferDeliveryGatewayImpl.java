@@ -89,6 +89,26 @@ public class TransferDeliveryGatewayImpl implements TransferDeliveryGateway {
     }
 
     @Override
+    public long countDistinctTransferIdsByDeliveredAtBetween(LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        return countDistinctTransferIdsByDeliveredAtBetweenAndExecuteStatus(startInclusive, endExclusive, null);
+    }
+
+    @Override
+    public long countDistinctTransferIdsByDeliveredAtBetweenAndExecuteStatus(LocalDateTime startInclusive,
+                                                                             LocalDateTime endExclusive,
+                                                                             String executeStatus) {
+        return transferDeliveryRecordRepository.selectList(
+                        Wrappers.lambdaQuery(TransferDeliveryRecordPO.class)
+                                .select(TransferDeliveryRecordPO::getTransferId)
+                                .ge(TransferDeliveryRecordPO::getDeliveredAt, startInclusive)
+                                .lt(TransferDeliveryRecordPO::getDeliveredAt, endExclusive)
+                                .eq(executeStatus != null && !executeStatus.trim().isEmpty(), TransferDeliveryRecordPO::getExecuteStatus, executeStatus)
+                                .groupBy(TransferDeliveryRecordPO::getTransferId)
+                )
+                .size();
+    }
+
+    @Override
     public List<TransferDeliveryRecord> listRecords(String routeId, String transferId, String targetCode, String executeStatus, Integer limit) {
         Long routeIdValue = parseLong(routeId);
         Long transferIdValue = parseLong(transferId);

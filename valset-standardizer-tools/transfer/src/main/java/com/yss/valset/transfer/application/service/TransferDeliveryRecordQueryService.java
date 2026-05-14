@@ -10,7 +10,8 @@ public interface TransferDeliveryRecordQueryService {
     /**
      * 统计当天文件投递结果。
      *
+     * @param taskDate 任务日期
      * @return 当天文件投递统计视图
      */
-    TransferDeliveryRecordSummaryViewDTO summarizeToday();
+    TransferDeliveryRecordSummaryViewDTO summarizeToday(String taskDate);
 }

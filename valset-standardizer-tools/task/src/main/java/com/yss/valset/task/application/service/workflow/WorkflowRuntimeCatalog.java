@@ -3,70 +3,57 @@ package com.yss.valset.task.application.service.workflow;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskType;
-import com.yss.valset.common.support.DatabaseDialectSupport;
-import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStage;
-import com.yss.valset.task.infrastructure.entity.workflow.OutsourcedWorkflowDefinitionPO;
-import com.yss.valset.task.infrastructure.entity.workflow.OutsourcedWorkflowStagePO;
-import com.yss.valset.task.infrastructure.mapper.workflow.OutsourcedWorkflowDefinitionRepository;
-import com.yss.valset.task.infrastructure.mapper.workflow.OutsourcedWorkflowStageRepository;
+import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
 import lombok.Data;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 工作流运行态阶段目录。
+ *
+ * <p>
+ * 当前版本直接使用固定的三段式 Spring Batch 业务阶段定义。
+ * 这样做的目的，是把估值表解析的运行态收敛为代码内常量，避免业务链路继续依赖外部工作流配置表。
+ * </p>
  */
 @Component
 public class WorkflowRuntimeCatalog {
 
     private static final String DEFAULT_WORKFLOW_CODE = "VALUATION_PARSE";
+    private static final String DEFAULT_WORKFLOW_ID = "VALUATION_PARSE";
+    private static final Integer DEFAULT_WORKFLOW_VERSION = 1;
 
-    private OutsourcedWorkflowDefinitionRepository definitionRepository;
-    private OutsourcedWorkflowStageRepository stageRepository;
-    private DatabaseDialectSupport databaseDialectSupport;
+    private static final List<StageDefinition> STAGES = Collections.unmodifiableList(Arrays.asList(
+            stage(OutsourcedDataTaskStage.FILE_PARSE, "原始文件抽取与解析"),
+            stage(OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE, "字段映射与结构标准化"),
+            stage(OutsourcedDataTaskStage.STANDARD_LANDING, "标准表落地")
+    ));
 
-    private final AtomicReference<ActiveWorkflowDefinition> activeWorkflowDefinitionCache = new AtomicReference<>();
+    private static final ActiveWorkflowDefinition ACTIVE_WORKFLOW_DEFINITION;
 
-    private volatile boolean activeWorkflowDefinitionResolved;
-
-    @Autowired(required = false)
-    public void setDefinitionRepository(OutsourcedWorkflowDefinitionRepository definitionRepository) {
-        this.definitionRepository = definitionRepository;
-    }
-
-    @Autowired(required = false)
-    public void setStageRepository(OutsourcedWorkflowStageRepository stageRepository) {
-        this.stageRepository = stageRepository;
-    }
-
-    @Autowired(required = false)
-    public void setDatabaseDialectSupport(DatabaseDialectSupport databaseDialectSupport) {
-        this.databaseDialectSupport = databaseDialectSupport;
-    }
-
-    private String limitClause(Integer limit) {
-        if (limit == null || limit <= 0) {
-            return null;
-        }
-        return databaseDialectSupport == null ? "limit " + limit : databaseDialectSupport.limitClause(limit);
+    static {
+        ActiveWorkflowDefinition definition = new ActiveWorkflowDefinition();
+        definition.setWorkflowId(DEFAULT_WORKFLOW_ID);
+        definition.setWorkflowCode(DEFAULT_WORKFLOW_CODE);
+        definition.setWorkflowName("估值表解析工作流");
+        definition.setEngineType("INTERNAL");
+        definition.setParseFallbackStage(OutsourcedDataTaskStage.FILE_PARSE.name());
+        definition.setWorkflowFallbackStage(OutsourcedDataTaskStage.STANDARD_LANDING.name());
+        definition.setVersionNo(DEFAULT_WORKFLOW_VERSION);
+        definition.setStages(new ArrayList<>(STAGES));
+        ACTIVE_WORKFLOW_DEFINITION = definition;
     }
 
     public List<StageDefinition> getStages() {
-        List<StageDefinition> dbStages = activeDefinition()
-                .map(this::toStageDefinitions)
-                .orElse(java.util.Arrays.asList());
-        if (dbStages.isEmpty()) {
-            throw new IllegalStateException("未找到启用中的工作流阶段配置：" + DEFAULT_WORKFLOW_CODE);
-        }
-        return dbStages;
+        return new ArrayList<>(STAGES);
     }
 
     public List<StatusDefinition> getStatuses() {
@@ -75,39 +62,30 @@ public class WorkflowRuntimeCatalog {
 
     public List<String> getIgnoredWorkflowTaskTypes() {
         List<String> defaults = defaultIgnoredWorkflowTaskTypes();
-        List<String> extras = java.util.Arrays.asList(TaskType.MATCH_SUBJECT.name(), TaskType.EXPORT_RESULT.name());
+        List<String> extras = Arrays.asList(TaskType.MATCH_SUBJECT.name(), TaskType.EXPORT_RESULT.name());
         List<String> merged = new ArrayList<>(defaults);
         merged.addAll(extras);
         return merged.stream().distinct().collect(java.util.stream.Collectors.toList());
     }
 
     public Optional<ActiveWorkflowDefinition> activeWorkflowDefinition() {
-        return activeDefinition();
+        return Optional.of(copyWorkflowDefinition(ACTIVE_WORKFLOW_DEFINITION));
     }
 
     public void refreshActiveWorkflowDefinition() {
-        activeWorkflowDefinitionCache.set(null);
-        activeWorkflowDefinitionResolved = false;
+        // 静态目录无需刷新，保留该方法仅为了兼容旧调用点。
     }
 
     public String activeWorkflowCode() {
-        return activeWorkflowDefinition()
-                .map(ActiveWorkflowDefinition::getWorkflowCode)
-                .filter(StringUtils::hasText)
-                .orElse(DEFAULT_WORKFLOW_CODE);
+        return ACTIVE_WORKFLOW_DEFINITION.getWorkflowCode();
     }
 
     public String activeWorkflowId() {
-        return activeWorkflowDefinition()
-                .map(ActiveWorkflowDefinition::getWorkflowId)
-                .filter(StringUtils::hasText)
-                .orElse(null);
+        return ACTIVE_WORKFLOW_DEFINITION.getWorkflowId();
     }
 
     public Integer activeWorkflowVersionNo() {
-        return activeWorkflowDefinition()
-                .map(ActiveWorkflowDefinition::getVersionNo)
-                .orElse(null);
+        return ACTIVE_WORKFLOW_DEFINITION.getVersionNo();
     }
 
     public List<OutsourcedDataTaskStage> stageSequence() {
@@ -132,8 +110,9 @@ public class WorkflowRuntimeCatalog {
         if (!StringUtils.hasText(stage)) {
             return firstStage();
         }
-        String normalized = stage.trim();
+        String normalized = stage.trim().toUpperCase();
         if (Objects.equals(OutsourcedDataTaskStage.RAW_DATA_EXTRACT.name(), normalized)
+                || Objects.equals("PARSE", normalized)
                 || Objects.equals("TASK_RAW_PARSED", normalized)
                 || Objects.equals("TASK_CREATED", normalized)
                 || Objects.equals("TASK_DISPATCHED", normalized)
@@ -180,7 +159,8 @@ public class WorkflowRuntimeCatalog {
     }
 
     public OutsourcedDataTaskStage resolveWorkflowStage(TaskType taskType, TaskStage taskStage) {
-        if (taskType == TaskType.EXTRACT_DATA || taskStage == TaskStage.EXTRACT) {
+        if (taskType == TaskType.EXTRACT_DATA || taskStage == TaskStage.EXTRACT
+                || taskType == TaskType.PARSE_WORKBOOK || taskStage == TaskStage.PARSE) {
             return OutsourcedDataTaskStage.FILE_PARSE;
         }
         if (taskStage == TaskStage.STANDARDIZE) {
@@ -252,82 +232,11 @@ public class WorkflowRuntimeCatalog {
     }
 
     public OutsourcedDataTaskStage parseFallbackStage() {
-        String dbFallback = activeDefinition()
-                .map(ActiveWorkflowDefinition::getParseFallbackStage)
-                .orElse(null);
-        return resolveConfiguredStage(dbFallback, OutsourcedDataTaskStage.FILE_PARSE);
+        return OutsourcedDataTaskStage.FILE_PARSE;
     }
 
     public OutsourcedDataTaskStage workflowFallbackStage() {
-        String dbFallback = activeDefinition()
-                .map(ActiveWorkflowDefinition::getWorkflowFallbackStage)
-                .orElse(null);
-        return resolveConfiguredStage(dbFallback, OutsourcedDataTaskStage.STANDARD_LANDING);
-    }
-
-    private Optional<ActiveWorkflowDefinition> activeDefinition() {
-        if (definitionRepository == null) {
-            return Optional.empty();
-        }
-        ActiveWorkflowDefinition cached = activeWorkflowDefinitionCache.get();
-        if (activeWorkflowDefinitionResolved) {
-            return Optional.ofNullable(copyWorkflowDefinition(cached));
-        }
-        synchronized (activeWorkflowDefinitionCache) {
-            if (!activeWorkflowDefinitionResolved) {
-                try {
-                    activeWorkflowDefinitionCache
-                            .set(copyWorkflowDefinition(loadActiveDefinition(DEFAULT_WORKFLOW_CODE)));
-                } catch (Exception ignored) {
-                    activeWorkflowDefinitionCache.set(null);
-                } finally {
-                    activeWorkflowDefinitionResolved = true;
-                }
-            }
-        }
-        return Optional.ofNullable(copyWorkflowDefinition(activeWorkflowDefinitionCache.get()));
-    }
-
-    private ActiveWorkflowDefinition loadActiveDefinition(String workflowCode) {
-        if (!StringUtils.hasText(workflowCode) || definitionRepository == null) {
-            return null;
-        }
-        OutsourcedWorkflowDefinitionPO definitionPO = definitionRepository.selectOne(
-                com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(OutsourcedWorkflowDefinitionPO.class)
-                        .eq(OutsourcedWorkflowDefinitionPO::getWorkflowCode, workflowCode.trim())
-                        .eq(OutsourcedWorkflowDefinitionPO::getEnabled, true)
-                        .orderByDesc(OutsourcedWorkflowDefinitionPO::getVersionNo)
-                        .last(limitClause(1)));
-        if (definitionPO == null) {
-            return null;
-        }
-        ActiveWorkflowDefinition definition = new ActiveWorkflowDefinition();
-        definition.setWorkflowId(definitionPO.getWorkflowId());
-        definition.setWorkflowCode(definitionPO.getWorkflowCode());
-        definition.setWorkflowName(definitionPO.getWorkflowName());
-        definition.setParseFallbackStage(definitionPO.getParseFallbackStage());
-        definition.setWorkflowFallbackStage(definitionPO.getWorkflowFallbackStage());
-        definition.setVersionNo(definitionPO.getVersionNo());
-        definition.setEngineType("INTERNAL");
-        definition.setStages(loadStages(definitionPO.getWorkflowId()));
-        return definition;
-    }
-
-    private List<OutsourcedWorkflowStagePO> loadStages(String workflowId) {
-        if (!StringUtils.hasText(workflowId) || stageRepository == null) {
-            return java.util.Arrays.asList();
-        }
-        List<OutsourcedWorkflowStagePO> stagePOs = stageRepository.selectList(
-                com.baomidou.mybatisplus.core.toolkit.Wrappers.lambdaQuery(OutsourcedWorkflowStagePO.class)
-                        .eq(OutsourcedWorkflowStagePO::getWorkflowId, workflowId.trim())
-                        .eq(OutsourcedWorkflowStagePO::getEnabled, true)
-                        .orderByAsc(OutsourcedWorkflowStagePO::getSortOrder));
-        if (stagePOs == null || stagePOs.isEmpty()) {
-            return java.util.Arrays.asList();
-        }
-        return stagePOs.stream()
-                .filter(Objects::nonNull)
-                .collect(java.util.stream.Collectors.toList());
+        return OutsourcedDataTaskStage.STANDARD_LANDING;
     }
 
     private ActiveWorkflowDefinition copyWorkflowDefinition(ActiveWorkflowDefinition source) {
@@ -342,53 +251,28 @@ public class WorkflowRuntimeCatalog {
         copy.setParseFallbackStage(source.getParseFallbackStage());
         copy.setWorkflowFallbackStage(source.getWorkflowFallbackStage());
         copy.setVersionNo(source.getVersionNo());
-        copy.setStages(source.getStages() == null ? java.util.Arrays.asList() : new ArrayList<>(source.getStages()));
+        copy.setStages(source.getStages() == null ? new ArrayList<>() : new ArrayList<>(source.getStages()));
         return copy;
     }
 
-    private List<StageDefinition> toStageDefinitions(ActiveWorkflowDefinition definition) {
-        if (definition == null || definition.getStages() == null) {
-            return java.util.Arrays.asList();
-        }
-        return definition.getStages().stream()
-                .filter(stage -> stage != null && Boolean.TRUE.equals(stage.getEnabled()))
-                .map(this::toStageDefinition)
-                .filter(Objects::nonNull)
-                .collect(java.util.stream.Collectors.toList());
-    }
-
-    private StageDefinition toStageDefinition(OutsourcedWorkflowStagePO dto) {
-        if (!StringUtils.hasText(dto.getStageCode())) {
-            return null;
-        }
-        StageDefinition definition = new StageDefinition();
-        definition.setStage(dto.getStageCode());
-        definition.setStep(dto.getStageCode());
-        definition.setStageName(dto.getStageName());
-        definition.setStepName(dto.getStageName());
-        definition.setStageDescription(dto.getStageDescription());
-        definition.setStepDescription(dto.getStageDescription());
-        return definition;
-    }
-
     private static List<String> defaultIgnoredWorkflowTaskTypes() {
-        return java.util.Arrays.asList(TaskType.PARSE_WORKBOOK.name());
+        return Arrays.asList(TaskType.PARSE_WORKBOOK.name());
     }
 
     private static List<String> defaultSuccessTaskStatuses() {
-        return java.util.Arrays.asList(TaskStatus.SUCCESS.name());
+        return Arrays.asList(TaskStatus.SUCCESS.name());
     }
 
     private static List<String> defaultFailedTaskStatuses() {
-        return java.util.Arrays.asList(TaskStatus.FAILED.name());
+        return Arrays.asList(TaskStatus.FAILED.name());
     }
 
     private static List<String> defaultStoppedTaskStatuses() {
-        return java.util.Arrays.asList(TaskStatus.CANCELED.name());
+        return Arrays.asList(TaskStatus.CANCELED.name());
     }
 
     private static List<String> defaultRunningTaskStatuses() {
-        return java.util.Arrays.asList(TaskStatus.RUNNING.name(), TaskStatus.RETRYING.name());
+        return Arrays.asList(TaskStatus.RUNNING.name(), TaskStatus.RETRYING.name());
     }
 
     private static boolean contains(List<String> values, String value) {
@@ -406,40 +290,23 @@ public class WorkflowRuntimeCatalog {
         }
     }
 
-    private OutsourcedDataTaskStage resolveConfiguredStage(String stage, OutsourcedDataTaskStage fallback) {
-        if (!StringUtils.hasText(stage)) {
-            return fallback;
-        }
-        try {
-            OutsourcedDataTaskStage parsed = OutsourcedDataTaskStage.valueOf(stage.trim());
-            if (parsed == OutsourcedDataTaskStage.SUBJECT_RECOGNIZE
-                    || parsed == OutsourcedDataTaskStage.VERIFY_ARCHIVE
-                    || parsed == OutsourcedDataTaskStage.DATA_PROCESSING) {
-                return OutsourcedDataTaskStage.STANDARD_LANDING;
-            }
-            return parsed == OutsourcedDataTaskStage.RAW_DATA_EXTRACT ? OutsourcedDataTaskStage.FILE_PARSE : parsed;
-        } catch (Exception ignored) {
-            return fallback;
-        }
-    }
-
-    private static List<StatusDefinition> defaultStatuses() {
-        List<StatusDefinition> statuses = new ArrayList<>();
-        statuses.add(status("PENDING", "待处理"));
-        statuses.add(status("RUNNING", "处理中"));
-        statuses.add(status("SUCCESS", "已完成"));
-        statuses.add(status("FAILED", "失败"));
-        statuses.add(status("STOPPED", "已停止"));
-        statuses.add(status("BLOCKED", "阻塞"));
-        return statuses;
-    }
-
     private StageDefinition firstStageDefinition() {
         List<StageDefinition> stages = getStages();
         if (stages.isEmpty()) {
             throw new IllegalStateException("未找到启用中的工作流阶段配置：" + DEFAULT_WORKFLOW_CODE);
         }
         return stages.get(0);
+    }
+
+    private static StageDefinition stage(OutsourcedDataTaskStage stage, String description) {
+        StageDefinition definition = new StageDefinition();
+        definition.setStage(stage.name());
+        definition.setStep(stage.name());
+        definition.setStageName(stage.getLabel());
+        definition.setStepName(stage.getLabel());
+        definition.setStageDescription(description);
+        definition.setStepDescription(description);
+        return definition;
     }
 
     @Data
@@ -463,7 +330,6 @@ public class WorkflowRuntimeCatalog {
                 return null;
             }
         }
-
     }
 
     @Data
@@ -475,7 +341,7 @@ public class WorkflowRuntimeCatalog {
         private String parseFallbackStage;
         private String workflowFallbackStage;
         private Integer versionNo;
-        private List<OutsourcedWorkflowStagePO> stages = new ArrayList<>();
+        private List<StageDefinition> stages = new ArrayList<>();
     }
 
     @Data
@@ -493,5 +359,16 @@ public class WorkflowRuntimeCatalog {
         definition.setStatus(status);
         definition.setLabel(label);
         return definition;
+    }
+
+    private static List<StatusDefinition> defaultStatuses() {
+        List<StatusDefinition> statuses = new ArrayList<>();
+        statuses.add(status("PENDING", "待处理"));
+        statuses.add(status("RUNNING", "处理中"));
+        statuses.add(status("SUCCESS", "已完成"));
+        statuses.add(status("FAILED", "失败"));
+        statuses.add(status("STOPPED", "已停止"));
+        statuses.add(status("BLOCKED", "阻塞"));
+        return statuses;
     }
 }

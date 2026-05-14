@@ -2,7 +2,6 @@ package com.yss.valset.task.web.controller;
 
 import com.yss.cloud.dto.result.SingleResult;
 import com.yss.cloud.dto.result.PageResult;
-import com.yss.cloud.dto.result.SingleResult;
 import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
@@ -38,7 +37,7 @@ public class OutsourcedDataTaskController {
     }
 
     @GetMapping("/summary")
-    @Operation(summary = "查询估值表解析任务总览")
+    @Operation(summary = "查询 Spring Batch 估值表解析任务总览")
     public SingleResult<OutsourcedDataTaskSummaryDTO> summary(
             @RequestParam(value = "batchId", required = false) String batchId,
             @RequestParam(value = "taskDate", required = false) String taskDate,
@@ -55,7 +54,7 @@ public class OutsourcedDataTaskController {
     }
 
     @GetMapping
-    @Operation(summary = "分页查询估值表解析任务")
+    @Operation(summary = "分页查询 Spring Batch 估值表解析任务")
     public PageResult<OutsourcedDataTaskBatchDTO> pageTasks(
             @RequestParam(value = "batchId", required = false) String batchId,
             @RequestParam(value = "taskDate", required = false) String taskDate,
@@ -74,40 +73,40 @@ public class OutsourcedDataTaskController {
     }
 
     @GetMapping("/{batchId}")
-    @Operation(summary = "查询估值表解析任务详情")
+    @Operation(summary = "查询 Spring Batch 估值表解析任务详情")
     public SingleResult<OutsourcedDataTaskBatchDetailDTO> getTask(@PathVariable String batchId) {
         return SingleResult.of(outsourcedDataTaskService.getTask(batchId));
     }
 
     @GetMapping("/{batchId}/steps")
-    @Operation(summary = "查询估值表解析任务步骤明细")
+    @Operation(summary = "查询 Spring Batch 估值表解析任务步骤明细")
     public MultiResult<OutsourcedDataTaskStepDTO> listSteps(@PathVariable String batchId) {
         return MultiResult.of(outsourcedDataTaskService.listSteps(batchId));
     }
 
     @PostMapping("/{batchId}/execute")
-    @Operation(summary = "手动执行估值表解析任务")
+    @Operation(summary = "手动执行 Spring Batch 估值表解析任务")
     public SingleResult<OutsourcedDataTaskActionResultDTO> execute(@PathVariable String batchId,
             @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
         return SingleResult.of(outsourcedDataTaskService.execute(batchId, command));
     }
 
     @PostMapping("/{batchId}/retry")
-    @Operation(summary = "全流程重跑估值表解析任务")
+    @Operation(summary = "全流程重跑 Spring Batch 估值表解析任务")
     public SingleResult<OutsourcedDataTaskActionResultDTO> retry(@PathVariable String batchId,
             @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
         return SingleResult.of(outsourcedDataTaskService.retry(batchId, command));
     }
 
     @PostMapping("/{batchId}/stop")
-    @Operation(summary = "停止估值表解析任务")
+    @Operation(summary = "停止 Spring Batch 估值表解析任务")
     public SingleResult<OutsourcedDataTaskActionResultDTO> stop(@PathVariable String batchId,
             @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
         return SingleResult.of(outsourcedDataTaskService.stop(batchId, command));
     }
 
     @PostMapping("/{batchId}/steps/{stepId}/retry")
-    @Operation(summary = "重跑估值表解析任务步骤")
+    @Operation(summary = "重跑 Spring Batch 估值表解析任务步骤")
     public SingleResult<OutsourcedDataTaskActionResultDTO> retryStep(@PathVariable String batchId,
             @PathVariable String stepId,
             @RequestBody(required = false) OutsourcedDataTaskActionCommand command) {
@@ -115,21 +114,21 @@ public class OutsourcedDataTaskController {
     }
 
     @PostMapping("/batch-execute")
-    @Operation(summary = "批量手动执行估值表解析任务")
+    @Operation(summary = "批量手动执行 Spring Batch 估值表解析任务")
     public MultiResult<OutsourcedDataTaskActionResultDTO> batchExecute(
             @Valid @RequestBody OutsourcedDataTaskBatchCommand command) {
         return MultiResult.of(outsourcedDataTaskService.batchExecute(command));
     }
 
     @PostMapping("/batch-retry")
-    @Operation(summary = "批量全流程重跑估值表解析任务")
+    @Operation(summary = "批量全流程重跑 Spring Batch 估值表解析任务")
     public MultiResult<OutsourcedDataTaskActionResultDTO> batchRetry(
             @Valid @RequestBody OutsourcedDataTaskBatchCommand command) {
         return MultiResult.of(outsourcedDataTaskService.batchRetry(command));
     }
 
     @PostMapping("/batch-stop")
-    @Operation(summary = "批量停止估值表解析任务")
+    @Operation(summary = "批量停止 Spring Batch 估值表解析任务")
     public MultiResult<OutsourcedDataTaskActionResultDTO> batchStop(
             @Valid @RequestBody OutsourcedDataTaskBatchCommand command) {
         return MultiResult.of(outsourcedDataTaskService.batchStop(command));

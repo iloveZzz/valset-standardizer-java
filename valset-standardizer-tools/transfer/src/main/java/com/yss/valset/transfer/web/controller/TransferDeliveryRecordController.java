@@ -5,6 +5,7 @@ import com.yss.valset.transfer.application.dto.TransferDeliveryRecordSummaryView
 import com.yss.valset.transfer.application.service.TransferDeliveryRecordQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,11 +25,12 @@ public class TransferDeliveryRecordController {
     /**
      * 统计当天文件投递结果。
      *
+     * @param taskDate 任务日期
      * @return 当天投递统计
      */
     @GetMapping("/summary")
-    @Operation(summary = "统计当天文件投递结果", description = "按 Asia/Shanghai 时区统计当天的文件投递总数、成功数、失败数和成功率。")
-    public SingleResult<TransferDeliveryRecordSummaryViewDTO> summarizeToday() {
-        return SingleResult.of(transferDeliveryRecordQueryService.summarizeToday());
+    @Operation(summary = "统计当天文件投递结果", description = "按任务日期统计文件投递总数、成功数、失败数和成功率。")
+    public SingleResult<TransferDeliveryRecordSummaryViewDTO> summarizeToday(@RequestParam(value = "taskDate", required = false) String taskDate) {
+        return SingleResult.of(transferDeliveryRecordQueryService.summarizeToday(taskDate));
     }
 }

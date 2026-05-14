@@ -9,9 +9,12 @@ import com.yss.valset.transfer.domain.model.TransferRunLogStageAnalysis;
 import com.yss.valset.transfer.domain.model.TransferRunLogStatusCount;
 import com.yss.valset.transfer.domain.model.TransferRunLog;
 import com.yss.valset.transfer.domain.model.TransferRunLogPage;
+import com.yss.valset.transfer.domain.model.TransferRunLogTrend;
 import com.yss.valset.transfer.domain.model.TransferRunStage;
 import com.yss.valset.transfer.infrastructure.convertor.TransferRunLogMapper;
+import com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO;
 import com.yss.valset.transfer.infrastructure.entity.TransferRunLogPO;
+import com.yss.valset.transfer.infrastructure.mapper.TransferRunLogStatisticsMapper;
 import com.yss.valset.transfer.infrastructure.mapper.TransferRunLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
@@ -40,6 +43,7 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
 
     private final TransferRunLogRepository transferRunLogRepository;
     private final TransferRunLogMapper transferRunLogMapper;
+    private final TransferRunLogStatisticsMapper transferRunLogStatisticsMapper;
     private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
@@ -99,14 +103,16 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                                          String runStage,
                                          String runStatus,
                                          String triggerType,
+                                         LocalDateTime startInclusive,
+                                         LocalDateTime endExclusive,
                                          Integer limit) {
         int maxSize = limit == null || limit <= 0 ? DEFAULT_LIMIT : limit;
         List<TransferRunLog> logs;
         if (TransferRunStage.DELIVER.name().equalsIgnoreCase(trimToEmpty(runStage))
                 && "FAILED".equalsIgnoreCase(trimToEmpty(runStatus))) {
-            logs = collapseLatestTransferObjectLogs(loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, false, null, null));
+            logs = collapseLatestTransferObjectLogs(loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, startInclusive, endExclusive, false, null, null));
         } else {
-            logs = loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, true, null, limit);
+            logs = loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, startInclusive, endExclusive, true, null, limit);
         }
         return logs.size() <= maxSize ? logs : logs.subList(0, maxSize);
     }
@@ -119,13 +125,15 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                                        String runStatus,
         String triggerType,
         String keyword,
+        LocalDateTime startInclusive,
+        LocalDateTime endExclusive,
         Integer pageIndex,
         Integer pageSize) {
         int current = pageIndex == null || pageIndex < 0 ? 1 : pageIndex + 1;
         int size = pageSize == null || pageSize <= 0 ? DEFAULT_LIMIT : pageSize;
         if (TransferRunStage.DELIVER.name().equalsIgnoreCase(trimToEmpty(runStage))
                 && "FAILED".equalsIgnoreCase(trimToEmpty(runStatus))) {
-            List<TransferRunLog> logs = loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, false, keyword, null);
+            List<TransferRunLog> logs = loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, startInclusive, endExclusive, false, keyword, null);
             List<TransferRunLog> collapsedLogs = collapseLatestTransferObjectLogs(logs);
             List<TransferRunLog> records = slice(collapsedLogs, current - 1, size);
             return new TransferRunLogPage(records, collapsedLogs.size(), current - 1, size);
@@ -142,6 +150,8 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                         .eq(runStage != null && !runStage.trim().isEmpty(), TransferRunLogPO::getRunStage, runStage)
                         .eq(runStatus != null && !runStatus.trim().isEmpty(), TransferRunLogPO::getRunStatus, runStatus)
                         .eq(triggerType != null && !triggerType.trim().isEmpty(), TransferRunLogPO::getTriggerType, triggerType)
+                        .ge(startInclusive != null, TransferRunLogPO::getCreatedAt, startInclusive)
+                        .lt(endExclusive != null, TransferRunLogPO::getCreatedAt, endExclusive)
                         .and(StringUtils.hasText(keyword), wrapper -> wrapper
                                 .like(TransferRunLogPO::getSourceCode, keyword)
                                 .or()
@@ -170,8 +180,10 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                                               String runStage,
         String runStatus,
         String triggerType,
-        String keyword) {
-        List<TransferRunLog> logs = loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, false, keyword, null);
+                                       String keyword,
+                                       LocalDateTime startInclusive,
+                                       LocalDateTime endExclusive) {
+        List<TransferRunLog> logs = loadLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, startInclusive, endExclusive, false, keyword, null);
         Map<String, List<TransferRunLog>> logsByStage = logs.stream()
                 .filter(log -> StringUtils.hasText(log.runStage()))
                 .collect(Collectors.groupingBy(TransferRunLog::runStage, LinkedHashMap::new, java.util.stream.Collectors.toList()));
@@ -196,6 +208,17 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
         return new TransferRunLogAnalysis(logs.size(), stageAnalyses);
     }
 
+    @Override
+    public List<TransferRunLogTrend> trendLogs(LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        if (startInclusive == null || endExclusive == null || !startInclusive.isBefore(endExclusive)) {
+            return Collections.emptyList();
+        }
+        return transferRunLogStatisticsMapper.selectDeliverTrend(startInclusive, endExclusive)
+                .stream()
+                .map(this::toTrend)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     private Long parseLong(String value) {
         if (value == null || value.trim().isEmpty()) {
             return null;
@@ -209,6 +232,8 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                                           String runStage,
                                           String runStatus,
                                           String triggerType,
+                                          LocalDateTime startInclusive,
+                                          LocalDateTime endExclusive,
                                           boolean useLimit,
                                           String keyword,
                                           Integer limit) {
@@ -222,6 +247,8 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
                 .eq(runStage != null && !runStage.trim().isEmpty(), TransferRunLogPO::getRunStage, runStage)
                 .eq(runStatus != null && !runStatus.trim().isEmpty(), TransferRunLogPO::getRunStatus, runStatus)
                 .eq(triggerType != null && !triggerType.trim().isEmpty(), TransferRunLogPO::getTriggerType, triggerType)
+                .ge(startInclusive != null, TransferRunLogPO::getCreatedAt, startInclusive)
+                .lt(endExclusive != null, TransferRunLogPO::getCreatedAt, endExclusive)
                 .and(StringUtils.hasText(keyword), wrapper -> wrapper
                         .like(TransferRunLogPO::getSourceCode, keyword)
                         .or()
@@ -261,6 +288,13 @@ public class TransferRunLogGatewayImpl implements TransferRunLogGateway {
             latestByTransferId.putIfAbsent(key, log);
         }
         return new ArrayList<>(latestByTransferId.values());
+    }
+
+    private TransferRunLogTrend toTrend(TransferRunLogTrendDTO trendDTO) {
+        if (trendDTO == null) {
+            return null;
+        }
+        return new TransferRunLogTrend(trendDTO.getTrendDate(), trendDTO.getCount() == null ? 0L : trendDTO.getCount());
     }
 
     private List<TransferRunLog> slice(List<TransferRunLog> logs, int pageIndex, int pageSize) {

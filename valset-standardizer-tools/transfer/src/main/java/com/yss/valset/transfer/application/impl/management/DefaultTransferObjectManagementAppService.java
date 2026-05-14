@@ -219,6 +219,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                     trimToNull(command == null ? null : command.getTagId()),
                     trimToNull(command == null ? null : command.getTagCode()),
                     trimToNull(command == null ? null : command.getTagValue()),
+                    null,
                     pageIndex,
                     RETAG_PAGE_SIZE
             );
@@ -247,6 +248,7 @@ public class DefaultTransferObjectManagementAppService implements TransferObject
                     null,
                     TransferStatus.IDENTIFIED.name(),
                     "UNDELIVERED",
+                    null,
                     null,
                     null,
                     null,

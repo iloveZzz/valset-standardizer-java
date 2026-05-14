@@ -251,11 +251,69 @@
         ORDER BY base.received_at DESC, base.transfer_id DESC
     </select>
 
-    <!-- 统计邮件收件箱分组总数 -->
-    <select id="countMailInboxGroups" resultType="long">
+    <!-- 统计邮件收件箱分组总数 - MySQL -->
+    <select id="countMailInboxGroups" resultType="long" databaseId="MySQL">
         WITH base AS (
             SELECT
                 COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)) AS mail_key
+            FROM t_transfer_object o
+            LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
+            LEFT JOIN (
+                SELECT DISTINCT transfer_id
+                FROM t_transfer_delivery_record
+                WHERE execute_status = 'SUCCESS'
+            ) dr ON o.transfer_id = dr.transfer_id
+            WHERE o.source_type = 'EMAIL'
+            <if test="sourceCode != null and sourceCode != ''">
+                AND o.source_code = #{sourceCode}
+            </if>
+            <if test="mailId != null and mailId != ''">
+                AND m.mail_id = #{mailId}
+            </if>
+            <if test="deliveryStatus == 'DELIVERED'">
+                AND dr.transfer_id IS NOT NULL
+            </if>
+            <if test="deliveryStatus == 'UNDELIVERED'">
+                AND dr.transfer_id IS NULL
+            </if>
+        )
+        SELECT COUNT(DISTINCT mail_key) FROM base
+    </select>
+
+    <!-- 统计邮件收件箱分组总数 - PostgreSQL -->
+    <select id="countMailInboxGroups" resultType="long" databaseId="PostgreSQL">
+        WITH base AS (
+            SELECT
+                COALESCE(m.mail_id, CONCAT('transfer:', o.transfer_id)) AS mail_key
+            FROM t_transfer_object o
+            LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
+            LEFT JOIN (
+                SELECT DISTINCT transfer_id
+                FROM t_transfer_delivery_record
+                WHERE execute_status = 'SUCCESS'
+            ) dr ON o.transfer_id = dr.transfer_id
+            WHERE o.source_type = 'EMAIL'
+            <if test="sourceCode != null and sourceCode != ''">
+                AND o.source_code = #{sourceCode}
+            </if>
+            <if test="mailId != null and mailId != ''">
+                AND m.mail_id = #{mailId}
+            </if>
+            <if test="deliveryStatus == 'DELIVERED'">
+                AND dr.transfer_id IS NOT NULL
+            </if>
+            <if test="deliveryStatus == 'UNDELIVERED'">
+                AND dr.transfer_id IS NULL
+            </if>
+        )
+        SELECT COUNT(DISTINCT mail_key) FROM base
+    </select>
+
+    <!-- 统计邮件收件箱分组总数 - Oracle -->
+    <select id="countMailInboxGroups" resultType="long" databaseId="Oracle">
+        WITH base AS (
+            SELECT
+                COALESCE(m.mail_id, 'transfer:' || o.transfer_id) AS mail_key
             FROM t_transfer_object o
             LEFT JOIN t_transfer_mail_info m ON o.transfer_id = m.transfer_id
             LEFT JOIN (

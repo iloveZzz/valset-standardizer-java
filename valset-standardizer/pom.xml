@@ -52,6 +52,10 @@
         </dependency>
         <dependency>
             <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-taskflow-springbatch</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.yss.datamiddle</groupId>
             <artifactId>valset-standardizer-taskflow-dolohinscheduler</artifactId>
         </dependency>
         <dependency>

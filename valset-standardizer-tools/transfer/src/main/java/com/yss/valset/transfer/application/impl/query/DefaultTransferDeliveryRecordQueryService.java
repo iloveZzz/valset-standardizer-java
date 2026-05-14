@@ -5,9 +5,12 @@ import com.yss.valset.transfer.application.service.TransferDeliveryRecordQuerySe
 import com.yss.valset.transfer.domain.gateway.TransferDeliveryGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.time.ZoneId;
 
 /**
@@ -22,13 +25,13 @@ public class DefaultTransferDeliveryRecordQueryService implements TransferDelive
     private final TransferDeliveryGateway transferDeliveryGateway;
 
     @Override
-    public TransferDeliveryRecordSummaryViewDTO summarizeToday() {
-        LocalDate today = LocalDate.now(SHANGHAI_ZONE_ID);
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
-        long todayDeliveryCount = transferDeliveryGateway.countByDeliveredAtBetween(startOfDay, endOfDay);
-        long todaySuccessCount = transferDeliveryGateway.countByDeliveredAtBetweenAndExecuteStatus(startOfDay, endOfDay, "SUCCESS");
-        long todayFailedCount = transferDeliveryGateway.countByDeliveredAtBetweenAndExecuteStatus(startOfDay, endOfDay, "FAILED");
+    public TransferDeliveryRecordSummaryViewDTO summarizeToday(String taskDate) {
+        LocalDate day = resolveTaskDate(taskDate);
+        LocalDateTime startOfDay = day.atStartOfDay();
+        LocalDateTime endOfDay = day.plusDays(1).atStartOfDay();
+        long todayDeliveryCount = transferDeliveryGateway.countDistinctTransferIdsByDeliveredAtBetween(startOfDay, endOfDay);
+        long todaySuccessCount = transferDeliveryGateway.countDistinctTransferIdsByDeliveredAtBetweenAndExecuteStatus(startOfDay, endOfDay, "SUCCESS");
+        long todayFailedCount = transferDeliveryGateway.countDistinctTransferIdsByDeliveredAtBetweenAndExecuteStatus(startOfDay, endOfDay, "FAILED");
         double successRate = todayDeliveryCount == 0L
                 ? 0D
                 : Math.round(todaySuccessCount * 1000D / todayDeliveryCount) / 10D;
@@ -38,5 +41,16 @@ public class DefaultTransferDeliveryRecordQueryService implements TransferDelive
                 .todayFailedCount(todayFailedCount)
                 .successRate(successRate)
                 .build();
+    }
+
+    private LocalDate resolveTaskDate(String taskDate) {
+        if (taskDate == null || taskDate.trim().isEmpty()) {
+            return LocalDate.now(SHANGHAI_ZONE_ID);
+        }
+        try {
+            return LocalDate.parse(taskDate.trim());
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的任务日期: " + taskDate, exception);
+        }
     }
 }

@@ -24,7 +24,6 @@
     <include file="sql/common/transfer-seed.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-source-poll-cron-cleanup.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/transfer-email.sql" relativeToChangelogFile="true"/>
-    <include file="sql/common/task.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/workflow-config.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/workflow-platform.sql" relativeToChangelogFile="true"/>
     <include file="sql/common/tr.sql" relativeToChangelogFile="true"/>

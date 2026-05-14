@@ -4,6 +4,7 @@ import com.yss.valset.transfer.application.command.TransferRunLogCleanupCommand;
 import com.yss.valset.transfer.application.command.TransferRunLogRedeliverCommand;
 import com.yss.valset.transfer.application.dto.TransferRunLogCleanupResponse;
 import com.yss.valset.transfer.application.dto.TransferRunLogRedeliverResponse;
+import com.yss.valset.transfer.application.dto.TransferRunLogTrendViewDTO;
 import com.yss.cloud.dto.result.MultiResult;
 import com.yss.cloud.dto.result.PageResult;
 import com.yss.cloud.dto.result.SingleResult;
@@ -50,6 +51,7 @@ public class TransferRunLogController {
      * @param runStage 运行阶段
      * @param runStatus 运行状态
      * @param triggerType 触发类型
+     * @param taskDate 任务日期
      * @param limit 查询上限
      * @return 文件收发运行日志列表
      */
@@ -61,8 +63,9 @@ public class TransferRunLogController {
                                                        @RequestParam(value = "runStage", required = false) String runStage,
                                                        @RequestParam(value = "runStatus", required = false) String runStatus,
                                                        @RequestParam(value = "triggerType", required = false) String triggerType,
+                                                       @RequestParam(value = "taskDate", required = false) String taskDate,
                                                        @RequestParam(value = "limit", required = false) Integer limit) {
-        return MultiResult.of(transferRunLogQueryService.listLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, limit));
+        return MultiResult.of(transferRunLogQueryService.listLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, taskDate, limit));
     }
 
     /**
@@ -75,6 +78,7 @@ public class TransferRunLogController {
      * @param runStatus 运行状态
      * @param triggerType 触发类型
      * @param keyword 关键字
+     * @param taskDate 任务日期
      * @param pageIndex 页码
      * @param pageSize 每页条数
      * @return 文件收发运行日志分页结果
@@ -88,9 +92,10 @@ public class TransferRunLogController {
                                                       @RequestParam(value = "runStatus", required = false) String runStatus,
                                                       @RequestParam(value = "triggerType", required = false) String triggerType,
                                                       @RequestParam(value = "keyword", required = false) String keyword,
+                                                      @RequestParam(value = "taskDate", required = false) String taskDate,
                                                       @RequestParam(value = "pageIndex", required = false) Integer pageIndex,
                                                       @RequestParam(value = "pageSize", required = false) Integer pageSize) {
-        return transferRunLogQueryService.pageLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, keyword, pageIndex, pageSize);
+        return transferRunLogQueryService.pageLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, keyword, taskDate, pageIndex, pageSize);
     }
 
     /**
@@ -103,6 +108,7 @@ public class TransferRunLogController {
      * @param runStatus 运行状态
      * @param triggerType 触发类型
      * @param keyword 关键字
+     * @param taskDate 任务日期
      * @return 文件收发运行日志统计分析结果
      */
     @GetMapping("/analysis")
@@ -113,8 +119,23 @@ public class TransferRunLogController {
                                                                    @RequestParam(value = "runStage", required = false) String runStage,
                                                                    @RequestParam(value = "runStatus", required = false) String runStatus,
                                                                    @RequestParam(value = "triggerType", required = false) String triggerType,
-                                                                   @RequestParam(value = "keyword", required = false) String keyword) {
-        return SingleResult.of(transferRunLogQueryService.analyzeLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, keyword));
+                                                                   @RequestParam(value = "keyword", required = false) String keyword,
+                                                                   @RequestParam(value = "taskDate", required = false) String taskDate) {
+        return SingleResult.of(transferRunLogQueryService.analyzeLogs(sourceId, transferId, routeId, runStage, runStatus, triggerType, keyword, taskDate));
+    }
+
+    /**
+     * 统计文件投递趋势。
+     *
+     * @param days 天数
+     * @param taskDate 任务日期
+     * @return 文件投递趋势
+     */
+    @GetMapping("/trend")
+    @Operation(summary = "统计文件投递趋势", description = "按任务日期统计最近 N 天每天的文件投递数量。")
+    public MultiResult<TransferRunLogTrendViewDTO> trendLogs(@RequestParam(value = "days", required = false) Integer days,
+                                                             @RequestParam(value = "taskDate", required = false) String taskDate) {
+        return MultiResult.of(transferRunLogQueryService.trendLogs(days, taskDate));
     }
 
     /**

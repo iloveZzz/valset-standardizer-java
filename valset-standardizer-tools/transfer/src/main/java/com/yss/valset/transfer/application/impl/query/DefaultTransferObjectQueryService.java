@@ -39,6 +39,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -126,9 +128,11 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                                                          String tagId,
                                                          String tagCode,
                                                          String tagValue,
+                                                         String taskDate,
                                                          Integer pageIndex,
                                                          Integer pageSize) {
         String normalizedStatus = normalizeStatus(status);
+        String normalizedTaskDate = normalizeTaskDate(taskDate);
         TransferObjectPage page = transferObjectGateway.pageObjects(
                 sourceId,
                 sourceType,
@@ -142,6 +146,7 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 tagId,
                 tagCode,
                 tagValue,
+                normalizedTaskDate,
                 pageIndex,
                 pageSize);
         List<TransferObject> records = page.records() == null ? java.util.Arrays.asList() : page.records();
@@ -193,12 +198,14 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                                                          String deliveryStatus,
                                                         String mailId,
                                                         String fingerprint,
-                                                        String routeId,
-                                                        String tagId,
-                                                        String tagCode,
-                                                        String tagValue) {
+                                                         String routeId,
+                                                         String tagId,
+                                                         String tagCode,
+                                                         String tagValue,
+                                                         String taskDate) {
         String normalizedStatus = normalizeStatus(status);
-        TransferObjectAnalysis analysis = transferObjectGateway.analyzeObjects(sourceId, sourceType, sourceCode, originalName, normalizedStatus, normalizeDeliveryStatus(deliveryStatus), mailId, fingerprint, routeId, tagId, tagCode, tagValue);
+        String normalizedTaskDate = normalizeTaskDate(taskDate);
+        TransferObjectAnalysis analysis = transferObjectGateway.analyzeObjects(sourceId, sourceType, sourceCode, originalName, normalizedStatus, normalizeDeliveryStatus(deliveryStatus), mailId, fingerprint, routeId, tagId, tagCode, tagValue, normalizedTaskDate);
         return TransferObjectAnalysisViewDTO.builder()
                 .totalCount(analysis.totalCount())
                 .taggedCount(analysis.taggedCount())
@@ -250,6 +257,18 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
             return "UNDELIVERED";
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的投递状态: " + deliveryStatus);
+    }
+
+    private String normalizeTaskDate(String taskDate) {
+        if (!StringUtils.hasText(taskDate)) {
+            return null;
+        }
+        try {
+            LocalDate.parse(taskDate.trim());
+            return taskDate.trim();
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的任务日期: " + taskDate, exception);
+        }
     }
 
     private TransferObjectSourceAnalysisViewDTO toSourceAnalysisView(TransferObjectSourceAnalysis sourceAnalysis) {

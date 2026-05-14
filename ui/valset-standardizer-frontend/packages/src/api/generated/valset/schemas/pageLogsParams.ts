@@ -35,6 +35,10 @@ export type PageLogsParams = {
    */
   keyword?: string;
   /**
+   * 任务日期
+   */
+  taskDate?: string;
+  /**
    * 页码
    */
   pageIndex?: number;

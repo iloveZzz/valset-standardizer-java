@@ -2,7 +2,7 @@
 
 ## 1. 目标
 
-新增“估值表解析任务管理”页面，用于串联估值表核心模块的数据处理链路，不纳入 transfer 分拣投递模块。
+新增“估值表解析任务管理”页面，用于串联估值表核心模块的数据处理链路，后端执行主链路已切到 Spring Batch，不纳入 transfer 分拣投递模块。
 
 页面覆盖从估值表文件解析、结构标准化、标准表落地，到后续数据加工任务的全链路任务管理能力，重点解决以下问题：
 
@@ -15,7 +15,7 @@
 
 ### 2.1 本期包含
 
-- 估值表解析任务管理一级页面。
+- 估值表解析任务管理一级页面，展示 Spring Batch 批次视图。
 - 批次级状态总览。
 - 阶段级任务链路展示。
 - 批次列表、筛选、分页、状态标签。
@@ -94,8 +94,6 @@
 - [x] 新增阶段枚举：`OutsourcedDataTaskStage`。
 - [x] 新增状态枚举：`OutsourcedDataTaskStatus`。
 - [x] 新增阶段视图 DTO：`OutsourcedDataTaskStepDTO`。
-- [x] 新增阶段持久化实体：`OutsourcedDataTaskStepPO`。
-- [x] 新增日志持久化实体：`OutsourcedDataTaskLogPO`。
 - [x] 新增或确认阶段明细实体：`OutsourcedDataTaskStep`。
 - [x] 每个批次下最多一条当前有效阶段记录，历史重跑记录通过 `runNo` 区分。
 - [x] 阶段明细需要关联底层任务 ID，例如 parse task、match task、landing task。
@@ -171,9 +169,8 @@
 ### P1. 任务事件与进度
 
 - [x] 打通底层任务事件到批次阶段明细。
-- [x] 监听解析生命周期事件并写入批次、阶段、日志。
 - [x] 每个阶段开始、成功、失败、停止时写入完整阶段事件。
-- [x] 批次聚合状态在阶段事件落库后同步刷新。
+- [x] 批次状态由 Spring Batch 元数据统一聚合。
 - [x] 如已有 SSE 能力，新增批次维度事件订阅；否则本期先使用列表轮询。
 
 建议 SSE 路径：
@@ -191,6 +188,8 @@
 - [x] 新增样式文件：`packages/src/views/OutsourcedDataTask/index.less`。
 - [x] 在路由中新增入口：`/outsourced-data-tasks`。
 - [x] 菜单名称：`估值表解析任务`。
+- [x] 新增只读 Spring Batch 页面：`packages/src/views/SpringBatchValuationTask`。
+- [x] 旧页面入口重定向到 Spring Batch 页面，历史步骤、日志和批次聚合不再单独展示。
 
 ### P0. 顶部统计区
 

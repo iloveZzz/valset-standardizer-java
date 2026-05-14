@@ -35,16 +35,13 @@ tools/task
     └── web/controller
 ```
 
-当前版本采用稳定 API 契约、阶段事件落库和列表轮询刷新：
+当前版本采用稳定 API 契约、Spring Batch 元数据回读和列表轮询刷新：
 
 ```text
 Controller
   -> OutsourcedDataTaskService
     -> OutsourcedDataTaskGateway
-      -> OutsourcedDataTaskRepository
-        -> t_outsourced_data_task_batch
-        -> t_outsourced_data_task_step
-        -> t_outsourced_data_task_log
+      -> Spring Batch JobExplorer
 ```
 
 ## 4. 核心模型
@@ -87,7 +84,6 @@ businessDate + productCode + fileFingerprint
 
 - `OutsourcedDataTaskStepDTO`
 - `OutsourcedDataTaskStageSummaryDTO`
-- `OutsourcedDataTaskLogDTO`
 
 ## 5. API 契约
 
@@ -99,14 +95,14 @@ Controller 根路径不带 `/api` 前缀，继续遵守当前工程策略，由�
 | `GET`  | `/outsourced-data-tasks`                                | 分页查询任务批次 |
 | `GET`  | `/outsourced-data-tasks/{batchId}`                      | 查询批次详情     |
 | `GET`  | `/outsourced-data-tasks/{batchId}/steps`                | 查询阶段明细     |
-| `GET`  | `/outsourced-data-tasks/{batchId}/logs`                 | 分页查询日志     |
-| `POST` | `/outsourced-data-tasks/{batchId}/execute`              | 执行批次         |
-| `POST` | `/outsourced-data-tasks/{batchId}/retry`                | 重跑批次         |
-| `POST` | `/outsourced-data-tasks/{batchId}/stop`                 | 停止批次         |
-| `POST` | `/outsourced-data-tasks/{batchId}/steps/{stepId}/retry` | 重跑阶段         |
-| `POST` | `/outsourced-data-tasks/batch-execute`                  | 批量执行         |
-| `POST` | `/outsourced-data-tasks/batch-retry`                    | 批量重跑         |
-| `POST` | `/outsourced-data-tasks/batch-stop`                     | 批量停止         |
+| `GET`  | `/outsourced-data-tasks/{batchId}/logs`                 | 仅迁移期兼容     |
+| `POST` | `/outsourced-data-tasks/{batchId}/execute`              | 仅兼容保留       |
+| `POST` | `/outsourced-data-tasks/{batchId}/retry`                | 仅兼容保留       |
+| `POST` | `/outsourced-data-tasks/{batchId}/stop`                 | 仅兼容保留       |
+| `POST` | `/outsourced-data-tasks/{batchId}/steps/{stepId}/retry` | 仅兼容保留       |
+| `POST` | `/outsourced-data-tasks/batch-execute`                  | 仅兼容保留       |
+| `POST` | `/outsourced-data-tasks/batch-retry`                    | 仅兼容保留       |
+| `POST` | `/outsourced-data-tasks/batch-stop`                     | 仅兼容保留       |
 
 ## 6. 当前落地状态
 
@@ -117,16 +113,14 @@ Controller 根路径不带 `/api` 前缀，继续遵守当前工程策略，由�
 - 将 `valset-standardizer-task` 加入 `yss-valset-standardizer` 依赖。
 - 新增阶段枚举、状态枚举、查询/操作命令、DTO、应用服务接口、默认应用服务、Controller。
 - 新增持久化端口、批次/阶段/日志 PO、Repository、MyBatis Gateway。
-- 新增 Liquibase `task.sql`，包含 `t_outsourced_data_task_batch`、`t_outsourced_data_task_step`、`t_outsourced_data_task_log`。
 - DDL 主键和关联字段使用字符串标识，匹配 `BATCH-*`、`FILE-*`、`TASK-*` 等业务批次和底层任务标识。
-- 新增 `OutsourcedDataTaskLifecycleListener`，监听 `ParseLifecycleEvent` 并归档解析生命周期事件。
 - 新增 `WorkflowTaskLifecycleEvent`，由 `DefaultTaskDispatcher` 发布通用工作流任务状态，事件包含文件标识、输入摘要、输出摘要和上下文字段。
 - `ParseQueueObserverJob` 在构建、创建、派发、完成、失败解析任务时补充 `fileId`、数据源类型和原始文件名，避免队列事件与解析执行事件拆成不同批次。
-- 批次状态和当前阶段由阶段明细落库后统一聚合刷新，前端只消费后端返回结果。
+- 批次状态和当前阶段由 Spring Batch 结果统一聚合刷新，前端只消费后端返回结果。
 - 默认应用服务在 Spring 环境中优先使用持久化 Gateway；静态样例只作为无 Gateway 的单元测试兜底。
-- 前端新增独立 `OutsourcedDataTask` 页面、路由和一级菜单入口，完成静态工作台骨架。
-- 前端新增 `packages/src/api/outsourcedDataTask.ts`，页面优先调用真实接口，后端不可用时回退样例数据。
-- 批次维度暂未新增独立 SSE 通道，页面采用 10 秒列表轮询刷新。
+- 前端新增独立 Spring Batch 任务页面、路由和一级菜单入口，完成只读工作台骨架。
+- 前端页面改为只查询 Spring Batch 元数据，不再展示历史步骤、日志和批次聚合投影。
+- 批次维度暂未新增独立 SSE 通道，页面采用轮询刷新。
 
 待完成：
 

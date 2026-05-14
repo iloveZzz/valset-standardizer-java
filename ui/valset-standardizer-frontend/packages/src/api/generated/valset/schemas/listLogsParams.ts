@@ -31,6 +31,10 @@ export type ListLogsParams = {
    */
   triggerType?: string;
   /**
+   * 任务日期
+   */
+  taskDate?: string;
+  /**
    * 查询上限
    */
   limit?: number;

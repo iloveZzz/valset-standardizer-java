@@ -146,41 +146,41 @@ export type SingleResultOutsourcedDataTaskActionResultDTO = {
 
 const generatedApi = getJavaApi();
 
-export const getOutsourcedDataTaskSummary = (
+export const getValuationParseTaskSummary = (
   params?: OutsourcedDataTaskQueryParams,
 ) =>
   generatedApi.summary(params) as Promise<SingleResultOutsourcedDataTaskSummaryDTO>;
 
-export const pageOutsourcedDataTasks = (
+export const pageValuationParseTasks = (
   params?: OutsourcedDataTaskQueryParams,
 ) =>
   generatedApi.pageTasks(params) as Promise<PageResultOutsourcedDataTaskBatchDTO>;
 
-export const getOutsourcedDataTask = (batchId: string) =>
+export const getValuationParseTask = (batchId: string) =>
   generatedApi.getTask(batchId) as Promise<SingleResultOutsourcedDataTaskBatchDetailDTO>;
 
-export const listOutsourcedDataTaskSteps = (batchId: string) =>
+export const listValuationParseTaskSteps = (batchId: string) =>
   generatedApi.listSteps(batchId) as Promise<MultiResultOutsourcedDataTaskStepDTO>;
 
-export const executeOutsourcedDataTask = (
+export const executeValuationParseTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
 ) =>
   generatedApi.execute(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
-export const retryOutsourcedDataTask = (
+export const retryValuationParseTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
 ) =>
   generatedApi.retry1(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
-export const stopOutsourcedDataTask = (
+export const stopValuationParseTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
 ) =>
   generatedApi.stop1(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
-export const retryOutsourcedDataTaskStep = (
+export const retryValuationParseTaskStep = (
   batchId: string,
   stepId: string,
   command?: OutsourcedDataTaskActionCommand,
@@ -191,17 +191,29 @@ export const retryOutsourcedDataTaskStep = (
     command ?? {},
   ) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
 
-export const batchExecuteOutsourcedDataTasks = (
+export const batchExecuteValuationParseTasks = (
   command: OutsourcedDataTaskBatchCommand,
 ) =>
   generatedApi.batchExecute(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
 
-export const batchRetryOutsourcedDataTasks = (
+export const batchRetryValuationParseTasks = (
   command: OutsourcedDataTaskBatchCommand,
 ) =>
   generatedApi.batchRetry(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
 
-export const batchStopOutsourcedDataTasks = (
+export const batchStopValuationParseTasks = (
   command: OutsourcedDataTaskBatchCommand,
 ) =>
   generatedApi.batchStop(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
+
+export const getOutsourcedDataTaskSummary = getValuationParseTaskSummary;
+export const pageOutsourcedDataTasks = pageValuationParseTasks;
+export const getOutsourcedDataTask = getValuationParseTask;
+export const listOutsourcedDataTaskSteps = listValuationParseTaskSteps;
+export const executeOutsourcedDataTask = executeValuationParseTask;
+export const retryOutsourcedDataTask = retryValuationParseTask;
+export const stopOutsourcedDataTask = stopValuationParseTask;
+export const retryOutsourcedDataTaskStep = retryValuationParseTaskStep;
+export const batchExecuteOutsourcedDataTasks = batchExecuteValuationParseTasks;
+export const batchRetryOutsourcedDataTasks = batchRetryValuationParseTasks;
+export const batchStopOutsourcedDataTasks = batchStopValuationParseTasks;

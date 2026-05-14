@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import "./index.less";
-import OutsourcedDataTaskPage from "../OutsourcedDataTask/index.vue";
+import SpringBatchValuationTaskPage from "../SpringBatchValuationTask/index.vue";
 
 defineOptions({ name: "TaskManagementPage" });
 </script>
@@ -8,7 +8,7 @@ defineOptions({ name: "TaskManagementPage" });
 <template>
   <div class="task-management-page">
     <div class="task-management-content">
-      <OutsourcedDataTaskPage />
+      <SpringBatchValuationTaskPage />
     </div>
   </div>
 </template>

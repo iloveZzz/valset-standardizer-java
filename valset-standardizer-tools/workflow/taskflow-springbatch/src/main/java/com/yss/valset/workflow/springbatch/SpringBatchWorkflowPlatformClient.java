@@ -19,9 +19,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.configuration.JobRegistry;
 import org.springframework.batch.core.configuration.support.ReferenceJobFactory;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -38,6 +40,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,7 +48,7 @@ import java.util.stream.Collectors;
  * Spring Batch 工作流客户端。
  *
  * <p>这个客户端负责把通用工作流定义转换为 Spring Batch 可执行对象，
- * 并把执行过程中的作业、步骤和阶段日志统一回写到工作流运行态存储中。
+ * 并把执行过程中的作业、步骤和阶段日志统一回放到 Spring Batch 元数据中。
  *
  * <p>核心链路如下：
  * <ol>
@@ -53,7 +56,7 @@ import java.util.stream.Collectors;
  *     <li>根据定义动态构建 Job 与 Step</li>
  *     <li>提交 JobLauncher 执行作业</li>
  *     <li>在每个 Step 内调用阶段处理器生成业务输入、输出和元数据</li>
- *     <li>把执行结果和阶段日志落到执行存储中，供 query / queryLogs / retry 使用</li>
+ *     <li>把执行结果和阶段日志写入 Batch 元数据上下文，供 query / queryLogs / retry 使用</li>
  * </ol>
  */
 @Component
@@ -63,7 +66,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
     private final JobLauncher jobLauncher;
     private final JobRepository jobRepository;
     private final JobRegistry jobRegistry;
-    private final SpringBatchWorkflowExecutionStore executionStore;
+    private final JobExplorer jobExplorer;
     private final SpringBatchStageProcessor stageProcessor;
     private final PlatformTransactionManager springBatchTransactionManager;
 
@@ -100,7 +103,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                                                 WorkflowStopRequest request) {
         // 停止逻辑目前以运行态标记为主，保留与外部平台停止语义一致的返回结构。
         WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.STOP, definition, instance, request);
-        JobExecution execution = locateExecution(instance).map(this::markStopped).orElse(null);
+        JobExecution execution = locateExecution(definition, instance).map(this::markStopped).orElse(null);
         return buildExecutionResult(definition, instance, execution, command,
                 request == null || !StringUtils.hasText(request.getReason()) ? "Spring Batch 作业已停止" : request.getReason());
     }
@@ -125,7 +128,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                                                  WorkflowInstanceDTO instance) {
         // 查询仅回读最近一次执行态，不重新触发作业。
         WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.QUERY, definition, instance, (WorkflowLogQueryRequest) null);
-        JobExecution execution = locateExecution(instance).orElse(null);
+        JobExecution execution = locateExecution(definition, instance).orElse(null);
         return buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业查询");
     }
 
@@ -135,12 +138,11 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                                                           WorkflowLogQueryRequest request) {
         // 日志查询以阶段日志为粒度，必要时按 stageCode 过滤。
         WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.QUERY_LOGS, definition, instance, request);
-        JobExecution execution = locateExecution(instance).orElse(null);
+        JobExecution execution = locateExecution(definition, instance).orElse(null);
         if (execution == null) {
             return java.util.Arrays.asList();
         }
-        List<WorkflowStageLogDTO> stageLogs = executionStore.listStageLogs(execution.getId(),
-                request == null ? null : request.getStageCode());
+        List<WorkflowStageLogDTO> stageLogs = buildStageLogs(execution, request == null ? null : request.getStageCode());
         if (CollectionUtils.isEmpty(stageLogs)) {
             return java.util.Arrays.asList(buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业日志"));
         }
@@ -203,7 +205,6 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         registerJob(job);
         try {
             JobExecution execution = jobLauncher.run(job, buildJobParameters(definition, instance, request));
-            executionStore.save(instance == null ? null : instance.getInstanceId(), execution);
             return execution;
         } catch (Exception e) {
             throw new IllegalStateException("Spring Batch 作业执行失败：" + e.getMessage(), e);
@@ -225,7 +226,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                     .stageOrder(1)
                     .build());
         }
-        JobBuilder jobBuilder = new JobBuilder(jobName);
+        JobBuilder jobBuilder = new JobBuilder(jobName).repository(jobRepository);
         SimpleJobBuilder simpleJobBuilder = jobBuilder.start(buildStep(definition, instance, request, stages.get(0)));
         for (int index = 1; index < stages.size(); index++) {
             simpleJobBuilder = simpleJobBuilder.next(buildStep(definition, instance, request, stages.get(index)));
@@ -249,10 +250,18 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                     instance,
                     stage,
                     buildCommand(WorkflowOperationType.TRIGGER, definition, instance, request));
+            executionContext.putString("instanceId", instance == null ? null : instance.getInstanceId());
+            executionContext.putString("externalWorkflowId", resolveExternalWorkflowId(definition, instance));
             executionContext.putString("workflowCode", definition.getWorkflowCode());
             executionContext.putString("workflowVersionNo", String.valueOf(definition.getWorkflowVersionNo()));
             executionContext.putString("stageCode", stage == null ? null : stage.getStageCode());
             executionContext.putString("stageName", stage == null ? null : stage.getStageName());
+            executionContext.putInt("stageOrder", stage == null || stage.getStageOrder() == null ? -1 : stage.getStageOrder());
+            executionContext.putString("stageStatus", stageExecutionResult.getStatus() == null ? null : stageExecutionResult.getStatus().name());
+            executionContext.putString("stageRawStatus", stageExecutionResult.getRawStatus());
+            executionContext.putString("stageMessage", stageExecutionResult.getMessage());
+            executionContext.putString("stageStartTime", stageExecutionResult.getStartTime() == null ? null : stageExecutionResult.getStartTime().toString());
+            executionContext.putString("stageEndTime", stageExecutionResult.getEndTime() == null ? null : stageExecutionResult.getEndTime().toString());
             if (stageExecutionResult.getInput() != null) {
                 stageExecutionResult.getInput().forEach((key, value) -> executionContext.put("input." + key, value));
             }
@@ -263,25 +272,12 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                 stageExecutionResult.getMetadata().forEach((key, value) -> executionContext.put("meta." + key, value));
             }
             org.springframework.batch.core.StepExecution stepExecution = chunkContext.getStepContext().getStepExecution();
-            Long executionId = stepExecution.getJobExecutionId();
-            WorkflowStageLogDTO stageLog = WorkflowStageLogDTO.builder()
-                    .instanceId(instance == null ? null : instance.getInstanceId())
-                    .workflowCode(definition.getWorkflowCode())
-                    .workflowVersionNo(definition.getWorkflowVersionNo())
-                    .stageCode(stage == null ? stepExecution.getStepName() : stage.getStageCode())
-                    .stageName(stage == null ? stepExecution.getStepName() : stage.getStageName())
-                    .stageOrder(stage == null ? null : stage.getStageOrder())
-                    .status(stageExecutionResult.getStatus())
-                    .rawStatus(stageExecutionResult.getRawStatus())
-                    .message(stageExecutionResult.getMessage())
-                    .startTime(stageExecutionResult.getStartTime())
-                    .endTime(stageExecutionResult.getEndTime())
-                    .payload(buildStagePayload(stageExecutionResult, stepExecution))
-                    .build();
-            executionStore.saveStageLog(executionId, stageLog);
+            buildStagePayload(stageExecutionResult, stepExecution);
             return RepeatStatus.FINISHED;
         };
         return new StepBuilder(stepName)
+                .repository(jobRepository)
+                .transactionManager(springBatchTransactionManager)
                 .tasklet(tasklet)
                 .build();
     }
@@ -318,12 +314,12 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         // 统一构建查询/触发/停止/重试的返回结构，保证控制层看到一致的响应形态。
         List<WorkflowStageLogDTO> stageLogs = execution == null
                 ? java.util.Arrays.asList()
-                : executionStore.listStageLogs(execution.getId(), null);
+                : buildStageLogs(execution, null);
         return WorkflowPlatformExecutionResult.builder()
                 .platformType(platformType())
                 .externalWorkflowId(resolveExternalWorkflowId(definition, instance))
                 .externalInstanceId(execution == null ? resolveExternalInstanceId(definition, instance) : String.valueOf(execution.getId()))
-                .rawStatus(execution == null ? (instance == null ? null : instance.getRawStatus()) : execution.getStatus().name())
+                .rawStatus(execution == null || execution.getStatus() == null ? (instance == null ? null : instance.getRawStatus()) : execution.getStatus().name())
                 .message(resolveMessage(execution, defaultMessage))
                 .payload(buildPayload(definition, instance, command, execution))
                 .stageLogs(stageLogs)
@@ -338,7 +334,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         Map<String, Object> payload = new LinkedHashMap<>(platformSpecificPayload(definition, instance, command));
         payload.put("jobName", resolveJobName(definition));
         payload.put("jobExecutionId", execution == null || execution.getId() == null ? null : execution.getId());
-        payload.put("batchStatus", execution == null ? null : execution.getStatus().name());
+        payload.put("batchStatus", execution == null || execution.getStatus() == null ? null : execution.getStatus().name());
         payload.put("exitStatus", execution == null || execution.getExitStatus() == null ? null : execution.getExitStatus().getExitCode());
         payload.put("jobParameters", execution == null ? java.util.Collections.emptyMap() : toParameterMap(execution.getJobParameters()));
         payload.put("stepCount", execution == null ? 0 : execution.getStepExecutions().size());
@@ -364,6 +360,26 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                                                   org.springframework.batch.core.StepExecution stepExecution) {
         // 将 Spring Batch 原生的执行统计和业务阶段处理结果合并成一个可查询负载。
         Map<String, Object> payload = new LinkedHashMap<>();
+        ExecutionContext executionContext = stepExecution == null ? null : stepExecution.getExecutionContext();
+        if (stepExecution != null && stepExecution.getExecutionContext() != null) {
+            payload.put("workflowCode", executionContext.getString("workflowCode", null));
+            payload.put("workflowVersionNo", executionContext.getString("workflowVersionNo", null));
+            payload.put("stageCode", executionContext.getString("stageCode", null));
+            payload.put("stageName", executionContext.getString("stageName", null));
+            payload.put("stageOrder", executionContext.getInt("stageOrder", -1));
+            payload.put("stageStatus", executionContext.getString("stageStatus", null));
+            payload.put("stageRawStatus", executionContext.getString("stageRawStatus", null));
+            payload.put("stageMessage", executionContext.getString("stageMessage", null));
+            payload.put("stageStartTime", executionContext.getString("stageStartTime", null));
+            payload.put("stageEndTime", executionContext.getString("stageEndTime", null));
+            payload.put("input", extractPrefixedMap(executionContext, "input."));
+            payload.put("output", extractPrefixedMap(executionContext, "output."));
+            payload.put("metadata", extractPrefixedMap(executionContext, "meta."));
+        } else {
+            payload.put("input", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getInput());
+            payload.put("output", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getOutput());
+            payload.put("metadata", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getMetadata());
+        }
         payload.put("readCount", stepExecution == null ? null : stepExecution.getReadCount());
         payload.put("writeCount", stepExecution == null ? null : stepExecution.getWriteCount());
         payload.put("commitCount", stepExecution == null ? null : stepExecution.getCommitCount());
@@ -371,12 +387,15 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         payload.put("filterCount", stepExecution == null ? null : stepExecution.getFilterCount());
         payload.put("exitStatus", stepExecution == null || stepExecution.getExitStatus() == null ? null : stepExecution.getExitStatus().getExitCode());
         payload.put("summary", stepExecution == null ? null : stepExecution.getSummary());
-        payload.put("input", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getInput());
-        payload.put("output", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getOutput());
-        payload.put("metadata", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getMetadata());
-        payload.put("executionMessage", stageExecutionResult == null ? null : stageExecutionResult.getMessage());
-        payload.put("executionRawStatus", stageExecutionResult == null ? null : stageExecutionResult.getRawStatus());
-        payload.put("executionStatus", stageExecutionResult == null || stageExecutionResult.getStatus() == null ? null : stageExecutionResult.getStatus().name());
+        payload.put("executionMessage", stageExecutionResult == null
+                ? executionContext == null ? (stepExecution == null ? null : stepExecution.getSummary()) : executionContext.getString("stageMessage", null)
+                : stageExecutionResult.getMessage());
+        payload.put("executionRawStatus", stageExecutionResult == null
+                ? executionContext == null ? (stepExecution == null || stepExecution.getExitStatus() == null ? null : stepExecution.getExitStatus().getExitCode()) : executionContext.getString("stageRawStatus", null)
+                : stageExecutionResult.getRawStatus());
+        payload.put("executionStatus", stageExecutionResult == null
+                ? executionContext == null ? (stepExecution == null || stepExecution.getStatus() == null ? null : stepExecution.getStatus().name()) : executionContext.getString("stageStatus", null)
+                : stageExecutionResult.getStatus() == null ? null : stageExecutionResult.getStatus().name());
         return payload;
     }
 
@@ -403,21 +422,6 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         return parameters;
     }
 
-    private Optional<JobExecution> locateExecution(WorkflowInstanceDTO instance) {
-        // 优先按外部执行 ID 查找，找不到再按内部实例 ID 回退。
-        if (instance == null) {
-            return Optional.empty();
-        }
-        if (StringUtils.hasText(instance.getExternalInstanceId())) {
-            try {
-                return executionStore.findByExecutionId(Long.parseLong(instance.getExternalInstanceId()));
-            } catch (NumberFormatException ignored) {
-                // 继续尝试使用内部实例 ID 索引。
-            }
-        }
-        return executionStore.findByInstanceId(instance.getInstanceId());
-    }
-
     private JobExecution markStopped(JobExecution execution) {
         // 这里不触发真实外部停止，仅将本地执行态标记为 STOPPED，供统一查询接口使用。
         if (execution == null) {
@@ -425,7 +429,6 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         }
         execution.setStatus(BatchStatus.STOPPED);
         execution.setExitStatus(org.springframework.batch.core.ExitStatus.STOPPED);
-        executionStore.save(null, execution);
         return execution;
     }
 
@@ -445,5 +448,121 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
             return "spring-batch-job";
         }
         return definition.getWorkflowCode() + "-v" + definition.getWorkflowVersionNo();
+    }
+
+    private Optional<JobExecution> locateExecution(WorkflowDefinitionDTO definition, WorkflowInstanceDTO instance) {
+        if (instance == null) {
+            return Optional.empty();
+        }
+        if (StringUtils.hasText(instance.getExternalInstanceId())) {
+            try {
+                return Optional.ofNullable(jobExplorer.getJobExecution(Long.parseLong(instance.getExternalInstanceId())));
+            } catch (NumberFormatException ignored) {
+                // 外部实例 ID 不是数字时，继续使用作业参数反查。
+            }
+        }
+        if (!StringUtils.hasText(instance.getInstanceId())) {
+            return Optional.empty();
+        }
+        List<JobInstance> jobInstances = jobExplorer.getJobInstances(resolveJobName(definition), 0, Integer.MAX_VALUE);
+        for (JobInstance jobInstance : jobInstances) {
+            List<JobExecution> executions = jobExplorer.getJobExecutions(jobInstance);
+            if (CollectionUtils.isEmpty(executions)) {
+                continue;
+            }
+            for (JobExecution execution : executions) {
+                if (execution == null || execution.getJobParameters() == null) {
+                    continue;
+                }
+                String jobInstanceId = execution.getJobParameters().getString("instanceId", null);
+                if (instance.getInstanceId().equals(jobInstanceId)) {
+                    return Optional.of(execution);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    private List<WorkflowStageLogDTO> buildStageLogs(JobExecution execution, String stageCode) {
+        if (execution == null || CollectionUtils.isEmpty(execution.getStepExecutions())) {
+            return java.util.Arrays.asList();
+        }
+        return execution.getStepExecutions().stream()
+                .sorted(Comparator.comparing(org.springframework.batch.core.StepExecution::getId, Comparator.nullsLast(Long::compareTo)))
+                .map(stepExecution -> toStageLog(execution, stepExecution))
+                .filter(log -> log != null && (!StringUtils.hasText(stageCode) || stageCode.equals(log.getStageCode())))
+                .collect(Collectors.toList());
+    }
+
+    private WorkflowStageLogDTO toStageLog(JobExecution execution, org.springframework.batch.core.StepExecution stepExecution) {
+        if (execution == null || stepExecution == null) {
+            return null;
+        }
+        ExecutionContext executionContext = stepExecution.getExecutionContext();
+        String rawStatus = stringValue(executionContext == null ? null : executionContext.getString("stageRawStatus", null),
+                stepExecution.getExitStatus() == null ? null : stepExecution.getExitStatus().getExitCode());
+        String statusText = stringValue(executionContext == null ? null : executionContext.getString("stageStatus", null),
+                stepExecution.getStatus() == null ? null : stepExecution.getStatus().name());
+        return WorkflowStageLogDTO.builder()
+                .instanceId(executionContext == null ? null : executionContext.getString("instanceId", null))
+                .workflowCode(executionContext == null ? null : executionContext.getString("workflowCode", null))
+                .workflowVersionNo(parseInteger(executionContext == null ? null : executionContext.getString("workflowVersionNo", null)))
+                .stageCode(executionContext == null ? stepExecution.getStepName() : executionContext.getString("stageCode", stepExecution.getStepName()))
+                .stageName(executionContext == null ? stepExecution.getStepName() : executionContext.getString("stageName", stepExecution.getStepName()))
+                .stageOrder(executionContext == null ? null : normalizeStageOrder(executionContext.getInt("stageOrder", -1)))
+                .status(WorkflowStatus.fromRawStatus(statusText))
+                .rawStatus(rawStatus)
+                .message(executionContext == null ? null : executionContext.getString("stageMessage", null))
+                .startTime(parseDateTime(executionContext == null ? null : executionContext.getString("stageStartTime", null), stepExecution.getStartTime()))
+                .endTime(parseDateTime(executionContext == null ? null : executionContext.getString("stageEndTime", null), stepExecution.getEndTime()))
+                .payload(buildStagePayload(null, stepExecution))
+                .build();
+    }
+
+    private Map<String, Object> extractPrefixedMap(ExecutionContext executionContext, String prefix) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (executionContext == null || !StringUtils.hasText(prefix)) {
+            return payload;
+        }
+        for (Map.Entry<String, Object> entry : executionContext.entrySet()) {
+            if (entry == null || entry.getKey() == null || !entry.getKey().startsWith(prefix)) {
+                continue;
+            }
+            payload.put(entry.getKey().substring(prefix.length()), entry.getValue());
+        }
+        return payload;
+    }
+
+    private Integer parseInteger(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(value.trim());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private Integer normalizeStageOrder(int stageOrder) {
+        return stageOrder < 0 ? null : stageOrder;
+    }
+
+    private LocalDateTime parseDateTime(String value, java.util.Date fallback) {
+        if (!StringUtils.hasText(value)) {
+            return fallback == null ? null : fallback.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        }
+        try {
+            return LocalDateTime.parse(value.trim());
+        } catch (Exception ignored) {
+            return fallback == null ? null : fallback.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        }
+    }
+
+    private String stringValue(String primary, String fallback) {
+        if (StringUtils.hasText(primary)) {
+            return primary;
+        }
+        return fallback;
     }
 }

@@ -3,6 +3,7 @@ package com.yss.valset.transfer.domain.gateway;
 import com.yss.valset.transfer.domain.model.TransferRunLog;
 import com.yss.valset.transfer.domain.model.TransferRunLogAnalysis;
 import com.yss.valset.transfer.domain.model.TransferRunLogPage;
+import com.yss.valset.transfer.domain.model.TransferRunLogTrend;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,6 +28,8 @@ public interface TransferRunLogGateway {
                                   String runStage,
                                   String runStatus,
                                   String triggerType,
+                                  LocalDateTime startInclusive,
+                                  LocalDateTime endExclusive,
                                   Integer limit);
 
     TransferRunLogPage pageLogs(String sourceId,
@@ -36,6 +39,8 @@ public interface TransferRunLogGateway {
                                 String runStatus,
                                 String triggerType,
                                 String keyword,
+                                LocalDateTime startInclusive,
+                                LocalDateTime endExclusive,
                                 Integer pageIndex,
                                 Integer pageSize);
 
@@ -45,5 +50,10 @@ public interface TransferRunLogGateway {
                                        String runStage,
                                        String runStatus,
                                        String triggerType,
-                                       String keyword);
+                                       String keyword,
+                                       LocalDateTime startInclusive,
+                                       LocalDateTime endExclusive);
+
+    List<TransferRunLogTrend> trendLogs(LocalDateTime startInclusive,
+                                        LocalDateTime endExclusive);
 }

@@ -112,6 +112,7 @@ public class TransferObjectController {
      * @param tagId 标签主键
      * @param tagCode 标签编码
      * @param tagValue 标签值
+     * @param taskDate 任务日期
      * @param pageIndex 页码
      * @param pageSize 每页条数
      * @return 文件主对象分页结果
@@ -130,9 +131,10 @@ public class TransferObjectController {
                                                              @RequestParam(value = "tagId", required = false) String tagId,
                                                              @RequestParam(value = "tagCode", required = false) String tagCode,
                                                              @RequestParam(value = "tagValue", required = false) String tagValue,
+                                                             @RequestParam(value = "taskDate", required = false) String taskDate,
                                                              @RequestParam(value = "pageIndex", required = false) Integer pageIndex,
                                                              @RequestParam(value = "pageSize", required = false) Integer pageSize) {
-        return transferObjectQueryService.pageObjects(sourceId, sourceType, sourceCode, originalName, status, deliveryStatus, mailId, fingerprint, routeId, tagId, tagCode, tagValue, pageIndex, pageSize);
+        return transferObjectQueryService.pageObjects(sourceId, sourceType, sourceCode, originalName, status, deliveryStatus, mailId, fingerprint, routeId, tagId, tagCode, tagValue, taskDate, pageIndex, pageSize);
     }
 
     /**
@@ -170,6 +172,7 @@ public class TransferObjectController {
      * @param tagId 标签主键
      * @param tagCode 标签编码
      * @param tagValue 标签值
+     * @param taskDate 任务日期
      * @return 文件主对象统计分析结果
      */
     @GetMapping("/analysis")
@@ -185,8 +188,9 @@ public class TransferObjectController {
                                                                       @RequestParam(value = "routeId", required = false) String routeId,
                                                                       @RequestParam(value = "tagId", required = false) String tagId,
                                                                       @RequestParam(value = "tagCode", required = false) String tagCode,
-                                                                      @RequestParam(value = "tagValue", required = false) String tagValue) {
-        return SingleResult.of(transferObjectQueryService.analyzeObjects(sourceId, sourceType, sourceCode, originalName, status, deliveryStatus, mailId, fingerprint, routeId, tagId, tagCode, tagValue));
+                                                                      @RequestParam(value = "tagValue", required = false) String tagValue,
+                                                                      @RequestParam(value = "taskDate", required = false) String taskDate) {
+        return SingleResult.of(transferObjectQueryService.analyzeObjects(sourceId, sourceType, sourceCode, originalName, status, deliveryStatus, mailId, fingerprint, routeId, tagId, tagCode, tagValue, taskDate));
     }
 
     /**

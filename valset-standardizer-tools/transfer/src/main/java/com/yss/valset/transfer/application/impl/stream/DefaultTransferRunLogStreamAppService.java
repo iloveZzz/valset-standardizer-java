@@ -211,6 +211,7 @@ public class DefaultTransferRunLogStreamAppService implements TransferRunLogStre
                 runStage,
                 runStatus,
                 triggerType,
+                null,
                 limit
         );
     }

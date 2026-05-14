@@ -29,6 +29,7 @@ public interface TransferObjectGateway {
                                    String tagId,
                                    String tagCode,
                                    String tagValue,
+                                   String taskDate,
                                    Integer pageIndex,
                                    Integer pageSize);
 
@@ -43,7 +44,8 @@ public interface TransferObjectGateway {
                                           String routeId,
                                           String tagId,
                                           String tagCode,
-                                          String tagValue);
+                                          String tagValue,
+                                          String taskDate);
 
     List<TransferObject> listEmailInboxObjects(String sourceCode, String mailId);
 

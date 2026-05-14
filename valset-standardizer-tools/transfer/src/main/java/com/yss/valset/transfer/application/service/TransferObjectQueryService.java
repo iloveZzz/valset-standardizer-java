@@ -47,6 +47,7 @@ public interface TransferObjectQueryService {
      * @param mailId 邮件唯一标识
      * @param fingerprint 文件指纹
      * @param routeId 路由主键
+     * @param taskDate 任务日期
      * @param pageIndex 页码
      * @param pageSize 每页条数
      * @return 文件主对象分页结果
@@ -63,6 +64,7 @@ public interface TransferObjectQueryService {
                                                   String tagId,
                                                   String tagCode,
                                                   String tagValue,
+                                                  String taskDate,
                                                   Integer pageIndex,
                                                   Integer pageSize);
 
@@ -92,6 +94,7 @@ public interface TransferObjectQueryService {
      * @param mailId 邮件唯一标识
      * @param fingerprint 文件指纹
      * @param routeId 路由主键
+     * @param taskDate 任务日期
      * @return 文件主对象统计分析结果
      */
     TransferObjectAnalysisViewDTO analyzeObjects(String sourceId,
@@ -105,7 +108,8 @@ public interface TransferObjectQueryService {
                                                  String routeId,
                                                  String tagId,
                                                  String tagCode,
-                                                 String tagValue);
+                                                 String tagValue,
+                                                 String taskDate);
 
     /**
      * 统计分析邮件收件箱。

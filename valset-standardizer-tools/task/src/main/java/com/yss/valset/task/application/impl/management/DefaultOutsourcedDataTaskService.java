@@ -4,11 +4,7 @@ import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
-import com.yss.valset.application.dto.workflow.WorkflowExecutionContextDTO;
-import com.yss.valset.application.dto.workflow.WorkflowContextKeys;
-import com.yss.valset.application.dto.workflow.WorkflowContextPayloadSupport;
 import com.yss.valset.task.application.service.workflow.WorkflowRuntimeCatalog;
-import com.yss.valset.task.application.service.workflow.WorkflowEngineDispatchService;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskActionResultDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
@@ -18,13 +14,10 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import com.yss.valset.task.application.port.OutsourcedDataTaskGateway;
 import com.yss.valset.task.application.service.OutsourcedDataTaskService;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.valset.batch.scheduler.SchedulerService;
-import com.yss.valset.domain.gateway.WorkflowTaskGateway;
-import com.yss.valset.domain.model.TaskStage;
-import com.yss.valset.domain.model.TaskStatus;
-import com.yss.valset.domain.model.TaskType;
-import com.yss.valset.domain.model.WorkflowTask;
+import com.yss.valset.parser.application.port.ParseExecutionUseCase;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.explore.JobExplorer;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -48,10 +42,9 @@ import java.util.stream.Collectors;
 public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskService {
 
     private final OutsourcedDataTaskGateway outsourcedDataTaskGateway;
-    private final WorkflowTaskGateway workflowTaskGateway;
-    private final SchedulerService schedulerService;
-    private final ObjectMapper objectMapper;
-    private WorkflowEngineDispatchService workflowEngineDispatchService;
+    private final ParseExecutionUseCase parseExecutionUseCase;
+    private final JobExplorer springBatchJobExplorer;
+    private final JobOperator springBatchJobOperator;
     private WorkflowRuntimeCatalog stageCatalog;
 
     public DefaultOutsourcedDataTaskService() {
@@ -60,13 +53,13 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
 
     @Autowired
     public DefaultOutsourcedDataTaskService(OutsourcedDataTaskGateway outsourcedDataTaskGateway,
-            WorkflowTaskGateway workflowTaskGateway,
-            SchedulerService schedulerService,
-            ObjectMapper objectMapper) {
+            ParseExecutionUseCase parseExecutionUseCase,
+            @org.springframework.beans.factory.annotation.Qualifier("springBatchJobExplorer") JobExplorer springBatchJobExplorer,
+            @org.springframework.beans.factory.annotation.Qualifier("springBatchJobOperator") JobOperator springBatchJobOperator) {
         this.outsourcedDataTaskGateway = outsourcedDataTaskGateway;
-        this.workflowTaskGateway = workflowTaskGateway;
-        this.schedulerService = schedulerService;
-        this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
+        this.parseExecutionUseCase = parseExecutionUseCase;
+        this.springBatchJobExplorer = springBatchJobExplorer;
+        this.springBatchJobOperator = springBatchJobOperator;
     }
 
     @Autowired
@@ -74,11 +67,6 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         if (stageCatalog != null) {
             this.stageCatalog = stageCatalog;
         }
-    }
-
-    @Autowired
-    public void setWorkflowEngineDispatchService(WorkflowEngineDispatchService workflowEngineDispatchService) {
-        this.workflowEngineDispatchService = workflowEngineDispatchService;
     }
 
     @Override
@@ -135,36 +123,35 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
     public OutsourcedDataTaskActionResultDTO execute(String batchId, OutsourcedDataTaskActionCommand command) {
         requireBatch(batchId);
         OutsourcedDataTaskStepDTO currentStep = requireCurrentStep(batchId);
-        WorkflowTask sourceTask = requireWorkflowTask(currentStep);
-        boolean resumeFromFailure = isManualExecuteResume(batchId);
-        triggerCurrentTask(batchId, sourceTask, resumeFromFailure);
-        String message = resumeFromFailure
-                ? "已提交估值表解析任务继续执行请求"
-                : "已提交估值表解析任务手动执行请求";
-        return accepted(batchId, currentStep.getStepId(), "EXECUTE", message);
+        Long taskId = resolveTaskId(batchId, currentStep);
+        triggerParseBatch(taskId);
+        return accepted(batchId, currentStep.getStepId(), "EXECUTE", "已提交估值表解析任务执行请求，taskId=" + taskId);
     }
 
     @Override
     public OutsourcedDataTaskActionResultDTO retry(String batchId, OutsourcedDataTaskActionCommand command) {
         requireBatch(batchId);
         OutsourcedDataTaskStepDTO currentStep = requireCurrentStep(batchId);
-        WorkflowTask sourceTask = requireWorkflowTask(currentStep);
-        Long taskId = cloneAndTrigger(sourceTask);
-        return accepted(batchId, currentStep.getStepId(), "RETRY", "已提交估值表解析任务全流程重跑请求，taskId=" + taskId);
+        Long taskId = resolveTaskId(batchId, currentStep);
+        triggerParseBatch(taskId);
+        return accepted(batchId, currentStep.getStepId(), "RETRY", "已提交估值表解析任务重试请求，taskId=" + taskId);
     }
 
     @Override
     public OutsourcedDataTaskActionResultDTO stop(String batchId, OutsourcedDataTaskActionCommand command) {
         requireBatch(batchId);
-        return accepted(batchId, null, "STOP", "已提交估值表解析任务停止请求");
+        OutsourcedDataTaskStepDTO currentStep = requireCurrentStep(batchId);
+        Long taskId = resolveTaskId(batchId, currentStep);
+        Long executionId = stopRunningBatch(taskId);
+        return accepted(batchId, currentStep.getStepId(), "STOP", "已提交估值表解析任务停止请求，executionId=" + executionId);
     }
 
     @Override
     public OutsourcedDataTaskActionResultDTO retryStep(String batchId, String stepId,
             OutsourcedDataTaskActionCommand command) {
         OutsourcedDataTaskStepDTO step = requireStep(batchId, stepId);
-        WorkflowTask sourceTask = requireWorkflowTask(step);
-        Long taskId = cloneAndTrigger(sourceTask);
+        Long taskId = resolveTaskId(batchId, step);
+        triggerParseBatch(taskId);
         return accepted(batchId, stepId, "RETRY_STEP", "已提交估值表解析任务阶段重跑请求，taskId=" + taskId);
     }
 
@@ -203,43 +190,6 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                 .collect(java.util.stream.Collectors.toList());
     }
 
-    private void triggerCurrentTask(String batchId, WorkflowTask sourceTask, boolean resumeFromFailure) {
-        if (sourceTask == null || sourceTask.getTaskId() == null) {
-            throw new IllegalArgumentException("估值表解析任务缺少可调度的工作流任务：" + batchId);
-        }
-        if (sourceTask.getTaskStatus() == TaskStatus.SUCCESS || sourceTask.getTaskStatus() == TaskStatus.RUNNING) {
-            throw new IllegalStateException("当前任务状态不允许重新调度：" + batchId + "，taskStatus=" + sourceTask.getTaskStatus());
-        }
-        if (resumeFromFailure) {
-            if (workflowTaskGateway == null || !workflowTaskGateway.markRetrying(sourceTask.getTaskId())) {
-                throw new IllegalStateException("估值表解析任务无法切换到重试状态：" + batchId);
-            }
-        }
-        triggerNow(sourceTask.getTaskId(), batchId);
-    }
-
-    private Long cloneAndTrigger(WorkflowTask sourceTask) {
-        if (sourceTask == null || sourceTask.getTaskType() == null) {
-            throw new IllegalArgumentException("工作流任务不能为空");
-        }
-        if (workflowTaskGateway == null) {
-            throw new IllegalStateException("工作流任务网关或调度器未启用，无法重跑任务");
-        }
-        WorkflowTask clone = WorkflowTask.builder()
-                .taskType(sourceTask.getTaskType())
-                .taskStatus(TaskStatus.PENDING)
-                .taskStage(sourceTask.getTaskStage() == null
-                        ? inferTaskStage(sourceTask.getTaskType())
-                        : sourceTask.getTaskStage())
-                .businessKey(sourceTask.getBusinessKey())
-                .fileId(sourceTask.getFileId())
-                .inputPayload(normalizeJson(sourceTask.getInputPayload()))
-                .build();
-        Long taskId = workflowTaskGateway.save(clone);
-        triggerNow(taskId, null);
-        return taskId;
-    }
-
     private OutsourcedDataTaskStepDTO requireCurrentStep(String batchId) {
         List<OutsourcedDataTaskStepDTO> steps = listSteps(batchId);
         return steps.stream()
@@ -252,156 +202,6 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                         .filter(step -> step != null && hasText(step.getTaskId()))
                         .reduce((left, right) -> right)
                         .orElseThrow(() -> new IllegalArgumentException("估值表解析任务阶段不存在：" + batchId)));
-    }
-
-    private WorkflowTask requireWorkflowTask(OutsourcedDataTaskStepDTO step) {
-        Long taskId = parseLong(step == null ? null : step.getTaskId());
-        if (taskId == null || workflowTaskGateway == null) {
-            throw new IllegalArgumentException("估值表解析任务缺少对应的工作流任务：" + (step == null ? null : step.getStepId()));
-        }
-        return workflowTaskGateway.findById(taskId);
-    }
-
-    private boolean isManualExecuteResume(String batchId) {
-        OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
-        return batch != null && isAnyStatus(batch, OutsourcedDataTaskStatus.FAILED, OutsourcedDataTaskStatus.BLOCKED,
-                OutsourcedDataTaskStatus.STOPPED);
-    }
-
-    private static boolean isFailedOrBlocked(String status) {
-        return OutsourcedDataTaskStatus.FAILED.name().equals(status)
-                || OutsourcedDataTaskStatus.BLOCKED.name().equals(status);
-    }
-
-    private static TaskStage inferTaskStage(TaskType taskType) {
-        if (taskType == null) {
-            return TaskStage.OTHER;
-        }
-        switch (taskType) {
-            case EXTRACT_DATA:
-                return TaskStage.EXTRACT;
-            case PARSE_WORKBOOK:
-                return TaskStage.PARSE;
-            case MATCH_SUBJECT:
-                return TaskStage.MATCH;
-            default:
-                return TaskStage.OTHER;
-        }
-    }
-
-    private String normalizeJson(String payload) {
-        if (payload == null || payload.trim().isEmpty() || objectMapper == null) {
-            return payload;
-        }
-        try {
-            Object json = objectMapper.readValue(payload, Object.class);
-            return objectMapper.writeValueAsString(json);
-        } catch (Exception ignored) {
-            return payload;
-        }
-    }
-
-    private void triggerNow(Long taskId, String batchId) {
-        WorkflowTask workflowTask = workflowTaskGateway == null ? null : workflowTaskGateway.findById(taskId);
-        WorkflowExecutionContextDTO executionContext = resolveWorkflowExecutionContext(workflowTask);
-        String stageCode = executionContext == null || !hasText(executionContext.getWorkflowStageCode())
-                ? inferTaskStage(workflowTask == null ? null : workflowTask.getTaskType()).name()
-                : executionContext.getWorkflowStageCode();
-        try {
-            if (workflowEngineDispatchService != null) {
-                workflowEngineDispatchService.trigger(taskId, stageCode, executionContext);
-                return;
-            }
-            if (schedulerService == null) {
-                throw new IllegalStateException("调度器未启用，无法触发估值表解析任务：" + (batchId == null ? taskId : batchId));
-            }
-            schedulerService.triggerNow(taskId);
-        } catch (Exception exception) {
-            throw new IllegalStateException("触发调度失败：" + (batchId == null ? taskId : batchId), exception);
-        }
-    }
-
-    private WorkflowExecutionContextDTO resolveWorkflowExecutionContext(WorkflowTask workflowTask) {
-        if (workflowTask == null || !hasText(workflowTask.getInputPayload()) || objectMapper == null) {
-            return null;
-        }
-        try {
-            Map<?, ?> payload = objectMapper.readValue(workflowTask.getInputPayload(), Map.class);
-            WorkflowExecutionContextDTO context = new WorkflowExecutionContextDTO();
-            context.setWorkflowCode(textValue(payload.get("workflowCode")));
-            context.setWorkflowId(textValue(payload.get("workflowId")));
-            context.setWorkflowVersionNo(numberValue(payload.get("workflowVersionNo")));
-            context.setWorkflowStageCode(textValue(payload.get("workflowStageCode")));
-            context.setWorkflowStageName(textValue(payload.get("workflowStageName")));
-            context.setWorkflowStageDescription(textValue(payload.get("workflowStageDescription")));
-            context.setEngineType(textValue(payload.get("workflowEngineType")));
-            context.setExternalRef(textValue(payload.get("workflowEngineExternalRef")));
-            context.setConfigJson(textValue(payload.get("workflowEngineConfigJson")));
-            Map<String, Object> contextPayload = parseContextEnvelope(context.getConfigJson());
-            Map<String, Object> commonContext = WorkflowContextPayloadSupport.extractSection(contextPayload, WorkflowContextKeys.COMMON_CONTEXT);
-            String createdBy = textValue(payload.get("createdBy"));
-            if (createdBy != null) {
-                commonContext.putIfAbsent(WorkflowContextKeys.CREATED_BY, createdBy);
-            }
-            Object forceRebuild = payload.get("forceRebuild");
-            if (forceRebuild != null) {
-                commonContext.putIfAbsent(WorkflowContextKeys.FORCE_REBUILD, forceRebuild instanceof Boolean
-                        ? (Boolean) forceRebuild
-                        : Boolean.valueOf(String.valueOf(forceRebuild)));
-            }
-            context.setCommonContext(commonContext);
-            Map<String, Object> businessContext = WorkflowContextPayloadSupport.extractSection(contextPayload, WorkflowContextKeys.BUSINESS_CONTEXT);
-            context.setBusinessContext(businessContext.isEmpty()
-                    ? WorkflowContextPayloadSupport.flattenEnvelope(contextPayload)
-                    : businessContext);
-            context.setBusinessContextJson(context.getConfigJson());
-            context.setBindingId(textValue(payload.get("workflowBindingId")));
-            Object bindingResolved = payload.get("workflowBindingResolved");
-            if (bindingResolved instanceof Boolean) {
-                context.setBindingResolved((Boolean) bindingResolved);
-            } else if (bindingResolved != null) {
-                context.setBindingResolved(Boolean.valueOf(String.valueOf(bindingResolved)));
-            }
-            return context;
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private Integer numberValue(Object value) {
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        }
-        if (value == null) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(String.valueOf(value));
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private String textValue(Object value) {
-        if (value == null) {
-            return null;
-        }
-        String text = String.valueOf(value);
-        return text.trim().isEmpty() ? null : text.trim();
-    }
-
-    private Map<String, Object> parseContextEnvelope(String configJson) {
-        if (!hasText(configJson)) {
-            return Collections.emptyMap();
-        }
-        try {
-            Map<?, ?> raw = objectMapper.readValue(configJson, Map.class);
-            Map<String, Object> context = new java.util.LinkedHashMap<>();
-            raw.forEach((key, value) -> context.put(String.valueOf(key), value));
-            return context;
-        } catch (Exception ignored) {
-            return Collections.emptyMap();
-        }
     }
 
     private static Long parseLong(String value) {
@@ -433,6 +233,55 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                     .orElseThrow(() -> new IllegalArgumentException("估值表解析任务阶段不存在：" + stepId));
         }
         throw new IllegalArgumentException("估值表解析任务阶段不存在：" + stepId);
+    }
+
+    private Long resolveTaskId(String batchId, OutsourcedDataTaskStepDTO step) {
+        Long taskId = parseLong(step == null ? null : step.getTaskId());
+        if (taskId != null) {
+            return taskId;
+        }
+        if (batchId != null && batchId.startsWith("TASK-")) {
+            return parseLong(batchId.substring("TASK-".length()));
+        }
+        throw new IllegalArgumentException("估值表解析任务缺少可执行的 taskId：" + batchId);
+    }
+
+    private void triggerParseBatch(Long taskId) {
+        if (taskId == null) {
+            throw new IllegalArgumentException("估值表解析任务缺少可执行的 taskId");
+        }
+        if (parseExecutionUseCase == null) {
+            throw new IllegalStateException("解析执行用例未启用，无法提交 Spring Batch 任务：" + taskId);
+        }
+        parseExecutionUseCase.execute(taskId);
+    }
+
+    private Long stopRunningBatch(Long taskId) {
+        if (taskId == null) {
+            throw new IllegalArgumentException("估值表解析任务缺少可停止的 taskId");
+        }
+        if (springBatchJobExplorer == null || springBatchJobOperator == null) {
+            throw new IllegalStateException("Spring Batch 停止能力未启用，无法停止任务：" + taskId);
+        }
+        Set<JobExecution> runningExecutions = springBatchJobExplorer.findRunningJobExecutions("valuationParseJob");
+        if (runningExecutions == null || runningExecutions.isEmpty()) {
+            return null;
+        }
+        for (JobExecution execution : runningExecutions) {
+            if (execution == null || execution.getJobParameters() == null) {
+                continue;
+            }
+            Long executionTaskId = execution.getJobParameters().getLong("taskId");
+            if (Objects.equals(taskId, executionTaskId)) {
+                try {
+                    springBatchJobOperator.stop(execution.getId());
+                } catch (Exception exception) {
+                    throw new IllegalStateException("停止 Spring Batch 任务失败，taskId=" + taskId, exception);
+                }
+                return execution.getId();
+            }
+        }
+        return null;
     }
 
     private List<OutsourcedDataTaskBatchDTO> filterBatches(OutsourcedDataTaskQueryCommand query) {
@@ -525,6 +374,11 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         return batches.stream()
                 .filter(batch -> Objects.equals(batch.getStatus(), status.name()))
                 .count();
+    }
+
+    private static boolean isFailedOrBlocked(String status) {
+        return OutsourcedDataTaskStatus.FAILED.name().equals(status)
+                || OutsourcedDataTaskStatus.BLOCKED.name().equals(status);
     }
 
     private static boolean isAnyStatus(OutsourcedDataTaskBatchDTO batch, OutsourcedDataTaskStatus... statuses) {
