@@ -5,14 +5,14 @@
 ## 目标
 
 - 对外提供统一的工作流定义、实例、阶段日志和回调 API
-- 统一 Spring Batch、DolphinScheduler、XXL-JOB 的参数映射和状态归一化
+- 统一 批量任务、DolphinScheduler、XXL-JOB 的参数映射和状态归一化
 - 让底层执行平台可替换，但上层查询和日志协议保持稳定
 
 ## 模块
 
 - `valset-standardizer-workflow`
   - `taskflow-adapter`：通用 DTO、状态、日志、控制接口和数据库运行态
-  - `taskflow-springbatch`：Spring Batch 适配
+  - `taskflow-springbatch`：批量任务 适配
   - `taskflow-dolohinscheduler`：DolphinScheduler 适配
   - `taskflow-xxljob`：XXL-JOB 适配
 
@@ -48,5 +48,5 @@
 ## 当前实现状态
 
 - 已落地统一 DTO、状态映射、数据库运行态和通用控制器
-- 已提供 Spring Batch、DolphinScheduler、XXL-JOB 三个适配器骨架
+- 已提供 批量任务、DolphinScheduler、XXL-JOB 三个适配器骨架
 - 已补齐数据库表、Repository 和运行态回读逻辑

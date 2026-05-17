@@ -13,6 +13,10 @@
   border: 1px solid rgba(15, 23, 42, 0.08);
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
 }
+
+.overview-trend-panel {
+  overflow: hidden;
+}
 .workspace-kicker,
 .section-title p {
   color: rgba(15, 23, 42, 0.62);
@@ -115,6 +119,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 10px;
 }
 
 .overview-hero-head {
@@ -339,7 +344,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 212px;
+  min-height: 160px;
   min-width: 0;
   padding: 16px 18px;
   border: 1px solid rgba(22, 119, 255, 0.14);
@@ -487,7 +492,7 @@
   position: relative;
   overflow: hidden;
   padding: 16px 18px;
-  min-height: 134px;
+  min-height: 120px;
   background: rgba(255, 255, 255, 0.76);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
@@ -537,6 +542,18 @@
   letter-spacing: 0;
 }
 
+.overview-hero-stat-value--green {
+  color: #52c41a;
+}
+
+.overview-hero-stat-value--blue {
+  color: #1677ff;
+}
+
+.overview-hero-stat-value--yellow {
+  color: #faad14;
+}
+
 .overview-hero-stat-desc,
 .overview-pipeline-copy p,
 .trend-phase-desc,
@@ -554,6 +571,18 @@
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.6;
+}
+
+.overview-hero-stat-desc strong {
+  font-weight: 700;
+}
+
+.overview-hero-stat-desc-value--green {
+  color: #52c41a;
+}
+
+.overview-hero-stat-desc-value--red {
+  color: #ff4d4f;
 }
 
 .overview-hero-stat-desc,
@@ -664,6 +693,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+  margin-bottom: 16px;
 }
 
 .trend-phase-grid {
@@ -836,7 +866,7 @@
 }
 
 .trend-chart-shell--echarts {
-  padding: 12px;
+  padding: 0px;
 }
 
 .trend-chart-canvas {

@@ -9,7 +9,5 @@ public enum DataSourceType {
     /** CSV 文件数据源 */
     CSV,
     /** 外部接口 API 数据源 */
-    API,
-    /** 本地数据库标准数据表 t_ods_valuation_data */
-    DB
+    API
 }

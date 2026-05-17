@@ -18,7 +18,11 @@ public class OutsourcedDataTaskQueryCommand {
 
     private String productKeyword;
 
+    private String taskStage;
+
     private String stage;
+
+    private String step;
 
     private String status;
 

@@ -37,7 +37,7 @@ public class DwdExternalValuationStandardSubjectPO {
     private String subjectName;
 
     @TableField("level_no")
-    private Integer level;
+    private Integer levelNo;
 
     @TableField("parent_code")
     private String parentCode;

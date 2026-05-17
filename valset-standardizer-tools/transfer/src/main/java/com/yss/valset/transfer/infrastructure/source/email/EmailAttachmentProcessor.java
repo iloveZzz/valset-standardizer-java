@@ -597,11 +597,7 @@ public class EmailAttachmentProcessor {
         if (message == null) {
             return null;
         }
-        try {
-            return message.getSubject();
-        } catch (Exception e) {
-            return null;
-        }
+        return EmailMimeHeaderDecoder.decodeSubject(message);
     }
 
     private String resolveMailId(Message message, EmailSourceConfig config, UIDFolder uidFolder) throws Exception {

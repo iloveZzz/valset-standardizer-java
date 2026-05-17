@@ -1,7 +1,7 @@
 package com.yss.valset.workflow.springbatch;
 
 /**
- * Spring Batch 运行结果负载键名常量。
+ * 批量任务 运行结果负载键名常量。
  *
  * <p>这些键名用于阶段输入、输出、元数据和作业级返回值的统一编码，
  * 保证日志、查询接口和测试断言使用同一套字段约定。

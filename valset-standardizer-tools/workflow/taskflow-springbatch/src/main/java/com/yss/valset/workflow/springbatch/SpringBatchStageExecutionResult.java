@@ -11,7 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Spring Batch 阶段执行结果。
+ * 批量任务 阶段执行结果。
  *
  * <p>这个对象是单个阶段的标准输出，既包含执行状态，也包含输入、输出和元数据快照。
  * 上层会把它写入阶段日志，查询接口可以直接拿来做页面展示或故障排查。
@@ -25,7 +25,7 @@ public class SpringBatchStageExecutionResult {
     private WorkflowStatus status;
 
     /**
-     * Spring Batch 或业务阶段对应的原始状态文本，便于排查底层执行结果。
+     * 批量任务 或业务阶段对应的原始状态文本，便于排查底层执行结果。
      */
     private String rawStatus;
 

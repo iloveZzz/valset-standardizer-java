@@ -2,6 +2,7 @@ package com.yss.valset.transfer.infrastructure.mapper;
 
 import com.yss.cloud.mybatis.support.BasePlusRepository;
 import com.yss.valset.transfer.infrastructure.entity.TransferDeliveryRecordPO;
+import org.springframework.stereotype.Repository;
 
 public interface TransferDeliveryRecordRepository extends BasePlusRepository<TransferDeliveryRecordPO> {
 }

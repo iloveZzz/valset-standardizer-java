@@ -6,4 +6,6 @@ package com.yss.valset.transfer.application.port;
 public interface DeliverTransferUseCase {
 
     void execute(String routeId, String transferId);
+
+    void execute(String routeId, String transferId, Integer retryCount);
 }

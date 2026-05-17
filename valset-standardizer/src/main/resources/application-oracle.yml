@@ -2,9 +2,9 @@ spring:
   datasource:
     primary:
       driver-class-name: oracle.jdbc.OracleDriver
-      url: jdbc:oracle:thin:@//127.0.0.1:1521/orclpdb1
-      username: ${VALSET_DATASOURCE_USERNAME:valset}
-      password: ${VALSET_DATASOURCE_PASSWORD:valset}
+      url: jdbc:oracle:thin:@//127.0.0.1:1521/orcl
+      username: ${VALSET_DATASOURCE_USERNAME:VALSET_STANDARDIZER}
+      password: ${VALSET_DATASOURCE_PASSWORD:Yss@300377!}
       hikari:
         maximum-pool-size: 20
         minimum-idle: 5
@@ -12,3 +12,9 @@ spring:
         max-lifetime: 1800000
         idle-timeout: 600000
         pool-name: valset-oracle-datasource
+yss:
+  mybatis:
+    helperDialect: oracle
+mybatis-plus:
+  configuration:
+    jdbc-type-for-null: NULL

@@ -163,12 +163,18 @@ public class DefaultTransferRunLogQueryService implements TransferRunLogQuerySer
     }
 
     private LocalDateTime resolveTaskStart(String taskDate) {
-        LocalDate taskDay = resolveTaskDate(taskDate);
+        if (!StringUtils.hasText(taskDate)) {
+            return null;
+        }
+        LocalDate taskDay = LocalDate.parse(taskDate.trim());
         return taskDay == null ? null : taskDay.atStartOfDay();
     }
 
     private LocalDateTime resolveTaskEnd(String taskDate) {
-        LocalDate taskDay = resolveTaskDate(taskDate);
+        if (!StringUtils.hasText(taskDate)) {
+            return null;
+        }
+        LocalDate taskDay = LocalDate.parse(taskDate.trim());
         return taskDay == null ? null : taskDay.plusDays(1L).atStartOfDay();
     }
 

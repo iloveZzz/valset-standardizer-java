@@ -19,7 +19,7 @@
 - `valset-standardizer-transfer`：文件收发分拣调度与任务分发，当前基于 db-scheduler
 - `valset-standardizer-workflow`：通用 ETL 平台适配层，下面包含
   - `valset-standardizer-taskflow-adapter`：统一工作流 DTO、状态、日志、控制接口与数据库运行态
-  - `valset-standardizer-taskflow-springbatch`：Spring Batch 适配实现
+  - `valset-standardizer-taskflow-springbatch`：批量任务 适配实现
   - `valset-standardizer-taskflow-dolohinscheduler`：DolphinScheduler 适配实现
   - `valset-standardizer-taskflow-xxljob`：XXL-JOB 适配实现
 - `yss-valset-standardizer`：整合应用，承载启动类、应用服务、控制器、运行配置以及原 `core` / `infra` 代码
@@ -30,7 +30,7 @@
 2. `PARSE_WORKBOOK` 和 `MATCH_SUBJECT` 的文件输入以 `workbookPath` 为主，内部优先使用 `localTempPath` / `realStoragePath` 定位文件，不再把 `fileId` 作为文件读取前提。
 3. `API` / `DB` 数据源继续走原有分析器。
 4. 文件主数据现在统一由 `t_transfer_object` 承担，估值文件通过 `VALUATION_TABLE` 标签识别，`t_transfer_object_tag` 记录接入分类，`file_id` 仍作为任务关联键保留。
-5. `t_valset_workflow_task` 记录流程阶段 `task_stage`，并分别记录 `task_start_time`、`parse_task_time_ms`、`standardize_time_ms`、`match_standard_subject_time_ms`，其中三段耗时分别对应文件解析、标准结构化、标准科目匹配。
+5. 任务执行状态和阶段日志现在以 批量任务 元数据为准，主要回放 `BATCH_JOB_EXECUTION`、`BATCH_JOB_EXECUTION_PARAMS`、`BATCH_STEP_EXECUTION` 与 `t_parse_queue` 的关联信息。
 6. `WorkflowEngineAdapter` 仅用于估值内部流程的触发、重试和查询，不承担通用 ETL 平台编排。
 7. 同一份文件默认会复用已成功完成的抽取任务、解析任务和匹配任务；如果需要重新执行，可在接口里传入 `forceRebuild=true`。上传返回里会带 `fileFingerprint`，便于排查是否命中同一份文件。
 8. 通用 ETL 场景走 `valset-standardizer-workflow`，对外统一 `/api/etl/workflows/**`，与估值内部 `WorkflowEngineAdapter` 分离。
@@ -47,23 +47,17 @@
 - 本地链路观测（OTEL + Tempo）：`docs/observability/otel-local-collector-tempo.md`
 - 文件管理接口：`/api/files/upload`、`/api/files/{fileId}`、`/api/files`、`/api/files/by-path`、`/api/files/by-path/ingest-logs`、`/api/files/by-path/sheet-styles`、`/api/files/{fileId}/ingest-logs`、`/api/files/{fileId}/sheet-styles`
 
-## Liquibase
+## 数据库初始化
 
-项目已补充 Liquibase changelog 入口：
+项目内不再保留数据库自动迁移配置与历史迁移入口。
 
-- `yss-valset-standardizer/src/main/resources/db/changelog/db.changelog-master.xml`
+当前数据库初始化以仓库中的静态 SQL 为准：
 
-启动配置默认关闭 Liquibase，需要显式开启：
+- MySQL 基线参考：`docs/ddl/mysql.sql`
+- 估值链路补充脚本：`valset-standardizer/src/main/resources/db/migration/*.sql`
+- ODS 抽取补充脚本：`valset-standardizer-tools/extract/src/main/resources/db/migration/*.sql`
 
-- `LIQUIBASE_ENABLED=true`
-- 可选覆盖 changelog：`LIQUIBASE_CHANGE_LOG=classpath:/db/changelog/db.changelog-master.xml`
-
-当前这套 Liquibase 脚本已经整理为项目当前使用的完整 schema 基线，覆盖任务、调度、文件主表、接入日志、ODS 原始表、DWD 标准表、匹配结果表、标准科目表、知识样本表、`leaf_alloc` 以及 legacy 估值表。
-
-注意：
-
-- 它可以作为新环境建库的基线入口，但不应直接覆盖已经运行中的存量库。
-- 如果目标环境已经按历史初始化脚本或人工变更建库，建议先对比字段差异，再拆分增量 changeSet 执行迁移。
+如需初始化新环境，建议先执行基线 DDL，再按业务链路补齐迁移 SQL，并在执行前对照目标库现状确认差异。
 
 ## 数据源切换
 

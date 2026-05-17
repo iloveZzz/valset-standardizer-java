@@ -1,4 +1,4 @@
-import { customInstance } from "./generated/valset/mutator";
+import { customInstance } from "./mutator";
 
 export type TransferDeliveryRecordSummaryDTO = {
   todayDeliveryCount?: number;

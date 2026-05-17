@@ -8,7 +8,8 @@
         <result column="file_id" property="fileId" jdbcType="BIGINT"/>
         <result column="sheet_name" property="sheetName" jdbcType="VARCHAR"/>
         <result column="style_scope" property="styleScope" jdbcType="VARCHAR"/>
-        <result column="sheet_style_json" property="sheetStyleJson" jdbcType="VARCHAR"/>
+        <result column="sheet_style_json" property="sheetStyleJson" jdbcType="CLOB"
+                typeHandler="com.yss.valset.extract.repository.mybatis.LongTextToStringTypeHandler"/>
         <result column="preview_row_count" property="previewRowCount" jdbcType="INTEGER"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
     </resultMap>
@@ -29,7 +30,7 @@
             #{fileId},
             #{sheetName},
             #{styleScope},
-            #{sheetStyleJson},
+            #{sheetStyleJson,typeHandler=com.yss.valset.extract.repository.mybatis.LongTextToStringTypeHandler},
             #{previewRowCount},
             #{createdAt}
         )

@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -20,7 +21,7 @@ import java.util.Optional;
  * 工作流运行态阶段目录。
  *
  * <p>
- * 当前版本直接使用固定的三段式 Spring Batch 业务阶段定义。
+ * 当前版本直接使用固定的三段式 批量任务 业务阶段定义。
  * 这样做的目的，是把估值表解析的运行态收敛为代码内常量，避免业务链路继续依赖外部工作流配置表。
  * </p>
  */
@@ -221,6 +222,50 @@ public class WorkflowRuntimeCatalog {
                 .filter(StringUtils::hasText)
                 .findFirst()
                 .orElseGet(() -> resolveStatusFallbackLabel(status));
+    }
+
+    /**
+     * 将页面态状态和 批量任务 原始状态统一归一化为任务页使用的状态编码。
+     *
+     * @param status 原始状态或页面状态
+     * @return 统一后的任务状态编码
+     */
+    public String normalizePageStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return OutsourcedDataTaskStatus.PENDING.name();
+        }
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        if (OutsourcedDataTaskStatus.PENDING.name().equals(normalized)
+                || OutsourcedDataTaskStatus.RUNNING.name().equals(normalized)
+                || OutsourcedDataTaskStatus.SUCCESS.name().equals(normalized)
+                || OutsourcedDataTaskStatus.FAILED.name().equals(normalized)
+                || OutsourcedDataTaskStatus.STOPPED.name().equals(normalized)
+                || OutsourcedDataTaskStatus.BLOCKED.name().equals(normalized)) {
+            return normalized;
+        }
+        if ("STARTING".equals(normalized) || "STARTED".equals(normalized) || "STOPPING".equals(normalized)) {
+            return OutsourcedDataTaskStatus.RUNNING.name();
+        }
+        if ("COMPLETED".equals(normalized)) {
+            return OutsourcedDataTaskStatus.SUCCESS.name();
+        }
+        if ("FAILED".equals(normalized)) {
+            return OutsourcedDataTaskStatus.FAILED.name();
+        }
+        if ("STOPPED".equals(normalized) || "ABANDONED".equals(normalized)) {
+            return OutsourcedDataTaskStatus.STOPPED.name();
+        }
+        return OutsourcedDataTaskStatus.PENDING.name();
+    }
+
+    /**
+     * 统一返回任务页展示使用的状态文案。
+     *
+     * @param status 原始状态或页面状态
+     * @return 展示文案
+     */
+    public String resolveStatusLabel(String status) {
+        return statusLabel(normalizePageStatus(status));
     }
 
     public OutsourcedDataTaskStage firstStage() {

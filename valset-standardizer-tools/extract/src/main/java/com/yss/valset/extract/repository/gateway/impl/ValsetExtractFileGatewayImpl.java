@@ -8,8 +8,10 @@ import com.yss.valset.domain.model.ValsetFileStatus;
 import com.yss.valset.domain.model.ValsetFileStorageType;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
+import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
+import com.yss.valset.transfer.domain.model.TransferTagDefinition;
 import com.yss.valset.transfer.domain.model.TransferStatus;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectPO;
 import com.yss.valset.transfer.infrastructure.mapper.TransferObjectRepository;
@@ -62,6 +64,7 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
     private final TransferObjectRepository transferObjectRepository;
     private final TransferObjectTagGateway transferObjectTagGateway;
     private final TransferObjectGateway transferObjectGateway;
+    private final TransferTagGateway transferTagGateway;
 
     @Override
     public Long save(ValsetFileInfo fileInfo) {
@@ -354,17 +357,19 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
         if (exists) {
             return;
         }
+        TransferTagDefinition tagDefinition = transferTagGateway.findByTagCode(VALUATION_TAG_CODE)
+                .orElseThrow(() -> new IllegalStateException("未配置估值表标签定义，tagCode=" + VALUATION_TAG_CODE));
         TransferObjectTag valuationTag = new TransferObjectTag(
                 null,
                 transferObject.transferId(),
-                null,
-                VALUATION_TAG_CODE,
-                VALUATION_TAG_NAME,
-                VALUATION_TAG_VALUE,
+                tagDefinition.tagId(),
+                tagDefinition.tagCode(),
+                tagDefinition.tagName(),
+                tagDefinition.tagValue(),
                 "SCRIPT_RULE",
                 "文件主数据自动标记为估值表",
                 "fileMeta",
-                VALUATION_TAG_VALUE,
+                tagDefinition.tagValue(),
                 com.yss.valset.common.support.Java8Maps.of("source", "file-info-gateway"),
                 Instant.now()
         );

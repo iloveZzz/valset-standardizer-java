@@ -9,6 +9,7 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskTraceDTO;
 
 import java.util.List;
 
@@ -22,6 +23,8 @@ public interface OutsourcedDataTaskService {
     PageResult<OutsourcedDataTaskBatchDTO> pageTasks(OutsourcedDataTaskQueryCommand query);
 
     OutsourcedDataTaskBatchDetailDTO getTask(String batchId);
+
+    OutsourcedDataTaskTraceDTO getTrace(String batchId);
 
     List<OutsourcedDataTaskStepDTO> listSteps(String batchId);
 

@@ -10,7 +10,6 @@ import java.util.List;
 /**
  * 文件收发运行日志统计查询器。
  */
-@Mapper
 public interface TransferRunLogStatisticsMapper {
 
     List<TransferRunLogTrendDTO> selectDeliverTrend(@Param("startInclusive") LocalDateTime startInclusive,

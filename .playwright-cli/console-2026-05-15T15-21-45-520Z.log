@@ -1,0 +1,3 @@
+[      66ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://127.0.0.1:5179/favicon.ico:0
+[    1227ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/@yss-ui_components.js?v=7f1919f9:37360
+[ 2463847ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://127.0.0.1:5179/node_modules/.vite/deps/@yss-ui_components.js?v=7f1919f9:37360

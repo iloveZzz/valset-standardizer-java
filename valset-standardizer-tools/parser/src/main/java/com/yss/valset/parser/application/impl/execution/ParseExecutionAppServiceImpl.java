@@ -1,8 +1,10 @@
 package com.yss.valset.parser.application.impl.execution;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.parser.application.port.ParseExecutionUseCase;
+import com.yss.valset.parser.domain.gateway.ParseQueueGateway;
+import com.yss.valset.parser.domain.model.ParseQueue;
+import com.yss.valset.parser.domain.model.ParseStatus;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.model.WorkflowTask;
 import com.yss.valset.common.support.TaskFailureClassifier;
@@ -16,13 +18,13 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Qualifier;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+import org.springframework.scheduling.annotation.Async;
 
 /**
  * 解析工作流程实现。
  *
  * <p>
- * 这个应用服务只负责 Spring Batch 的启动编排：
+ * 这个应用服务只负责 批量任务 的启动编排：
  * 先补齐作业参数，再提交作业，最后根据执行结果把旧任务状态做兼容回写。
  * 真正的解析、标准化和落库逻辑都在具体 Step 中完成。
  * </p>
@@ -31,19 +33,21 @@ import org.springframework.util.StringUtils;
 @Service
 public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
 
+    private static final String PARSE_QUEUE_SUCCESS_MESSAGE = "解析成功";
+
     private final WorkflowTaskGateway taskGateway;
-    private final ObjectMapper objectMapper;
+    private final ParseQueueGateway parseQueueGateway;
     private final JobLauncher springBatchJobLauncher;
     private final Job valuationParseJob;
 
     public ParseExecutionAppServiceImpl(
             WorkflowTaskGateway taskGateway,
-            ObjectMapper objectMapper,
+            ParseQueueGateway parseQueueGateway,
             @Qualifier("springBatchJobLauncher") JobLauncher springBatchJobLauncher,
             @Qualifier("valuationParseJob") Job valuationParseJob
     ) {
         this.taskGateway = taskGateway;
-        this.objectMapper = objectMapper;
+        this.parseQueueGateway = parseQueueGateway;
         this.springBatchJobLauncher = springBatchJobLauncher;
         this.valuationParseJob = valuationParseJob;
     }
@@ -52,52 +56,52 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
      * 启动估值表解析作业。
      *
      * <p>
-     * 这里不直接执行业务逻辑，而是把任务信息封装成 JobParameters 交给 Spring Batch，
+     * 这里不直接执行业务逻辑，而是把任务信息封装成 JobParameters 交给 批量任务，
      * 由 Job 内部的三个 Step 依次完成。
      * </p>
      */
     @Override
+    @Async("parseTaskExecutor")
     public void execute(Long taskId) {
         WorkflowTask workflowTask = taskGateway.findById(taskId);
         if (workflowTask == null) {
             throw new IllegalStateException("未找到解析任务，taskId=" + taskId);
         }
-        log.info("开始执行 Spring Batch 估值解析任务，taskId={}", taskId);
+        log.info("开始执行 批量任务 估值解析任务，taskId={}", taskId);
         taskGateway.markRunning(taskId, TaskStage.PARSE.name(), java.time.LocalDateTime.now());
-        String inputPayload = workflowTask.getInputPayload();
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("taskId", taskId, true)
                 .addString("taskType", workflowTask.getTaskType() == null ? null : workflowTask.getTaskType().name(), true)
                 .addString("taskStage", workflowTask.getTaskStage() == null ? null : workflowTask.getTaskStage().name(), true)
                 .addString("businessKey", workflowTask.getBusinessKey(), false)
                 .addLong("fileId", workflowTask.getFileId(), false)
-                .addString("inputPayload", StringUtils.hasText(inputPayload) ? inputPayload : null, false)
-                .addDate("triggerTime", new java.util.Date(), false)
+                // 每次执行都注入一个新的 identifying 参数，避免重试时复用已完成的 JobInstance。
+                .addDate("triggerTime", new java.util.Date(), true)
                 .toJobParameters();
         try {
             JobExecution jobExecution = springBatchJobLauncher.run(valuationParseJob, jobParameters);
-            updateLegacyTaskResult(taskId, jobExecution);
+            updateLegacyTaskResult(taskId, workflowTask, jobExecution);
             if (jobExecution == null || jobExecution.getStatus() == null || jobExecution.getStatus().isUnsuccessful()) {
                 String failureMessage = resolveFailureMessage(jobExecution, taskId);
                 taskGateway.markFailed(taskId, failureMessage);
                 throw new IllegalStateException(failureMessage);
             }
-            log.info("Spring Batch 估值解析任务执行完成，taskId={}, jobExecutionId={}, status={}",
+            log.info("批量任务 估值解析任务执行完成，taskId={}, jobExecutionId={}, status={}",
                     taskId,
                     jobExecution.getId(),
                     jobExecution.getStatus());
         } catch (Exception exception) {
             String failureMessage = TaskFailureClassifier.resolveReadableMessage(exception);
             taskGateway.markFailed(taskId, failureMessage);
-            log.error("Spring Batch 估值解析任务执行失败，taskId={}", taskId, exception);
+            log.error("批量任务 估值解析任务执行失败，taskId={}", taskId, exception);
             throw new IllegalStateException("Failed to execute parse task " + taskId, exception);
         }
     }
 
     /**
-     * 将 Spring Batch 的执行结果同步回旧任务模型，保证迁移期页面和接口还能读到结果。
+     * 将 批量任务 的执行结果同步回旧任务模型，保证迁移期页面和接口还能读到结果。
      */
-    private void updateLegacyTaskResult(Long taskId, JobExecution jobExecution) {
+    private void updateLegacyTaskResult(Long taskId, WorkflowTask workflowTask, JobExecution jobExecution) {
         if (jobExecution == null) {
             return;
         }
@@ -107,13 +111,76 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
             taskGateway.updateTaskTimings(taskId, fileParseMs, standardizeMs, null);
         }
         if (BatchStatus.COMPLETED.equals(jobExecution.getStatus())) {
-            String resultPayload = jobExecution.getExecutionContext().getString(
-                    com.yss.valset.parser.application.support.ParseBatchStepSupport.JOB_CONTEXT_RESULT_PAYLOAD,
-                    null);
+            WorkflowTask latestTask = taskGateway.findById(taskId);
+            String resultPayload = latestTask == null ? null : latestTask.getResultPayload();
             if (resultPayload != null) {
                 taskGateway.markSuccess(taskId, resultPayload);
             }
+            markRelatedParseQueueSuccess(latestTask == null ? workflowTask : latestTask, resultPayload);
         }
+    }
+
+    /**
+     * 批量重新解析不会再经过 ParseQueueObserverJob，因此成功后需要在这里补齐队列状态回写。
+     */
+    private void markRelatedParseQueueSuccess(WorkflowTask workflowTask, String resultPayload) {
+        if (workflowTask == null || workflowTask.getFileId() == null || parseQueueGateway == null) {
+            return;
+        }
+        String transferId = String.valueOf(workflowTask.getFileId());
+        java.util.List<ParseQueue> queues = parseQueueGateway.listQueues(
+                transferId,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                1);
+        if (queues == null || queues.isEmpty()) {
+            log.debug("批量任务 解析成功后未找到关联待解析队列，taskId={}, transferId={}",
+                    workflowTask.getTaskId(),
+                    transferId);
+            return;
+        }
+        ParseQueue queue = queues.get(0);
+        java.time.Instant now = java.time.Instant.now();
+        ParseQueue successQueue = new ParseQueue(
+                queue.queueId(),
+                queue.businessKey(),
+                queue.transferId(),
+                queue.originalName(),
+                queue.sourceId(),
+                queue.sourceType(),
+                queue.sourceCode(),
+                queue.routeId(),
+                queue.deliveryId(),
+                queue.tagId(),
+                queue.tagCode(),
+                queue.tagName(),
+                queue.fileStatus(),
+                queue.deliveryStatus(),
+                ParseStatus.PARSED,
+                queue.triggerMode(),
+                queue.retryCount(),
+                queue.subscribedBy(),
+                queue.subscribedAt(),
+                now,
+                PARSE_QUEUE_SUCCESS_MESSAGE,
+                queue.objectSnapshotJson(),
+                queue.deliverySnapshotJson(),
+                queue.parseRequestJson(),
+                resultPayload,
+                queue.createdAt(),
+                now
+        );
+        parseQueueGateway.save(successQueue);
+        log.info("批量任务 解析成功后已回写待解析队列，taskId={}, queueId={}, transferId={}",
+                workflowTask.getTaskId(),
+                queue.queueId(),
+                transferId);
     }
 
     /**
@@ -130,13 +197,14 @@ public class ParseExecutionAppServiceImpl implements ParseExecutionUseCase {
      * 归一化作业失败消息，优先返回真正的异常信息。
      */
     private String resolveFailureMessage(JobExecution jobExecution, Long taskId) {
+        jobExecution.getAllFailureExceptions().forEach(e -> log.error("批量任务 解析任务失败，taskId=" + taskId, e));
         if (jobExecution == null) {
-            return "Spring Batch 解析任务失败，taskId=" + taskId;
+            return "批量任务 解析任务失败，taskId=" + taskId;
         }
         if (jobExecution.getAllFailureExceptions() != null && !jobExecution.getAllFailureExceptions().isEmpty()) {
             Throwable throwable = jobExecution.getAllFailureExceptions().get(0);
             return TaskFailureClassifier.resolveReadableMessage(throwable);
         }
-        return "Spring Batch 解析任务失败，taskId=" + taskId + ", status=" + jobExecution.getStatus();
+        return "批量任务 解析任务失败，taskId=" + taskId + ", status=" + jobExecution.getStatus();
     }
 }

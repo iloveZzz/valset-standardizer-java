@@ -3,6 +3,24 @@ import type {
   SpringBatchValuationTaskStatus,
 } from "./types";
 
+export const springBatchValuationTaskSourceTypeLabelMap: Record<string, string> = {
+  EXTRACT_DATA: "原始数据提取",
+  PARSE_WORKBOOK: "解析工作簿",
+  MATCH_SUBJECT: "标准科目匹配",
+  EVALUATE_MAPPING: "映射评估",
+  EXPORT_RESULT: "结果导出",
+  REFRESH_STANDARD_SUBJECT: "刷新标准科目",
+  REFRESH_MAPPING_HINT: "刷新映射提示",
+};
+
+export const resolveSpringBatchValuationTaskSourceTypeLabel = (value?: string) => {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (!normalized) {
+    return "-";
+  }
+  return springBatchValuationTaskSourceTypeLabelMap[normalized] ?? normalized;
+};
+
 export const springBatchValuationTaskStageCatalog: Array<{
   stage: SpringBatchValuationTaskStage;
   step: SpringBatchValuationTaskStage;
@@ -18,10 +36,10 @@ export const springBatchValuationTaskStageCatalog: Array<{
     step: "FILE_PARSE",
     stageName: "文件解析",
     stepName: "文件解析",
-    stageDescription: "解析 Spring Batch 文件输入与原始内容抽取结果",
-    stepDescription: "解析 Spring Batch 文件输入与原始内容抽取结果",
+    stageDescription: "解析文件输入与原始内容抽取结果",
+    stepDescription: "解析文件输入与原始内容抽取结果",
     label: "文件解析",
-    description: "解析 Spring Batch 文件输入与原始内容抽取结果",
+    description: "解析文件输入与原始内容抽取结果",
   },
   {
     stage: "STRUCTURE_STANDARDIZE",
@@ -68,8 +86,9 @@ export const springBatchValuationTaskPageText = {
     batchId: "批次ID",
     taskDate: "任务日期",
     productKeyword: "产品名称/代码",
-    stage: "阶段",
+    stage: "任务阶段",
     status: "状态",
+    sourceType: "来源类型",
   },
   table: {
     batchName: "批次名称",

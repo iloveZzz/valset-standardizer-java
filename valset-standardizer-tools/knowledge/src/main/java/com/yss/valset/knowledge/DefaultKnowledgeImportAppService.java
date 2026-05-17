@@ -123,7 +123,7 @@ public class DefaultKnowledgeImportAppService implements KnowledgeImportAppServi
         }
         try {
             DataSourceType type = DataSourceType.valueOf(dataSourceType.trim().toUpperCase(Locale.ROOT));
-            if (type == DataSourceType.API || type == DataSourceType.DB) {
+            if (type == DataSourceType.API ) {
                 throw new IllegalArgumentException("不支持通过文件导入的标准科目数据源类型: " + dataSourceType);
             }
             return type;

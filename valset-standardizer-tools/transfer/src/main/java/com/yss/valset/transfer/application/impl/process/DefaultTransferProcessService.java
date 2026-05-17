@@ -33,4 +33,9 @@ public class DefaultTransferProcessService implements TransferProcessUseCase {
     public void deliver(String routeId, String transferId) {
         deliverTransferUseCase.execute(routeId, transferId);
     }
+
+    @Override
+    public void deliver(String routeId, String transferId, Integer retryCount) {
+        deliverTransferUseCase.execute(routeId, transferId, retryCount);
+    }
 }

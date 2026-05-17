@@ -31,7 +31,7 @@ public class StandardSubjectPO {
     @TableField("parent_name")
     private String parentName;
 
-    @TableField("level")
+    @TableField("\"LEVEL\"")
     private Integer level;
 
     @TableField("root_code")

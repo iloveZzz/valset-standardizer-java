@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.valset.parser.infrastructure.mapper.ParseQueueRepository">
+
+    <!-- 仅在队列仍处于待订阅状态时完成订阅接管 -->
+    <update id="subscribeIfPending">
+        UPDATE t_parse_queue
+        SET parse_status = 'PARSING',
+            claimed_by = #{subscribedBy},
+            claimed_at = #{subscribedAt},
+            updated_at = #{updatedAt}
+        WHERE queue_id = #{queueId}
+          AND parse_status = 'PENDING'
+    </update>
+
+</mapper>

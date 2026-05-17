@@ -10,6 +10,7 @@ import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.explore.support.JobExplorerFactoryBean;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
+import org.springframework.batch.item.database.support.DataFieldMaxValueIncrementerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -22,10 +23,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import javax.sql.DataSource;
 
 /**
- * Spring Batch 工作流运行时配置。
+ * 批量任务 工作流运行时配置。
  *
  * <p>
- * 这里负责提供 Spring Batch 运行所需的最小基础设施，
+ * 这里负责提供 批量任务 运行所需的最小基础设施，
  * 让估值表解析作业完全依赖数据库版 Batch 元数据表，而不是内存仓库。
  * </p>
  *
@@ -57,13 +58,27 @@ public class SpringBatchWorkflowRuntimeConfiguration {
     @Bean(name = "springBatchJobRepository")
     @Primary
     public JobRepository springBatchJobRepository(DataSource dataSource,
+                                                  @Qualifier("springBatchIncrementerFactory") DataFieldMaxValueIncrementerFactory incrementerFactory,
                                                   @Qualifier("springBatchTransactionManager") PlatformTransactionManager transactionManager) throws Exception {
         JobRepositoryFactoryBean factoryBean = new JobRepositoryFactoryBean();
         factoryBean.setDataSource(dataSource);
         factoryBean.setTransactionManager(transactionManager);
         factoryBean.setTablePrefix("BATCH_");
+        factoryBean.setIncrementerFactory(incrementerFactory);
+        // Oracle 在批量重试/并发触发时，默认的 ISOLATION_SERIALIZABLE 容易在 Batch 元数据写入阶段触发 ORA-08177。
+        // 这里仅降低创建 JobExecution 的事务隔离级别，避免 BATCH_JOB_EXECUTION_PARAMS 插入互相冲突。
+        factoryBean.setIsolationLevelForCreate("ISOLATION_READ_COMMITTED");
         factoryBean.afterPropertiesSet();
         return factoryBean.getObject();
+    }
+
+    /**
+     * 批量任务 元数据主键统一走分布式号段，避免默认序列表回退到 0。
+     */
+    @Bean(name = "springBatchIncrementerFactory")
+    @Primary
+    public DataFieldMaxValueIncrementerFactory springBatchIncrementerFactory() {
+        return new SpringBatchSegmentContextIncrementerFactory();
     }
 
     /**
@@ -113,7 +128,7 @@ public class SpringBatchWorkflowRuntimeConfiguration {
      * 作业操作器提供停止和重启等运行态控制能力。
      *
      * <p>
-     * 迁移期保留这层控制器，方便页面上的停止、补跑和重试动作直接映射到 Spring Batch。
+     * 迁移期保留这层控制器，方便页面上的停止、补跑和重试动作直接映射到 批量任务。
      * </p>
      */
     @Bean(name = "springBatchJobOperator")

@@ -4,6 +4,8 @@ import {
   DatabaseOutlined,
   FileTextOutlined,
   FileSearchOutlined,
+  ForkOutlined,
+  FundProjectionScreenOutlined,
   InboxOutlined,
   ProjectOutlined,
   SettingOutlined,
@@ -59,6 +61,11 @@ export const workspaceNav: Array<{
         path: "/task-management?scene=valuation",
         icon: FileSearchOutlined,
       },
+      {
+        title: "解析链路监控",
+        path: "/task-management/valuation-monitor",
+        icon: ForkOutlined,
+      },
     ],
   },
   {
@@ -80,6 +87,11 @@ export const workspaceNav: Array<{
         title: "工作流实例",
         path: "/workflow-management/workflow-instances",
         icon: FileSearchOutlined,
+      },
+      {
+        title: "全链路监控",
+        path: "/workflow-management/workflow-monitor",
+        icon: FundProjectionScreenOutlined,
       },
       {
         title: "任务实例",
@@ -134,6 +146,15 @@ export const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/task-management/valuation-monitor",
+    name: "task-management-valuation-monitor",
+    component: () => import("@/views/SpringBatchValuationTaskMonitor/index.vue"),
+    meta: {
+      title: "解析链路监控",
+      keepAlive: false,
+    },
+  },
+  {
     path: "/workflow-management",
     redirect: "/workflow-management/workflow-list",
   },
@@ -161,6 +182,15 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/EtlWorkflowInstance/index.vue"),
     meta: {
       title: "工作流实例",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/workflow-management/workflow-monitor",
+    name: "workflow-management-workflow-monitor",
+    component: () => import("@/views/EtlWorkflowMonitor/index.vue"),
+    meta: {
+      title: "全链路监控",
       keepAlive: false,
     },
   },

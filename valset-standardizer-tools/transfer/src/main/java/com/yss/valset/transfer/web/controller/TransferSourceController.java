@@ -59,6 +59,7 @@ public class TransferSourceController {
      * @param sourceCode 来源编码
      * @param sourceName 来源名称
      * @param enabled 是否启用
+     * @param taskDate 任务日期
      * @param limit 查询上限
      * @return 文件来源列表
      */
@@ -68,6 +69,7 @@ public class TransferSourceController {
                                                           @RequestParam(value = "sourceCode", required = false) String sourceCode,
                                                           @RequestParam(value = "sourceName", required = false) String sourceName,
                                                           @RequestParam(value = "enabled", required = false) Boolean enabled,
+                                                          @RequestParam(value = "taskDate", required = false) String taskDate,
                                                           @RequestParam(value = "limit", required = false) Integer limit) {
         return MultiResult.of(transferSourceManagementAppService.listSources(sourceType, sourceCode, sourceName, enabled, limit));
     }

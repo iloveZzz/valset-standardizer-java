@@ -12,4 +12,6 @@ public interface TransferProcessUseCase {
     void route(String transferId);
 
     void deliver(String routeId, String transferId);
+
+    void deliver(String routeId, String transferId, Integer retryCount);
 }

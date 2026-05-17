@@ -8,7 +8,8 @@
         <result column="task_id" property="taskId" jdbcType="BIGINT"/>
         <result column="file_id" property="fileId" jdbcType="BIGINT"/>
         <result column="row_data_number" property="rowDataNumber" jdbcType="INTEGER"/>
-        <result column="row_data_json" property="rowDataJson" jdbcType="VARCHAR"/>
+        <result column="row_data_json" property="rowDataJson" jdbcType="CLOB"
+                typeHandler="com.yss.valset.extract.repository.mybatis.LongTextToStringTypeHandler"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.yss.valset.extract.repository.entity.ValuationFileDataPO">
@@ -23,7 +24,7 @@
             #{taskId},
             #{fileId},
             #{rowDataNumber},
-            #{rowDataJson}
+            #{rowDataJson,typeHandler=com.yss.valset.extract.repository.mybatis.LongTextToStringTypeHandler}
         )
     </insert>
 

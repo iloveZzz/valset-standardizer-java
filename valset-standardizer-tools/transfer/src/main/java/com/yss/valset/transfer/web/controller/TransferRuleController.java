@@ -40,6 +40,7 @@ public class TransferRuleController {
      * @param ruleCode 规则编码
      * @param ruleName 规则名称
      * @param enabled 是否启用
+     * @param taskDate 任务日期
      * @param limit 查询上限
      * @return 路由规则列表
      */
@@ -48,6 +49,7 @@ public class TransferRuleController {
     public MultiResult<TransferRuleViewDTO> listRules(@RequestParam(value = "ruleCode", required = false) String ruleCode,
                                                       @RequestParam(value = "ruleName", required = false) String ruleName,
                                                       @RequestParam(value = "enabled", required = false) Boolean enabled,
+                                                      @RequestParam(value = "taskDate", required = false) String taskDate,
                                                       @RequestParam(value = "limit", required = false) Integer limit) {
         return MultiResult.of(transferRuleManagementAppService.listRules(ruleCode, ruleName, enabled, limit));
     }

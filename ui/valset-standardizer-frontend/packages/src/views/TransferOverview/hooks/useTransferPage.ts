@@ -6,20 +6,19 @@ import {
   type TransferDeliveryRecordSummaryDTO,
 } from "@/api/transferDeliveryRecord";
 import {
-  listTransferRunLogTrends,
-  type TransferRunLogTrendViewDTO,
-} from "@/api/transferRunLog";
+  listTransferObjectTrends,
+  type TransferObjectTrendViewDTO,
+} from "@/api/transferObject";
+import {
+  listTransferObjectTagSummaries,
+  type TransferObjectTagSummaryViewDTO,
+} from "@/api/transferObjectTag";
 import {
   getOutsourcedDataTaskSummary,
   pageOutsourcedDataTasks,
   type OutsourcedDataTaskBatchDTO,
-  type OutsourcedDataTaskStageSummaryDTO,
-  type OutsourcedDataTaskSummaryDTO,
 } from "@/api/outsourcedDataTask";
 import { unwrapMultiResult, unwrapSingleResult } from "@/utils/api-response";
-import {
-  springBatchValuationTaskStageCatalog as outsourcedDataTaskStageCatalog,
-} from "../../SpringBatchValuationTask/constants";
 import { transferSectionOptions } from "../schemas/transferSchemas";
 import type {
   ListLogsParams,
@@ -36,6 +35,13 @@ type OverviewHeroStat = {
   value: number | string;
   description: string;
   tone: string;
+  valueClass?: string;
+  descriptionParts?: Array<{
+    key: string;
+    label: string;
+    value: number | string;
+    valueClass?: string;
+  }>;
 };
 
 const api = getJavaSpringBootQuartzApi();
@@ -63,15 +69,20 @@ export const useTransferPage = () => {
     return parsed.format(TASK_DATE_FORMAT);
   };
   const buildTrendSeries = (endDateText: string) => {
-    const deliveryCounts = new Map<string, number>();
+    const deliveredCounts = new Map<string, number>();
+    const undeliveredCounts = new Map<string, number>();
     trendRows.value.forEach((item) => {
       const dateKey = parseTrendDateKey(item.trendDate);
       if (!dateKey) {
         return;
       }
-      deliveryCounts.set(
+      deliveredCounts.set(
         dateKey,
-        (deliveryCounts.get(dateKey) ?? 0) + Number(item.count ?? 0),
+        (deliveredCounts.get(dateKey) ?? 0) + Number(item.deliveredCount ?? 0),
+      );
+      undeliveredCounts.set(
+        dateKey,
+        (undeliveredCounts.get(dateKey) ?? 0) + Number(item.undeliveredCount ?? 0),
       );
     });
 
@@ -82,7 +93,8 @@ export const useTransferPage = () => {
         .format(TASK_DATE_FORMAT);
       return {
         label,
-        value: deliveryCounts.get(label) ?? 0,
+        deliveredValue: deliveredCounts.get(label) ?? 0,
+        undeliveredValue: undeliveredCounts.get(label) ?? 0,
       };
     });
     return series;
@@ -110,14 +122,15 @@ export const useTransferPage = () => {
   const rules = ruleRows;
   const logs = ref<any[]>([]);
   const trendWindow = ref<3 | 7 | 30>(3);
-  const trendRows = ref<TransferRunLogTrendViewDTO[]>([]);
+  const trendRows = ref<TransferObjectTrendViewDTO[]>([]);
   const runLogAnalysis = ref<TransferRunLogAnalysisViewDTO | null>(null);
   const objectAnalysis = ref<TransferObjectAnalysisViewDTO | null>(null);
   const deliveryRecordSummary = ref<TransferDeliveryRecordSummaryDTO | null>(
     null,
   );
-  const outsourcedTaskSummary = ref<OutsourcedDataTaskSummaryDTO | null>(null);
   const outsourcedTaskRows = ref<OutsourcedDataTaskBatchDTO[]>([]);
+  const outsourcedTaskSummary = ref<any | null>(null);
+  const tagSummaryRows = ref<TransferObjectTagSummaryViewDTO[]>([]);
   const searchModel = reactive({
     keyword: "",
     enabledStatus: "all",
@@ -175,99 +188,22 @@ export const useTransferPage = () => {
     return `${current.toFixed(precision)} ${units[unitIndex]}`;
   };
 
-  const parseTaskStageOrder = outsourcedDataTaskStageCatalog.map(
-    (item) => item.stage,
+  const tagChartRows = computed(() =>
+    [...tagSummaryRows.value]
+      .sort((left, right) => Number(right.tagCount ?? 0) - Number(left.tagCount ?? 0))
+      .slice(0, 8)
+      .map((item) => ({
+        key: item.tagCode || item.tagName || "-",
+        label: item.tagName || item.tagCode || "-",
+        tagCode: item.tagCode || "-",
+        tagCount: Number(item.tagCount ?? 0),
+      })),
   );
-  const normalizeSummaryStage = (
-    item: OutsourcedDataTaskStageSummaryDTO,
-    fallbackStage: string,
-  ) => {
-    const stage = String(item.stage ?? item.step ?? fallbackStage)
-      .trim()
-      .toUpperCase();
-    const stageMeta = outsourcedDataTaskStageCatalog.find(
-      (catalogItem) =>
-        catalogItem.stage === stage ||
-        catalogItem.step === stage ||
-        catalogItem.stageName === item.stageName ||
-        catalogItem.stepName === item.stepName,
-    );
-    const totalCount = Number(item.totalCount ?? 0);
-    const runningCount = Number(item.runningCount ?? 0);
-    const failedCount = Number(item.failedCount ?? 0);
-    const pendingCount = Number(item.pendingCount ?? 0);
-    const successCount = Math.max(
-      0,
-      totalCount - runningCount - failedCount - pendingCount,
-    );
-    return {
-      key: stage || fallbackStage,
-      stage,
-      label:
-        stageMeta?.stageName ||
-        stageMeta?.stepName ||
-        item.stageName ||
-        item.stepName ||
-        fallbackStage,
-      description:
-        stageMeta?.stageDescription ||
-        stageMeta?.stepDescription ||
-        item.stageDescription ||
-        item.stepDescription ||
-        "",
-      totalCount,
-      successCount,
-      failedCount,
-      pendingCount,
-    };
-  };
-  const stageChartRows = computed(() => {
-    const sourceSummaries =
-      outsourcedTaskSummary.value?.stageCatalog?.length
-        ? outsourcedTaskSummary.value.stageCatalog
-        : outsourcedTaskSummary.value?.stepSummaries ?? [];
-    return parseTaskStageOrder.map((stage, index) => {
-      const matched = sourceSummaries.find((item) => {
-        const normalizedStage = String(item.stage ?? item.step ?? "")
-          .trim()
-          .toUpperCase();
-        return (
-          normalizedStage === stage ||
-          String(item.stageName ?? "").trim() ===
-            outsourcedDataTaskStageCatalog[index]?.stageName ||
-          String(item.stepName ?? "").trim() ===
-            outsourcedDataTaskStageCatalog[index]?.stepName
-        );
-      });
-      return normalizeSummaryStage(
-        matched ?? {
-          stage,
-          step: stage,
-          stageName: outsourcedDataTaskStageCatalog[index]?.stageName,
-          stepName: outsourcedDataTaskStageCatalog[index]?.stepName,
-          stageDescription: outsourcedDataTaskStageCatalog[index]?.stageDescription,
-          stepDescription: outsourcedDataTaskStageCatalog[index]?.stepDescription,
-        },
-        stage,
-      );
-    });
-  });
-  const stageChartMax = computed(() =>
-    Math.max(
-      ...stageChartRows.value.map(
-        (item) => item.successCount + item.failedCount + item.pendingCount,
-      ),
-      1,
-    ),
+  const tagChartMax = computed(() =>
+    Math.max(...tagChartRows.value.map((item) => item.tagCount), 1),
   );
-  const hasStageChartData = computed(() =>
-    stageChartRows.value.some(
-      (item) =>
-        item.totalCount > 0 ||
-        item.successCount > 0 ||
-        item.failedCount > 0 ||
-        item.pendingCount > 0,
-    ),
+  const hasTagChartData = computed(() =>
+    tagChartRows.value.some((item) => item.tagCount > 0),
   );
 
   const sourceAnalysisCards = computed(() =>
@@ -320,7 +256,7 @@ export const useTransferPage = () => {
               key: `${sourceLabel}-skipped`,
               label: "已跳过",
               value: countStatus("SKIPPED"),
-              color: "#ff4d4f",
+              color: "#faad14",
             },
           ],
         };
@@ -378,9 +314,9 @@ export const useTransferPage = () => {
   const overviewHeroStats = computed<OverviewHeroStat[]>(() => [
     {
       key: "delivery-total",
-      label: "文件投递个数",
+      label: "分拣对象总数",
       value: deliveryCount.value,
-      description: "选中日期统计的文件投递数量",
+      description: "选中日期统计的分拣对象数量",
       tone: "primary",
     },
     {
@@ -389,6 +325,7 @@ export const useTransferPage = () => {
       value: `${successRate.value.toFixed(1)}%`,
       description: "选中日期成功投递占总投递比例",
       tone: "success",
+      valueClass: "overview-hero-stat-value--green",
     },
     {
       key: "receive-size",
@@ -396,6 +333,7 @@ export const useTransferPage = () => {
       value: `${formatBytes(objectSizeAnalysis.value.totalSizeBytes)}`,
       description: `共 ${objectSizeAnalysis.value.totalCount} 个文件， 按后缀统计展示`,
       tone: "success",
+      valueClass: "overview-hero-stat-value--blue",
     },
   ]);
 
@@ -459,20 +397,18 @@ export const useTransferPage = () => {
   const anomalyCount = computed(
     () =>
       Number(
-        outsourcedTaskSummary.value?.failedCount ??
-          outsourcedTaskRows.value.filter((item) =>
-            isAbnormalOutsourcedTask(item.status),
-          ).length ??
-          0,
+        outsourcedTaskRows.value.filter((item) =>
+          isAbnormalOutsourcedTask(item.status),
+        ).length ?? 0,
       ),
   );
 
   const overviewMetrics = computed(() => [
     {
       key: "delivery",
-      label: "文件投递个数",
+      label: "分拣对象总数",
       value: deliveryCount.value,
-      description: "今日统计的文件投递数量",
+      description: "今日统计的分拣对象数量",
     },
     {
       key: "source",
@@ -520,10 +456,24 @@ export const useTransferPage = () => {
       tone: "primary",
     },
     {
-      key: "object-tagged",
-      label: "分拣对象打标个数",
-      value: Number(objectAnalysis.value?.taggedCount ?? 0),
-      description: "已匹配到标签的分拣对象数量",
+      key: "parse-task-summary",
+      label: "解析任务统计",
+      value: Number(outsourcedTaskSummary.value?.totalCount ?? 0),
+      description: "",
+      descriptionParts: [
+        {
+          key: "parse-success",
+          label: "已完成",
+          value: Number(outsourcedTaskSummary.value?.successCount ?? 0),
+          valueClass: "overview-hero-stat-desc-value--green",
+        },
+        {
+          key: "parse-failed",
+          label: "失败",
+          value: Number(outsourcedTaskSummary.value?.failedCount ?? 0),
+          valueClass: "overview-hero-stat-desc-value--red",
+        },
+      ],
       tone: "success",
     },
     {
@@ -532,6 +482,7 @@ export const useTransferPage = () => {
       value: Number(objectAnalysis.value?.untaggedCount ?? 0),
       description: "尚未匹配到标签的分拣数量",
       tone: "warning",
+      valueClass: "overview-hero-stat-value--yellow",
     },
   ]);
 
@@ -544,7 +495,11 @@ export const useTransferPage = () => {
     return trendSeries.value.slice(startIndex);
   });
   const hasTrendChartData = computed(() =>
-    trendData.value.some((item) => Number(item.value ?? 0) > 0),
+    trendData.value.some(
+      (item) =>
+        Number(item.deliveredValue ?? 0) > 0 ||
+        Number(item.undeliveredValue ?? 0) > 0,
+    ),
   );
 
   const trendOptions: Array<{ label: string; value: 3 | 7 | 30 }> = [
@@ -570,6 +525,23 @@ export const useTransferPage = () => {
       borderWidth: 0,
       textStyle: {
         color: "#fff",
+      },
+      formatter: (params: Array<{ axisValue?: string; marker?: string; seriesName?: string; data?: number }>) => {
+        const title = params[0]?.axisValue ?? "";
+        const lines = params.map((item) => `${item.marker ?? ""}${item.seriesName ?? ""}：${item.data ?? 0}`);
+        return [title, ...lines].join("<br/>");
+      },
+    },
+    legend: {
+      top: 0,
+      right: 0,
+      icon: "circle",
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 14,
+      textStyle: {
+        color: "rgba(15, 23, 42, 0.62)",
+        fontSize: 12,
       },
     },
     xAxis: {
@@ -609,24 +581,45 @@ export const useTransferPage = () => {
     },
     series: [
       {
-        name: "文件投递个数",
+        name: "已投递",
         type: "line",
         smooth: true,
         symbol: "circle",
         symbolSize: 8,
-        data: trendData.value.map((item) => item.value),
+        data: trendData.value.map((item) => item.deliveredValue),
         lineStyle: {
           width: 3,
-          color: "#1677ff",
+          color: "#52c41a",
         },
         itemStyle: {
-          color: "#1677ff",
+          color: "#52c41a",
         },
         emphasis: {
           scale: 1.1,
         },
         areaStyle: {
-          color: "rgba(22, 119, 255, 0.12)",
+          color: "rgba(82, 196, 26, 0.12)",
+        },
+      },
+      {
+        name: "未投递",
+        type: "line",
+        smooth: true,
+        symbol: "circle",
+        symbolSize: 8,
+        data: trendData.value.map((item) => item.undeliveredValue),
+        lineStyle: {
+          width: 3,
+          color: "#ff7a45",
+        },
+        itemStyle: {
+          color: "#ff7a45",
+        },
+        emphasis: {
+          scale: 1.1,
+        },
+        areaStyle: {
+          color: "rgba(255, 122, 69, 0.12)",
         },
       },
     ],
@@ -724,19 +717,16 @@ export const useTransferPage = () => {
       },
     ],
   }));
-  const overviewStageHighlights = computed(() =>
-    stageChartRows.value.map((item) => ({
+  const overviewTagHighlights = computed(() =>
+    tagChartRows.value.map((item) => ({
       key: item.key,
       label: item.label,
-      description: item.description,
-      totalCount: item.totalCount,
-      successCount: item.successCount,
-      failedCount: item.failedCount,
-      pendingCount: item.pendingCount,
+      tagCode: item.tagCode,
+      tagCount: item.tagCount,
     })),
   );
 
-  const overviewStageChartOption = computed(() => ({
+  const overviewTagChartOption = computed(() => ({
     grid: {
       left: 60,
       right: 34,
@@ -754,23 +744,19 @@ export const useTransferPage = () => {
       textStyle: {
         color: "#fff",
       },
-    },
-    legend: {
-      top: 0,
-      right: 0,
-      icon: "roundRect",
-      itemWidth: 12,
-      itemHeight: 8,
-      itemGap: 14,
-      textStyle: {
-        color: "rgba(15, 23, 42, 0.62)",
-        fontSize: 12,
+      formatter: (params: Array<{ name?: string; seriesName?: string; value?: number }>) => {
+        const item = params[0];
+        if (!item) {
+          return "";
+        }
+        return `${item.name ?? ""}<br/>${item.seriesName ?? "标签命中数"}：${item.value ?? 0}`;
       },
     },
+    legend: { show: false },
     xAxis: {
       type: "value",
       minInterval: 1,
-      max: Math.ceil(stageChartMax.value * 1.2),
+      max: Math.ceil(tagChartMax.value * 1.2),
       axisLine: {
         show: false,
       },
@@ -788,7 +774,7 @@ export const useTransferPage = () => {
     },
     yAxis: {
       type: "category",
-      data: stageChartRows.value.map((item) => item.label),
+      data: tagChartRows.value.map((item) => item.label),
       axisLine: {
         show: false,
       },
@@ -801,13 +787,12 @@ export const useTransferPage = () => {
     },
     series: [
       {
-        name: "成功",
+        name: "标签命中数",
         type: "bar",
-        stack: "total",
         barWidth: 14,
         itemStyle: {
           borderRadius: [0, 6, 6, 0],
-          color: "#52c41a",
+          color: "#1677ff",
         },
         label: {
           show: true,
@@ -816,35 +801,13 @@ export const useTransferPage = () => {
           fontWeight: 700,
           formatter: (params: { dataIndex: number }) =>
             String(
-              stageChartRows.value[params.dataIndex]?.successCount ?? "",
+              tagChartRows.value[params.dataIndex]?.tagCount ?? "",
             ),
         },
-        data: stageChartRows.value.map((item) => item.successCount),
-      },
-      {
-        name: "失败",
-        type: "bar",
-        stack: "total",
-        barWidth: 14,
-        itemStyle: {
-          borderRadius: [0, 6, 6, 0],
-          color: "#ff4d4f",
-        },
-        data: stageChartRows.value.map((item) => item.failedCount),
-      },
-      {
-        name: "待处理",
-        type: "bar",
-        stack: "total",
-        barWidth: 14,
-        itemStyle: {
-          borderRadius: [0, 6, 6, 0],
-          color: "#faad14",
-        },
-        data: stageChartRows.value.map((item) => item.pendingCount),
+        data: tagChartRows.value.map((item) => item.tagCount),
       },
     ],
-    graphic: hasStageChartData.value
+    graphic: hasTagChartData.value
       ? []
       : [
           {
@@ -852,7 +815,7 @@ export const useTransferPage = () => {
             left: "center",
             top: "middle",
             style: {
-              text: "暂无解析任务统计",
+              text: "暂无标签识别结果",
               fill: "rgba(15, 23, 42, 0.46)",
               fontSize: 13,
               textAlign: "center",
@@ -942,13 +905,13 @@ export const useTransferPage = () => {
 
   const loadOverviewTrend = async (currentTaskDate = taskDate.value) => {
     try {
-      const res = await listTransferRunLogTrends({
+      const res = await listTransferObjectTrends({
         days: 30,
         taskDate: currentTaskDate,
       });
       trendRows.value = res?.data ?? [];
     } catch (error) {
-      console.error("加载文件投递趋势失败:", error);
+      console.error("加载分拣对象趋势失败:", error);
       trendRows.value = [];
     }
   };
@@ -966,13 +929,16 @@ export const useTransferPage = () => {
         outsourcedTaskFailedPageResult,
         outsourcedTaskBlockedPageResult,
         deliverySummaryResult,
+        tagSummaryResult,
       ] = await Promise.all([
-        api.listSources(),
-        api.listTargets(),
-        api.listRules(),
+        api.listSources({ taskDate: currentTaskDate }),
+        api.listTargets({ taskDate: currentTaskDate }),
+        api.listRules({ taskDate: currentTaskDate }),
         api.analyzeLogs({ taskDate: currentTaskDate }),
         api.analyzeObjects({ taskDate: currentTaskDate }),
-        getOutsourcedDataTaskSummary({ taskDate: currentTaskDate }),
+        getOutsourcedDataTaskSummary({ taskDate: currentTaskDate }).catch(
+          () => null,
+        ),
         pageOutsourcedDataTasks({
           status: "FAILED",
           taskDate: currentTaskDate,
@@ -986,6 +952,9 @@ export const useTransferPage = () => {
           pageSize: 10,
         }),
         getTransferDeliveryRecordSummary({ taskDate: currentTaskDate }).catch(
+          () => null,
+        ),
+        listTransferObjectTagSummaries({ taskDate: currentTaskDate }).catch(
           () => null,
         ),
       ]);
@@ -1010,6 +979,7 @@ export const useTransferPage = () => {
       });
       deliveryRecordSummary.value =
         unwrapSingleResult(deliverySummaryResult) ?? null;
+      tagSummaryRows.value = tagSummaryResult?.data ?? [];
     } catch (error) {
       console.error("加载分拣总览数据失败:", error);
       logs.value = [];
@@ -1018,6 +988,7 @@ export const useTransferPage = () => {
       deliveryRecordSummary.value = null;
       outsourcedTaskSummary.value = null;
       outsourcedTaskRows.value = [];
+      tagSummaryRows.value = [];
     } finally {
       await loadOverviewTrend(currentTaskDate);
       loading.value = false;
@@ -1063,10 +1034,10 @@ export const useTransferPage = () => {
     trendWindow,
     trendChartOption,
     overviewStatusChartOption,
-    overviewStageChartOption,
+    overviewTagChartOption,
     overviewStatusTotal,
     sourceAnalysisCards,
-    overviewStageHighlights,
+    overviewTagHighlights,
     anomalyCount,
     objectSizeAnalysis,
     formatBytes,

@@ -237,12 +237,6 @@ watch(
                         >
                           SSE {{ page.getSourceIngestConnectionLabel(row) }}
                         </a-tag>
-                        <span>
-                          {{
-                            page.getSourceIngestConnectionMessage(row) ||
-                            "等待连接事件"
-                          }}
-                        </span>
                       </div>
                       <p>{{ node.content }}</p>
                     </div>

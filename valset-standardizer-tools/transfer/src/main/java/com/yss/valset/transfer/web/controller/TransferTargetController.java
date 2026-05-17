@@ -41,6 +41,7 @@ public class TransferTargetController {
      * @param targetType 目标类型
      * @param targetCode 目标编码
      * @param enabled 是否启用
+     * @param taskDate 任务日期
      * @param limit 查询上限
      * @return 投递目标列表
      */
@@ -49,6 +50,7 @@ public class TransferTargetController {
     public MultiResult<TransferTargetViewDTO> listTargets(@RequestParam(value = "targetType", required = false) String targetType,
                                                           @RequestParam(value = "targetCode", required = false) String targetCode,
                                                           @RequestParam(value = "enabled", required = false) Boolean enabled,
+                                                          @RequestParam(value = "taskDate", required = false) String taskDate,
                                                           @RequestParam(value = "limit", required = false) Integer limit) {
         return MultiResult.of(transferTargetManagementAppService.listTargets(targetType, targetCode, enabled, limit));
     }

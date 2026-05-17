@@ -7,7 +7,6 @@ import com.yss.valset.application.service.WorkflowTaskQueryAppService;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.WorkflowTask;
-import com.yss.valset.parser.application.support.ParseBatchStepSupport;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
@@ -31,18 +30,16 @@ import java.util.Optional;
 @Service
 public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppService {
 
-    private static final String VALUATION_PARSE_JOB_NAME = "valuationParseJob";
-
-    private final WorkflowTaskGateway taskGateway;
     private final JobExplorer jobExplorer;
     private final ObjectMapper objectMapper;
+    private final WorkflowTaskGateway workflowTaskGateway;
 
-    public DefaultWorkflowTaskQueryAppService(WorkflowTaskGateway taskGateway,
-                                              @Qualifier("springBatchJobExplorer") JobExplorer jobExplorer,
-                                              ObjectMapper objectMapper) {
-        this.taskGateway = taskGateway;
+    public DefaultWorkflowTaskQueryAppService(@Qualifier("springBatchJobExplorer") JobExplorer jobExplorer,
+                                              ObjectMapper objectMapper,
+                                              WorkflowTaskGateway workflowTaskGateway) {
         this.jobExplorer = jobExplorer;
         this.objectMapper = objectMapper;
+        this.workflowTaskGateway = workflowTaskGateway;
     }
 
     /**
@@ -50,37 +47,31 @@ public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppS
      */
     @Override
     public TaskViewDTO queryTask(Long taskId) {
-        Optional<JobExecution> batchExecution = findParseBatchExecution(taskId);
+        Optional<JobExecution> batchExecution = findBatchExecution(taskId);
         if (batchExecution.isPresent()) {
-            return buildBatchTaskView(findLegacyTask(taskId), batchExecution.get(), taskId);
+            return buildBatchTaskView(batchExecution.get(), taskId);
         }
-        return buildLegacyTaskView(findLegacyTask(taskId));
+        throw new IllegalStateException("未找到 Batch 任务记录，taskId=" + taskId);
     }
 
-    private WorkflowTask findLegacyTask(Long taskId) {
-        try {
-            return taskGateway.findById(taskId);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private TaskViewDTO buildBatchTaskView(WorkflowTask workflowTask, JobExecution jobExecution, Long taskId) {
+    private TaskViewDTO buildBatchTaskView(JobExecution jobExecution, Long taskId) {
         JobParameters jobParameters = jobExecution == null ? null : jobExecution.getJobParameters();
-        String taskStatus = jobExecution == null || jobExecution.getStatus() == null
-                ? resolveLegacyStatus(workflowTask)
-                : jobExecution.getStatus().name();
+        WorkflowTask workflowTask = taskId == null ? null : workflowTaskGateway.findById(taskId);
+        String taskStatus = jobExecution == null || jobExecution.getStatus() == null ? null : jobExecution.getStatus().name();
         boolean failedTask = isFailedStatus(taskStatus);
-        String inputPayload = firstText(readString(jobParameters, "inputPayload"), workflowTask == null ? null : workflowTask.getInputPayload());
-        String resultPayload = firstText(readString(jobExecution == null ? null : jobExecution.getExecutionContext(), ParseBatchStepSupport.JOB_CONTEXT_RESULT_PAYLOAD),
-                workflowTask == null ? null : workflowTask.getResultPayload());
+        String inputPayload = firstText(workflowTask == null ? null : workflowTask.getInputPayload(),
+                readString(jobParameters, "inputPayload"),
+                readContextString(jobExecution, "inputPayload"));
+        String resultPayload = firstText(workflowTask == null ? null : workflowTask.getResultPayload(),
+                readContextString(jobExecution, "resultPayload"),
+                readContextString(jobExecution, "taskResultPayload"));
         Map<String, Object> resultData = parsePayload(resultPayload, failedTask);
         return TaskViewDTO.builder()
                 .taskId(taskId == null ? null : String.valueOf(taskId))
-                .taskType(firstText(readString(jobParameters, "taskType"), workflowTask == null || workflowTask.getTaskType() == null ? null : workflowTask.getTaskType().name()))
-                .taskStage(firstText(readString(jobParameters, "taskStage"), workflowTask == null || workflowTask.getTaskStage() == null ? null : workflowTask.getTaskStage().name()))
+                .taskType(readString(jobParameters, "taskType"))
+                .taskStage(readString(jobParameters, "taskStage"))
                 .taskStatus(taskStatus)
-                .businessKey(firstText(readString(jobParameters, "businessKey"), workflowTask == null ? null : workflowTask.getBusinessKey()))
+                .businessKey(readString(jobParameters, "businessKey"))
                 .inputPayload(inputPayload)
                 .inputData(parsePayload(inputPayload, false))
                 .resultPayload(resultPayload)
@@ -90,65 +81,57 @@ public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppS
                 .rowCount(resolveRowCount(resultData))
                 .fileSizeBytes(null)
                 .durationMs(resolveDurationMs(jobExecution))
-                .taskStartTime(resolveTaskStartTime(jobExecution, workflowTask))
-                .parseTaskTimeMs(firstText(resolveExecutionContextLong(jobExecution, ParseBatchStepSupport.JOB_CONTEXT_FILE_PARSE_MS), workflowTask == null ? null : stringValue(workflowTask.getParseTaskTimeMs())))
-                .standardizeTimeMs(firstText(resolveExecutionContextLong(jobExecution, ParseBatchStepSupport.JOB_CONTEXT_STANDARDIZE_MS), workflowTask == null ? null : stringValue(workflowTask.getStandardizeTimeMs())))
-                .matchStandardSubjectTimeMs(workflowTask == null ? null : stringValue(workflowTask.getMatchStandardSubjectTimeMs()))
+                .taskStartTime(resolveTaskStartTime(jobExecution))
+                .parseTaskTimeMs(stringValue(readContextLong(jobExecution, "parse.fileParseMs")))
+                .standardizeTimeMs(stringValue(readContextLong(jobExecution, "parse.standardizeMs")))
+                .matchStandardSubjectTimeMs(stringValue(readContextLong(jobExecution, "match.standardizeMs")))
                 .build();
     }
 
-    private TaskViewDTO buildLegacyTaskView(WorkflowTask workflowTask) {
-        if (workflowTask == null) {
-            throw new IllegalStateException("未找到任务记录");
-        }
-        String taskStatus = workflowTask.getTaskStatus() == null ? null : workflowTask.getTaskStatus().name();
-        boolean failedTask = isFailedStatus(taskStatus);
-        Map<String, Object> resultData = parsePayload(workflowTask.getResultPayload(), failedTask);
-        return TaskViewDTO.builder()
-                .taskId(workflowTask.getTaskId() == null ? null : String.valueOf(workflowTask.getTaskId()))
-                .taskType(workflowTask.getTaskType() == null ? null : workflowTask.getTaskType().name())
-                .taskStage(workflowTask.getTaskStage() == null ? null : workflowTask.getTaskStage().name())
-                .taskStatus(taskStatus)
-                .businessKey(workflowTask.getBusinessKey())
-                .inputPayload(workflowTask.getInputPayload())
-                .inputData(parsePayload(workflowTask.getInputPayload(), false))
-                .resultPayload(workflowTask.getResultPayload())
-                .resultData(resultData)
-                .errorMessage(failedTask ? resolveErrorMessage(null, resultData, workflowTask.getResultPayload()) : null)
-                .errorCode(failedTask ? resolveErrorCode(null, resultData) : null)
-                .rowCount(resolveRowCount(resultData))
-                .fileSizeBytes(null)
-                .durationMs(null)
-                .taskStartTime(workflowTask.getTaskStartTime())
-                .parseTaskTimeMs(stringValue(workflowTask.getParseTaskTimeMs()))
-                .standardizeTimeMs(stringValue(workflowTask.getStandardizeTimeMs()))
-                .matchStandardSubjectTimeMs(stringValue(workflowTask.getMatchStandardSubjectTimeMs()))
-                .build();
-    }
-
-    private Optional<JobExecution> findParseBatchExecution(Long taskId) {
+    private Optional<JobExecution> findBatchExecution(Long taskId) {
         if (taskId == null) {
             return Optional.empty();
         }
-        List<JobInstance> jobInstances = jobExplorer.getJobInstances(VALUATION_PARSE_JOB_NAME, 0, Integer.MAX_VALUE);
-        if (CollectionUtils.isEmpty(jobInstances)) {
+        List<String> jobNames = jobExplorer.getJobNames();
+        if (CollectionUtils.isEmpty(jobNames)) {
             return Optional.empty();
         }
-        for (JobInstance jobInstance : jobInstances) {
-            List<JobExecution> executions = jobExplorer.getJobExecutions(jobInstance);
-            if (CollectionUtils.isEmpty(executions)) {
+        for (String jobName : jobNames) {
+            List<JobInstance> jobInstances = jobExplorer.getJobInstances(jobName, 0, Integer.MAX_VALUE);
+            if (CollectionUtils.isEmpty(jobInstances)) {
                 continue;
             }
-            JobExecution matched = executions.stream()
-                    .filter(execution -> execution != null && execution.getJobParameters() != null)
-                    .filter(execution -> taskId.equals(execution.getJobParameters().getLong("taskId", null)))
-                    .reduce((left, right) -> right)
-                    .orElse(null);
-            if (matched != null) {
-                return Optional.of(matched);
+            for (JobInstance jobInstance : jobInstances) {
+                List<JobExecution> executions = jobExplorer.getJobExecutions(jobInstance);
+                if (CollectionUtils.isEmpty(executions)) {
+                    continue;
+                }
+                JobExecution matched = executions.stream()
+                        .filter(execution -> execution != null && execution.getJobParameters() != null)
+                        .filter(execution -> taskId.equals(readTaskId(execution.getJobParameters())))
+                        .reduce((left, right) -> right)
+                        .orElse(null);
+                if (matched != null) {
+                    return Optional.of(matched);
+                }
             }
         }
         return Optional.empty();
+    }
+
+    private Long readTaskId(JobParameters jobParameters) {
+        if (jobParameters == null || jobParameters.getParameters() == null || !jobParameters.getParameters().containsKey("taskId")) {
+            return null;
+        }
+        Object value = jobParameters.getParameters().get("taskId");
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value).trim());
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private Map<String, Object> parsePayload(String payload, boolean failedTask) {
@@ -248,6 +231,35 @@ public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppS
         return jobParameters.getString(key, null);
     }
 
+    private String readContextString(JobExecution jobExecution, String key) {
+        if (jobExecution == null || jobExecution.getExecutionContext() == null || !StringUtils.hasText(key)) {
+            return null;
+        }
+        if (!jobExecution.getExecutionContext().containsKey(key)) {
+            return null;
+        }
+        Object value = jobExecution.getExecutionContext().get(key);
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private Long readContextLong(JobExecution jobExecution, String key) {
+        if (jobExecution == null || jobExecution.getExecutionContext() == null || !StringUtils.hasText(key)) {
+            return null;
+        }
+        if (!jobExecution.getExecutionContext().containsKey(key)) {
+            return null;
+        }
+        Object value = jobExecution.getExecutionContext().get(key);
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value).trim());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private String readString(org.springframework.batch.item.ExecutionContext executionContext, String key) {
         if (executionContext == null || !StringUtils.hasText(key) || !executionContext.containsKey(key)) {
             return null;
@@ -275,27 +287,25 @@ public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppS
         return String.valueOf(duration);
     }
 
-    private LocalDateTime resolveTaskStartTime(JobExecution jobExecution, WorkflowTask workflowTask) {
-        if (jobExecution != null && jobExecution.getStartTime() != null) {
-            return jobExecution.getStartTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+    private LocalDateTime resolveTaskStartTime(JobExecution jobExecution) {
+        if (jobExecution == null || jobExecution.getStartTime() == null) {
+            return null;
         }
-        return workflowTask == null ? null : workflowTask.getTaskStartTime();
-    }
-
-    private String resolveLegacyStatus(WorkflowTask workflowTask) {
-        return workflowTask == null || workflowTask.getTaskStatus() == null ? null : workflowTask.getTaskStatus().name();
+        return jobExecution.getStartTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 
     private boolean isFailedStatus(String status) {
         return TaskStatus.FAILED.name().equalsIgnoreCase(status);
     }
 
-    private String firstText(String primary, String fallback) {
-        if (StringUtils.hasText(primary)) {
-            return primary.trim();
+    private String firstText(String... candidates) {
+        if (candidates == null) {
+            return null;
         }
-        if (StringUtils.hasText(fallback)) {
-            return fallback.trim();
+        for (String candidate : candidates) {
+            if (StringUtils.hasText(candidate)) {
+                return candidate.trim();
+            }
         }
         return null;
     }

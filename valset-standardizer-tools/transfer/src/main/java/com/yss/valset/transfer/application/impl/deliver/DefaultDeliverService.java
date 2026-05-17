@@ -57,6 +57,11 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
 
     @Override
     public void execute(String routeId, String transferId) {
+        execute(routeId, transferId, null);
+    }
+
+    @Override
+    public void execute(String routeId, String transferId, Integer retryCount) {
         TransferRoute route = transferRouteGateway.findById(routeId)
                 .orElseThrow(() -> new IllegalStateException("未找到路由记录，routeId=" + routeId));
         TransferObject transferObject = transferObjectGateway.findById(transferId)
@@ -65,8 +70,8 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
                 .orElseThrow(() -> new IllegalStateException("未找到投递目标，targetCode=" + route.targetCode()));
         String triggerType = resolveTriggerType(route.routeMeta());
         boolean failureLogged = false;
+        int attemptIndex = resolveAttemptIndex(routeId, transferId, retryCount);
         try {
-            int attemptIndex = (int) transferDeliveryGateway.countByRouteId(routeId);
             log.info("开始文件投递，routeId={}，transferId={}，targetCode={}，targetType={}，originalName={}，retryCount={}",
                     route.routeId(),
                     transferObject.transferId(),
@@ -92,7 +97,13 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
                     transferId,
                     target.targetCode(),
                     attemptIndex);
-            TransferResult result = transferActionPluginRegistry.getRequired(route).execute(context);
+            TransferResult result;
+            try {
+                result = transferActionPluginRegistry.getRequired(route).execute(context);
+            } catch (RuntimeException exception) {
+                scheduleRetryIfNeeded(routeId, transferId, route, attemptIndex + 1);
+                throw exception;
+            }
             TransferDeliveryRecord deliveryRecord = transferDeliveryGateway.recordResult(routeId, transferId, result, attemptIndex);
             if (!result.success()) {
                 log.warn("文件投递未成功，routeId={}，transferId={}，targetCode={}，attemptIndex={}，messages={}",
@@ -163,6 +174,18 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
             }
             throw exception;
         }
+    }
+
+    private int resolveAttemptIndex(String routeId, String transferId, Integer retryCount) {
+        if (retryCount != null && retryCount >= 0) {
+            return retryCount;
+        }
+        return transferDeliveryGateway.listRecords(routeId, transferId, null, null, 1).stream()
+                .findFirst()
+                .map(TransferDeliveryRecord::retryCount)
+                .filter(count -> count != null && count >= 0)
+                .map(count -> count + 1)
+                .orElse(0);
     }
 
     private TransferObject persistStoragePath(TransferObject transferObject, TransferResult result) {

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.yss.valset.extract.repository.mybatis.LongTextToStringTypeHandler;
 import lombok.Data;
 
 import javax.persistence.Id;
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
  * 估值表 sheet 级样式快照 ODS 表。
  */
 @Data
-@TableName("t_ods_valuation_sheet_style")
+@TableName(value = "t_ods_valuation_sheet_style", autoResultMap = true)
 public class ValuationSheetStylePO {
 
     @Id
@@ -32,7 +33,7 @@ public class ValuationSheetStylePO {
     @TableField("style_scope")
     private String styleScope;
 
-    @TableField("sheet_style_json")
+    @TableField(value = "sheet_style_json", typeHandler = LongTextToStringTypeHandler.class)
     private String sheetStyleJson;
 
     @TableField("preview_row_count")

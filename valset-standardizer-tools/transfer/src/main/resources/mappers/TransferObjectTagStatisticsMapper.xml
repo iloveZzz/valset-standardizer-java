@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.valset.transfer.infrastructure.mapper.TransferObjectTagStatisticsMapper">
+
+    <select id="selectTagSummary" resultType="com.yss.valset.transfer.infrastructure.dto.TransferObjectTagSummaryDTO">
+        SELECT
+            t.tag_code AS tag_code,
+            COALESCE(NULLIF(MAX(t.tag_name), ''), MAX(t.tag_code)) AS tag_name,
+            COUNT(1) AS tag_count
+        FROM t_transfer_object_tag t
+        INNER JOIN t_transfer_object o ON t.transfer_id = o.transfer_id
+        WHERE o.received_at <![CDATA[>=]]> #{startInclusive}
+          AND o.received_at <![CDATA[<]]> #{endExclusive}
+        GROUP BY t.tag_code
+        ORDER BY tag_count DESC, tag_code ASC
+    </select>
+
+</mapper>

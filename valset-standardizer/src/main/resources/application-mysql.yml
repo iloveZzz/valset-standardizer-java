@@ -1,3 +1,6 @@
+yss:
+  mybatis:
+    helperDialect: mysql
 spring:
   datasource:
     primary:

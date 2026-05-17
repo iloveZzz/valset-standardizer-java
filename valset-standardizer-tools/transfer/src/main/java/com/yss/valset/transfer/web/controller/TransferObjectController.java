@@ -9,6 +9,8 @@ import com.yss.valset.transfer.application.dto.TransferMailInfoViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectRetagResponse;
 import com.yss.valset.transfer.application.dto.TransferObjectAnalysisViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectRedeliverResponse;
+import com.yss.valset.transfer.application.dto.TransferObjectTagSummaryViewDTO;
+import com.yss.valset.transfer.application.dto.TransferObjectTrendViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectViewDTO;
 import com.yss.valset.transfer.application.service.TransferObjectManagementAppService;
 import com.yss.valset.transfer.application.service.TransferObjectQueryService;
@@ -207,6 +209,32 @@ public class TransferObjectController {
                                                                         @RequestParam(value = "mailId", required = false) String mailId,
                                                                         @RequestParam(value = "deliveryStatus", required = false) String deliveryStatus) {
         return SingleResult.of(transferObjectQueryService.analyzeMailInbox(sourceCode, mailId, deliveryStatus));
+    }
+
+    /**
+     * 统计分拣对象趋势。
+     *
+     * @param taskDate 任务日期
+     * @param days 天数窗口
+     * @return 分拣对象趋势结果
+     */
+    @GetMapping("/trend")
+    @Operation(summary = "统计分拣对象趋势", description = "按天统计已投递与未投递分拣对象数量。")
+    public com.yss.cloud.dto.result.MultiResult<TransferObjectTrendViewDTO> trendObjects(@RequestParam(value = "taskDate", required = false) String taskDate,
+                                                                                         @RequestParam(value = "days", required = false) Integer days) {
+        return com.yss.cloud.dto.result.MultiResult.of(transferObjectQueryService.trendObjects(taskDate, days));
+    }
+
+    /**
+     * 统计标签识别结果汇总。
+     *
+     * @param taskDate 任务日期
+     * @return 标签识别结果汇总
+     */
+    @GetMapping("/tag-summary")
+    @Operation(summary = "统计标签识别结果汇总", description = "按任务日期统计标签识别结果命中数量。")
+    public com.yss.cloud.dto.result.MultiResult<TransferObjectTagSummaryViewDTO> summarizeTags(@RequestParam(value = "taskDate", required = false) String taskDate) {
+        return com.yss.cloud.dto.result.MultiResult.of(transferObjectQueryService.summarizeTags(taskDate));
     }
 
     /**

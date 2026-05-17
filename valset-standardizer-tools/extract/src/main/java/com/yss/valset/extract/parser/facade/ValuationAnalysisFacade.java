@@ -32,7 +32,6 @@ public class ValuationAnalysisFacade implements ValuationDataParserProvider {
         parserMap.put(DataSourceType.EXCEL, odsValuationDataParser);
         parserMap.put(DataSourceType.CSV, csvValuationDataParser);
         parserMap.put(DataSourceType.API, apiValuationDataParser);
-        parserMap.put(DataSourceType.DB, dbValuationDataParser);
     }
 
     /**

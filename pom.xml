@@ -43,7 +43,7 @@
         <mybatis.spring.boot.starter.test.version>2.3.2</mybatis.spring.boot.starter.test.version>
         <testcontainers.version>1.20.4</testcontainers.version>
         <postgresql.version>42.7.8</postgresql.version>
-        <oracle.jdbc.version>21.15.0.0</oracle.jdbc.version>
+        <oracle.jdbc.version>23.26.2.0.0</oracle.jdbc.version>
         <jqwik.version>1.9.2</jqwik.version>
         <lombok.version>1.18.34</lombok.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
@@ -61,6 +61,11 @@
                 <groupId>com.yss.datamiddle</groupId>
                 <artifactId>yss-datamiddle-bom</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.cloud</groupId>
+                <artifactId>yss-component-mybatis-starter</artifactId>
+                <version>2.0.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>com.yss.datamiddle</groupId>

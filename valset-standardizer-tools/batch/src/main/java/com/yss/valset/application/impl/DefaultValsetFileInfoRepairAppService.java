@@ -103,7 +103,7 @@ public class DefaultValsetFileInfoRepairAppService implements ValsetFileInfoRepa
 
         int pageIndex = 0;
         while (true) {
-            TransferObjectPage page = transferObjectGateway.pageObjects(null, null, null, null, null, null, null, null, null, null, null, null,pageIndex, pageSize);
+            TransferObjectPage page = transferObjectGateway.pageObjects(null, null, null, null, null, null, null, null, null, null, null, null,null,pageIndex, pageSize);
             List<TransferObject> records = page == null || page.records() == null ? java.util.Arrays.asList() : page.records();
             if (records.isEmpty()) {
                 break;

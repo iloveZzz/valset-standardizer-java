@@ -23,6 +23,10 @@ export type ListSourcesParams = {
    */
   enabled?: boolean;
   /**
+   * 任务日期
+   */
+  taskDate?: string;
+  /**
    * 查询上限
    */
   limit?: number;

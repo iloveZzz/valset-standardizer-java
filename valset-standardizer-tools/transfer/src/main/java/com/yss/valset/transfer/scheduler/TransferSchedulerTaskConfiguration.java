@@ -58,7 +58,8 @@ public class TransferSchedulerTaskConfiguration {
                 .onDeadExecutionRevive()
                 .execute((taskInstance, executionContext) -> transferProcessUseCase.deliver(
                         taskInstance.getData().routeId(),
-                        taskInstance.getData().transferId()
+                        taskInstance.getData().transferId(),
+                        taskInstance.getData().retryCount()
                 ));
     }
 

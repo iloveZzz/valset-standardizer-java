@@ -518,7 +518,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
         }
         switch (platformType) {
             case SPRING_BATCH:
-                return "Spring Batch";
+                return "批量任务";
             case DOLPHIN_SCHEDULER:
                 return "DolphinScheduler";
             case XXL_JOB:
@@ -534,7 +534,7 @@ public class DefaultWorkflowApplicationService implements WorkflowApplicationSer
         }
         switch (platformType) {
             case SPRING_BATCH:
-                return "基于 Spring Batch 的批处理执行平台";
+                return "基于 批量任务 的批处理执行平台";
             case DOLPHIN_SCHEDULER:
                 return "基于 DolphinScheduler 的 DAG 调度平台";
             case XXL_JOB:

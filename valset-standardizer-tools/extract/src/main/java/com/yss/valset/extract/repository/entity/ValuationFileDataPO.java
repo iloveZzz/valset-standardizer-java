@@ -4,12 +4,13 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.yss.valset.extract.repository.mybatis.LongTextToStringTypeHandler;
 import lombok.Data;
 
 import javax.persistence.Id;
 
 @Data
-@TableName("t_ods_valuation_filedata")
+@TableName(value = "t_ods_valuation_filedata", autoResultMap = true)
 public class ValuationFileDataPO {
     @Id
     @TableId(value = "id", type = IdType.ASSIGN_ID)
@@ -24,6 +25,6 @@ public class ValuationFileDataPO {
     @TableField("row_data_number")
     private Integer rowDataNumber;
 
-    @TableField("row_data_json")
+    @TableField(value = "row_data_json", typeHandler = LongTextToStringTypeHandler.class)
     private String rowDataJson;
 }

@@ -353,11 +353,11 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
     private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
         if (parseRuleTemplateResolver == null) {
-            return java.util.Arrays.asList("科目代码", "科目名称", "币种");
+            return java.util.Arrays.asList("科目代码", "科目名称");
         }
         List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
         return requiredHeaders == null || requiredHeaders.isEmpty()
-                ? java.util.Arrays.asList("科目代码", "科目名称", "币种")
+                ? java.util.Arrays.asList("科目代码", "科目名称")
                 : requiredHeaders;
     }
 

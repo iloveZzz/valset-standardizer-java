@@ -2,39 +2,26 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yss.valset.transfer.infrastructure.mapper.TransferRunLogStatisticsMapper">
 
-    <select id="selectDeliverTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO" databaseId="MySQL">
-        SELECT
-            DATE_FORMAT(created_at, '%Y-%m-%d') AS trend_date,
-            COUNT(1) AS count
-        FROM t_transfer_run_log
-        WHERE run_stage = 'DELIVER'
-          AND created_at <![CDATA[>=]]> #{startInclusive}
-          AND created_at <![CDATA[<]]> #{endExclusive}
-        GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
-        ORDER BY trend_date
-    </select>
+    <sql id="trendDateExpr">
+        <choose>
+            <when test="_databaseId == 'MySQL'">
+                DATE_FORMAT(created_at, '%Y-%m-%d')
+            </when>
+            <otherwise>
+                TO_CHAR(created_at, 'YYYY-MM-DD')
+            </otherwise>
+        </choose>
+    </sql>
 
-    <select id="selectDeliverTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO" databaseId="PostgreSQL">
+    <select id="selectDeliverTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO">
         SELECT
-            TO_CHAR(created_at, 'YYYY-MM-DD') AS trend_date,
+            <include refid="trendDateExpr"/> AS trend_date,
             COUNT(1) AS count
         FROM t_transfer_run_log
         WHERE run_stage = 'DELIVER'
           AND created_at <![CDATA[>=]]> #{startInclusive}
           AND created_at <![CDATA[<]]> #{endExclusive}
-        GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
-        ORDER BY trend_date
-    </select>
-
-    <select id="selectDeliverTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferRunLogTrendDTO" databaseId="Oracle">
-        SELECT
-            TO_CHAR(created_at, 'YYYY-MM-DD') AS trend_date,
-            COUNT(1) AS count
-        FROM t_transfer_run_log
-        WHERE run_stage = 'DELIVER'
-          AND created_at <![CDATA[>=]]> #{startInclusive}
-          AND created_at <![CDATA[<]]> #{endExclusive}
-        GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+        GROUP BY <include refid="trendDateExpr"/>
         ORDER BY trend_date
     </select>
 

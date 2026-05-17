@@ -11,6 +11,8 @@ import com.yss.valset.transfer.application.dto.TransferObjectTagViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectSourceAnalysisViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectStatusCountViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectSizeAnalysisViewDTO;
+import com.yss.valset.transfer.application.dto.TransferObjectTagSummaryViewDTO;
+import com.yss.valset.transfer.application.dto.TransferObjectTrendViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectViewDTO;
 import com.yss.valset.transfer.application.service.TransferObjectQueryService;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
@@ -25,6 +27,7 @@ import com.yss.valset.transfer.domain.model.TransferObjectPage;
 import com.yss.valset.transfer.domain.model.TransferObjectSourceAnalysis;
 import com.yss.valset.transfer.domain.model.TransferObjectStatusCount;
 import com.yss.valset.transfer.domain.model.TransferObjectSizeAnalysis;
+import com.yss.valset.transfer.domain.model.TransferObjectTrend;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
 import com.yss.valset.transfer.domain.model.TransferMailInfo;
@@ -234,6 +237,30 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .build();
     }
 
+    @Override
+    public List<TransferObjectTrendViewDTO> trendObjects(String taskDate, Integer days) {
+        return transferObjectGateway.trendObjects(taskDate, days).stream()
+                .map(this::toTrendView)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public List<TransferObjectTagSummaryViewDTO> summarizeTags(String taskDate) {
+        String normalizedTaskDate = normalizeTaskDate(taskDate);
+        LocalDate taskDay = StringUtils.hasText(normalizedTaskDate) ? LocalDate.parse(normalizedTaskDate) : null;
+        if (taskDay == null) {
+            return java.util.Arrays.asList();
+        }
+        return transferObjectTagGateway.summarizeTags(taskDay.atStartOfDay(), taskDay.plusDays(1L).atStartOfDay()).stream()
+                .map(summary -> TransferObjectTagSummaryViewDTO.builder()
+                        .tagCode(summary.getTagCode())
+                        .tagName(summary.getTagName())
+                        .tagCount(summary.getTagCount())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     private String normalizeStatus(String status) {
         if (!StringUtils.hasText(status)) {
             return null;
@@ -302,6 +329,17 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 .totalCount(sizeAnalysis.totalCount())
                 .totalSizeBytes(sizeAnalysis.totalSizeBytes())
                 .extensionCounts(sizeAnalysis.extensionCounts() == null ? java.util.Arrays.asList() : sizeAnalysis.extensionCounts().stream().map(this::toExtensionCountView).collect(java.util.stream.Collectors.toList()))
+                .build();
+    }
+
+    private TransferObjectTrendViewDTO toTrendView(TransferObjectTrend trend) {
+        if (trend == null) {
+            return null;
+        }
+        return TransferObjectTrendViewDTO.builder()
+                .trendDate(trend.getTrendDate())
+                .deliveredCount(trend.getDeliveredCount())
+                .undeliveredCount(trend.getUndeliveredCount())
                 .build();
     }
 

@@ -16,4 +16,9 @@ public interface StandardizedExternalValuationGateway {
      * 按文件标识查询最近一次标准化结果。
      */
     ParsedValuationData findLatestByFileId(Long fileId);
+
+    /**
+     * 按本次解析任务标识查询标准化结果。
+     */
+    ParsedValuationData findByValuationId(Long valuationId);
 }

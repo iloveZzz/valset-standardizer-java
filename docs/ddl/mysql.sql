@@ -1,20 +1,5 @@
 -- Generated from PO classes in valset-standardizer.
--- This DDL matches the current workflow task model with task_stage and per-stage timing fields.
-
-CREATE TABLE t_valset_workflow_task (
-    task_id BIGINT PRIMARY KEY,
-    task_type VARCHAR(64) NOT NULL,
-    task_stage VARCHAR(32),
-    task_status VARCHAR(32) NOT NULL,
-    business_key VARCHAR(512),
-    file_id BIGINT,
-    input_payload TEXT,
-    result_payload TEXT,
-    task_start_time DATETIME,
-    parse_task_time_ms BIGINT,
-    standardize_time_ms BIGINT,
-    match_standard_subject_time_ms BIGINT
-);
+-- 批量任务 metadata tables are provided by the Batch schema; this file only keeps the valuation business tables.
 
 CREATE TABLE t_subject_match_result (
     id BIGINT PRIMARY KEY,
@@ -132,10 +117,6 @@ CREATE TABLE t_dwd_external_valuation_metric (
     raw_values_json TEXT
 );
 
-CREATE TABLE t_ods_valuation_data (
-    subject_code VARCHAR(128),
-    subject_name VARCHAR(512)
-);
 
 CREATE TABLE t_ods_standard_subject (
     id BIGINT PRIMARY KEY,
@@ -205,7 +186,7 @@ CREATE TABLE t_tr_jjhzgzb (
     org_cd VARCHAR(30),
     pd_cd VARCHAR(30),
     biz_date VARCHAR(8),
-    subject_cd VARCHAR(100),
+    subject_cd VARCHAR(200),
     subject_nm VARCHAR(300),
     pa_subject_cd VARCHAR(100),
     pa_subject_nm VARCHAR(300),

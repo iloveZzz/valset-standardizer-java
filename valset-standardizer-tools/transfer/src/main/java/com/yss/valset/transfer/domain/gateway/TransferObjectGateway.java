@@ -4,6 +4,7 @@ import com.yss.valset.transfer.application.impl.query.DefaultTransferObjectQuery
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectAnalysis;
 import com.yss.valset.transfer.domain.model.TransferObjectPage;
+import com.yss.valset.transfer.domain.model.TransferObjectTrend;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +47,8 @@ public interface TransferObjectGateway {
                                           String tagCode,
                                           String tagValue,
                                           String taskDate);
+
+    List<TransferObjectTrend> trendObjects(String taskDate, Integer days);
 
     List<TransferObject> listEmailInboxObjects(String sourceCode, String mailId);
 

@@ -4,11 +4,14 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
 import com.yss.valset.transfer.infrastructure.convertor.TransferObjectTagMapper;
+import com.yss.valset.transfer.infrastructure.dto.TransferObjectTagSummaryDTO;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectTagPO;
 import com.yss.valset.transfer.infrastructure.mapper.TransferObjectTagRepository;
+import com.yss.valset.transfer.infrastructure.mapper.TransferObjectTagStatisticsMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +26,7 @@ public class TransferObjectTagGatewayImpl implements TransferObjectTagGateway {
 
     private final TransferObjectTagRepository transferObjectTagRepository;
     private final TransferObjectTagMapper transferObjectTagMapper;
+    private final TransferObjectTagStatisticsMapper transferObjectTagStatisticsMapper;
 
     @Override
     public List<TransferObjectTag> listByTransferId(String transferId) {
@@ -60,6 +64,10 @@ public class TransferObjectTagGatewayImpl implements TransferObjectTagGateway {
             return java.util.Arrays.asList();
         }
         List<TransferObjectTagPO> pos = tags.stream().map(tag -> {
+            if (tag == null || !StringUtils.hasText(tag.tagId())) {
+                String tagCode = tag == null ? null : tag.tagCode();
+                throw new IllegalStateException("文件对象标签缺少标签定义主键，tagCode=" + tagCode);
+            }
             TransferObjectTagPO po = transferObjectTagMapper.toPO(tag);
             if (po.getCreatedAt() == null) {
                 po.setCreatedAt(LocalDateTime.now());
@@ -78,5 +86,26 @@ public class TransferObjectTagGatewayImpl implements TransferObjectTagGateway {
                 Wrappers.lambdaQuery(TransferObjectTagPO.class)
                         .eq(TransferObjectTagPO::getTransferId, transferId)
         );
+    }
+
+    @Override
+    public List<TagSummary> summarizeTags(LocalDateTime startInclusive, LocalDateTime endExclusive) {
+        if (startInclusive == null || endExclusive == null || !startInclusive.isBefore(endExclusive)) {
+            return java.util.Arrays.asList();
+        }
+        return transferObjectTagStatisticsMapper.selectTagSummary(startInclusive, endExclusive)
+                .stream()
+                .map(this::toSummary)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private TagSummary toSummary(TransferObjectTagSummaryDTO dto) {
+        if (dto == null) {
+            return null;
+        }
+        return new TagSummary(
+                dto.getTagCode(),
+                dto.getTagName(),
+                dto.getTagCount() == null ? 0L : dto.getTagCount());
     }
 }

@@ -167,7 +167,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                     po.setRowDataNumber(subject.getRowDataNumber());
                     po.setSubjectCode(subject.getSubjectCode());
                     po.setSubjectName(subject.getSubjectName());
-                    po.setLevel(subject.getLevel());
+                    po.setLevelNo(subject.getLevel());
                     po.setParentCode(subject.getParentCode());
                     po.setRootCode(subject.getRootCode());
                     po.setSegmentCount(subject.getSegmentCount());
@@ -260,7 +260,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                         .rowDataNumber(po.getRowDataNumber())
                         .subjectCode(po.getSubjectCode())
                         .subjectName(po.getSubjectName())
-                        .level(po.getLevel())
+                        .level(po.getLevelNo())
                         .parentCode(po.getParentCode())
                         .rootCode(po.getRootCode())
                         .segmentCount(po.getSegmentCount())

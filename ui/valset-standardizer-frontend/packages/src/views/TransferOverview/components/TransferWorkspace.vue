@@ -15,13 +15,13 @@ const page = props.page;
 
 const trendChartRef = ref<HTMLDivElement | null>(null);
 const statusChartRef = ref<HTMLDivElement | null>(null);
-const stageChartRef = ref<HTMLDivElement | null>(null);
+const tagChartRef = ref<HTMLDivElement | null>(null);
 let trendChartInstance: echarts.ECharts | null = null;
 let statusChartInstance: echarts.ECharts | null = null;
-let stageChartInstance: echarts.ECharts | null = null;
+let tagChartInstance: echarts.ECharts | null = null;
 let trendChartObserver: ResizeObserver | null = null;
 let statusChartObserver: ResizeObserver | null = null;
-let stageChartObserver: ResizeObserver | null = null;
+let tagChartObserver: ResizeObserver | null = null;
 
 const bindChartObservers = () => {
   if (trendChartRef.value && !trendChartObserver) {
@@ -36,11 +36,11 @@ const bindChartObservers = () => {
     });
     statusChartObserver.observe(statusChartRef.value);
   }
-  if (stageChartRef.value && !stageChartObserver) {
-    stageChartObserver = new ResizeObserver(() => {
-      stageChartInstance?.resize();
+  if (tagChartRef.value && !tagChartObserver) {
+    tagChartObserver = new ResizeObserver(() => {
+      tagChartInstance?.resize();
     });
-    stageChartObserver.observe(stageChartRef.value);
+    tagChartObserver.observe(tagChartRef.value);
   }
 };
 
@@ -50,7 +50,7 @@ const renderOverviewCharts = async () => {
   await Promise.all([
     renderTrendChart(),
     renderStatusChart(),
-    renderStageChart(),
+    renderTagChart(),
   ]);
 };
 
@@ -117,23 +117,23 @@ const renderStatusChart = async () => {
   statusChartInstance.resize();
 };
 
-const renderStageChart = async () => {
+const renderTagChart = async () => {
   if (page.activeSection !== "overview") {
     return;
   }
 
   await nextTick();
-  const element = stageChartRef.value;
+  const element = tagChartRef.value;
   if (!element) {
     return;
   }
 
-  if (!stageChartInstance) {
-    stageChartInstance = echarts.init(element);
+  if (!tagChartInstance) {
+    tagChartInstance = echarts.init(element);
   }
 
-  stageChartInstance.setOption(page.overviewStageChartOption, true);
-  stageChartInstance.resize();
+  tagChartInstance.setOption(page.overviewTagChartOption, true);
+  tagChartInstance.resize();
 };
 
 watch(
@@ -159,9 +159,9 @@ watch(
 );
 
 watch(
-  () => page.overviewStageChartOption,
+  () => page.overviewTagChartOption,
   () => {
-    void renderStageChart();
+    void renderTagChart();
   },
   {
     deep: true,
@@ -202,16 +202,16 @@ onMounted(() => {
 onBeforeUnmount(() => {
   trendChartObserver?.disconnect();
   statusChartObserver?.disconnect();
-  stageChartObserver?.disconnect();
+  tagChartObserver?.disconnect();
   trendChartInstance?.dispose();
   statusChartInstance?.dispose();
-  stageChartInstance?.dispose();
+  tagChartInstance?.dispose();
   trendChartObserver = null;
   statusChartObserver = null;
-  stageChartObserver = null;
+  tagChartObserver = null;
   trendChartInstance = null;
   statusChartInstance = null;
-  stageChartInstance = null;
+  tagChartInstance = null;
 });
 </script>
 
@@ -348,10 +348,31 @@ onBeforeUnmount(() => {
                       <div class="overview-hero-stat-label">
                         {{ item.label }}
                       </div>
-                      <div class="overview-hero-stat-value">
+                      <div
+                        class="overview-hero-stat-value"
+                        :class="item.valueClass"
+                      >
                         {{ item.value }}
                       </div>
-                      <div class="overview-hero-stat-desc">
+                      <div
+                        v-if="item.descriptionParts?.length"
+                        class="overview-hero-stat-desc"
+                      >
+                        <template
+                          v-for="(part, index) in item.descriptionParts"
+                          :key="part.key"
+                        >
+                          <span>{{ part.label }}</span>
+                          <strong :class="part.valueClass">
+                            {{ part.value }}
+                          </strong>
+                          <span>个</span>
+                          <span v-if="index < item.descriptionParts.length - 1">
+                            ，
+                          </span>
+                        </template>
+                      </div>
+                      <div v-else class="overview-hero-stat-desc">
                         {{ item.description }}
                       </div>
                     </div>
@@ -439,22 +460,21 @@ onBeforeUnmount(() => {
                   >
                     <div class="section-title section-title-inline">
                       <div>
-                        <h3>估值表解析阶段态势</h3>
-                        <p>文件解析、结构标准化、标准表落地的成功、失败与待处理统计。</p>
+                        <h3>标签识别结果</h3>
+                        <p>按任务日期展示标签识别命中数量。</p>
                       </div>
                     </div>
-                    <div ref="stageChartRef" class="overview-mini-chart"></div>
+                    <div ref="tagChartRef" class="overview-mini-chart"></div>
                     <div
                       class="overview-mini-summary-grid overview-mini-summary-grid--stage"
                     >
                       <div
-                        v-for="item in page.overviewStageHighlights"
+                        v-for="item in page.overviewTagHighlights"
                         :key="item.key"
                         class="overview-mini-summary-card"
                       >
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.totalCount }}</strong>
-                        <em>成功 {{ item.successCount }} · 失败 {{ item.failedCount }} · 待处理 {{ item.pendingCount }}</em>
+                        <span>{{ item.label }}  : {{ item.tagCount }}</span>
+
                       </div>
                     </div>
                   </YCard>
@@ -486,8 +506,8 @@ onBeforeUnmount(() => {
               <template v-else>
                 <div class="section-title">
                   <div>
-                    <h3>文件投递个数趋势图</h3>
-                    <p>支持查看最近 3 天、7 天和 30 天的投递趋势。</p>
+                    <h3>分拣对象趋势图</h3>
+                    <p>支持查看最近 3 天、7 天和 30 天的已投递与未投递趋势。</p>
                   </div>
                   <div class="trend-window-switch">
                     <YButton

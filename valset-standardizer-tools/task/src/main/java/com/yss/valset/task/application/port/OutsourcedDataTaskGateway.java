@@ -5,6 +5,7 @@ import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskTraceDTO;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,8 @@ public interface OutsourcedDataTaskGateway {
     List<OutsourcedDataTaskBatchDTO> listTasks(OutsourcedDataTaskQueryCommand query);
 
     Optional<OutsourcedDataTaskBatchDTO> findTask(String batchId);
+
+    OutsourcedDataTaskTraceDTO getTrace(String batchId);
 
     List<OutsourcedDataTaskStepDTO> listSteps(String batchId);
 }

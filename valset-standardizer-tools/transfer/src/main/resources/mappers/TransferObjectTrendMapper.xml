@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.valset.transfer.infrastructure.mapper.TransferObjectTrendMapper">
+
+    <sql id="trendDateExpr">
+        <choose>
+            <when test="_databaseId == 'MySQL'">
+                DATE_FORMAT(o.received_at, '%Y-%m-%d')
+            </when>
+            <otherwise>
+                TO_CHAR(o.received_at, 'YYYY-MM-DD')
+            </otherwise>
+        </choose>
+    </sql>
+
+    <select id="selectDeliveryTrend" resultType="com.yss.valset.transfer.infrastructure.dto.TransferObjectTrendDTO">
+        SELECT
+            <include refid="trendDateExpr"/> AS trend_date,
+            SUM(CASE WHEN dr.transfer_id IS NOT NULL THEN 1 ELSE 0 END) AS delivered_count,
+            SUM(CASE WHEN dr.transfer_id IS NULL THEN 1 ELSE 0 END) AS undelivered_count
+        FROM t_transfer_object o
+        LEFT JOIN (
+            SELECT DISTINCT transfer_id
+            FROM t_transfer_delivery_record
+            WHERE execute_status = 'SUCCESS'
+        ) dr ON o.transfer_id = dr.transfer_id
+        WHERE o.received_at <![CDATA[>=]]> #{startInclusive}
+          AND o.received_at <![CDATA[<]]> #{endExclusive}
+        GROUP BY <include refid="trendDateExpr"/>
+        ORDER BY trend_date
+    </select>
+
+</mapper>

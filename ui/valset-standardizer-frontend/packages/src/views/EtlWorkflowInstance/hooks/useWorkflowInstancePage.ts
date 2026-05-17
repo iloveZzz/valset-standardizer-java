@@ -52,7 +52,7 @@ const PLATFORM_ORDER: EtlPlatformType[] = [
 ];
 
 const PLATFORM_LABELS: Record<EtlPlatformType, string> = {
-  SPRING_BATCH: "Spring Batch",
+  SPRING_BATCH: "批量任务",
   DOLPHIN_SCHEDULER: "DolphinScheduler",
   XXL_JOB: "XXL-JOB",
 };

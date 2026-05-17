@@ -77,7 +77,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class DefaultParseRuleManagementAppService implements ParseRuleManagementAppService {
 
     private static final int DEFAULT_LIMIT = 50;
-    private static final List<String> DEFAULT_REQUIRED_HEADERS = java.util.Arrays.asList("科目代码", "科目名称", "币种");
+    private static final List<String> DEFAULT_REQUIRED_HEADERS = java.util.Arrays.asList("科目代码", "科目名称");
     private static final String DEFAULT_SUBJECT_CODE_PATTERN = "^\\d{4}[A-Za-z0-9]*$";
 
     private final ParseRuleProfileRepository profileRepository;

@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
- * 估值表解析 Spring Batch 配置。
+ * 估值表解析 批量任务 配置。
  *
  * <p>
  * 这里把估值表解析拆成固定的三段式作业：
@@ -109,7 +109,7 @@ public class ParseSpringBatchConfiguration {
             JobParameters jobParameters = jobExecution.getJobParameters();
             Long taskId = jobParameters == null ? null : jobParameters.getLong("taskId");
             if (taskId == null) {
-                throw new IllegalStateException("Spring Batch 解析作业缺少 taskId");
+                throw new IllegalStateException("批量任务 解析作业缺少 taskId");
             }
             ExecutionContext jobExecutionContext = jobExecution.getExecutionContext();
             action.execute(taskId, jobExecutionContext);

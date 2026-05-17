@@ -3,7 +3,7 @@ package com.yss.valset.workflow.springbatch;
 import java.util.List;
 
 /**
- * Spring Batch 业务阶段语义。
+ * 批量任务 业务阶段语义。
  *
  * <p>这里把业务阶段码、阶段族、阶段说明、审计等级和目标表集中起来，
  * 便于后续新增阶段时统一维护，而不是把这些语义散落在处理代码里。

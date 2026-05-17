@@ -69,7 +69,7 @@ class SpringBatchWorkflowPlatformAdapterTest {
     private WorkflowDefinitionDTO definition() {
         return WorkflowDefinitionDTO.builder()
                 .workflowCode("spring-batch")
-                .workflowName("Spring Batch ETL")
+                .workflowName("批量任务 ETL")
                 .workflowVersionNo(1)
                 .platformType(EtlPlatformType.SPRING_BATCH)
                 .engineBinding(WorkflowEngineBindingDTO.builder()

@@ -18,6 +18,7 @@ import com.yss.valset.transfer.domain.model.TransferObjectPage;
 import com.yss.valset.transfer.domain.model.TransferObjectSourceAnalysis;
 import com.yss.valset.transfer.domain.model.TransferObjectStatusCount;
 import com.yss.valset.transfer.domain.model.TransferObjectSizeAnalysis;
+import com.yss.valset.transfer.domain.model.TransferObjectTrend;
 import com.yss.valset.transfer.domain.model.TransferMailInfo;
 import com.yss.valset.transfer.domain.model.TransferStatus;
 import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
@@ -27,6 +28,7 @@ import com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectPO;
 import com.yss.valset.transfer.infrastructure.mapper.TransferObjectMybatisMapper;
 import com.yss.valset.transfer.infrastructure.mapper.TransferObjectRepository;
+import com.yss.valset.transfer.infrastructure.mapper.TransferObjectTrendMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
@@ -64,6 +66,7 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     private final TransferJsonMapper transferJsonMapper;
     private final TransferObjectMapper transferObjectMapper;
     private final TransferObjectMybatisMapper transferObjectMybatisMapper;
+    private final TransferObjectTrendMapper transferObjectTrendMapper;
     private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
@@ -300,6 +303,22 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                 sourceAnalyses,
                 buildSizeAnalysis(objects)
         );
+    }
+
+    @Override
+    public List<TransferObjectTrend> trendObjects(String taskDate, Integer days) {
+        LocalDateTime taskStart = resolveTaskStart(taskDate);
+        LocalDateTime taskEnd = resolveTaskEnd(taskDate);
+        if (taskStart == null || taskEnd == null || !taskStart.isBefore(taskEnd)) {
+            return Collections.emptyList();
+        }
+        return transferObjectTrendMapper.selectDeliveryTrend(taskStart, taskEnd)
+                .stream()
+                .map(dto -> new TransferObjectTrend(
+                        dto.getTrendDate(),
+                        dto.getDeliveredCount() == null ? 0L : dto.getDeliveredCount(),
+                        dto.getUndeliveredCount() == null ? 0L : dto.getUndeliveredCount()))
+                .collect(Collectors.toList());
     }
 
     @Override

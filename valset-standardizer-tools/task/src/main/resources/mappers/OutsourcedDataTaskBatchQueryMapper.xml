@@ -1,0 +1,676 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.valset.task.infrastructure.mapper.OutsourcedDataTaskBatchQueryMapper">
+
+    <resultMap id="OutsourcedDataTaskBatchMap" type="com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO">
+        <result property="batchId" column="batch_id" jdbcType="VARCHAR"/>
+        <result property="businessDate" column="business_date" jdbcType="VARCHAR"/>
+        <result property="productCode" column="product_code" jdbcType="VARCHAR"/>
+        <result property="productName" column="product_name" jdbcType="VARCHAR"/>
+        <result property="managerName" column="manager_name" jdbcType="VARCHAR"/>
+        <result property="fileId" column="file_id" jdbcType="VARCHAR"/>
+        <result property="filesysFileId" column="filesys_file_id" jdbcType="VARCHAR"/>
+        <result property="originalFileName" column="original_file_name" jdbcType="VARCHAR"/>
+        <result property="sourceType" column="source_type" jdbcType="VARCHAR"/>
+        <result property="taskId" column="task_id" jdbcType="BIGINT"/>
+        <result property="inputPayload" column="input_payload" jdbcType="CLOB"
+                typeHandler="com.yss.valset.task.infrastructure.mybatis.ClobToStringTypeHandler"/>
+        <result property="taskStage" column="task_stage" jdbcType="VARCHAR"/>
+        <result property="currentStage" column="current_stage" jdbcType="VARCHAR"/>
+        <result property="currentStep" column="current_step" jdbcType="VARCHAR"/>
+        <result property="status" column="status" jdbcType="VARCHAR"/>
+        <result property="progress" column="progress" jdbcType="INTEGER"/>
+        <result property="startedAt" column="started_at" jdbcType="VARCHAR"/>
+        <result property="endedAt" column="ended_at" jdbcType="VARCHAR"/>
+        <result property="durationMs" column="duration_ms" jdbcType="BIGINT"/>
+        <result property="lastErrorCode" column="last_error_code" jdbcType="VARCHAR"/>
+        <result property="lastErrorMessage" column="last_error_message" jdbcType="CLOB"
+                typeHandler="com.yss.valset.task.infrastructure.mybatis.ClobToStringTypeHandler"/>
+        <result property="stepStatus" column="step_status" jdbcType="VARCHAR"/>
+        <result property="transferErrorMessage" column="transfer_error_message" jdbcType="CLOB"
+                typeHandler="com.yss.valset.task.infrastructure.mybatis.ClobToStringTypeHandler"/>
+        <result property="executionId" column="execution_id" jdbcType="BIGINT"/>
+    </resultMap>
+
+    <sql id="normalizedBatchStatus">
+        CASE
+            WHEN UPPER(COALESCE(eb.raw_status, '')) IN ('STARTING', 'STARTED', 'STOPPING') THEN 'RUNNING'
+            WHEN UPPER(COALESCE(eb.raw_status, '')) = 'COMPLETED' THEN 'SUCCESS'
+            WHEN UPPER(COALESCE(eb.raw_status, '')) = 'FAILED' THEN 'FAILED'
+            WHEN UPPER(COALESCE(eb.raw_status, '')) IN ('STOPPED', 'ABANDONED') THEN 'STOPPED'
+            ELSE 'PENDING'
+        END
+    </sql>
+
+    <sql id="normalizedTaskStage">
+        CASE
+            WHEN UPPER(COALESCE(eb.task_stage, '')) IN ('EXTRACT', 'PARSE', 'RAW_DATA_EXTRACT', 'FILE_PARSE') THEN 'FILE_PARSE'
+            WHEN UPPER(COALESCE(eb.task_stage, '')) IN ('STANDARDIZE', 'STRUCTURE_STANDARDIZE', 'TASK_STANDARDIZED') THEN 'STRUCTURE_STANDARDIZE'
+            WHEN UPPER(COALESCE(eb.task_stage, '')) IN ('MATCH', 'STANDARD_LANDING', 'SUBJECT_RECOGNIZE', 'VERIFY_ARCHIVE',
+                    'DATA_PROCESSING', 'TASK_PERSISTED', 'TASK_SUCCEEDED', 'QUEUE_COMPLETED') THEN 'STANDARD_LANDING'
+            ELSE 'FILE_PARSE'
+        END
+    </sql>
+
+    <sql id="stepNameExpr">
+        <include refid="comparableCharExpr">
+            <property name="column" value="se.STEP_NAME"/>
+        </include>
+    </sql>
+
+    <sql id="stepStatusExpr">
+        <include refid="comparableCharExpr">
+            <property name="column" value="se.STATUS"/>
+        </include>
+    </sql>
+
+    <sql id="normalizedStepStage">
+        CASE
+            WHEN UPPER(COALESCE(<include refid="stepNameExpr"/>, '')) IN ('RAW_DATA_EXTRACT', 'PARSE', 'TASK_RAW_PARSED', 'TASK_CREATED',
+                    'TASK_DISPATCHED', 'TASK_EXECUTION_STARTED', 'TASK_REUSED', 'QUEUE_DISCOVERED', 'QUEUE_GENERATED',
+                    'QUEUE_BACKFILLED', 'QUEUE_REUSED', 'QUEUE_UPDATED', 'QUEUE_RETRIED', 'QUEUE_SUBSCRIBED',
+                    'QUEUE_SUBSCRIBE_ATTEMPTED', 'QUEUE_SUBSCRIBE_CONFLICT', 'QUEUE_SUBSCRIBE_SKIPPED',
+                    'QUEUE_FILE_INFO_REPAIR_STARTED', 'QUEUE_FILE_INFO_REPAIR_COMPLETED', 'QUEUE_FILE_INFO_REPAIR_FAILED') THEN 'FILE_PARSE'
+            WHEN UPPER(COALESCE(<include refid="stepNameExpr"/>, '')) IN ('TASK_STANDARDIZED', 'STRUCTURE_STANDARDIZE') THEN 'STRUCTURE_STANDARDIZE'
+            WHEN UPPER(COALESCE(<include refid="stepNameExpr"/>, '')) IN ('SUBJECT_RECOGNIZE', 'VERIFY_ARCHIVE', 'DATA_PROCESSING',
+                    'TASK_PERSISTED', 'TASK_SUCCEEDED', 'QUEUE_COMPLETED', 'STANDARD_LANDING') THEN 'STANDARD_LANDING'
+            ELSE 'FILE_PARSE'
+        END
+    </sql>
+
+    <sql id="comparableCharExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                TO_CHAR(${column})
+            </when>
+            <otherwise>
+                ${column}
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="clobTextExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                DBMS_LOB.SUBSTR(${column}, 4000, 1)
+            </when>
+            <otherwise>
+                ${column}
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="literalExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                CAST('${value}' AS VARCHAR2(128))
+            </when>
+            <otherwise>
+                '${value}'
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="batchIdExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                CASE
+                    WHEN eb.file_id IS NOT NULL THEN <include refid="literalExpr"><property name="value" value="FILE-"/></include> || TO_CHAR(eb.file_id)
+                    WHEN eb.business_key IS NOT NULL AND TRIM(eb.business_key) IS NOT NULL THEN <include refid="literalExpr"><property name="value" value="BIZ-"/></include> ||
+                            REGEXP_REPLACE(TRIM(eb.business_key), <include refid="literalExpr"><property name="value" value="[^A-Za-z0-9_-]"/></include>, <include refid="literalExpr"><property name="value" value="_"/></include>)
+                    WHEN eb.task_id IS NOT NULL THEN <include refid="literalExpr"><property name="value" value="TASK-"/></include> || TO_CHAR(eb.task_id)
+                    ELSE <include refid="literalExpr"><property name="value" value="EXEC-"/></include> || TO_CHAR(eb.JOB_EXECUTION_ID)
+                END
+            </when>
+            <when test="_databaseId == 'PostgreSQL'">
+                CASE
+                    WHEN eb.file_id IS NOT NULL THEN 'FILE-' || CAST(eb.file_id AS VARCHAR)
+                    WHEN eb.business_key IS NOT NULL AND TRIM(eb.business_key) != '' THEN 'BIZ-' ||
+                            REGEXP_REPLACE(TRIM(eb.business_key), '[^A-Za-z0-9_-]', '_')
+                    WHEN eb.task_id IS NOT NULL THEN 'TASK-' || CAST(eb.task_id AS VARCHAR)
+                    ELSE 'EXEC-' || CAST(eb.JOB_EXECUTION_ID AS VARCHAR)
+                END
+            </when>
+            <otherwise>
+                CASE
+                    WHEN eb.file_id IS NOT NULL THEN CONCAT('FILE-', eb.file_id)
+                    WHEN eb.business_key IS NOT NULL AND TRIM(eb.business_key) != '' THEN CONCAT('BIZ-',
+                            REGEXP_REPLACE(TRIM(eb.business_key), '[^A-Za-z0-9_-]', '_'))
+                    WHEN eb.task_id IS NOT NULL THEN CONCAT('TASK-', eb.task_id)
+                    ELSE CONCAT('EXEC-', eb.JOB_EXECUTION_ID)
+                END
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="businessDateExpr">
+        <choose>
+            <when test="_databaseId == 'MySQL'">
+                DATE_FORMAT(COALESCE(tto.business_date, eb.START_TIME, eb.CREATE_TIME), '%Y-%m-%d')
+            </when>
+            <otherwise>
+                TO_CHAR(COALESCE(tto.business_date, eb.START_TIME, eb.CREATE_TIME), 'YYYY-MM-DD')
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="dateExpr">
+        <choose>
+            <when test="_databaseId == 'MySQL'">
+                DATE_FORMAT(${column}, '%Y-%m-%d')
+            </when>
+            <otherwise>
+                TO_CHAR(${column}, 'YYYY-MM-DD')
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="fileIdExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                CASE WHEN eb.file_id IS NULL THEN NULL ELSE TO_CHAR(eb.file_id) END
+            </when>
+            <when test="_databaseId == 'PostgreSQL'">
+                CASE WHEN eb.file_id IS NULL THEN NULL ELSE CAST(eb.file_id AS VARCHAR) END
+            </when>
+            <otherwise>
+                CASE WHEN eb.file_id IS NULL THEN NULL ELSE CAST(eb.file_id AS CHAR) END
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="dateTimeExpr">
+        <choose>
+            <when test="_databaseId == 'MySQL'">
+                DATE_FORMAT(${column}, '%Y-%m-%d %H:%i:%s')
+            </when>
+            <otherwise>
+                TO_CHAR(${column}, 'YYYY-MM-DD HH24:MI:SS')
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="durationMsExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                CASE
+                    WHEN eb.START_TIME IS NULL OR eb.END_TIME IS NULL THEN NULL
+                    ELSE FLOOR(
+                        EXTRACT(DAY FROM (CAST(eb.END_TIME AS TIMESTAMP) - CAST(eb.START_TIME AS TIMESTAMP))) * 86400000
+                        + EXTRACT(HOUR FROM (CAST(eb.END_TIME AS TIMESTAMP) - CAST(eb.START_TIME AS TIMESTAMP))) * 3600000
+                        + EXTRACT(MINUTE FROM (CAST(eb.END_TIME AS TIMESTAMP) - CAST(eb.START_TIME AS TIMESTAMP))) * 60000
+                        + EXTRACT(SECOND FROM (CAST(eb.END_TIME AS TIMESTAMP) - CAST(eb.START_TIME AS TIMESTAMP))) * 1000
+                    )
+                END
+            </when>
+            <when test="_databaseId == 'PostgreSQL'">
+                CASE
+                    WHEN eb.START_TIME IS NULL OR eb.END_TIME IS NULL THEN NULL
+                    ELSE FLOOR(EXTRACT(EPOCH FROM (eb.END_TIME - eb.START_TIME)) * 1000)
+                END
+            </when>
+            <otherwise>
+                CASE
+                    WHEN eb.START_TIME IS NULL OR eb.END_TIME IS NULL THEN NULL
+                    ELSE TIMESTAMPDIFF(MICROSECOND, eb.START_TIME, eb.END_TIME) DIV 1000
+                END
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="transferIdJoinExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                TO_CHAR(eb.file_id)
+            </when>
+            <when test="_databaseId == 'PostgreSQL'">
+                CAST(eb.file_id AS VARCHAR)
+            </when>
+            <otherwise>
+                CAST(eb.file_id AS CHAR)
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="likeExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                <include refid="literalExpr"><property name="value" value="%"/></include> || ${value} || <include refid="literalExpr"><property name="value" value="%"/></include>
+            </when>
+            <otherwise>
+                CONCAT('%', ${value}, '%')
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="taskDateFilterExpr">
+        <choose>
+            <when test="_databaseId == 'MySQL'">
+                DATE_FORMAT(lb.sort_time, '%Y-%m-%d') = #{query.taskDate}
+            </when>
+            <otherwise>
+                TO_CHAR(lb.sort_time, 'YYYY-MM-DD') = #{query.taskDate}
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="pageLimit">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                OFFSET #{offset} ROWS FETCH NEXT #{limit} ROWS ONLY
+            </when>
+            <otherwise>
+                LIMIT #{limit} OFFSET #{offset}
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="fetchFirst">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                FETCH FIRST 1 ROWS ONLY
+            </when>
+            <otherwise>
+                LIMIT 1
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="resolvedCurrentStageExpr">
+        COALESCE(cs.stage_code, <include refid="normalizedTaskStage"/>)
+    </sql>
+
+    <sql id="batchRowSelectColumns">
+        lb.batch_id,
+        lb.business_date,
+        lb.product_code,
+        lb.product_name,
+        lb.manager_name,
+        lb.file_id,
+        lb.filesys_file_id,
+        lb.original_file_name,
+        lb.source_type,
+        lb.task_id,
+        lb.input_payload,
+        lb.task_stage,
+        lb.current_stage,
+        lb.current_step,
+        lb.status,
+        lb.progress,
+        lb.started_at,
+        lb.ended_at,
+        lb.duration_ms,
+        lb.last_error_code,
+        lb.last_error_message,
+        lb.step_status,
+        lb.transfer_error_message,
+        lb.execution_id
+    </sql>
+
+    <sql id="executionEnrichedSharedColumns">
+        <include refid="batchIdExpr"/> AS batch_id,
+        <include refid="businessDateExpr"/> AS business_date,
+        NULL AS product_code,
+        NULL AS product_name,
+        NULL AS manager_name,
+        <include refid="comparableCharExpr">
+            <property name="column" value="tto.source_type"/>
+        </include> AS source_type,
+        <include refid="normalizedTaskStage"/> AS task_stage,
+        <include refid="resolvedCurrentStageExpr"/> AS current_stage,
+        <include refid="resolvedCurrentStageExpr"/> AS current_step,
+        <include refid="normalizedBatchStatus"/> AS status,
+        eb.JOB_EXECUTION_ID AS execution_id,
+        COALESCE(ssh.has_file_parse, 0) AS has_file_parse,
+        COALESCE(ssh.has_structure_standardize, 0) AS has_structure_standardize,
+        COALESCE(ssh.has_standard_landing, 0) AS has_standard_landing,
+        COALESCE(eb.START_TIME, eb.CREATE_TIME, eb.END_TIME) AS sort_time
+    </sql>
+
+    <sql id="executionEnrichedSharedJoins">
+        FROM execution_base eb
+        LEFT JOIN current_step cs ON cs.JOB_EXECUTION_ID = eb.JOB_EXECUTION_ID
+        LEFT JOIN step_stage_history ssh ON ssh.JOB_EXECUTION_ID = eb.JOB_EXECUTION_ID
+        LEFT JOIN t_transfer_object tto ON tto.transfer_id = <include refid="transferIdJoinExpr"/>
+    </sql>
+
+    <sql id="batchBaseCte">
+        execution_base AS (
+            SELECT
+                je.JOB_EXECUTION_ID,
+                MAX(je.CREATE_TIME) AS CREATE_TIME,
+                MAX(je.START_TIME) AS START_TIME,
+                MAX(je.END_TIME) AS END_TIME,
+                MAX(<include refid="comparableCharExpr"><property name="column" value="je.STATUS"/></include>) AS raw_status,
+                MAX(<include refid="clobTextExpr"><property name="column" value="je.EXIT_CODE"/></include>) AS EXIT_CODE,
+                MAX(<include refid="clobTextExpr"><property name="column" value="je.EXIT_MESSAGE"/></include>) AS EXIT_MESSAGE,
+                MAX(<include refid="comparableCharExpr"><property name="column" value="ji.JOB_NAME"/></include>) AS JOB_NAME,
+                MAX(CASE WHEN <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'taskId' THEN jp.LONG_VAL END) AS task_id,
+                MAX(CASE WHEN <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'fileId' THEN jp.LONG_VAL END) AS file_id,
+                MAX(CASE WHEN <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'taskType' THEN <include refid="clobTextExpr"><property name="column" value="jp.STRING_VAL"/></include> END) AS task_type,
+                MAX(CASE WHEN <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'taskStage' THEN <include refid="clobTextExpr"><property name="column" value="jp.STRING_VAL"/></include> END) AS task_stage,
+                MAX(CASE WHEN <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'businessKey' THEN <include refid="clobTextExpr"><property name="column" value="jp.STRING_VAL"/></include> END) AS business_key,
+                MAX(CASE WHEN <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'inputPayload' THEN <include refid="clobTextExpr"><property name="column" value="jp.STRING_VAL"/></include> END) AS input_payload
+            FROM BATCH_JOB_EXECUTION je
+            INNER JOIN BATCH_JOB_INSTANCE ji ON ji.JOB_INSTANCE_ID = je.JOB_INSTANCE_ID
+            LEFT JOIN BATCH_JOB_EXECUTION_PARAMS jp ON jp.JOB_EXECUTION_ID = je.JOB_EXECUTION_ID
+            WHERE <include refid="comparableCharExpr"><property name="column" value="ji.JOB_NAME"/></include> = 'valuationParseJob'
+            GROUP BY je.JOB_EXECUTION_ID
+        ),
+        step_ranked AS (
+            SELECT
+                se.JOB_EXECUTION_ID,
+                se.STEP_EXECUTION_ID,
+                <include refid="stepNameExpr"/> AS STEP_NAME,
+                <include refid="stepStatusExpr"/> AS step_status,
+                <include refid="normalizedStepStage"/> AS stage_code,
+                ROW_NUMBER() OVER (
+                    PARTITION BY se.JOB_EXECUTION_ID
+                    ORDER BY
+                        CASE
+                            WHEN UPPER(COALESCE(<include refid="stepStatusExpr"/>, '')) IN ('STARTING', 'STARTED') THEN 0
+                            WHEN UPPER(COALESCE(<include refid="stepStatusExpr"/>, '')) = 'FAILED' THEN 1
+                            ELSE 2
+                        END,
+                        COALESCE(se.START_TIME, se.END_TIME, se.LAST_UPDATED) DESC,
+                        se.STEP_EXECUTION_ID DESC
+                ) AS rn
+            FROM BATCH_STEP_EXECUTION se
+        ),
+        step_stage_history AS (
+            SELECT
+                se.JOB_EXECUTION_ID,
+                MAX(CASE WHEN <include refid="normalizedStepStage"/> = 'FILE_PARSE' THEN 1 ELSE 0 END) AS has_file_parse,
+                MAX(CASE WHEN <include refid="normalizedStepStage"/> = 'STRUCTURE_STANDARDIZE' THEN 1 ELSE 0 END) AS has_structure_standardize,
+                MAX(CASE WHEN <include refid="normalizedStepStage"/> = 'STANDARD_LANDING' THEN 1 ELSE 0 END) AS has_standard_landing
+            FROM BATCH_STEP_EXECUTION se
+            GROUP BY se.JOB_EXECUTION_ID
+        ),
+        current_step AS (
+            SELECT sr.JOB_EXECUTION_ID, sr.step_status, sr.stage_code
+            FROM step_ranked sr
+            WHERE sr.rn = 1
+        )
+    </sql>
+
+    <sql id="batchFilterCte">
+        WITH
+        <include refid="batchBaseCte"/>,
+        execution_enriched AS (
+            SELECT
+                <include refid="executionEnrichedSharedColumns"/>,
+                eb.EXIT_CODE AS exit_code,
+                cs.step_status,
+                eb.EXIT_MESSAGE AS exit_message,
+                <include refid="clobTextExpr">
+                    <property name="column" value="tto.error_message"/>
+                </include> AS transfer_error_message
+            <include refid="executionEnrichedSharedJoins"/>
+        ),
+        latest_batch AS (
+            SELECT
+                ee.*,
+                ROW_NUMBER() OVER (
+                    PARTITION BY ee.batch_id
+                    ORDER BY ee.sort_time DESC, ee.execution_id DESC
+                ) AS rn
+            FROM execution_enriched ee
+        )
+    </sql>
+
+    <sql id="batchRowCte">
+        WITH
+        <include refid="batchBaseCte"/>,
+        execution_enriched AS (
+            SELECT
+                <include refid="executionEnrichedSharedColumns"/>,
+                <include refid="fileIdExpr"/> AS file_id,
+                NULL AS filesys_file_id,
+                <include refid="comparableCharExpr">
+                    <property name="column" value="tto.original_name"/>
+                </include> AS original_file_name,
+                eb.task_id,
+                eb.input_payload,
+                CASE
+                    WHEN UPPER(COALESCE(eb.raw_status, '')) = 'COMPLETED' THEN 100
+                    WHEN UPPER(COALESCE(eb.raw_status, '')) = 'FAILED' THEN 66
+                    WHEN UPPER(COALESCE(eb.raw_status, '')) IN ('STOPPED', 'ABANDONED') THEN 66
+                    WHEN UPPER(COALESCE(eb.raw_status, '')) IN ('STARTING', 'STARTED', 'STOPPING') THEN 50
+                    ELSE 0
+                END AS progress,
+                <include refid="dateTimeExpr"><property name="column" value="eb.START_TIME"/></include> AS started_at,
+                <include refid="dateTimeExpr"><property name="column" value="eb.END_TIME"/></include> AS ended_at,
+                <include refid="durationMsExpr"/> AS duration_ms,
+                eb.EXIT_CODE AS last_error_code,
+                cs.step_status,
+                eb.EXIT_MESSAGE AS last_error_message,
+                <include refid="clobTextExpr">
+                    <property name="column" value="tto.error_message"/>
+                </include> AS transfer_error_message
+            <include refid="executionEnrichedSharedJoins"/>
+        ),
+        latest_batch AS (
+            SELECT
+                ee.*,
+                ROW_NUMBER() OVER (
+                    PARTITION BY ee.batch_id
+                    ORDER BY ee.sort_time DESC, ee.execution_id DESC
+                ) AS rn
+            FROM execution_enriched ee
+        )
+    </sql>
+
+    <sql id="taskFilters">
+        <if test="query != null and query.batchId != null and query.batchId != ''">
+            AND lb.batch_id LIKE <include refid="likeExpr"><property name="value" value="#{query.batchId}"/></include>
+        </if>
+        <if test="query != null and query.taskDate != null and query.taskDate != ''">
+            AND <include refid="taskDateFilterExpr"/>
+        </if>
+        <if test="query != null and query.businessDate != null and query.businessDate != ''">
+            AND lb.business_date = #{query.businessDate}
+        </if>
+        <if test="query != null and query.managerName != null and query.managerName != ''">
+            AND lb.manager_name LIKE <include refid="likeExpr"><property name="value" value="#{query.managerName}"/></include>
+        </if>
+        <if test="query != null and query.productKeyword != null and query.productKeyword != ''">
+            AND (
+                lb.product_code LIKE <include refid="likeExpr"><property name="value" value="#{query.productKeyword}"/></include>
+                OR lb.product_name LIKE <include refid="likeExpr"><property name="value" value="#{query.productKeyword}"/></include>
+            )
+        </if>
+        <if test="query != null and query.taskStage != null and query.taskStage != ''">
+            AND (
+                UPPER(lb.task_stage) = UPPER(#{query.taskStage})
+                OR UPPER(lb.current_stage) = UPPER(#{query.taskStage})
+                OR UPPER(lb.current_step) = UPPER(#{query.taskStage})
+                OR (UPPER(#{query.taskStage}) = 'FILE_PARSE' AND lb.has_file_parse = 1)
+                OR (UPPER(#{query.taskStage}) = 'STRUCTURE_STANDARDIZE' AND lb.has_structure_standardize = 1)
+                OR (UPPER(#{query.taskStage}) = 'STANDARD_LANDING' AND lb.has_standard_landing = 1)
+            )
+        </if>
+        <if test="query != null and query.stage != null and query.stage != ''">
+            AND UPPER(lb.current_stage) = UPPER(#{query.stage})
+        </if>
+        <if test="query != null and query.step != null and query.step != ''">
+            AND UPPER(lb.current_step) = UPPER(#{query.step})
+        </if>
+        <if test="query != null and query.status != null and query.status != ''">
+            AND UPPER(lb.status) = UPPER(#{query.status})
+        </if>
+        <if test="query != null and query.sourceType != null and query.sourceType != ''">
+            AND lb.source_type IS NOT NULL
+            AND UPPER(lb.source_type) = UPPER(#{query.sourceType})
+        </if>
+        <if test="query != null and query.errorType != null and query.errorType != ''">
+            AND (
+                (lb.exit_code IS NOT NULL AND lb.exit_code LIKE <include refid="likeExpr"><property name="value" value="#{query.errorType}"/></include>)
+                OR (lb.step_status IS NOT NULL AND lb.step_status LIKE <include refid="likeExpr"><property name="value" value="#{query.errorType}"/></include>)
+                OR (lb.exit_message IS NOT NULL AND lb.exit_message LIKE <include refid="likeExpr"><property name="value" value="#{query.errorType}"/></include>)
+                OR (lb.transfer_error_message IS NOT NULL AND lb.transfer_error_message LIKE <include refid="likeExpr"><property name="value" value="#{query.errorType}"/></include>)
+            )
+        </if>
+    </sql>
+
+    <select id="countTasks" resultType="long">
+        <include refid="batchFilterCte"/>
+        SELECT COUNT(1)
+        FROM latest_batch lb
+        WHERE lb.rn = 1
+        <include refid="taskFilters"/>
+    </select>
+
+    <select id="countStatusTasks" resultType="long">
+        <include refid="batchFilterCte"/>
+        SELECT COUNT(1)
+        FROM latest_batch lb
+        WHERE lb.rn = 1
+        <include refid="taskFilters"/>
+        <if test="statuses != null and statuses.length > 0">
+            AND UPPER(lb.status) IN
+            <foreach collection="statuses" item="status" open="(" separator="," close=")">
+                UPPER(#{status})
+            </foreach>
+        </if>
+    </select>
+
+    <select id="pageTasks" resultMap="OutsourcedDataTaskBatchMap">
+        <include refid="batchRowCte"/>
+        SELECT
+            <include refid="batchRowSelectColumns"/>
+        FROM latest_batch lb
+        WHERE lb.rn = 1
+        <include refid="taskFilters"/>
+        ORDER BY lb.sort_time DESC, lb.execution_id DESC
+        <include refid="pageLimit"/>
+    </select>
+
+    <select id="queryStageSummaries" resultType="com.yss.valset.task.application.dto.OutsourcedDataTaskStageSummaryDTO">
+        <include refid="batchFilterCte"/>
+        SELECT
+            lb.current_stage AS stage,
+            lb.current_step AS step,
+            COUNT(1) AS total_count,
+            SUM(CASE WHEN lb.status = 'RUNNING' THEN 1 ELSE 0 END) AS running_count,
+            SUM(CASE WHEN lb.status IN ('FAILED', 'STOPPED') THEN 1 ELSE 0 END) AS failed_count,
+            SUM(CASE WHEN lb.status = 'PENDING' THEN 1 ELSE 0 END) AS pending_count
+        FROM latest_batch lb
+        WHERE lb.rn = 1
+        <include refid="taskFilters"/>
+        GROUP BY lb.current_stage, lb.current_step
+        ORDER BY
+        CASE lb.current_stage
+            WHEN 'FILE_PARSE' THEN 1
+            WHEN 'STRUCTURE_STANDARDIZE' THEN 2
+            WHEN 'STANDARD_LANDING' THEN 3
+            ELSE 99
+        END,
+        lb.current_step
+    </select>
+
+    <select id="findTaskByBatchId" resultMap="OutsourcedDataTaskBatchMap">
+        <include refid="batchRowCte"/>
+        SELECT
+            <include refid="batchRowSelectColumns"/>
+        FROM latest_batch lb
+        WHERE lb.rn = 1
+          AND lb.batch_id = #{batchId}
+        <include refid="fetchFirst"/>
+    </select>
+
+    <select id="findExecutionIdByBatchId" resultType="long">
+        <include refid="batchFilterCte"/>
+        SELECT lb.execution_id
+        FROM latest_batch lb
+        WHERE lb.rn = 1
+          AND lb.batch_id = #{batchId}
+        <include refid="fetchFirst"/>
+    </select>
+
+    <select id="findTraceRowByBatchId" resultType="com.yss.valset.task.infrastructure.dto.OutsourcedDataTaskTraceRow">
+        <include refid="batchRowCte"/>,
+        selected_batch AS (
+            SELECT lb.*
+            FROM latest_batch lb
+            WHERE lb.rn = 1
+              AND lb.batch_id = #{batchId}
+            <include refid="fetchFirst"/>
+        )
+        SELECT
+            sb.execution_id AS execution_id,
+            je.JOB_INSTANCE_ID AS job_instance_id,
+            <include refid="comparableCharExpr"><property name="column" value="ji.JOB_NAME"/></include> AS job_name,
+            <include refid="comparableCharExpr"><property name="column" value="je.STATUS"/></include> AS job_status,
+            <include refid="clobTextExpr"><property name="column" value="je.EXIT_CODE"/></include> AS job_exit_code,
+            <include refid="clobTextExpr"><property name="column" value="je.EXIT_MESSAGE"/></include> AS job_exit_message,
+            <include refid="dateTimeExpr"><property name="column" value="je.CREATE_TIME"/></include> AS job_create_time,
+            <include refid="dateTimeExpr"><property name="column" value="je.START_TIME"/></include> AS job_start_time,
+            <include refid="dateTimeExpr"><property name="column" value="je.END_TIME"/></include> AS job_end_time,
+            sb.duration_ms AS job_duration_ms,
+            sb.task_id AS task_id,
+            sb.file_id AS file_id,
+            (
+                SELECT <include refid="clobTextExpr"><property name="column" value="jp.STRING_VAL"/></include>
+                FROM BATCH_JOB_EXECUTION_PARAMS jp
+                WHERE jp.JOB_EXECUTION_ID = sb.execution_id
+                  AND <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'businessKey'
+                <include refid="fetchFirst"/>
+            ) AS business_key,
+            (
+                SELECT <include refid="clobTextExpr"><property name="column" value="jp.STRING_VAL"/></include>
+                FROM BATCH_JOB_EXECUTION_PARAMS jp
+                WHERE jp.JOB_EXECUTION_ID = sb.execution_id
+                  AND <include refid="comparableCharExpr"><property name="column" value="jp.KEY_NAME"/></include> = 'taskType'
+                <include refid="fetchFirst"/>
+            ) AS task_type,
+            sb.task_stage AS task_stage,
+            sb.input_payload AS input_payload,
+            pq.queue_id AS queue_id,
+            <include refid="comparableCharExpr"><property name="column" value="pq.parse_status"/></include> AS queue_status,
+            <include refid="comparableCharExpr"><property name="column" value="pq.delivery_status"/></include> AS queue_delivery_status,
+            <include refid="comparableCharExpr"><property name="column" value="pq.trigger_mode"/></include> AS queue_trigger_mode,
+            pq.retry_count AS queue_retry_count,
+            <include refid="comparableCharExpr"><property name="column" value="pq.claimed_by"/></include> AS queue_claimed_by,
+            <include refid="dateTimeExpr"><property name="column" value="pq.claimed_at"/></include> AS queue_claimed_at,
+            <include refid="dateTimeExpr"><property name="column" value="pq.parsed_at"/></include> AS queue_parsed_at,
+            <include refid="clobTextExpr"><property name="column" value="pq.last_error_message"/></include> AS queue_error_message,
+            <include refid="clobTextExpr"><property name="column" value="pq.parse_request_json"/></include> AS queue_request_json,
+            <include refid="clobTextExpr"><property name="column" value="pq.parse_result_json"/></include> AS queue_result_json,
+            <include refid="comparableCharExpr"><property name="column" value="tto.transfer_id"/></include> AS transfer_id,
+            <include refid="comparableCharExpr"><property name="column" value="tto.status"/></include> AS transfer_status,
+            (
+                SELECT <include refid="comparableCharExpr"><property name="column" value="tdr.execute_status"/></include>
+                FROM t_transfer_delivery_record tdr
+                WHERE tdr.transfer_id = tto.transfer_id
+                ORDER BY tdr.delivered_at DESC, tdr.delivery_id DESC
+                <include refid="fetchFirst"/>
+            ) AS delivery_execute_status,
+            (
+                SELECT <include refid="dateTimeExpr"><property name="column" value="tdr.delivered_at"/></include>
+                FROM t_transfer_delivery_record tdr
+                WHERE tdr.transfer_id = tto.transfer_id
+                ORDER BY tdr.delivered_at DESC, tdr.delivery_id DESC
+                <include refid="fetchFirst"/>
+            ) AS delivery_delivered_at,
+            (
+                SELECT <include refid="clobTextExpr"><property name="column" value="tdr.error_message"/></include>
+                FROM t_transfer_delivery_record tdr
+                WHERE tdr.transfer_id = tto.transfer_id
+                ORDER BY tdr.delivered_at DESC, tdr.delivery_id DESC
+                <include refid="fetchFirst"/>
+            ) AS delivery_error_message,
+            <include refid="comparableCharExpr"><property name="column" value="tto.source_type"/></include> AS transfer_source_type,
+            <include refid="comparableCharExpr"><property name="column" value="tto.source_code"/></include> AS transfer_source_code,
+            <include refid="comparableCharExpr"><property name="column" value="tto.original_name"/></include> AS transfer_original_name,
+            <include refid="dateTimeExpr"><property name="column" value="tto.received_at"/></include> AS transfer_received_at,
+            <include refid="dateTimeExpr"><property name="column" value="tto.stored_at"/></include> AS transfer_stored_at,
+            <include refid="dateExpr"><property name="column" value="tto.business_date"/></include> AS transfer_business_date,
+            <include refid="clobTextExpr"><property name="column" value="tto.error_message"/></include> AS transfer_error_message
+        FROM selected_batch sb
+        LEFT JOIN BATCH_JOB_EXECUTION je ON je.JOB_EXECUTION_ID = sb.execution_id
+        LEFT JOIN BATCH_JOB_INSTANCE ji ON ji.JOB_INSTANCE_ID = je.JOB_INSTANCE_ID
+        LEFT JOIN t_transfer_object tto ON tto.transfer_id = sb.file_id
+        LEFT JOIN t_parse_queue pq ON pq.transfer_id = tto.transfer_id
+    </select>
+
+</mapper>

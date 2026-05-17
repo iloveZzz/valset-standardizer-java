@@ -368,11 +368,7 @@ public class EmailMailScanner {
         if (message == null) {
             return null;
         }
-        try {
-            return message.getSubject();
-        } catch (Exception e) {
-            return null;
-        }
+        return EmailMimeHeaderDecoder.decodeSubject(message);
     }
 
     /**

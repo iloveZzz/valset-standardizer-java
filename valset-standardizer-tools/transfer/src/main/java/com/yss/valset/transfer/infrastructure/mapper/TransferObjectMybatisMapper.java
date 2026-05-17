@@ -2,6 +2,7 @@ package com.yss.valset.transfer.infrastructure.mapper;
 
 import com.yss.valset.transfer.infrastructure.dto.MailInboxGroupDTO;
 import org.apache.ibatis.annotations.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 

@@ -45,10 +45,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Spring Batch 工作流客户端。
+ * 批量任务 工作流客户端。
  *
- * <p>这个客户端负责把通用工作流定义转换为 Spring Batch 可执行对象，
- * 并把执行过程中的作业、步骤和阶段日志统一回放到 Spring Batch 元数据中。
+ * <p>这个客户端负责把通用工作流定义转换为 批量任务 可执行对象，
+ * 并把执行过程中的作业、步骤和阶段日志统一回放到 批量任务 元数据中。
  *
  * <p>核心链路如下：
  * <ol>
@@ -77,13 +77,13 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
 
     @Override
     public void validate(WorkflowDefinitionDTO definition) {
-        // 校验 Spring Batch 绑定是否完整，避免运行时才发现外部作业名称缺失。
+        // 校验 批量任务 绑定是否完整，避免运行时才发现外部作业名称缺失。
         WorkflowEngineBindingDTO binding = definition == null ? null : definition.getEngineBinding();
         if (binding == null || binding.getPlatformType() != EtlPlatformType.SPRING_BATCH) {
-            throw new IllegalArgumentException("Spring Batch 绑定信息不合法");
+            throw new IllegalArgumentException("批量任务 绑定信息不合法");
         }
         if (!StringUtils.hasText(binding.getExternalWorkflowId())) {
-            throw new IllegalArgumentException("Spring Batch 需要配置作业名称");
+            throw new IllegalArgumentException("批量任务 需要配置作业名称");
         }
     }
 
@@ -91,10 +91,10 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
     public WorkflowPlatformExecutionResult trigger(WorkflowDefinitionDTO definition,
                                                    WorkflowInstanceDTO instance,
                                                    WorkflowTriggerRequest request) {
-        // 触发时先构造统一命令，再交给 Spring Batch 运行时执行。
+        // 触发时先构造统一命令，再交给 批量任务 运行时执行。
         WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.TRIGGER, definition, instance, request);
         JobExecution execution = executeJob(definition, instance, request);
-        return buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业已提交");
+        return buildExecutionResult(definition, instance, execution, command, "批量任务 作业已提交");
     }
 
     @Override
@@ -105,7 +105,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.STOP, definition, instance, request);
         JobExecution execution = locateExecution(definition, instance).map(this::markStopped).orElse(null);
         return buildExecutionResult(definition, instance, execution, command,
-                request == null || !StringUtils.hasText(request.getReason()) ? "Spring Batch 作业已停止" : request.getReason());
+                request == null || !StringUtils.hasText(request.getReason()) ? "批量任务 作业已停止" : request.getReason());
     }
 
     @Override
@@ -120,7 +120,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                 .businessKey(instance == null ? null : instance.getBusinessKey())
                 .context(request.getContext())
                 .build());
-        return buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业已重新提交");
+        return buildExecutionResult(definition, instance, execution, command, "批量任务 作业已重新提交");
     }
 
     @Override
@@ -129,7 +129,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         // 查询仅回读最近一次执行态，不重新触发作业。
         WorkflowPlatformCommand command = buildCommand(WorkflowOperationType.QUERY, definition, instance, (WorkflowLogQueryRequest) null);
         JobExecution execution = locateExecution(definition, instance).orElse(null);
-        return buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业查询");
+        return buildExecutionResult(definition, instance, execution, command, "批量任务 作业查询");
     }
 
     @Override
@@ -144,7 +144,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         }
         List<WorkflowStageLogDTO> stageLogs = buildStageLogs(execution, request == null ? null : request.getStageCode());
         if (CollectionUtils.isEmpty(stageLogs)) {
-            return java.util.Arrays.asList(buildExecutionResult(definition, instance, execution, command, "Spring Batch 作业日志"));
+            return java.util.Arrays.asList(buildExecutionResult(definition, instance, execution, command, "批量任务 作业日志"));
         }
         return stageLogs.stream()
                 .map(stageLog -> WorkflowPlatformExecutionResult.builder()
@@ -163,7 +163,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
     protected Map<String, Object> platformSpecificPayload(WorkflowDefinitionDTO definition,
                                                           WorkflowInstanceDTO instance,
                                                           WorkflowPlatformCommand command) {
-        // 平台特有负载仅放置 Spring Batch 运行时相关信息，避免污染通用工作流字段。
+        // 平台特有负载仅放置 批量任务 运行时相关信息，避免污染通用工作流字段。
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("jobName", resolveJobName(definition));
         payload.put("batchInfrastructure", "resourceless");
@@ -207,7 +207,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
             JobExecution execution = jobLauncher.run(job, buildJobParameters(definition, instance, request));
             return execution;
         } catch (Exception e) {
-            throw new IllegalStateException("Spring Batch 作业执行失败：" + e.getMessage(), e);
+            throw new IllegalStateException("批量任务 作业执行失败：" + e.getMessage(), e);
         }
     }
 
@@ -262,15 +262,9 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
             executionContext.putString("stageMessage", stageExecutionResult.getMessage());
             executionContext.putString("stageStartTime", stageExecutionResult.getStartTime() == null ? null : stageExecutionResult.getStartTime().toString());
             executionContext.putString("stageEndTime", stageExecutionResult.getEndTime() == null ? null : stageExecutionResult.getEndTime().toString());
-            if (stageExecutionResult.getInput() != null) {
-                stageExecutionResult.getInput().forEach((key, value) -> executionContext.put("input." + key, value));
-            }
-            if (stageExecutionResult.getOutput() != null) {
-                stageExecutionResult.getOutput().forEach((key, value) -> executionContext.put("output." + key, value));
-            }
-            if (stageExecutionResult.getMetadata() != null) {
-                stageExecutionResult.getMetadata().forEach((key, value) -> executionContext.put("meta." + key, value));
-            }
+            executionContext.putString("inputSummary", summarizeSnapshot(stageExecutionResult.getInput()));
+            executionContext.putString("outputSummary", summarizeSnapshot(stageExecutionResult.getOutput()));
+            executionContext.putString("metadataSummary", summarizeSnapshot(stageExecutionResult.getMetadata()));
             org.springframework.batch.core.StepExecution stepExecution = chunkContext.getStepContext().getStepExecution();
             buildStagePayload(stageExecutionResult, stepExecution);
             return RepeatStatus.FINISHED;
@@ -358,7 +352,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
 
     private Map<String, Object> buildStagePayload(SpringBatchStageExecutionResult stageExecutionResult,
                                                   org.springframework.batch.core.StepExecution stepExecution) {
-        // 将 Spring Batch 原生的执行统计和业务阶段处理结果合并成一个可查询负载。
+        // 将 批量任务 原生的执行统计和业务阶段处理结果合并成一个可查询负载。
         Map<String, Object> payload = new LinkedHashMap<>();
         ExecutionContext executionContext = stepExecution == null ? null : stepExecution.getExecutionContext();
         if (stepExecution != null && stepExecution.getExecutionContext() != null) {
@@ -372,13 +366,13 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
             payload.put("stageMessage", executionContext.getString("stageMessage", null));
             payload.put("stageStartTime", executionContext.getString("stageStartTime", null));
             payload.put("stageEndTime", executionContext.getString("stageEndTime", null));
-            payload.put("input", extractPrefixedMap(executionContext, "input."));
-            payload.put("output", extractPrefixedMap(executionContext, "output."));
-            payload.put("metadata", extractPrefixedMap(executionContext, "meta."));
+            payload.put("inputSummary", executionContext.getString("inputSummary", null));
+            payload.put("outputSummary", executionContext.getString("outputSummary", null));
+            payload.put("metadataSummary", executionContext.getString("metadataSummary", null));
         } else {
-            payload.put("input", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getInput());
-            payload.put("output", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getOutput());
-            payload.put("metadata", stageExecutionResult == null ? java.util.Collections.emptyMap() : stageExecutionResult.getMetadata());
+            payload.put("inputSummary", summarizeSnapshot(stageExecutionResult == null ? null : stageExecutionResult.getInput()));
+            payload.put("outputSummary", summarizeSnapshot(stageExecutionResult == null ? null : stageExecutionResult.getOutput()));
+            payload.put("metadataSummary", summarizeSnapshot(stageExecutionResult == null ? null : stageExecutionResult.getMetadata()));
         }
         payload.put("readCount", stepExecution == null ? null : stepExecution.getReadCount());
         payload.put("writeCount", stepExecution == null ? null : stepExecution.getWriteCount());
@@ -397,6 +391,17 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                 ? executionContext == null ? (stepExecution == null || stepExecution.getStatus() == null ? null : stepExecution.getStatus().name()) : executionContext.getString("stageStatus", null)
                 : stageExecutionResult.getStatus() == null ? null : stageExecutionResult.getStatus().name());
         return payload;
+    }
+
+    private String summarizeSnapshot(Map<String, Object> snapshot) {
+        if (snapshot == null || snapshot.isEmpty()) {
+            return "empty";
+        }
+        String keys = snapshot.keySet().stream()
+                .filter(StringUtils::hasText)
+                .limit(5)
+                .collect(Collectors.joining(","));
+        return snapshot.size() <= 5 ? snapshot.size() + " items: " + keys : snapshot.size() + " items: " + keys + " ...";
     }
 
     private String resolveMessage(JobExecution execution, String defaultMessage) {
@@ -439,7 +444,7 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
                 jobRegistry.register(new ReferenceJobFactory(job));
             }
         } catch (Exception e) {
-            throw new IllegalStateException("Spring Batch 作业注册失败：" + e.getMessage(), e);
+            throw new IllegalStateException("批量任务 作业注册失败：" + e.getMessage(), e);
         }
     }
 

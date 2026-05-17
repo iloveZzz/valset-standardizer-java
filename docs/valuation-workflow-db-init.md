@@ -2,21 +2,18 @@
 
 ## 必需表
 
-## Liquibase 说明
+## 初始化方式
 
-项目已提供一套独立的 Liquibase changelog 入口：
+项目已移除内置数据库自动迁移能力，当前数据库初始化以仓库中的静态 SQL 为准。
 
-- `yss-valset-standardizer/src/main/resources/db/changelog/db.changelog-master.xml`
+建议准备以下脚本：
 
-默认不自动执行，需要在启动时显式开启：
+- MySQL 基线：`docs/ddl/mysql.sql`
+- ODS 原始表：`valset-standardizer-tools/extract/src/main/resources/db/migration/t_ods_valuation_filedata.sql`
+- ODS 样式表：`valset-standardizer-tools/extract/src/main/resources/db/migration/t_ods_valuation_sheet_style.sql`
+- DWD / STG / 知识样本 / 规则字典：`valset-standardizer/src/main/resources/db/migration/*.sql`
 
-- `LIQUIBASE_ENABLED=true`
-
-如需切换 changelog，可通过：
-
-- `LIQUIBASE_CHANGE_LOG=classpath:/db/changelog/db.changelog-master.xml`
-
-当前这套 Liquibase 脚本已经整理为项目当前使用的完整 schema 基线，覆盖任务、调度、文件主对象、接入日志、ODS 原始表、DWD 标准表、匹配结果表、标准科目表、知识样本表、`leaf_alloc` 以及 legacy 估值表。若你的环境已经使用本文档中的 SQL 或人工变更完成初始化，请先比对差异，再将 Liquibase 拆成增量 changeSet 执行迁移。
+若你的环境已经通过历史脚本或人工变更完成初始化，请先比对目标库差异，再决定是否补执行其中部分 SQL。
 
 当前全流程依赖以下数据表：
 
@@ -104,16 +101,19 @@ SQL 文件：
 
 ### 任务表
 
-- `t_valset_workflow_task`
+任务执行状态已切换为 批量任务 元数据模型，默认依赖：
 
-用途：
+- `t_parse_queue`
+- `BATCH_JOB_EXECUTION`
+- `BATCH_JOB_EXECUTION_PARAMS`
+- `BATCH_STEP_EXECUTION`
 
-- 保存外部估值流程任务记录
-- 记录任务阶段 `task_stage`
-- 记录任务开始时间 `task_start_time`
-- 记录阶段耗时：
-  - `parse_task_time_ms`：文件解析耗时，主要由文件解析任务写入
-  - `standardize_time_ms`：元数据到标准结构化耗时，主要由 `PARSE_WORKBOOK` 任务写入
+其中：
+
+- `t_parse_queue` 负责待解析队列
+- `BATCH_JOB_EXECUTION` 负责任务级状态
+- `BATCH_JOB_EXECUTION_PARAMS` 负责 `taskId` / `businessKey` / `taskType` 等作业参数
+- `BATCH_STEP_EXECUTION` 负责阶段级执行明细与耗时
   - `match_standard_subject_time_ms`：匹配标准科目耗时，主要由 `MATCH_SUBJECT` 任务写入
 - 任务复用逻辑默认开启：同一份文件的同一阶段任务在成功后会被复用，除非请求显式传入 `forceRebuild=true`
 

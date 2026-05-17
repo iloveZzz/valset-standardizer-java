@@ -4,7 +4,9 @@ import com.yss.cloud.dto.result.PageResult;
 import com.yss.valset.transfer.application.dto.TransferObjectDownloadViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectAnalysisViewDTO;
 import com.yss.valset.transfer.application.dto.TransferMailInfoViewDTO;
+import com.yss.valset.transfer.application.dto.TransferObjectTagSummaryViewDTO;
 import com.yss.valset.transfer.application.dto.TransferObjectViewDTO;
+import com.yss.valset.transfer.application.dto.TransferObjectTrendViewDTO;
 
 import java.util.List;
 
@@ -122,4 +124,21 @@ public interface TransferObjectQueryService {
     TransferObjectAnalysisViewDTO analyzeMailInbox(String sourceCode,
                                                    String mailId,
                                                    String deliveryStatus);
+
+    /**
+     * 统计分拣对象趋势。
+     *
+     * @param taskDate 任务日期
+     * @param days 天数窗口
+     * @return 分拣对象趋势结果
+     */
+    List<TransferObjectTrendViewDTO> trendObjects(String taskDate, Integer days);
+
+    /**
+     * 统计标签识别结果汇总。
+     *
+     * @param taskDate 任务日期
+     * @return 标签识别结果汇总
+     */
+    List<TransferObjectTagSummaryViewDTO> summarizeTags(String taskDate);
 }

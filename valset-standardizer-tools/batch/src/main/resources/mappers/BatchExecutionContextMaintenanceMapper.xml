@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.valset.batch.infrastructure.mapper.BatchExecutionContextMaintenanceMapper">
+
+    <!-- 删除指定时间点之前已经结束的作业执行上下文 -->
+    <delete id="deleteJobExecutionContextsBefore">
+        DELETE FROM BATCH_JOB_EXECUTION_CONTEXT
+        WHERE JOB_EXECUTION_ID IN (
+            SELECT JOB_EXECUTION_ID
+            FROM BATCH_JOB_EXECUTION
+            WHERE END_TIME IS NOT NULL
+              AND END_TIME &lt; #{cleanupBefore}
+        )
+    </delete>
+
+    <!-- 删除指定时间点之前已经结束的步骤执行上下文 -->
+    <delete id="deleteStepExecutionContextsBefore">
+        DELETE FROM BATCH_STEP_EXECUTION_CONTEXT
+        WHERE STEP_EXECUTION_ID IN (
+            SELECT STEP_EXECUTION_ID
+            FROM BATCH_STEP_EXECUTION
+            WHERE JOB_EXECUTION_ID IN (
+                SELECT JOB_EXECUTION_ID
+                FROM BATCH_JOB_EXECUTION
+                WHERE END_TIME IS NOT NULL
+                  AND END_TIME &lt; #{cleanupBefore}
+            )
+        )
+    </delete>
+
+</mapper>

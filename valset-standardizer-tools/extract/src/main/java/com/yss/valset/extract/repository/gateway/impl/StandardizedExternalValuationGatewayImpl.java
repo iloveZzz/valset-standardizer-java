@@ -3,6 +3,7 @@ package com.yss.valset.extract.repository.gateway.impl;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
@@ -38,6 +39,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
     private final DwdExternalValuationStandardMetricRepository metricRepository;
     private final ObjectMapper objectMapper;
     private final WorkflowRuntimeParamService workflowRuntimeParamService;
+    private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
     public void saveStandardizedExternalValuation(Long valuationId, Long fileId, ParsedValuationData standardizedValuationData) {
@@ -45,30 +47,35 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
             log.info("标准化 DWD 明细写入跳过，原因=standardizedValuationData为空，valuationId={}, fileId={}", valuationId, fileId);
             return;
         }
-        if (workflowRuntimeParamService.persistStandardizedDwdDetails()) {
-            // Step: 仅在开关开启时落地标准化中间明细，便于审计与回放
-            saveSubjects(valuationId, fileId, standardizedValuationData.getSubjects());
-            saveMetrics(valuationId, fileId, standardizedValuationData.getMetrics());
-            log.info("标准化 DWD 明细写入完成，valuationId={}, fileId={}, subjectCount={}, metricCount={}",
-                    valuationId,
-                    fileId,
-                    standardizedValuationData.getSubjects() == null ? 0 : standardizedValuationData.getSubjects().size(),
-                    standardizedValuationData.getMetrics() == null ? 0 : standardizedValuationData.getMetrics().size());
-        } else {
-            log.info("标准化 DWD 明细写入已跳过，仅保留标准化结果内存态和 t_tr_* 落地，valuationId={}, fileId={}", valuationId, fileId);
-        }
+        saveSubjects(valuationId, fileId, standardizedValuationData.getSubjects());
+        saveMetrics(valuationId, fileId, standardizedValuationData.getMetrics());
+        log.info("标准化 DWD 明细写入完成，valuationId={}, fileId={}, subjectCount={}, metricCount={}, persistFlag={}",
+                valuationId,
+                fileId,
+                standardizedValuationData.getSubjects() == null ? 0 : standardizedValuationData.getSubjects().size(),
+                standardizedValuationData.getMetrics() == null ? 0 : standardizedValuationData.getMetrics().size(),
+                workflowRuntimeParamService.persistStandardizedDwdDetails());
     }
 
     @Override
     public ParsedValuationData findLatestByFileId(Long fileId) {
+        Long valuationId = resolveLatestValuationId(fileId);
+        return valuationId == null ? null : findByValuationId(valuationId);
+    }
+
+    @Override
+    public ParsedValuationData findByValuationId(Long valuationId) {
+        if (valuationId == null) {
+            return null;
+        }
         List<DwdExternalValuationStandardSubjectPO> subjectPOList = subjectRepository.selectList(
                 Wrappers.lambdaQuery(DwdExternalValuationStandardSubjectPO.class)
-                        .eq(DwdExternalValuationStandardSubjectPO::getFileId, fileId)
+                        .eq(DwdExternalValuationStandardSubjectPO::getValuationId, valuationId)
                         .orderByAsc(DwdExternalValuationStandardSubjectPO::getRowDataNumber)
         );
         List<DwdExternalValuationStandardMetricPO> metricPOList = metricRepository.selectList(
                 Wrappers.lambdaQuery(DwdExternalValuationStandardMetricPO.class)
-                        .eq(DwdExternalValuationStandardMetricPO::getFileId, fileId)
+                        .eq(DwdExternalValuationStandardMetricPO::getValuationId, valuationId)
                         .orderByAsc(DwdExternalValuationStandardMetricPO::getRowDataNumber)
         );
         if ((subjectPOList == null || subjectPOList.isEmpty()) && (metricPOList == null || metricPOList.isEmpty())) {
@@ -79,6 +86,28 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
                 .subjects(loadSubjects(subjectPOList))
                 .metrics(loadMetrics(metricPOList))
                 .build();
+    }
+
+    private Long resolveLatestValuationId(Long fileId) {
+        if (fileId == null) {
+            return null;
+        }
+        DwdExternalValuationStandardSubjectPO latestSubject = subjectRepository.selectOne(
+                Wrappers.lambdaQuery(DwdExternalValuationStandardSubjectPO.class)
+                        .eq(DwdExternalValuationStandardSubjectPO::getFileId, fileId)
+                        .orderByDesc(DwdExternalValuationStandardSubjectPO::getValuationId)
+                        .last(databaseDialectSupport.limitClause(1))
+        );
+        if (latestSubject != null && latestSubject.getValuationId() != null) {
+            return latestSubject.getValuationId();
+        }
+        DwdExternalValuationStandardMetricPO latestMetric = metricRepository.selectOne(
+                Wrappers.lambdaQuery(DwdExternalValuationStandardMetricPO.class)
+                        .eq(DwdExternalValuationStandardMetricPO::getFileId, fileId)
+                        .orderByDesc(DwdExternalValuationStandardMetricPO::getValuationId)
+                        .last(databaseDialectSupport.limitClause(1))
+        );
+        return latestMetric == null ? null : latestMetric.getValuationId();
     }
 
     private void saveSubjects(Long valuationId, Long fileId, List<SubjectRecord> subjects) {
@@ -94,7 +123,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
             po.setRowDataNumber(subject.getRowDataNumber());
             po.setSubjectCode(subject.getSubjectCode());
             po.setSubjectName(subject.getSubjectName());
-            po.setLevel(subject.getLevel());
+            po.setLevelNo(subject.getLevel());
             po.setParentCode(subject.getParentCode());
             po.setRootCode(subject.getRootCode());
             po.setSegmentCount(subject.getSegmentCount());
@@ -155,7 +184,7 @@ public class StandardizedExternalValuationGatewayImpl implements StandardizedExt
                     .rowDataNumber(po.getRowDataNumber())
                     .subjectCode(po.getSubjectCode())
                     .subjectName(po.getSubjectName())
-                    .level(po.getLevel())
+                    .level(po.getLevelNo())
                     .parentCode(po.getParentCode())
                     .rootCode(po.getRootCode())
                     .segmentCount(po.getSegmentCount())

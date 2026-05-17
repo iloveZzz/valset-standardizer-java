@@ -22,12 +22,10 @@ public class StandardSubjectLoaderRegistry {
 
     public StandardSubjectLoaderRegistry(PoiStandardSubjectLoader poiLoader,
                                          CsvStandardSubjectLoader csvLoader,
-                                         ApiStandardSubjectLoader apiLoader,
-                                         DbStandardSubjectLoader dbLoader) {
+                                         ApiStandardSubjectLoader apiLoader) {
         loaderMap.put(DataSourceType.EXCEL, poiLoader);
         loaderMap.put(DataSourceType.CSV, csvLoader);
         loaderMap.put(DataSourceType.API, apiLoader);
-        loaderMap.put(DataSourceType.DB, dbLoader);
     }
 
     /**

@@ -6,7 +6,7 @@ import com.yss.valset.workflow.model.WorkflowPlatformCommand;
 import com.yss.valset.workflow.model.WorkflowStageDTO;
 
 /**
- * Spring Batch 阶段处理器。
+ * 批量任务 阶段处理器。
  *
  * <p>该接口用于把“工作流阶段定义”转换成“可执行阶段结果”。
  * 实现类只关心单个阶段的业务语义，不负责作业提交、查询或日志存储。

@@ -167,15 +167,9 @@
 
 ## 与现有流程的关系
 
-### 现有任务表继续保留
+### 任务执行模型
 
-`t_valset_workflow_task` 继续负责：
-
-- 文件解析任务
-- `PARSE_WORKBOOK`
-- `MATCH_SUBJECT`
-
-它不再承担文件主数据职责，只记录流程执行状态、阶段和耗时。
+任务执行状态由 批量任务 元数据承载，`t_parse_queue` 负责待解析队列，`BATCH_JOB_EXECUTION` / `BATCH_JOB_EXECUTION_PARAMS` / `BATCH_STEP_EXECUTION` 负责任务、参数和阶段回放。
 
 ### `file_id` 的来源变化
 

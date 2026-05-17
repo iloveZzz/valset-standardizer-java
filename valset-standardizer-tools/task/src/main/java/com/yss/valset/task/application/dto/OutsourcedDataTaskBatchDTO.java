@@ -1,5 +1,6 @@
 package com.yss.valset.task.application.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 
 /**
@@ -28,6 +29,12 @@ public class OutsourcedDataTaskBatchDTO implements java.io.Serializable{
 
     private String sourceType;
 
+    private String sourceTypeName;
+
+    private String taskStage;
+
+    private String taskStageName;
+
     private String currentStage;
 
     private String currentStep;
@@ -53,4 +60,19 @@ public class OutsourcedDataTaskBatchDTO implements java.io.Serializable{
     private String lastErrorCode;
 
     private String lastErrorMessage;
+
+    @JsonIgnore
+    private Long taskId;
+
+    @JsonIgnore
+    private String inputPayload;
+
+    @JsonIgnore
+    private Long executionId;
+
+    @JsonIgnore
+    private String stepStatus;
+
+    @JsonIgnore
+    private String transferErrorMessage;
 }

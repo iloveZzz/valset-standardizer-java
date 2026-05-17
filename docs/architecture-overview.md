@@ -51,7 +51,7 @@
 - `parser`：待解析事件订阅、队列状态管理、结构化解析执行
 - `task`：估值内部流程的引擎适配、阶段分发、状态查询
 - `batch`：任务调度、任务路由、执行器分派，主要支撑内部流程触发
-- `workflow`：通用 ETL 平台适配层，负责统一工作流定义、实例、状态和阶段日志，并对接 Spring Batch、DolphinScheduler、XXL-JOB 等底层实现
+- `workflow`：通用 ETL 平台适配层，负责统一工作流定义、实例、状态和阶段日志，并对接 批量任务、DolphinScheduler、XXL-JOB 等底层实现
 
 ### 2.5 `boot`
 
@@ -62,7 +62,7 @@
 ### 2.6 通用 ETL 工作流模块
 
 - `taskflow-adapter`：统一工作流 DTO、状态枚举、阶段日志、适配器接口和通用 API
-- `taskflow-springbatch`：Spring Batch 的参数映射与执行适配
+- `taskflow-springbatch`：批量任务 的参数映射与执行适配
 - `taskflow-dolohinscheduler`：DolphinScheduler 的参数映射与执行适配
 - `taskflow-xxljob`：XXL-JOB 的参数映射与执行适配
 - 这一层与估值内部 `WorkflowEngineAdapter` 分离，避免把外部调度器语义混进估值 parse-task 模型
@@ -202,9 +202,12 @@ flowchart LR
 
 ### 6.2 任务层
 
-- `t_valset_workflow_task`
+- `t_parse_queue`
+- `BATCH_JOB_EXECUTION`
+- `BATCH_JOB_EXECUTION_PARAMS`
+- `BATCH_STEP_EXECUTION`
 
-用于管理任务执行和阶段耗时。
+用于管理任务执行、参数和阶段耗时。
 
 ### 6.3 待解析事件层
 

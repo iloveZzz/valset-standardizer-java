@@ -1,4 +1,5 @@
 import { getJavaApi } from "./generated/valset";
+import { customInstance } from "./mutator";
 
 export type OutsourcedDataTaskQueryParams = {
   batchId?: string;
@@ -6,6 +7,7 @@ export type OutsourcedDataTaskQueryParams = {
   businessDate?: string;
   managerName?: string;
   productKeyword?: string;
+  taskStage?: string;
   stage?: string;
   step?: string;
   status?: string;
@@ -26,6 +28,9 @@ export type OutsourcedDataTaskBatchDTO = {
   filesysFileId?: string;
   originalFileName?: string;
   sourceType?: string;
+  sourceTypeName?: string;
+  taskStage?: string;
+  taskStageName?: string;
   currentStage?: string;
   currentStep?: string;
   currentStageName?: string;
@@ -99,6 +104,58 @@ export type OutsourcedDataTaskBatchDetailDTO = {
   currentBlockPoint?: string;
 };
 
+export type OutsourcedDataTaskTraceRecordDTO = {
+  id?: string;
+  type?: string;
+  name?: string;
+  status?: string;
+  statusName?: string;
+  upstreamId?: string;
+  downstreamId?: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMs?: number;
+  errorCode?: string;
+  errorMessage?: string;
+  inputSummary?: string;
+  outputSummary?: string;
+  logRef?: string;
+  attributes?: Record<string, unknown>;
+};
+
+export type OutsourcedDataTaskTraceLogDTO = {
+  logId?: string;
+  nodeType?: string;
+  nodeId?: string;
+  level?: string;
+  message?: string;
+  loggedAt?: string;
+  logRef?: string;
+};
+
+export type OutsourcedDataTaskTraceResultSummaryDTO = {
+  status?: string;
+  statusName?: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationMs?: number;
+  inputSummary?: string;
+  outputSummary?: string;
+  errorCode?: string;
+  errorMessage?: string;
+};
+
+export type OutsourcedDataTaskTraceDTO = {
+  batch?: OutsourcedDataTaskBatchDTO;
+  parseQueue?: OutsourcedDataTaskTraceRecordDTO;
+  transferObject?: OutsourcedDataTaskTraceRecordDTO;
+  jobExecution?: OutsourcedDataTaskTraceRecordDTO;
+  stepExecutions?: OutsourcedDataTaskTraceRecordDTO[];
+  taskSteps?: OutsourcedDataTaskStepDTO[];
+  logs?: OutsourcedDataTaskTraceLogDTO[];
+  resultSummary?: OutsourcedDataTaskTraceResultSummaryDTO;
+};
+
 export type OutsourcedDataTaskActionCommand = {
   reason?: string;
   operator?: string;
@@ -132,6 +189,10 @@ export type SingleResultOutsourcedDataTaskBatchDetailDTO = {
   data?: OutsourcedDataTaskBatchDetailDTO;
 };
 
+export type SingleResultOutsourcedDataTaskTraceDTO = {
+  data?: OutsourcedDataTaskTraceDTO;
+};
+
 export type MultiResultOutsourcedDataTaskActionResultDTO = {
   data?: OutsourcedDataTaskActionResultDTO[];
 };
@@ -158,6 +219,12 @@ export const pageValuationParseTasks = (
 
 export const getValuationParseTask = (batchId: string) =>
   generatedApi.getTask(batchId) as Promise<SingleResultOutsourcedDataTaskBatchDetailDTO>;
+
+export const getValuationParseTaskTrace = (batchId: string) =>
+  customInstance<SingleResultOutsourcedDataTaskTraceDTO>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/trace`,
+    method: "GET",
+  });
 
 export const listValuationParseTaskSteps = (batchId: string) =>
   generatedApi.listSteps(batchId) as Promise<MultiResultOutsourcedDataTaskStepDTO>;
@@ -209,6 +276,7 @@ export const batchStopValuationParseTasks = (
 export const getOutsourcedDataTaskSummary = getValuationParseTaskSummary;
 export const pageOutsourcedDataTasks = pageValuationParseTasks;
 export const getOutsourcedDataTask = getValuationParseTask;
+export const getOutsourcedDataTaskTrace = getValuationParseTaskTrace;
 export const listOutsourcedDataTaskSteps = listValuationParseTaskSteps;
 export const executeOutsourcedDataTask = executeValuationParseTask;
 export const retryOutsourcedDataTask = retryValuationParseTask;

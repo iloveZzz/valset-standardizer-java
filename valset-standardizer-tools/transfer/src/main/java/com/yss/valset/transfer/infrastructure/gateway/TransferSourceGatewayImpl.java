@@ -109,7 +109,7 @@ public class TransferSourceGatewayImpl implements TransferSourceGateway {
                         .set(TransferSourcePO::getIngestStatus, "RUNNING")
                         .set(TransferSourcePO::getIngestTriggerType, triggerType)
                         .set(TransferSourcePO::getIngestStartedAt, toLocalDateTime(startedAt))
-                        .set(TransferSourcePO::getIngestFinishedAt, null)
+                        .setSql("ingest_finished_at = null")
                         .set(TransferSourcePO::getUpdatedAt, toLocalDateTime(startedAt))
         );
         return updated > 0;

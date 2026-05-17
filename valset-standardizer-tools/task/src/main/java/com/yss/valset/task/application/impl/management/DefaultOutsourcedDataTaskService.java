@@ -11,10 +11,12 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStageSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskTraceDTO;
 import com.yss.valset.task.application.port.OutsourcedDataTaskGateway;
 import com.yss.valset.task.application.service.OutsourcedDataTaskService;
 import com.yss.valset.task.domain.model.OutsourcedDataTaskStatus;
 import com.yss.valset.parser.application.port.ParseExecutionUseCase;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.explore.JobExplorer;
 import org.springframework.batch.core.launch.JobOperator;
@@ -22,8 +24,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,7 +42,13 @@ import java.util.stream.Collectors;
  * </p>
  */
 @Service
+@Slf4j
 public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskService {
+
+    private static final Set<String> RETRYABLE_STATUSES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            OutsourcedDataTaskStatus.SUCCESS.name(),
+            OutsourcedDataTaskStatus.FAILED.name(),
+            OutsourcedDataTaskStatus.STOPPED.name())));
 
     private final OutsourcedDataTaskGateway outsourcedDataTaskGateway;
     private final ParseExecutionUseCase parseExecutionUseCase;
@@ -112,6 +121,17 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
     }
 
     @Override
+    public OutsourcedDataTaskTraceDTO getTrace(String batchId) {
+        if (outsourcedDataTaskGateway != null) {
+            return outsourcedDataTaskGateway.getTrace(batchId);
+        }
+        OutsourcedDataTaskTraceDTO trace = new OutsourcedDataTaskTraceDTO();
+        trace.setBatch(requireBatch(batchId));
+        trace.setTaskSteps(listSteps(batchId));
+        return trace;
+    }
+
+    @Override
     public List<OutsourcedDataTaskStepDTO> listSteps(String batchId) {
         if (outsourcedDataTaskGateway != null) {
             return outsourcedDataTaskGateway.listSteps(batchId);
@@ -130,7 +150,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
 
     @Override
     public OutsourcedDataTaskActionResultDTO retry(String batchId, OutsourcedDataTaskActionCommand command) {
-        requireBatch(batchId);
+        validateRetryableBatch(batchId);
         OutsourcedDataTaskStepDTO currentStep = requireCurrentStep(batchId);
         Long taskId = resolveTaskId(batchId, currentStep);
         triggerParseBatch(taskId);
@@ -183,11 +203,49 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         if (command == null || command.getBatchIds() == null) {
             return Collections.emptyList();
         }
-        return command.getBatchIds().stream()
-                .map(batchId -> {
-                    return manualExecute ? execute(batchId, null) : retry(batchId, null);
-                })
-                .collect(java.util.stream.Collectors.toList());
+        List<BatchActionContext> actionContexts = command.getBatchIds().stream()
+                .map(batchId -> prepareBatchAction(batchId, manualExecute))
+                .collect(Collectors.toList());
+        actionContexts.forEach(context -> submitBatchAction(context, manualExecute, command));
+        String action = manualExecute ? "BATCH_EXECUTE" : "BATCH_RETRY";
+        String actionLabel = manualExecute ? "批量执行" : "批量重新解析";
+        return actionContexts.stream()
+                .map(context -> accepted(context.getBatchId(), context.getStepId(),
+                        action,
+                        actionLabel + "请求已异步提交，taskId=" + context.getTaskId()))
+                .collect(Collectors.toList());
+    }
+
+    private BatchActionContext prepareBatchAction(String batchId, boolean manualExecute) {
+        if (manualExecute) {
+            requireBatch(batchId);
+        } else {
+            validateRetryableBatch(batchId);
+        }
+        OutsourcedDataTaskStepDTO currentStep = requireCurrentStep(batchId);
+        Long taskId = resolveTaskId(batchId, currentStep);
+        return new BatchActionContext(batchId, currentStep.getStepId(), taskId);
+    }
+
+    private void submitBatchAction(BatchActionContext context,
+            boolean manualExecute,
+            OutsourcedDataTaskBatchCommand command) {
+        String action = manualExecute ? "execute" : "retry";
+        log.info("已提交估值表解析任务{}请求，batchId={}，stepId={}，taskId={}，reason={}",
+                action,
+                context.getBatchId(),
+                context.getStepId(),
+                context.getTaskId(),
+                command == null ? null : command.getReason());
+        triggerParseBatch(context.getTaskId());
+    }
+
+    private OutsourcedDataTaskBatchDTO validateRetryableBatch(String batchId) {
+        OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
+        if (batch == null || !hasText(batch.getStatus()) || !RETRYABLE_STATUSES.contains(batch.getStatus())) {
+            throw new IllegalArgumentException("当前批次不支持重新解析，仅允许已完成、失败或已停止的批次重试：" + batchId);
+        }
+        return batch;
     }
 
     private OutsourcedDataTaskStepDTO requireCurrentStep(String batchId) {
@@ -251,7 +309,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             throw new IllegalArgumentException("估值表解析任务缺少可执行的 taskId");
         }
         if (parseExecutionUseCase == null) {
-            throw new IllegalStateException("解析执行用例未启用，无法提交 Spring Batch 任务：" + taskId);
+            throw new IllegalStateException("解析执行用例未启用，无法提交 批量任务 任务：" + taskId);
         }
         parseExecutionUseCase.execute(taskId);
     }
@@ -261,7 +319,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
             throw new IllegalArgumentException("估值表解析任务缺少可停止的 taskId");
         }
         if (springBatchJobExplorer == null || springBatchJobOperator == null) {
-            throw new IllegalStateException("Spring Batch 停止能力未启用，无法停止任务：" + taskId);
+            throw new IllegalStateException("批量任务 停止能力未启用，无法停止任务：" + taskId);
         }
         Set<JobExecution> runningExecutions = springBatchJobExplorer.findRunningJobExecutions("valuationParseJob");
         if (runningExecutions == null || runningExecutions.isEmpty()) {
@@ -276,7 +334,7 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
                 try {
                     springBatchJobOperator.stop(execution.getId());
                 } catch (Exception exception) {
-                    throw new IllegalStateException("停止 Spring Batch 任务失败，taskId=" + taskId, exception);
+                    throw new IllegalStateException("停止 批量任务 任务失败，taskId=" + taskId, exception);
                 }
                 return execution.getId();
             }
@@ -400,5 +458,30 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
 
     private WorkflowRuntimeCatalog stageCatalog() {
         return Objects.requireNonNull(stageCatalog, "WorkflowRuntimeCatalog 未注入");
+    }
+
+    private static final class BatchActionContext {
+
+        private final String batchId;
+        private final String stepId;
+        private final Long taskId;
+
+        private BatchActionContext(String batchId, String stepId, Long taskId) {
+            this.batchId = batchId;
+            this.stepId = stepId;
+            this.taskId = taskId;
+        }
+
+        private String getBatchId() {
+            return batchId;
+        }
+
+        private String getStepId() {
+            return stepId;
+        }
+
+        private Long getTaskId() {
+            return taskId;
+        }
     }
 }

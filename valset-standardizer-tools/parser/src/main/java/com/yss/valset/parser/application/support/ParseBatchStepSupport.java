@@ -38,10 +38,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 估值表解析 Spring Batch 阶段支持组件。
+ * 估值表解析 批量任务 阶段支持组件。
  *
  * <p>
- * 这个组件承载 Spring Batch 三个步骤的真实业务逻辑：
+ * 这个组件承载 批量任务 三个步骤的真实业务逻辑：
  * 第一步负责文件解析，第二步负责结构标准化，第三步负责标准化结果落地。
  * 各步骤之间通过 {@link ExecutionContext} 传递中间结果，避免重复读取和重复解析。
  * </p>
@@ -51,9 +51,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ParseBatchStepSupport {
 
-    public static final String JOB_CONTEXT_PARSED_DATA_JSON = "parse.parsedDataJson";
-    public static final String JOB_CONTEXT_STANDARDIZED_DATA_JSON = "parse.standardizedDataJson";
-    public static final String JOB_CONTEXT_RESULT_PAYLOAD = "parse.resultPayload";
     public static final String JOB_CONTEXT_FILE_PARSE_MS = "parse.fileParseMs";
     public static final String JOB_CONTEXT_STANDARDIZE_MS = "parse.standardizeMs";
 
@@ -88,7 +85,7 @@ public class ParseBatchStepSupport {
                 DataSourceType type = resolveDataSourceType(command);
                 DataSourceConfig config = buildAnalysisConfig(type, resolveAnalysisWorkbookPath(command), command.getFileId());
                 ValuationDataParser parser = parserProvider.getParser(type);
-                log.info("Spring Batch 解析文件阶段开始，taskId={}, parser={}, sourceType={}, sourceUri={}",
+                log.info("批量任务 解析文件阶段开始，taskId={}, parser={}, sourceType={}, sourceUri={}",
                         taskId, parser.getClass().getSimpleName(), type, config.getSourceUri());
                 ParsedValuationData parsedValuationData = parser.parse(config);
                 validateParsedValuationData(parsedValuationData, command);
@@ -98,11 +95,10 @@ public class ParseBatchStepSupport {
                         .build();
                 dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), normalizedParsedData);
                 publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
-                putJson(jobExecutionContext, JOB_CONTEXT_PARSED_DATA_JSON, normalizedParsedData);
                 jobExecutionContext.putLong(JOB_CONTEXT_FILE_PARSE_MS, System.currentTimeMillis() - startedAt);
             } catch (Exception exception) {
                 publishFailureEvent(currentStage, taskId, command, exception);
-                throw new IllegalStateException("Spring Batch 文件解析阶段失败，taskId=" + taskId, exception);
+                throw new IllegalStateException("批量任务 文件解析阶段失败，taskId=" + taskId, exception);
             }
         }
     }
@@ -124,20 +120,20 @@ public class ParseBatchStepSupport {
         long startedAt = System.currentTimeMillis();
         try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
             try {
-                ParsedValuationData parsedValuationData = readJson(jobExecutionContext, JOB_CONTEXT_PARSED_DATA_JSON, ParsedValuationData.class);
+                ParsedValuationData parsedValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
                 if (parsedValuationData == null) {
-                    throw new IllegalStateException("Spring Batch 结构标准化阶段缺少文件解析结果，taskId=" + taskId);
+                    throw new IllegalStateException("批量任务 结构标准化阶段缺少文件解析结果，taskId=" + taskId);
                 }
                 ParsedValuationData standardizedValuationData = standardizationService.standardize(parsedValuationData);
                 String fileNameOriginal = resolveFileNameOriginal(workflowTask);
                 ParsedValuationData normalizedStandardizedData = standardizedValuationData == null ? null
                         : standardizedValuationData.toBuilder().fileNameOriginal(fileNameOriginal).build();
-                putJson(jobExecutionContext, JOB_CONTEXT_STANDARDIZED_DATA_JSON, normalizedStandardizedData);
+                standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), normalizedStandardizedData);
                 publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
                 jobExecutionContext.putLong(JOB_CONTEXT_STANDARDIZE_MS, System.currentTimeMillis() - startedAt);
             } catch (Exception exception) {
                 publishFailureEvent(currentStage, taskId, command, exception);
-                throw new IllegalStateException("Spring Batch 结构标准化阶段失败，taskId=" + taskId, exception);
+                throw new IllegalStateException("批量任务 结构标准化阶段失败，taskId=" + taskId, exception);
             }
         }
     }
@@ -146,7 +142,7 @@ public class ParseBatchStepSupport {
      * 标准表落地步骤。
      *
      * <p>
-     * 这是整条 Spring Batch 流水线的最后一步，负责把标准化结果写入业务目标表，
+     * 这是整条 批量任务 流水线的最后一步，负责把标准化结果写入业务目标表，
      * 同时回写任务耗时、执行结果和生命周期事件。
      * </p>
      */
@@ -158,18 +154,16 @@ public class ParseBatchStepSupport {
         ParseRuleTraceContext traceContext = buildTraceContext(workflowTask, taskId);
         try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
             try {
-                ParsedValuationData standardizedValuationData = readJson(jobExecutionContext, JOB_CONTEXT_STANDARDIZED_DATA_JSON, ParsedValuationData.class);
+                ParsedValuationData standardizedValuationData = standardizedExternalValuationGateway.findByValuationId(taskId);
                 if (standardizedValuationData == null) {
-                    throw new IllegalStateException("Spring Batch 标准表落地阶段缺少标准化结果，taskId=" + taskId);
+                    throw new IllegalStateException("批量任务 标准表落地阶段缺少标准化结果，taskId=" + taskId);
                 }
                 DataSourceType type = resolveDataSourceType(command);
                 String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-                ParsedValuationData finalStandardizedValuationData = standardizedValuationData.toBuilder()
-                        .fileNameOriginal(fileNameOriginal)
-                        .build();
+                ParsedValuationData sourceValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
+                ParsedValuationData finalStandardizedValuationData = mergeSourceMetadata(standardizedValuationData, sourceValuationData, fileNameOriginal);
                 String sourceTypeName = type.name();
                 String sourceSign = fileNameOriginal;
-                standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), finalStandardizedValuationData);
                 dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
                 trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
                 String resultPayload = buildResultPayload(finalStandardizedValuationData);
@@ -178,11 +172,11 @@ public class ParseBatchStepSupport {
                         jobExecutionContext.getLong(JOB_CONTEXT_STANDARDIZE_MS, 0L),
                         null);
                 taskGateway.markSuccess(taskId, resultPayload);
-                jobExecutionContext.putString(JOB_CONTEXT_RESULT_PAYLOAD, resultPayload);
                 publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
             } catch (Exception exception) {
+                log.error("批量任务 标准表落地阶段失败，taskId={}, fileId={}", taskId, workflowTask.getFileId(), exception);
                 publishFailureEvent(currentStage, taskId, command, exception);
-                throw new IllegalStateException("Spring Batch 标准表落地阶段失败，taskId=" + taskId, exception);
+                throw new IllegalStateException("批量任务 标准表落地阶段失败，taskId=" + taskId, exception);
             }
         }
     }
@@ -191,7 +185,7 @@ public class ParseBatchStepSupport {
      * 按任务 ID 重新加载解析任务。
      *
      * <p>
-     * Spring Batch 的步骤执行本身只接收 taskId，因此这里统一通过任务网关还原完整任务对象。
+     * 批量任务 的步骤执行本身只接收 taskId，因此这里统一通过任务网关还原完整任务对象。
      * </p>
      */
     private WorkflowTask requireTask(Long taskId) {
@@ -206,14 +200,40 @@ public class ParseBatchStepSupport {
      * 从任务输入体中反序列化解析命令。
      */
     private ParseTaskCommand readCommand(WorkflowTask workflowTask) {
-        if (workflowTask == null || !StringUtils.hasText(workflowTask.getInputPayload())) {
+        if (workflowTask == null) {
             throw new IllegalStateException("解析任务入参为空，taskId=" + (workflowTask == null ? null : workflowTask.getTaskId()));
+        }
+        if (!StringUtils.hasText(workflowTask.getInputPayload())) {
+            return rebuildCommandFromFileInfo(workflowTask);
         }
         try {
             return objectMapper.readValue(workflowTask.getInputPayload(), ParseTaskCommand.class);
         } catch (Exception exception) {
             throw new IllegalStateException("解析任务入参反序列化失败，taskId=" + workflowTask.getTaskId(), exception);
         }
+    }
+
+    /**
+     * 历史批次重新解析时，Batch 元数据可能已经不再保存大 JSON 入参。
+     * 这里从文件主数据恢复解析命令，保证重跑路径不依赖旧的 inputPayload。
+     */
+    private ParseTaskCommand rebuildCommandFromFileInfo(WorkflowTask workflowTask) {
+        Long fileId = workflowTask.getFileId();
+        if (fileId == null) {
+            throw new IllegalStateException("解析任务入参为空且缺少 fileId，taskId=" + workflowTask.getTaskId());
+        }
+        ValsetFileInfo fileInfo = subjectMatchFileInfoGateway.findById(fileId);
+        if (fileInfo == null) {
+            throw new IllegalStateException("解析任务入参为空且未找到文件主数据，taskId=" + workflowTask.getTaskId() + "，fileId=" + fileId);
+        }
+        ParseTaskCommand command = new ParseTaskCommand();
+        command.setDataSourceType(resolveDataSourceTypeName(fileInfo));
+        command.setWorkbookPath(resolveWorkbookPath(fileInfo));
+        command.setFileId(fileId);
+        command.setFileNameOriginal(fileInfo.getFileNameOriginal());
+        command.setCreatedBy("file-manage-reanalyse");
+        command.setForceRebuild(Boolean.TRUE);
+        return command;
     }
 
     /**
@@ -273,6 +293,30 @@ public class ParseBatchStepSupport {
         return commandPath;
     }
 
+    private String resolveDataSourceTypeName(ValsetFileInfo fileInfo) {
+        if (fileInfo == null || !StringUtils.hasText(fileInfo.getFileFormat())) {
+            return DataSourceType.EXCEL.name();
+        }
+        return fileInfo.getFileFormat().trim().toUpperCase();
+    }
+
+    private String resolveWorkbookPath(ValsetFileInfo fileInfo) {
+        if (fileInfo == null) {
+            return null;
+        }
+        String readablePath = firstReadablePath(fileInfo.getStorageUri(), fileInfo.getLocalTempPath(), fileInfo.getRealStoragePath());
+        if (readablePath != null) {
+            return readablePath;
+        }
+        if (StringUtils.hasText(fileInfo.getStorageUri())) {
+            return fileInfo.getStorageUri().trim();
+        }
+        if (StringUtils.hasText(fileInfo.getRealStoragePath())) {
+            return fileInfo.getRealStoragePath().trim();
+        }
+        return StringUtils.hasText(fileInfo.getLocalTempPath()) ? fileInfo.getLocalTempPath().trim() : null;
+    }
+
     /**
      * 回填原始文件名，保证后续标准化和落库使用同一份文件标识。
      */
@@ -323,6 +367,32 @@ public class ParseBatchStepSupport {
         }
     }
 
+    private ParsedValuationData mergeSourceMetadata(
+            ParsedValuationData standardizedValuationData,
+            ParsedValuationData sourceValuationData,
+            String fileNameOriginal
+    ) {
+        if (standardizedValuationData == null) {
+            return null;
+        }
+        ParsedValuationData.ParsedValuationDataBuilder builder = standardizedValuationData.toBuilder()
+                .fileNameOriginal(fileNameOriginal);
+        if (sourceValuationData != null) {
+            builder.workbookPath(sourceValuationData.getWorkbookPath())
+                    .sheetName(sourceValuationData.getSheetName())
+                    .headerRowNumber(sourceValuationData.getHeaderRowNumber())
+                    .dataStartRowNumber(sourceValuationData.getDataStartRowNumber())
+                    .title(sourceValuationData.getTitle())
+                    .basicInfo(sourceValuationData.getBasicInfo())
+                    .headers(sourceValuationData.getHeaders())
+                    .headerDetails(sourceValuationData.getHeaderDetails())
+                    .headerColumns(sourceValuationData.getHeaderColumns())
+                    .headerMappingDecisions(sourceValuationData.getHeaderMappingDecisions())
+                    .mappingQualityReport(sourceValuationData.getMappingQualityReport());
+        }
+        return builder.build();
+    }
+
     private void validateParsedValuationData(ParsedValuationData parsedValuationData, ParseTaskCommand command) {
         if (parsedValuationData == null) {
             throw new IllegalStateException("解析失败，未返回结构化数据，fileId=" + (command == null ? null : command.getFileId()));
@@ -371,29 +441,4 @@ public class ParseBatchStepSupport {
         ));
     }
 
-    private <T> T readJson(ExecutionContext jobExecutionContext, String key, Class<T> type) {
-        if (jobExecutionContext == null || !StringUtils.hasText(key) || type == null) {
-            return null;
-        }
-        String value = jobExecutionContext.getString(key, null);
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-        try {
-            return objectMapper.readValue(value, type);
-        } catch (Exception exception) {
-            throw new IllegalStateException("解析作业上下文反序列化失败，key=" + key, exception);
-        }
-    }
-
-    private void putJson(ExecutionContext jobExecutionContext, String key, Object value) {
-        if (jobExecutionContext == null || !StringUtils.hasText(key) || value == null) {
-            return;
-        }
-        try {
-            jobExecutionContext.putString(key, objectMapper.writeValueAsString(value));
-        } catch (Exception exception) {
-            throw new IllegalStateException("解析作业上下文序列化失败，key=" + key, exception);
-        }
-    }
 }

@@ -20,7 +20,7 @@
 - 通用数据 ETL 编排
 - DolphinScheduler 适配
 - XXL-JOB 适配
-- Spring Batch 平台适配
+- 批量任务 平台适配
 - 任何与估值主链路无关的外部工作流抽象
 
 ## 运行模型

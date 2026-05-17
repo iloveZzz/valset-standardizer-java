@@ -35,13 +35,13 @@ tools/task
     └── web/controller
 ```
 
-当前版本采用稳定 API 契约、Spring Batch 元数据回读和列表轮询刷新：
+当前版本采用稳定 API 契约、批量任务 元数据回读和列表轮询刷新：
 
 ```text
 Controller
   -> OutsourcedDataTaskService
     -> OutsourcedDataTaskGateway
-      -> Spring Batch JobExplorer
+      -> 批量任务 JobExplorer
 ```
 
 ## 4. 核心模型
@@ -116,10 +116,10 @@ Controller 根路径不带 `/api` 前缀，继续遵守当前工程策略，由�
 - DDL 主键和关联字段使用字符串标识，匹配 `BATCH-*`、`FILE-*`、`TASK-*` 等业务批次和底层任务标识。
 - 新增 `WorkflowTaskLifecycleEvent`，由 `DefaultTaskDispatcher` 发布通用工作流任务状态，事件包含文件标识、输入摘要、输出摘要和上下文字段。
 - `ParseQueueObserverJob` 在构建、创建、派发、完成、失败解析任务时补充 `fileId`、数据源类型和原始文件名，避免队列事件与解析执行事件拆成不同批次。
-- 批次状态和当前阶段由 Spring Batch 结果统一聚合刷新，前端只消费后端返回结果。
+- 批次状态和当前阶段由 批量任务 结果统一聚合刷新，前端只消费后端返回结果。
 - 默认应用服务在 Spring 环境中优先使用持久化 Gateway；静态样例只作为无 Gateway 的单元测试兜底。
-- 前端新增独立 Spring Batch 任务页面、路由和一级菜单入口，完成只读工作台骨架。
-- 前端页面改为只查询 Spring Batch 元数据，不再展示历史步骤、日志和批次聚合投影。
+- 前端新增独立 批量任务 任务页面、路由和一级菜单入口，完成只读工作台骨架。
+- 前端页面改为只查询 批量任务 元数据，不再展示历史步骤、日志和批次聚合投影。
 - 批次维度暂未新增独立 SSE 通道，页面采用轮询刷新。
 
 待完成：
