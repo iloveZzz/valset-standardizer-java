@@ -1,11 +1,14 @@
 package com.yss.valset.transfer.domain.rule;
 
-import com.alibaba.qlexpress4.Express4Runner;
-import com.alibaba.qlexpress4.InitOptions;
 import com.alibaba.qlexpress4.QLOptions;
+import com.yss.valset.qlexpress.domain.runtime.ManagedQlexpressRunner;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressExecutionContextEnhancer;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressRunnerRegistry;
+import com.yss.valset.qlexpress.domain.runtime.SystemQlexpressFunctionSeedScripts;
 import com.yss.valset.transfer.domain.model.RuleContext;
 import com.yss.valset.transfer.domain.model.RuleDefinition;
 import com.yss.valset.transfer.domain.model.RuleEvaluationResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -19,11 +22,21 @@ import java.util.Map;
 @Component
 public class ScriptRuleEngineAdapter implements RuleEngine {
 
-    private final Express4Runner express4Runner = new Express4Runner(InitOptions.DEFAULT_OPTIONS);
-    private final TransferRuleFunctions transferRuleFunctions = new TransferRuleFunctions();
+    private static final String RUNNER_SCOPE = "transfer.rule";
+
+    private final ManagedQlexpressRunner managedRunner;
+    private final QlexpressExecutionContextEnhancer contextEnhancer;
 
     public ScriptRuleEngineAdapter() {
-        registerBuiltInFunctions();
+        this(new QlexpressRunnerRegistry(SystemQlexpressFunctionSeedScripts::scripts, QlexpressExecutionContextEnhancer.empty()),
+                QlexpressExecutionContextEnhancer.empty());
+    }
+
+    @Autowired
+    public ScriptRuleEngineAdapter(QlexpressRunnerRegistry qlexpressRunnerRegistry,
+                                   QlexpressExecutionContextEnhancer contextEnhancer) {
+        this.managedRunner = qlexpressRunnerRegistry.createManagedRunner(RUNNER_SCOPE);
+        this.contextEnhancer = contextEnhancer == null ? QlexpressExecutionContextEnhancer.empty() : contextEnhancer;
     }
 
     @Override
@@ -47,13 +60,15 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
             Map<?, ?> map = (Map<?, ?>) rawResult;
             boolean matched = resolveBoolean(map.get("matched"));
             String message = map.get("message") == null ? "规则执行完成" : String.valueOf(map.get("message"));
+            Map<String, Object> result = copyResultMap(map);
             List<?> routeRawList;
             if (map.get("routes") instanceof List<?>) {
                 routeRawList = (List<?>) map.get("routes");
             } else {
                 routeRawList = java.util.Collections.emptyList();
             }
-            return new RuleEvaluationResult(matched, Collections.emptyList(), message + ", routes=" + routeRawList.size());
+            String resultMessage = routeRawList.isEmpty() ? message : message + ", routes=" + routeRawList.size();
+            return new RuleEvaluationResult(matched, Collections.emptyList(), resultMessage, result);
         }
         if (rawResult == null) {
             return new RuleEvaluationResult(false, Collections.emptyList(), "规则未返回结果");
@@ -79,11 +94,21 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
     }
 
     private Object executeExpression(String script, Map<String, Object> variables) {
-        return express4Runner.execute(script, variables, QLOptions.DEFAULT_OPTIONS).getResult();
+        return managedRunner.getRunner().execute(script, contextEnhancer.enhance(RUNNER_SCOPE, variables), QLOptions.DEFAULT_OPTIONS).getResult();
     }
 
-    private void registerBuiltInFunctions() {
-        express4Runner.addObjFunction(transferRuleFunctions);
+    private Map<String, Object> copyResultMap(Map<?, ?> map) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (map == null || map.isEmpty()) {
+            return result;
+        }
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            if (entry == null || entry.getKey() == null) {
+                continue;
+            }
+            result.put(String.valueOf(entry.getKey()), entry.getValue());
+        }
+        return result;
     }
 
     private Map<String, Object> buildVariables(RuleContext context) {
@@ -122,7 +147,6 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
                 variables.putIfAbsent("attributes", context.recognitionContext().attributes());
             }
         }
-        variables.putIfAbsent("fn", transferRuleFunctions);
         return variables;
     }
 
@@ -131,7 +155,6 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
         if (variables != null) {
             safeVariables.putAll(variables);
         }
-        safeVariables.putIfAbsent("fn", transferRuleFunctions);
         return safeVariables;
     }
 

@@ -84,13 +84,14 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 60px;
-  padding: 12px 14px;
+  min-height: 78px;
+  padding: 14px 16px 15px;
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.82));
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.06);
   cursor: pointer;
   text-align: left;
   transition:
@@ -102,20 +103,20 @@
 
 .workflow-instance-stat-card::after {
   position: absolute;
-  right: -12px;
+  right: -16px;
   bottom: -18px;
-  width: 58px;
-  height: 58px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  background: rgba(22, 119, 255, 0.1);
+  background: rgba(22, 119, 255, 0.08);
   content: "";
 }
 
 .workflow-instance-stat-card:hover,
 .workflow-instance-stat-card.is-active {
-  border-color: rgba(22, 119, 255, 0.42);
-  box-shadow: 0 12px 32px rgba(22, 119, 255, 0.14);
-  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .workflow-instance-stat-card.is-active {
@@ -123,7 +124,7 @@
 }
 
 .workflow-instance-stat-card--primary::after {
-  background: rgba(22, 119, 255, 0.12);
+  background: rgba(37, 99, 235, 0.12);
 }
 
 .workflow-instance-stat-card--success::after {
@@ -131,11 +132,11 @@
 }
 
 .workflow-instance-stat-card--processing::after {
-  background: rgba(250, 173, 20, 0.16);
+  background: rgba(14, 165, 233, 0.12);
 }
 
 .workflow-instance-stat-card--warning::after {
-  background: rgba(250, 173, 20, 0.16);
+  background: rgba(14, 165, 233, 0.12);
 }
 
 .workflow-instance-stat-card--danger::after {
@@ -174,8 +175,8 @@
 .workflow-instance-stat-label {
   position: relative;
   z-index: 1;
-  color: rgba(15, 23, 42, 0.56);
-  font-size: 13px;
+  color: rgba(15, 23, 42, 0.54);
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
 }
@@ -185,7 +186,7 @@
   z-index: 1;
   margin-top: 0;
   color: #0f172a;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 850;
   line-height: 1;
   letter-spacing: 0;

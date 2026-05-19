@@ -23,6 +23,10 @@
             <artifactId>valset-standardizer-batch</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-extract</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.yss.cloud</groupId>
             <artifactId>yss-component-dto</artifactId>
         </dependency>
@@ -50,6 +54,10 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-webmvc-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.fesod</groupId>
+            <artifactId>fesod-sheet</artifactId>
         </dependency>
 
         <dependency>

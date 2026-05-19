@@ -1,5 +1,6 @@
 package com.yss.valset.workflow.springbatch;
 
+import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.workflow.model.EtlPlatformType;
 import com.yss.valset.workflow.model.WorkflowDefinitionDTO;
 import com.yss.valset.workflow.model.WorkflowEngineBindingDTO;
@@ -408,12 +409,15 @@ public class SpringBatchWorkflowPlatformClient extends AbstractWorkflowPlatformC
         if (execution == null) {
             return defaultMessage;
         }
-        if (execution.getExitStatus() != null && StringUtils.hasText(execution.getExitStatus().getExitDescription())) {
-            return execution.getExitStatus().getExitDescription();
-        }
         if (execution.getFailureExceptions() != null && !execution.getFailureExceptions().isEmpty()) {
             Throwable throwable = execution.getFailureExceptions().get(0);
-            return throwable == null ? defaultMessage : throwable.getMessage();
+            String message = TaskFailureClassifier.resolveReadableMessage(throwable);
+            if (StringUtils.hasText(message)) {
+                return message;
+            }
+        }
+        if (execution.getExitStatus() != null && StringUtils.hasText(execution.getExitStatus().getExitDescription())) {
+            return execution.getExitStatus().getExitDescription();
         }
         return defaultMessage;
     }

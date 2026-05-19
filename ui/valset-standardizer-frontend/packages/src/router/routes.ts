@@ -7,6 +7,7 @@ import {
   ForkOutlined,
   FundProjectionScreenOutlined,
   InboxOutlined,
+  FunctionOutlined,
   ProjectOutlined,
   SettingOutlined,
   SwapOutlined,
@@ -65,6 +66,11 @@ export const workspaceNav: Array<{
         title: "解析链路监控",
         path: "/task-management/valuation-monitor",
         icon: ForkOutlined,
+      },
+      {
+        title: "函数库维护",
+        path: "/task-management/qlexpress-functions",
+        icon: FunctionOutlined,
       },
     ],
   },
@@ -148,9 +154,18 @@ export const routes: RouteRecordRaw[] = [
   {
     path: "/task-management/valuation-monitor",
     name: "task-management-valuation-monitor",
-    component: () => import("@/views/SpringBatchValuationTaskMonitor/index.vue"),
+    component: () => import("@/views/BatchValuationTaskMonitor/index.vue"),
     meta: {
       title: "解析链路监控",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/task-management/qlexpress-functions",
+    name: "task-management-qlexpress-functions",
+    component: () => import("@/views/QlexpressFunction/index.vue"),
+    meta: {
+      title: "函数库维护",
       keepAlive: false,
     },
   },
@@ -212,7 +227,7 @@ export const routes: RouteRecordRaw[] = [
     redirect: "/task-management",
   },
   {
-    path: "/spring-batch-valuation-tasks",
+    path: "/batch-valuation-tasks",
     redirect: "/task-management",
   },
   ...transferSectionRoutes,

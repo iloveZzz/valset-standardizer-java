@@ -17,6 +17,7 @@
         <module>file</module>
         <module>extract</module>
         <module>parser</module>
+        <module>qlexpress</module>
         <module>task</module>
         <module>batch</module>
         <module>transfer</module>

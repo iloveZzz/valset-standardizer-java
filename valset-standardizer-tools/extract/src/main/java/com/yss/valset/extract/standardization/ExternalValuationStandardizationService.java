@@ -8,6 +8,8 @@ import com.yss.valset.domain.model.MappingQualityReport;
 import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
+import com.yss.valset.domain.rule.ParseRuleType;
+import com.yss.valset.extract.rule.ParseRuleStepDescriptor;
 import com.yss.valset.extract.repository.entity.FileParseRulePO;
 import com.yss.valset.extract.repository.entity.FileParseSourcePO;
 import com.yss.valset.extract.repository.mapper.FileParseRuleRepository;
@@ -42,6 +44,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class ExternalValuationStandardizationService {
+
+    private static final String ERROR_POLICY_FAIL_FAST = "FAIL_FAST";
 
     private final ObjectMapper objectMapper;
     private final FileParseRuleRepository parseRuleRepository;
@@ -107,6 +111,12 @@ public class ExternalValuationStandardizationService {
         String fieldMapExpr = parseRuleTemplateResolver == null
                 ? null
                 : parseRuleTemplateResolver.resolveFieldMapExpr(fileScene, fileTypeName);
+        String transformExpr = parseRuleTemplateResolver == null
+                ? null
+                : parseRuleTemplateResolver.resolveTransformExpr(fileScene, fileTypeName);
+        ParseRuleStepDescriptor normalizeRule = parseRuleTemplateResolver == null
+                ? null
+                : parseRuleTemplateResolver.resolveRuleStep(fileScene, fileTypeName, ParseRuleType.NORMALIZE);
         Map<Integer, MappingDecision> mappingDecisionByIndex = resolveHeaderMappingDecisionByIndex(headers, headerColumns, dictionary, fieldMapExpr);
         Map<Integer, String> standardColumnByIndex = mappingDecisionByIndex.entrySet().stream()
                 .filter(entry -> Boolean.TRUE.equals(entry.getValue().getMatched()))
@@ -124,12 +134,18 @@ public class ExternalValuationStandardizationService {
         List<SubjectRecord> standardizedSubjects = parsedValuationData.getSubjects() == null
                 ? java.util.Arrays.asList()
                 : parsedValuationData.getSubjects().stream()
-                .map(subject -> standardizeSubject(subject, headers, standardColumnByIndex, mappingDecisionByIndex, dictionary))
+                .map(subject -> applySubjectStandardizationRules(
+                        standardizeSubject(subject, headers, standardColumnByIndex, mappingDecisionByIndex, dictionary),
+                        transformExpr,
+                        normalizeRule))
                 .collect(java.util.stream.Collectors.toList());
         List<MetricRecord> standardizedMetrics = parsedValuationData.getMetrics() == null
                 ? java.util.Arrays.asList()
                 : parsedValuationData.getMetrics().stream()
-                .map(metric -> standardizeMetric(metric, dictionary))
+                .map(metric -> applyMetricStandardizationRules(
+                        standardizeMetric(metric, dictionary),
+                        transformExpr,
+                        normalizeRule))
                 .collect(java.util.stream.Collectors.toList());
         logSubjectMetricMappingSummary(standardizedSubjects, standardizedMetrics);
 
@@ -304,6 +320,153 @@ public class ExternalValuationStandardizationService {
             metric.setMappingConfidence(0D);
         }
         return metric;
+    }
+
+    private SubjectRecord applySubjectStandardizationRules(SubjectRecord subject,
+                                                           String transformExpr,
+                                                           ParseRuleStepDescriptor normalizeRule) {
+        if (subject == null) {
+            return null;
+        }
+        Map<String, Object> transformValues = evaluateStandardizationRule(
+                transformExpr,
+                null,
+                "SUBJECT",
+                subject,
+                null);
+        mergeSubjectStandardization(subject, transformValues);
+        Map<String, Object> normalizeValues = evaluateStandardizationRule(
+                normalizeRule == null ? null : normalizeRule.getExpression(),
+                normalizeRule,
+                "SUBJECT",
+                subject,
+                null);
+        mergeSubjectStandardization(subject, normalizeValues);
+        return subject;
+    }
+
+    private MetricRecord applyMetricStandardizationRules(MetricRecord metric,
+                                                         String transformExpr,
+                                                         ParseRuleStepDescriptor normalizeRule) {
+        if (metric == null) {
+            return null;
+        }
+        Map<String, Object> transformValues = evaluateStandardizationRule(
+                transformExpr,
+                null,
+                "METRIC",
+                null,
+                metric);
+        mergeMetricStandardization(metric, transformValues);
+        Map<String, Object> normalizeValues = evaluateStandardizationRule(
+                normalizeRule == null ? null : normalizeRule.getExpression(),
+                normalizeRule,
+                "METRIC",
+                null,
+                metric);
+        mergeMetricStandardization(metric, normalizeValues);
+        return metric;
+    }
+
+    private Map<String, Object> evaluateStandardizationRule(String expression,
+                                                            ParseRuleStepDescriptor rule,
+                                                            String recordType,
+                                                            SubjectRecord subject,
+                                                            MetricRecord metric) {
+        if (expression == null || expression.trim().isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        Map<String, Object> context = new HashMap<>();
+        context.put("recordType", recordType);
+        context.put("subject", subject);
+        context.put("metric", metric);
+        context.put("standardValues", subject == null ? metric.getStandardValues() : subject.getStandardValues());
+        context.put("rawValues", subject == null ? metric.getRawValues() : subject.getRawValues());
+        try {
+            return qlexpressRuleEngine.evaluateMap(expression, context);
+        } catch (Exception exception) {
+            if (isFailFast(rule)) {
+                throw exception;
+            }
+            log.warn("标准化规则执行失败，profileCode={}, version={}, ruleType={}, recordType={}，回退默认标准化结果",
+                    rule == null ? null : rule.getProfileCode(),
+                    rule == null ? null : rule.getVersion(),
+                    rule == null || rule.getRuleType() == null ? ParseRuleType.VALUE_TRANSFORM.name() : rule.getRuleType().name(),
+                    recordType,
+                    exception);
+            return java.util.Collections.emptyMap();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeSubjectStandardization(SubjectRecord subject, Map<String, Object> values) {
+        if (subject == null || values == null || values.isEmpty()) {
+            return;
+        }
+        if (values.containsKey("standardCode")) {
+            subject.setStandardCode(firstString(values.get("standardCode"), subject.getStandardCode()));
+        }
+        if (values.containsKey("standardName")) {
+            subject.setStandardName(firstString(values.get("standardName"), subject.getStandardName()));
+        }
+        if (values.get("standardValues") instanceof Map<?, ?>) {
+            subject.setStandardValues(new LinkedHashMap<>((Map<String, Object>) values.get("standardValues")));
+        }
+        if (values.containsKey("mappingRuleId")) {
+            subject.setMappingRuleId(firstLong(values.get("mappingRuleId"), subject.getMappingRuleId()));
+        }
+        if (values.containsKey("mappingSourceId")) {
+            subject.setMappingSourceId(firstLong(values.get("mappingSourceId"), subject.getMappingSourceId()));
+        }
+        if (values.containsKey("mappingStatus")) {
+            subject.setMappingStatus(firstString(values.get("mappingStatus"), subject.getMappingStatus()));
+        }
+        if (values.containsKey("mappingReason")) {
+            subject.setMappingReason(firstString(values.get("mappingReason"), subject.getMappingReason()));
+        }
+        if (values.containsKey("mappingConfidence")) {
+            subject.setMappingConfidence(firstDouble(values.get("mappingConfidence"), subject.getMappingConfidence()));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeMetricStandardization(MetricRecord metric, Map<String, Object> values) {
+        if (metric == null || values == null || values.isEmpty()) {
+            return;
+        }
+        if (values.containsKey("standardCode")) {
+            metric.setStandardCode(firstString(values.get("standardCode"), metric.getStandardCode()));
+        }
+        if (values.containsKey("standardName")) {
+            metric.setStandardName(firstString(values.get("standardName"), metric.getStandardName()));
+        }
+        if (values.containsKey("standardValueText")) {
+            metric.setStandardValueText(firstString(values.get("standardValueText"), metric.getStandardValueText()));
+        }
+        if (values.containsKey("standardValueNumber")) {
+            metric.setStandardValueNumber(firstBigDecimal(values.get("standardValueNumber"), metric.getStandardValueNumber()));
+        }
+        if (values.containsKey("standardValueUnit")) {
+            metric.setStandardValueUnit(firstString(values.get("standardValueUnit"), metric.getStandardValueUnit()));
+        }
+        if (values.get("standardValues") instanceof Map<?, ?>) {
+            metric.setStandardValues(new LinkedHashMap<>((Map<String, Object>) values.get("standardValues")));
+        }
+        if (values.containsKey("mappingRuleId")) {
+            metric.setMappingRuleId(firstLong(values.get("mappingRuleId"), metric.getMappingRuleId()));
+        }
+        if (values.containsKey("mappingSourceId")) {
+            metric.setMappingSourceId(firstLong(values.get("mappingSourceId"), metric.getMappingSourceId()));
+        }
+        if (values.containsKey("mappingStatus")) {
+            metric.setMappingStatus(firstString(values.get("mappingStatus"), metric.getMappingStatus()));
+        }
+        if (values.containsKey("mappingReason")) {
+            metric.setMappingReason(firstString(values.get("mappingReason"), metric.getMappingReason()));
+        }
+        if (values.containsKey("mappingConfidence")) {
+            metric.setMappingConfidence(firstDouble(values.get("mappingConfidence"), metric.getMappingConfidence()));
+        }
     }
 
     private Map<Integer, MappingDecision> resolveHeaderMappingDecisionByIndex(
@@ -629,6 +792,52 @@ public class ExternalValuationStandardizationService {
         }
     }
 
+    private boolean isFailFast(ParseRuleStepDescriptor rule) {
+        String policy = rule == null ? null : rule.getErrorPolicy();
+        return policy != null && ERROR_POLICY_FAIL_FAST.equalsIgnoreCase(policy.trim());
+    }
+
+    private String firstString(Object value, String defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        String text = String.valueOf(value);
+        return text.trim().isEmpty() ? defaultValue : text;
+    }
+
+    private Long firstLong(Object value, Long defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
+    }
+
+    private Double firstDouble(Object value, Double defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
+    }
+
+    private BigDecimal firstBigDecimal(Object value, BigDecimal defaultValue) {
+        BigDecimal decimal = toBigDecimal(value);
+        return decimal == null ? defaultValue : decimal;
+    }
+
     private <T> T firstNonNull(ParseSourceEntry first, ParseSourceEntry second, java.util.function.Function<ParseSourceEntry, T> mapper) {
         if (first != null) {
             T value = mapper.apply(first);
@@ -646,6 +855,9 @@ public class ExternalValuationStandardizationService {
             FileParseRuleRepository parseRuleRepository,
             FileParseSourceRepository parseSourceRepository
     ) {
+        if (parseRuleRepository == null || parseSourceRepository == null) {
+            return new Dictionary(java.util.Collections.emptyMap(), java.util.Collections.emptyMap());
+        }
         try {
             List<ParseRuleEntry> rules = loadRules(parseRuleRepository);
             Map<String, ParseRuleEntry> ruleByCode = new LinkedHashMap<>();

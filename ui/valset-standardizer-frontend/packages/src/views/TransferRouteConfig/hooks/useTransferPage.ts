@@ -36,7 +36,6 @@ import type {
   RouteFlowFactMessage,
   RouteFlowPreview,
   RouteFlowStats,
-  SourceIngestMessage,
 } from "../types";
 
 type QueryState = {
@@ -611,7 +610,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
   const routeFlowFactMessages = reactive<
     Record<string, RouteFlowFactMessage[]>
   >({});
-  const sourceIngestMessages = reactive<Record<string, SourceIngestMessage[]>>({});
   const sourceTypeOptions = Object.values(SourceTypeEnum).map(
     (value) => ({
       label: SOURCE_TYPE_LABELS[value] ?? value,
@@ -672,7 +670,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     delete sourceIngestStates[sourceId];
     delete sourceIngestConnectionStates[sourceId];
     delete routeFlowFactMessages[sourceId];
-    delete sourceIngestMessages[sourceId];
   };
 
   const updateRouteFlowFactsForSource = (sourceId: string) => {
@@ -688,21 +685,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
       getRuleDisplayName(row.ruleId),
       routeIssue,
     );
-  };
-
-  const appendSourceIngestMessage = (sourceId: string, content: string) => {
-    if (!sourceId || !content) {
-      return;
-    }
-    const history = sourceIngestMessages[sourceId] ?? [];
-    sourceIngestMessages[sourceId] = [
-      ...history,
-      {
-        title: "邮件收取消息",
-        content,
-        timeText: getCurrentTimeText(),
-      },
-    ].slice(-20);
   };
 
   const upsertSourceIngestState = (
@@ -814,7 +796,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
             if (!text) {
               return;
             }
-            appendSourceIngestMessage(sourceId, text);
             patchSourceIngestState(sourceId, {
               ingestBusy: true,
               ingestStatus:
@@ -1323,13 +1304,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
       return [];
     }
     return routeFlowFactMessages[row.sourceId] ?? [];
-  };
-
-  const getSourceIngestMessages = (row: TransferRouteViewDTO | null) => {
-    if (!row?.sourceId) {
-      return [];
-    }
-    return sourceIngestMessages[row.sourceId] ?? [];
   };
 
   const getSourceIngestConnectionState = (
@@ -1964,7 +1938,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     sourceIngestStates,
     sourceIngestConnectionStates,
     routeFlowFactMessages,
-    sourceIngestMessages,
     uploadVisible,
     uploadSubmitting,
     uploadRouteRow,
@@ -1995,7 +1968,6 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
     getSourceIngestProgressPercent,
     getSourceIngestProgressText,
     getRouteFlowFactMessages,
-    getSourceIngestMessages,
     getSourceIngestConnectionState,
     getSourceIngestConnectionLabel,
     getSourceIngestConnectionColor,

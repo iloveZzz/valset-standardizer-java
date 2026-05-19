@@ -29,18 +29,14 @@ import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.domain.parser.ValuationDataParserProvider;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.rule.ParseRuleEngine;
-import com.yss.valset.domain.rule.ParseRuleTraceContext;
-import com.yss.valset.domain.rule.ParseRuleTraceContextHolder;
 import com.yss.valset.parser.infrastructure.entity.ParseRuleCasePO;
 import com.yss.valset.parser.infrastructure.entity.ParseRuleDefinitionPO;
-import com.yss.valset.extract.repository.entity.ParseRuleProfilePO;
+import com.yss.valset.parser.infrastructure.entity.ParseRuleProfilePO;
 import com.yss.valset.parser.infrastructure.entity.ParseRulePublishLogPO;
-import com.yss.valset.extract.repository.entity.ParseRuleTracePO;
 import com.yss.valset.parser.infrastructure.mapper.ParseRuleCaseRepository;
 import com.yss.valset.parser.infrastructure.mapper.ParseRuleDefinitionRepository;
-import com.yss.valset.extract.repository.mapper.ParseRuleProfileRepository;
+import com.yss.valset.parser.infrastructure.mapper.ParseRuleProfileRepository;
 import com.yss.valset.parser.infrastructure.mapper.ParseRulePublishLogRepository;
-import com.yss.valset.extract.repository.mapper.ParseRuleTraceRepository;
 import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -78,13 +74,11 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     private static final int DEFAULT_LIMIT = 50;
     private static final List<String> DEFAULT_REQUIRED_HEADERS = java.util.Arrays.asList("科目代码", "科目名称");
-    private static final String DEFAULT_SUBJECT_CODE_PATTERN = "^\\d{4}[A-Za-z0-9]*$";
 
     private final ParseRuleProfileRepository profileRepository;
     private final ParseRuleDefinitionRepository definitionRepository;
     private final ParseRuleCaseRepository caseRepository;
     private final ParseRulePublishLogRepository publishLogRepository;
-    private final ParseRuleTraceRepository traceRepository;
     private final ObjectMapper objectMapper;
     private final ParseRuleEngine parseRuleEngine;
     private final ExternalValuationStandardizationService standardizationService;
@@ -96,7 +90,6 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                                                 ParseRuleDefinitionRepository definitionRepository,
                                                 ParseRuleCaseRepository caseRepository,
                                                 ParseRulePublishLogRepository publishLogRepository,
-                                                ParseRuleTraceRepository traceRepository,
                                                 ObjectMapper objectMapper,
                                                 ParseRuleEngine parseRuleEngine,
                                                 ExternalValuationStandardizationService standardizationService,
@@ -107,7 +100,6 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         this.definitionRepository = definitionRepository;
         this.caseRepository = caseRepository;
         this.publishLogRepository = publishLogRepository;
-        this.traceRepository = traceRepository;
         this.objectMapper = objectMapper;
         this.parseRuleEngine = parseRuleEngine;
         this.standardizationService = standardizationService;
@@ -278,21 +270,10 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         List<ParseRuleRegressionCaseViewDTO> caseResults = new ArrayList<>();
         int passedCases = 0;
         for (ParseRuleCasePO parseCase : cases) {
-            ParseRuleTraceContext traceContext = ParseRuleTraceContext.builder()
-                    .profileId(profile.getId())
-                    .profileCode(profile.getProfileCode())
-                    .version(profile.getVersion())
-                    .fileId(parseCase == null ? null : parseCase.getSampleFileId())
-                    .taskId(null)
-                    .traceEnabled(Boolean.TRUE.equals(profile.getTraceEnabled()))
-                    .traceScope("REGRESSION")
-                    .build();
-            try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
-                ParseRuleRegressionCaseViewDTO caseResult = runRegressionCase(parseCase, issues);
-                caseResults.add(caseResult);
-                if (Boolean.TRUE.equals(caseResult.getPassed())) {
-                    passedCases++;
-                }
+            ParseRuleRegressionCaseViewDTO caseResult = runRegressionCase(parseCase, issues);
+            caseResults.add(caseResult);
+            if (Boolean.TRUE.equals(caseResult.getPassed())) {
+                passedCases++;
             }
         }
 
@@ -310,19 +291,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     @Override
     public List<ParseRuleTraceViewDTO> listTraces(Long profileId, Long fileId, Long taskId, String traceType, Integer limit) {
-        int safeLimit = limit == null || limit <= 0 ? 100 : Math.min(limit, 500);
-        List<ParseRuleTracePO> traces = traceRepository.selectList(Wrappers.lambdaQuery(ParseRuleTracePO.class)
-                        .eq(profileId != null, ParseRuleTracePO::getProfileId, profileId)
-                        .eq(fileId != null, ParseRuleTracePO::getFileId, fileId)
-                        .eq(taskId != null, ParseRuleTracePO::getTaskId, taskId)
-                        .eq(traceType != null && !traceType.trim().isEmpty(), ParseRuleTracePO::getTraceType, traceType.trim())
-                        .orderByDesc(ParseRuleTracePO::getTraceTime)
-                        .orderByDesc(ParseRuleTracePO::getId)
-                        .last(databaseDialectSupport.limitClause(safeLimit)))
-                .stream()
-                .filter(Objects::nonNull)
-                .collect(java.util.stream.Collectors.toList());
-        return traces.stream().map(this::toTraceView).collect(java.util.stream.Collectors.toList());
+        return java.util.Collections.emptyList();
     }
 
     @Override
@@ -569,27 +538,6 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
                 .publishComment(publishLog.getPublishComment())
                 .validationResultJson(publishLog.getValidationResultJson())
                 .rollbackFromVersion(publishLog.getRollbackFromVersion())
-                .build();
-    }
-
-    private ParseRuleTraceViewDTO toTraceView(ParseRuleTracePO tracePO) {
-        return ParseRuleTraceViewDTO.builder()
-                .id(tracePO.getId() == null ? null : String.valueOf(tracePO.getId()))
-                .traceScope(tracePO.getTraceScope())
-                .traceType(tracePO.getTraceType())
-                .profileId(tracePO.getProfileId() == null ? null : String.valueOf(tracePO.getProfileId()))
-                .profileCode(tracePO.getProfileCode())
-                .version(tracePO.getVersion())
-                .fileId(tracePO.getFileId() == null ? null : String.valueOf(tracePO.getFileId()))
-                .taskId(tracePO.getTaskId() == null ? null : String.valueOf(tracePO.getTaskId()))
-                .stepName(tracePO.getStepName())
-                .expression(tracePO.getExpression())
-                .inputJson(tracePO.getInputJson())
-                .outputJson(tracePO.getOutputJson())
-                .success(tracePO.getSuccess())
-                .costMs(tracePO.getCostMs() == null ? null : String.valueOf(tracePO.getCostMs()))
-                .errorMessage(tracePO.getErrorMessage())
-                .traceTime(tracePO.getTraceTime())
                 .build();
     }
 
@@ -846,7 +794,7 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
         context.put("row", java.util.Arrays.asList());
         context.put("requiredHeaders", DEFAULT_REQUIRED_HEADERS);
         context.put("footerKeywords", java.util.Arrays.asList());
-        context.put("subjectCodePattern", DEFAULT_SUBJECT_CODE_PATTERN);
+        context.put("subjectCodePattern", null);
         context.put("headerText", "");
         context.put("segments", java.util.Arrays.asList());
         context.put("exactCandidate", null);
@@ -1180,13 +1128,13 @@ public class DefaultParseRuleManagementAppService implements ParseRuleManagement
 
     private String normalizeSubjectCodePattern(String subjectCodePattern) {
         if (isBlank(subjectCodePattern)) {
-            return DEFAULT_SUBJECT_CODE_PATTERN;
+            return null;
         }
         try {
             Pattern.compile(subjectCodePattern.trim());
             return subjectCodePattern.trim();
         } catch (Exception exception) {
-            return DEFAULT_SUBJECT_CODE_PATTERN;
+            return null;
         }
     }
 

@@ -89,6 +89,11 @@
             </dependency>
             <dependency>
                 <groupId>com.yss.datamiddle</groupId>
+                <artifactId>valset-standardizer-qlexpress</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.yss.datamiddle</groupId>
                 <artifactId>valset-standardizer-task</artifactId>
                 <version>${project.version}</version>
             </dependency>

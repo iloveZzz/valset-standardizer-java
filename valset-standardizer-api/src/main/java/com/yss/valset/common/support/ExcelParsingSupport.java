@@ -17,8 +17,6 @@ import java.util.regex.Pattern;
  */
 public final class ExcelParsingSupport {
 
-    private static final Pattern DEFAULT_SUBJECT_CODE_PATTERN = Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
-
     private ExcelParsingSupport() {
     }
 
@@ -123,13 +121,16 @@ public final class ExcelParsingSupport {
      * 检查某个值是否看起来像科目代码。
      */
     public static boolean isSubjectCode(String value) {
-        return isSubjectCode(value, DEFAULT_SUBJECT_CODE_PATTERN);
+        return isSubjectCode(value, null);
     }
 
     /**
-     * 检查某个值是否看起来像科目代码。
+     * 检查某个值是否命中显式传入的科目代码规则。
      */
     public static boolean isSubjectCode(String value, Pattern subjectCodePattern) {
+        if (subjectCodePattern == null) {
+            return false;
+        }
         String normalized = normalizeSubjectCode(value);
         if (normalized.isEmpty()) {
             return false;
@@ -137,8 +138,7 @@ public final class ExcelParsingSupport {
         if (containsChineseCharacter(normalized)) {
             return false;
         }
-        Pattern pattern = subjectCodePattern == null ? DEFAULT_SUBJECT_CODE_PATTERN : subjectCodePattern;
-        return pattern.matcher(normalized).matches();
+        return subjectCodePattern.matcher(normalized).matches();
     }
 
     /**
@@ -177,7 +177,7 @@ public final class ExcelParsingSupport {
      * 判断某行是否是科目数据行。
      */
     public static boolean isSubjectDataRow(List<Object> rowValues) {
-        return isSubjectDataRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+        return isSubjectDataRow(rowValues, null);
     }
 
     /**
@@ -191,7 +191,7 @@ public final class ExcelParsingSupport {
      * 查找科目代码列。
      */
     public static int findSubjectCodeColumnIndex(List<Object> rowValues) {
-        return findSubjectCodeColumnIndex(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+        return findSubjectCodeColumnIndex(rowValues, null);
     }
 
     /**
@@ -201,14 +201,16 @@ public final class ExcelParsingSupport {
         if (rowValues == null || rowValues.isEmpty()) {
             return -1;
         }
-        Pattern pattern = subjectCodePattern == null ? DEFAULT_SUBJECT_CODE_PATTERN : subjectCodePattern;
+        if (subjectCodePattern == null) {
+            return -1;
+        }
         boolean seenMeaningfulText = false;
         for (int columnIndex = 0; columnIndex < rowValues.size(); columnIndex++) {
             String candidateCode = textAt(rowValues, columnIndex);
             if (candidateCode.trim().isEmpty() || "-".equals(candidateCode)) {
                 continue;
             }
-            if (!isSubjectCode(candidateCode, pattern)) {
+            if (!isSubjectCode(candidateCode, subjectCodePattern)) {
                 seenMeaningfulText = true;
                 continue;
             }
@@ -243,7 +245,7 @@ public final class ExcelParsingSupport {
      * 判断某行是否包含单条指标数据。
      */
     public static boolean isMetricDataRow(List<Object> rowValues) {
-        return isMetricDataRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+        return isMetricDataRow(rowValues, null);
     }
 
     /**
@@ -269,7 +271,7 @@ public final class ExcelParsingSupport {
      * 判断某行是否是指标行。
      */
     public static boolean isMetricRow(List<Object> rowValues) {
-        return isMetricRow(rowValues, DEFAULT_SUBJECT_CODE_PATTERN);
+        return isMetricRow(rowValues, null);
     }
 
     /**

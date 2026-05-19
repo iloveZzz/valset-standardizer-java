@@ -9,8 +9,11 @@ import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
 import com.yss.valset.domain.parser.ValuationDataParser;
-import com.yss.valset.extract.rule.ParseRuleSupport;
+import com.yss.valset.domain.rule.ParseRuleType;
+import com.yss.valset.extract.rule.ParseRuleExpressions;
+import com.yss.valset.extract.rule.ParseRuleStepDescriptor;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
+import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
@@ -34,10 +37,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * CSV 格式估值表数据解析器。
+ *
+ * <p>核心流程与工作簿解析器保持一致：先把 CSV 统一读成二维原始行，再根据解析模板定位表头、
+ * 数据起始行和多级表头，最后按行分类结果拆分科目行与指标行。</p>
  */
 @Slf4j
 @Component
@@ -45,6 +50,8 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
     private static final String DEFAULT_SHEET_NAME = "CSV_RAW_DATA";
     private static final List<String> FOOTER_KEYWORDS = java.util.Arrays.asList("制表", "复核", "打印", "备注");
+    private static final String ERROR_POLICY_FAIL_FAST = "FAIL_FAST";
+    private static final String ERROR_POLICY_SKIP_ROW = "SKIP_ROW";
     private static final Charset[] CANDIDATE_CHARSETS = new Charset[] {
             Charset.forName("UTF-8"),
             Charset.forName("GBK"),
@@ -52,6 +59,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
     };
 
     private final ObjectMapper objectMapper;
+    private final QlexpressParseRuleEngine parseRuleEngine;
     private final ParseRuleTemplateResolver parseRuleTemplateResolver;
 
     public CsvValuationDataParser(ObjectMapper objectMapper) {
@@ -60,8 +68,15 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
     @Autowired
     public CsvValuationDataParser(ObjectMapper objectMapper, ParseRuleTemplateResolver parseRuleTemplateResolver) {
+        this(objectMapper, parseRuleTemplateResolver, new QlexpressParseRuleEngine());
+    }
+
+    public CsvValuationDataParser(ObjectMapper objectMapper,
+                                  ParseRuleTemplateResolver parseRuleTemplateResolver,
+                                  QlexpressParseRuleEngine parseRuleEngine) {
         this.objectMapper = objectMapper;
         this.parseRuleTemplateResolver = parseRuleTemplateResolver;
+        this.parseRuleEngine = parseRuleEngine == null ? new QlexpressParseRuleEngine() : parseRuleEngine;
     }
 
     @Override
@@ -70,29 +85,41 @@ public class CsvValuationDataParser implements ValuationDataParser {
         try {
             long startedAt = System.currentTimeMillis();
             log.info("开始解析 CSV 估值文件，sourceUri={}", config.getSourceUri());
-            List<List<Object>> rows = readRows(csvPath);
-            if (rows.isEmpty()) {
+            ValuationRawTable rawTable = ValuationRawTable.of(csvPath, DEFAULT_SHEET_NAME, readRows(csvPath));
+            if (rawTable.isEmpty()) {
                 log.warn("CSV 估值文件没有可解析行，sourceUri={}", config.getSourceUri());
                 return emptyResult(csvPath);
             }
-            String fileScene = resolveFileScene(config);
-            String fileTypeName = resolveFileTypeName(config);
-            List<String> requiredHeaders = resolveRequiredHeaders(fileScene, fileTypeName);
-            Pattern subjectCodePattern = resolveSubjectCodePattern(fileScene, fileTypeName);
+            List<List<Object>> rows = rawTable.rows();
+            ParseRuntimeContext runtimeContext = ParseRuntimeContext.resolve(
+                    resolveFileScene(config),
+                    resolveFileTypeName(config),
+                    parseRuleTemplateResolver);
 
-            // Step 1: 识别表头和数据起始行
-            int headerRowIndex = findHeaderRow(rows, requiredHeaders, subjectCodePattern);
-            int dataStartRowIndex = findDataStartRow(rows, headerRowIndex, subjectCodePattern);
+            // Step 1: 通过解析模板和必选表头定位业务表头，再从表头下方寻找第一条有效数据行。
+            int headerRowIndex = findHeaderRow(rows, runtimeContext.headerExpr(), runtimeContext.requiredHeaders(), runtimeContext.subjectCodePattern());
+            int dataStartRowIndex = findDataStartRow(rows, headerRowIndex, runtimeContext.dataStartRule(), runtimeContext.subjectCodePattern());
 
-            // Step 2: 构建分层表头结构（header/headerDetails/headerColumns）
+            // Step 2: 抽取表头区域并构建分层表头结构，后续字段取值统一依赖该列路径。
             List<List<String>> headerBlockRows = extractHeaderBlock(rows, headerRowIndex, dataStartRowIndex);
             HeaderLayout headerLayout = buildHeaderLayout(headerBlockRows);
             List<String> headers = headerLayout.headers();
             Map<String, Integer> headerIndex = buildHeaderIndex(headers);
+            List<HeaderColumnMeta> headerColumns = headerLayout.headerColumns();
 
-            // Step 3: 解析标题与基础信息，拆分科目行和指标行
+            // Step 3: 表头上方保留标题/估值日期等基础信息，数据区按行分类规则拆成科目与指标。
             TitleAndInfo titleAndInfo = extractTitleAndBasicInfo(rows, headerRowIndex);
-            SplitResult splitResult = splitSubjectsAndMetrics(rows, dataStartRowIndex, headers, headerIndex, subjectCodePattern);
+            SplitResult splitResult = splitSubjectsAndMetrics(
+                    rows,
+                    dataStartRowIndex,
+                    headers,
+                    headerIndex,
+                    headerColumns,
+                    titleAndInfo.basicInfo(),
+                    runtimeContext.rowClassifyExpr(),
+                    runtimeContext.subjectCodePattern(),
+                    runtimeContext.subjectExtractRule(),
+                    runtimeContext.metricExtractRule());
             log.info("CSV 估值文件解析完成，sourceUri={}, headerRow={}, dataStartRow={}, headerCount={}, subjectCount={}, metricCount={}, elapsedMs={}",
                     config.getSourceUri(),
                     headerRowIndex + 1,
@@ -104,7 +131,7 @@ public class CsvValuationDataParser implements ValuationDataParser {
 
             return ParsedValuationData.builder()
                     .workbookPath(csvPath.toAbsolutePath().toString())
-                    .sheetName(DEFAULT_SHEET_NAME)
+                    .sheetName(rawTable.sheetName())
                     .headerRowNumber(headerRowIndex + 1)
                     .dataStartRowNumber(dataStartRowIndex + 1)
                     .title(titleAndInfo.title())
@@ -121,6 +148,10 @@ public class CsvValuationDataParser implements ValuationDataParser {
         }
     }
 
+    /**
+     * CSV 来源可能来自不同托管系统，编码不统一；这里按常见编码依次尝试，
+     * 只有明确是编码失败时才继续回退，避免吞掉真实的文件结构错误。
+     */
     private List<List<Object>> readRows(Path csvPath) throws Exception {
         Exception lastException = null;
         for (Charset charset : CANDIDATE_CHARSETS) {
@@ -153,6 +184,9 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return java.util.Arrays.asList();
     }
 
+    /**
+     * 空文件仍返回完整 ParsedValuationData 壳，保证上游解析任务可以拿到稳定的结果结构。
+     */
     private ParsedValuationData emptyResult(Path csvPath) {
         return ParsedValuationData.builder()
                 .workbookPath(csvPath.toAbsolutePath().toString())
@@ -167,14 +201,17 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 .build();
     }
 
-    private int findHeaderRow(List<List<Object>> rows, List<String> requiredHeaders, Pattern subjectCodePattern) {
+    /**
+     * 表头识别先用必选字段做快速过滤，再执行模板中的 header 表达式；
+     * 两层判断可以避免把标题行、基础信息行误识别为业务表头。
+     */
+    private int findHeaderRow(List<List<Object>> rows, String headerExpr, List<String> requiredHeaders, String subjectCodePattern) {
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
             List<Object> rowValues = rows.get(rowIndex);
-            if (!CollectionUtils.isEmpty(requiredHeaders) && !ParseRuleSupport.rowContainsAll(rowValues, requiredHeaders)) {
+            if (!CollectionUtils.isEmpty(requiredHeaders) && !rowContainsAll(rowValues, requiredHeaders)) {
                 continue;
             }
-            List<String> texts = toRowTexts(rowValues);
-            if (texts.containsAll(requiredHeaders)) {
+            if (parseRuleEngine.matchesHeaderRow(rowValues, requiredHeaders, headerExpr)) {
                 return rowIndex;
             }
         }
@@ -190,17 +227,28 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return -1;
     }
 
-    private int findDataStartRow(List<List<Object>> rows, int headerRowIndex, Pattern subjectCodePattern) {
+    /**
+     * 数据起始行优先选择第一条科目数据行；如果部分估值表没有显式科目编码，
+     * 则保留第一条指标候选行作为兜底起点，保证指标型表格仍可进入后续拆分。
+     */
+    private int findDataStartRow(List<List<Object>> rows,
+                                 int headerRowIndex,
+                                 ParseRuleStepDescriptor dataStartRule,
+                                 String subjectCodePattern) {
+        String dataStartExpr = dataStartRule == null || dataStartRule.getExpression() == null || dataStartRule.getExpression().trim().isEmpty()
+                ? ParseRuleExpressions.DATA_START_EXPR
+                : dataStartRule.getExpression();
         int firstMetricCandidate = -1;
         for (int rowIndex = headerRowIndex + 1; rowIndex < rows.size(); rowIndex++) {
             List<Object> rowValues = rows.get(rowIndex);
             if (isFooterRow(rowValues)) {
                 break;
             }
-            if (ExcelParsingSupport.isSubjectDataRow(rowValues, subjectCodePattern)) {
+            boolean dataStartMatched = matchesDataStartRow(rowValues, rowIndex, dataStartRule, dataStartExpr, subjectCodePattern);
+            if (dataStartMatched && parseRuleEngine.matchesSubjectDataRow(rowValues, subjectCodePattern)) {
                 return rowIndex;
             }
-            if (firstMetricCandidate < 0 && isMetricCandidate(rowValues, subjectCodePattern)) {
+            if (firstMetricCandidate < 0 && dataStartMatched && isMetricCandidate(rowValues, subjectCodePattern)) {
                 firstMetricCandidate = rowIndex;
             }
         }
@@ -210,6 +258,39 @@ public class CsvValuationDataParser implements ValuationDataParser {
         throw new IllegalArgumentException("在表头下方未找到科目数据。");
     }
 
+    /**
+     * 执行数据起始行表达式。模板配置为 FAIL_FAST 时直接暴露脚本错误；
+     * 其他策略下回退到内置默认规则，优先保证历史模板兼容。
+     */
+    private boolean matchesDataStartRow(List<Object> rowValues,
+                                        int rowIndex,
+                                        ParseRuleStepDescriptor rule,
+                                        String expression,
+                                        String subjectCodePattern) {
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("row", rowValues);
+        context.put("rowIndex", rowIndex);
+        context.put("subjectCodePattern", subjectCodePattern);
+        try {
+            return parseRuleEngine.evaluateBoolean(expression, context);
+        } catch (Exception exception) {
+            if (isFailFast(rule)) {
+                throw exception;
+            }
+            log.warn("CSV 数据起始行规则执行失败，profileCode={}, version={}, ruleType={}, rowIndex={}, errorPolicy={}，回退默认逻辑",
+                    profileCode(rule),
+                    version(rule),
+                    ruleTypeName(rule, ParseRuleType.DATA_START),
+                    rowIndex,
+                    errorPolicy(rule),
+                    exception);
+            return parseRuleEngine.matchesDataStartRow(rowValues, ParseRuleExpressions.DATA_START_EXPR);
+        }
+    }
+
+    /**
+     * 取表头行到数据起始行之间的所有非空行，作为多级表头的原始区域。
+     */
     private List<List<String>> extractHeaderBlock(List<List<Object>> rows, int headerRowIndex, int dataStartRowIndex) {
         List<List<String>> headerBlockRows = new ArrayList<>();
         for (int rowIndex = headerRowIndex; rowIndex < dataStartRowIndex; rowIndex++) {
@@ -222,6 +303,9 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return headerBlockRows;
     }
 
+    /**
+     * 将多行表头压平成列路径，例如“持仓|市值”，同时保留 pathSegments 供前端和后续标准化使用。
+     */
     private HeaderLayout buildHeaderLayout(List<List<String>> headerBlockRows) {
         if (headerBlockRows.isEmpty()) {
             return new HeaderLayout(java.util.Arrays.asList(), java.util.Arrays.asList(), java.util.Arrays.asList());
@@ -255,6 +339,9 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return new HeaderLayout(headers, headerDetails, headerColumns);
     }
 
+    /**
+     * 建立表头路径到列下标的首个命中映射；同名列保留第一次出现的位置，避免后续取值漂移。
+     */
     private Map<String, Integer> buildHeaderIndex(List<String> headers) {
         Map<String, Integer> headerIndex = new LinkedHashMap<>();
         for (int index = 0; index < headers.size(); index++) {
@@ -266,6 +353,9 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return headerIndex;
     }
 
+    /**
+     * CSV 没有真实合并单元格信息，空表头格继承左侧最近的非空文本，模拟 Excel 横向合并表头。
+     */
     private List<String> fillMergedHeaderRow(List<String> rowTexts) {
         List<String> normalized = new ArrayList<>(rowTexts.size());
         String carry = "";
@@ -284,6 +374,34 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return rowTexts == null || rowTexts.stream().allMatch(String::isEmpty);
     }
 
+    private boolean rowContainsAll(List<Object> rowValues, List<String> keywords) {
+        if (CollectionUtils.isEmpty(rowValues) || CollectionUtils.isEmpty(keywords)) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            if (keyword == null || keyword.trim().isEmpty()) {
+                continue;
+            }
+            boolean matched = false;
+            for (Object value : rowValues) {
+                String text = ExcelParsingSupport.normalizeText(value);
+                String normalizedKeyword = keyword.trim();
+                if (text.equals(normalizedKeyword) || text.contains(normalizedKeyword) || normalizedKeyword.contains(text)) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 表头上方通常包含报表标题、产品代码、估值日期等信息；
+     * 单独成行且没有冒号的最长文本作为标题，键值对行写入 basicInfo。
+     */
     private TitleAndInfo extractTitleAndBasicInfo(List<List<Object>> rows, int headerRowIndex) {
         Map<String, String> basicInfo = new LinkedHashMap<>();
         List<String> titleCandidates = new ArrayList<>();
@@ -322,12 +440,21 @@ public class CsvValuationDataParser implements ValuationDataParser {
         return new TitleAndInfo(title, basicInfo);
     }
 
+    /**
+     * 从数据起始行开始逐行分类：科目行进入 SubjectRecord，指标行进入 MetricRecord，
+     * 遇到页脚关键字立即停止，最后统一补充科目父子层级。
+     */
     private SplitResult splitSubjectsAndMetrics(
             List<List<Object>> rows,
             int dataStartRowIndex,
             List<String> headers,
             Map<String, Integer> headerIndex,
-            Pattern subjectCodePattern
+            List<HeaderColumnMeta> headerColumns,
+            Map<String, String> basicInfo,
+            String rowClassifyExpr,
+            String subjectCodePattern,
+            ParseRuleStepDescriptor subjectExtractRule,
+            ParseRuleStepDescriptor metricExtractRule
     ) {
         List<SubjectRecord> subjects = new ArrayList<>();
         List<MetricRecord> metrics = new ArrayList<>();
@@ -339,37 +466,67 @@ public class CsvValuationDataParser implements ValuationDataParser {
             if (isFooterRow(rowValues)) {
                 break;
             }
-            if (ExcelParsingSupport.isSubjectDataRow(rowValues, subjectCodePattern)) {
-                subjects.add(extractSubjectRecord(rowIndex, rowValues, headers, headerIndex));
+            String rowType = parseRuleEngine.classifyRow(rowValues, FOOTER_KEYWORDS, subjectCodePattern, rowClassifyExpr);
+            if ("FOOTER".equalsIgnoreCase(rowType)) {
+                break;
+            }
+            if ("SUBJECT".equalsIgnoreCase(rowType)) {
+                SubjectRecord subjectRecord = extractSubjectRecord(rowIndex, rowValues, headers, headerIndex, headerColumns, basicInfo, subjectCodePattern, subjectExtractRule);
+                if (subjectRecord != null) {
+                    subjects.add(subjectRecord);
+                }
                 continue;
             }
-            if (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern) || ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern)) {
-                metrics.add(extractMetricRecord(rowIndex, rowValues, headers, headerIndex, subjectCodePattern));
+            if ("METRIC_DATA".equalsIgnoreCase(rowType)
+                    || "METRIC_ROW".equalsIgnoreCase(rowType)) {
+                MetricRecord metricRecord = extractMetricRecord(rowIndex, rowValues, headers, headerIndex, headerColumns, basicInfo, subjectCodePattern, metricExtractRule);
+                if (metricRecord != null) {
+                    metrics.add(metricRecord);
+                }
             }
         }
         SubjectHierarchySupport.enrichSubjectHierarchy(subjects);
         return new SplitResult(subjects, metrics);
     }
 
-    private List<String> resolveRequiredHeaders(String fileScene, String fileTypeName) {
-        if (parseRuleTemplateResolver == null) {
-            return java.util.Arrays.asList("科目代码", "科目名称");
-        }
-        List<String> requiredHeaders = parseRuleTemplateResolver.resolveRequiredHeaders(fileScene, fileTypeName);
-        return requiredHeaders == null || requiredHeaders.isEmpty()
-                ? java.util.Arrays.asList("科目代码", "科目名称")
-                : requiredHeaders;
-    }
-
-    private Pattern resolveSubjectCodePattern(String fileScene, String fileTypeName) {
-        if (parseRuleTemplateResolver == null) {
-            return Pattern.compile("^\\d{4}[A-Za-z0-9]*$");
-        }
-        Pattern pattern = parseRuleTemplateResolver.resolveSubjectCodePattern(fileScene, fileTypeName);
-        return pattern == null ? Pattern.compile("^\\d{4}[A-Za-z0-9]*$") : pattern;
-    }
-
+    /**
+     * 科目抽取先构造内置默认结果，再用模板脚本返回值覆盖；
+     * 返回 null 表示当前行按策略跳过，空 Map 表示沿用默认抽取。
+     */
     private SubjectRecord extractSubjectRecord(
+            int rowIndex,
+            List<Object> rowValues,
+            List<String> headers,
+            Map<String, Integer> headerIndex,
+            List<HeaderColumnMeta> headerColumns,
+            Map<String, String> basicInfo,
+            String subjectCodePattern,
+            ParseRuleStepDescriptor subjectExtractRule
+    ) {
+        SubjectRecord defaultRecord = buildDefaultSubjectRecord(rowIndex, rowValues, headers, headerIndex);
+        Map<String, Object> overrideValues = evaluateExtractRule(
+                subjectExtractRule,
+                ParseRuleType.SUBJECT_EXTRACT,
+                rowIndex,
+                rowValues,
+                headers,
+                headerIndex,
+                headerColumns,
+                basicInfo,
+                subjectCodePattern);
+        if (overrideValues == null) {
+            return null;
+        }
+        if (overrideValues.isEmpty()) {
+            return defaultRecord;
+        }
+        return mergeSubjectRecord(defaultRecord, overrideValues);
+    }
+
+    /**
+     * 默认科目抽取依赖“科目代码/科目名称”列，并根据科目代码推导层级路径。
+     */
+    private SubjectRecord buildDefaultSubjectRecord(
             int rowIndex,
             List<Object> rowValues,
             List<String> headers,
@@ -395,15 +552,53 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 .build();
     }
 
+    /**
+     * 指标抽取与科目抽取策略一致：默认识别一行指标，再允许模板脚本覆盖指标名称、类型和值。
+     */
     private MetricRecord extractMetricRecord(
             int rowIndex,
             List<Object> rowValues,
             List<String> headers,
             Map<String, Integer> headerIndex,
-            Pattern subjectCodePattern
+            List<HeaderColumnMeta> headerColumns,
+            Map<String, String> basicInfo,
+            String subjectCodePattern,
+            ParseRuleStepDescriptor metricExtractRule
+    ) {
+        MetricRecord defaultRecord = buildDefaultMetricRecord(rowIndex, rowValues, headers, headerIndex, subjectCodePattern);
+        Map<String, Object> overrideValues = evaluateExtractRule(
+                metricExtractRule,
+                ParseRuleType.METRIC_EXTRACT,
+                rowIndex,
+                rowValues,
+                headers,
+                headerIndex,
+                headerColumns,
+                basicInfo,
+                subjectCodePattern);
+        if (overrideValues == null) {
+            return null;
+        }
+        if (overrideValues.isEmpty()) {
+            return defaultRecord;
+        }
+        return mergeMetricRecord(defaultRecord, overrideValues);
+    }
+
+    /**
+     * 默认指标抽取兼容两类形态：
+     * 1. “指标名 + 指标值”的横向键值行；
+     * 2. 带完整业务表头的明细指标行。
+     */
+    private MetricRecord buildDefaultMetricRecord(
+            int rowIndex,
+            List<Object> rowValues,
+            List<String> headers,
+            Map<String, Integer> headerIndex,
+            String subjectCodePattern
     ) {
         String metricName = normalizeMetricLabel(rowValues);
-        if (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern)) {
+        if (parseRuleEngine.matchesMetricDataRow(rowValues, subjectCodePattern)) {
             int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
             Object rawValue = findFirstValueAfterLabel(rowValues, labelIndex);
             return MetricRecord.builder()
@@ -439,6 +634,109 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 .metricType("metric_row")
                 .value(value == null ? "" : String.valueOf(value))
                 .rawValues(rawValues)
+                .build();
+    }
+
+    /**
+     * 执行科目/指标抽取脚本，并统一处理错误策略：
+     * FAIL_FAST 抛错，SKIP_ROW 返回 null，其他策略回退默认抽取。
+     */
+    private Map<String, Object> evaluateExtractRule(ParseRuleStepDescriptor rule,
+                                                    ParseRuleType ruleType,
+                                                    int rowIndex,
+                                                    List<Object> rowValues,
+                                                    List<String> headers,
+                                                    Map<String, Integer> headerIndex,
+                                                    List<HeaderColumnMeta> headerColumns,
+                                                    Map<String, String> basicInfo,
+                                                    String subjectCodePattern) {
+        if (rule == null || rule.getExpression() == null || rule.getExpression().trim().isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        Map<String, Object> context = buildExtractRuleContext(rowIndex, rowValues, headers, headerIndex, headerColumns, basicInfo, subjectCodePattern);
+        try {
+            return parseRuleEngine.evaluateMap(rule.getExpression(), context);
+        } catch (Exception exception) {
+            if (isFailFast(rule)) {
+                throw exception;
+            }
+            log.warn("CSV 解析抽取规则执行失败，profileCode={}, version={}, ruleType={}, rowIndex={}, errorPolicy={}",
+                    profileCode(rule),
+                    version(rule),
+                    ruleTypeName(rule, ruleType),
+                    rowIndex,
+                    errorPolicy(rule),
+                    exception);
+            return isSkipRow(rule) ? null : java.util.Collections.emptyMap();
+        }
+    }
+
+    /**
+     * 暴露给 QLExpress 的上下文变量，脚本可通过 row/headerIndex/basicInfo 等对象读取原始行和表头信息。
+     */
+    private Map<String, Object> buildExtractRuleContext(int rowIndex,
+                                                        List<Object> rowValues,
+                                                        List<String> headers,
+                                                        Map<String, Integer> headerIndex,
+                                                        List<HeaderColumnMeta> headerColumns,
+                                                        Map<String, String> basicInfo,
+                                                        String subjectCodePattern) {
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("row", rowValues);
+        context.put("rowIndex", rowIndex);
+        context.put("headers", headers);
+        context.put("headerIndex", headerIndex);
+        context.put("headerColumns", headerColumns);
+        context.put("basicInfo", basicInfo == null ? java.util.Collections.emptyMap() : basicInfo);
+        context.put("subjectCodePattern", subjectCodePattern);
+        return context;
+    }
+
+    /**
+     * 将脚本抽取结果合并到默认科目记录，未返回的字段继续沿用默认值。
+     */
+    @SuppressWarnings("unchecked")
+    private SubjectRecord mergeSubjectRecord(SubjectRecord defaults, Map<String, Object> values) {
+        String subjectCode = firstString(values.get("subjectCode"), defaults.getSubjectCode());
+        String subjectName = firstString(values.get("subjectName"), defaults.getSubjectName());
+        List<String> pathCodes = asStringList(values.get("pathCodes"), defaults.getPathCodes());
+        List<String> segments = SubjectHierarchySupport.splitSubjectCode(subjectCode);
+        if (pathCodes == null || pathCodes.isEmpty()) {
+            pathCodes = SubjectHierarchySupport.buildSubjectPathCodes(subjectCode, segments);
+        }
+        Object rawValues = values.containsKey("rawValues") ? values.get("rawValues") : defaults.getRawValues();
+        return SubjectRecord.builder()
+                .sheetName(defaults.getSheetName())
+                .rowDataNumber(defaults.getRowDataNumber())
+                .subjectCode(subjectCode)
+                .subjectName(subjectName)
+                .level(firstInteger(values.get("level"), pathCodes.size()))
+                .parentCode(firstString(values.get("parentCode"), defaults.getParentCode()))
+                .rootCode(firstString(values.get("rootCode"), pathCodes.isEmpty() ? subjectCode : pathCodes.get(0)))
+                .segmentCount(firstInteger(values.get("segmentCount"), segments.size()))
+                .pathCodes(pathCodes)
+                .rawValues(rawValues instanceof List<?> ? new ArrayList<Object>((List<Object>) rawValues) : defaults.getRawValues())
+                .leaf(firstBoolean(values.get("leaf"), defaults.getLeaf()))
+                .build();
+    }
+
+    /**
+     * 将脚本抽取结果合并到默认指标记录，rawValues 只有在脚本返回 Map 时才整体替换。
+     */
+    @SuppressWarnings("unchecked")
+    private MetricRecord mergeMetricRecord(MetricRecord defaults, Map<String, Object> values) {
+        Object rawValues = values.containsKey("rawValues") ? values.get("rawValues") : defaults.getRawValues();
+        Map<String, Object> normalizedRawValues = defaults.getRawValues();
+        if (rawValues instanceof Map<?, ?>) {
+            normalizedRawValues = new LinkedHashMap<>((Map<String, Object>) rawValues);
+        }
+        return MetricRecord.builder()
+                .sheetName(defaults.getSheetName())
+                .rowDataNumber(defaults.getRowDataNumber())
+                .metricName(firstString(values.get("metricName"), defaults.getMetricName()))
+                .metricType(firstString(values.get("metricType"), defaults.getMetricType()))
+                .value(firstString(values.get("value"), defaults.getValue()))
+                .rawValues(normalizedRawValues)
                 .build();
     }
 
@@ -495,23 +793,13 @@ public class CsvValuationDataParser implements ValuationDataParser {
                 || header.contains("|" + headerName + "|");
     }
 
-    private boolean isMetricCandidate(List<Object> rowValues, Pattern subjectCodePattern) {
-        return (ExcelParsingSupport.isMetricDataRow(rowValues, subjectCodePattern) || ExcelParsingSupport.isMetricRow(rowValues, subjectCodePattern))
+    private boolean isMetricCandidate(List<Object> rowValues, String subjectCodePattern) {
+        return (parseRuleEngine.matchesMetricDataRow(rowValues, subjectCodePattern) || parseRuleEngine.matchesMetricRow(rowValues, subjectCodePattern))
                 && !isFooterRow(rowValues);
     }
 
     private boolean isFooterRow(List<Object> rowValues) {
-        int labelIndex = ExcelParsingSupport.findFirstMeaningfulCellIndex(rowValues);
-        if (labelIndex < 0) {
-            return false;
-        }
-        String labelText = ExcelParsingSupport.textAt(rowValues, labelIndex);
-        for (String keyword : FOOTER_KEYWORDS) {
-            if (labelText.contains(keyword)) {
-                return true;
-            }
-        }
-        return false;
+        return parseRuleEngine.matchesFooterRow(rowValues, FOOTER_KEYWORDS);
     }
 
     private String findNextMeaningfulText(List<String> rowTexts, int startIndex) {
@@ -610,6 +898,82 @@ public class CsvValuationDataParser implements ValuationDataParser {
             return null;
         }
         return config.getSourceType().name();
+    }
+
+    private boolean isFailFast(ParseRuleStepDescriptor rule) {
+        return ERROR_POLICY_FAIL_FAST.equalsIgnoreCase(errorPolicy(rule));
+    }
+
+    private boolean isSkipRow(ParseRuleStepDescriptor rule) {
+        return ERROR_POLICY_SKIP_ROW.equalsIgnoreCase(errorPolicy(rule));
+    }
+
+    private String errorPolicy(ParseRuleStepDescriptor rule) {
+        String policy = rule == null ? null : rule.getErrorPolicy();
+        return policy == null || policy.trim().isEmpty() ? "FALLBACK_DEFAULT" : policy.trim();
+    }
+
+    private String profileCode(ParseRuleStepDescriptor rule) {
+        return rule == null ? null : rule.getProfileCode();
+    }
+
+    private String version(ParseRuleStepDescriptor rule) {
+        return rule == null ? null : rule.getVersion();
+    }
+
+    private String ruleTypeName(ParseRuleStepDescriptor rule, ParseRuleType defaultType) {
+        ParseRuleType ruleType = rule == null ? null : rule.getRuleType();
+        return ruleType == null ? defaultType.name() : ruleType.name();
+    }
+
+    private String firstString(Object value, String defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        String text = String.valueOf(value);
+        return text.trim().isEmpty() ? defaultValue : text;
+    }
+
+    private Integer firstInteger(Object value, Integer defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return defaultValue;
+        }
+    }
+
+    private Boolean firstBoolean(Object value, Boolean defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        }
+        return Boolean.valueOf(String.valueOf(value));
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> asStringList(Object value, List<String> defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (value instanceof List<?>) {
+            List<?> source = (List<?>) value;
+            List<String> result = new ArrayList<>(source.size());
+            for (Object item : source) {
+                if (item != null) {
+                    result.add(String.valueOf(item));
+                }
+            }
+            return result;
+        }
+        return java.util.Arrays.asList(String.valueOf(value));
     }
 
     @Value

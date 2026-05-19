@@ -1,6 +1,5 @@
 package com.yss.valset.transfer.domain.rule;
 
-import com.alibaba.qlexpress4.annotation.QLFunction;
 import com.yss.valset.common.support.SpreadsheetXmlSupport;
 import com.yss.valset.domain.exception.FileAccessException;
 
@@ -46,7 +45,9 @@ import java.util.Locale;
 import java.util.ArrayList;
 
 /**
- * 脚本规则可用的基础函数。
+ * 传输规则运行前后的 Java 基础设施工具。
+ *
+ * <p>QLExpress4 脚本公开函数由 T_QLEXPRESS_FUNCTION.SCRIPT_BODY 提供，本类不再作为脚本门面注入。</p>
  */
 public class TransferRuleFunctions {
 
@@ -57,7 +58,6 @@ public class TransferRuleFunctions {
     };
     private static final int DEFAULT_HEADER_SCAN_LIMIT = 100;
 
-    @QLFunction({"containsIgnoreCase"})
     public boolean containsIgnoreCase(Object source, Object keyword) {
         String sourceText = normalizeKeyword(source);
         String keywordText = normalizeKeyword(keyword);
@@ -70,12 +70,10 @@ public class TransferRuleFunctions {
     /**
      * 判断文本是否有实际内容，供 QLExpress 直接调用。
      */
-    @QLFunction({"hasText"})
     public boolean hasText(Object value) {
         return value != null && StringUtils.hasText(String.valueOf(value));
     }
 
-    @QLFunction({"matchesRegex"})
     public boolean matchesRegex(String source, Object regex) {
         if (source == null || regex == null) {
             return false;
@@ -89,9 +87,97 @@ public class TransferRuleFunctions {
     }
 
     /**
+     * 从产品识别规则列表中取首条命中文件名的规则。
+     */
+    public Object firstProductMatchRule(Object fileName, Object productMatchRules) {
+        String sourceText = normalizeKeyword(fileName);
+        if (sourceText.trim().isEmpty() || productMatchRules == null) {
+            return null;
+        }
+        if (productMatchRules instanceof Collection<?>) {
+            for (Object rule : (Collection<?>) productMatchRules) {
+                if (matchesProductRule(sourceText, rule)) {
+                    return rule;
+                }
+            }
+            return null;
+        }
+        if (productMatchRules.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(productMatchRules);
+            for (int index = 0; index < length; index++) {
+                Object rule = java.lang.reflect.Array.get(productMatchRules, index);
+                if (matchesProductRule(sourceText, rule)) {
+                    return rule;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 读取产品识别规则字段，供 QLExpress 脚本按需组合判断。
+     */
+    public Object productRuleValue(Object rule, Object fieldName) {
+        if (rule == null || fieldName == null) {
+            return null;
+        }
+        String field = normalizeProductRuleField(String.valueOf(fieldName));
+        if (field.trim().isEmpty()) {
+            return null;
+        }
+        if (rule instanceof Map<?, ?>) {
+            Map<?, ?> map = (Map<?, ?>) rule;
+            Object value = map.get(field);
+            if (value == null) {
+                value = map.get(toSnakeCase(field));
+            }
+            return value;
+        }
+        try {
+            String getterName = "get" + Character.toUpperCase(field.charAt(0)) + field.substring(1);
+            return rule.getClass().getMethod(getterName).invoke(rule);
+        } catch (Exception ignore) {
+            try {
+                return rule.getClass().getMethod(field).invoke(rule);
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * 将命中的产品识别规则转换为脚本结果型标签的返回值。
+     */
+    public Map<String, Object> productMatchResult(Object rule, Object fileName) {
+        if (rule == null) {
+            return null;
+        }
+        Map<String, Object> snapshot = new java.util.LinkedHashMap<>();
+        snapshot.put("ruleId", stringProductRuleValue(rule, "id"));
+        snapshot.put("pdCd", stringProductRuleValue(rule, "pdCd"));
+        snapshot.put("pdNm", stringProductRuleValue(rule, "pdNm"));
+        snapshot.put("orgCd", stringProductRuleValue(rule, "orgCd"));
+        snapshot.put("orgNm", stringProductRuleValue(rule, "orgNm"));
+        snapshot.put("pdType", stringProductRuleValue(rule, "pdType"));
+        snapshot.put("fileType", stringProductRuleValue(rule, "fileType"));
+        snapshot.put("fileTypeName", stringProductRuleValue(rule, "fileTypeName"));
+        snapshot.put("matchRules", stringProductRuleValue(rule, "matchRules"));
+        snapshot.put("jobName", stringProductRuleValue(rule, "jobName"));
+        snapshot.put("jobScene", stringProductRuleValue(rule, "jobScene"));
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("matched", Boolean.TRUE);
+        result.put("message", "产品匹配规则命中");
+        result.put("tagValue", snapshot.get("ruleId"));
+        result.put("matchedField", "fileName");
+        result.put("matchedValue", fileName == null ? null : String.valueOf(fileName));
+        result.put("snapshot", snapshot);
+        return result;
+    }
+
+    /**
      * 判断文本是否命中任意一个正则表达式。
      */
-    @QLFunction({"matchesAnyRegex"})
     public boolean matchesAnyRegex(Object source, Object regexList) {
         String sourceText = normalizeKeyword(source);
         if (sourceText.trim().isEmpty() || regexList == null) {
@@ -126,27 +212,96 @@ public class TransferRuleFunctions {
         return false;
     }
 
-    @QLFunction({"isExcel"})
+    private boolean matchesProductRule(String sourceText, Object rule) {
+        Object regex = productRuleValue(rule, "matchRules");
+        if (regex == null) {
+            return false;
+        }
+        try {
+            return matchesRegex(sourceText, regex);
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    private String stringProductRuleValue(Object rule, String fieldName) {
+        Object value = productRuleValue(rule, fieldName);
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private String normalizeProductRuleField(String fieldName) {
+        String field = normalizeKeyword(fieldName);
+        if (field.trim().isEmpty()) {
+            return "";
+        }
+        String lower = field.toLowerCase(Locale.ROOT);
+        if ("ruleid".equals(lower) || "rule_id".equals(lower)) {
+            return "id";
+        }
+        if ("pd_cd".equals(lower) || "productcode".equals(lower) || "product_code".equals(lower)) {
+            return "pdCd";
+        }
+        if ("pd_nm".equals(lower) || "productname".equals(lower) || "product_name".equals(lower)) {
+            return "pdNm";
+        }
+        if ("org_cd".equals(lower)) {
+            return "orgCd";
+        }
+        if ("org_nm".equals(lower) || "orgname".equals(lower) || "org_name".equals(lower)) {
+            return "orgNm";
+        }
+        if ("pd_type".equals(lower) || "producttype".equals(lower) || "product_type".equals(lower)) {
+            return "pdType";
+        }
+        if ("file_type_name".equals(lower)) {
+            return "fileTypeName";
+        }
+        if ("file_type".equals(lower)) {
+            return "fileType";
+        }
+        if ("match_rules".equals(lower) || "matchrule".equals(lower) || "match_rule".equals(lower)) {
+            return "matchRules";
+        }
+        if ("job_name".equals(lower)) {
+            return "jobName";
+        }
+        if ("job_scene".equals(lower)) {
+            return "jobScene";
+        }
+        return field;
+    }
+
+    private String toSnakeCase(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return value;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < value.length(); index++) {
+            char ch = value.charAt(index);
+            if (Character.isUpperCase(ch) && index > 0) {
+                builder.append('_');
+            }
+            builder.append(Character.toLowerCase(ch));
+        }
+        return builder.toString();
+    }
+
     public boolean isExcel(Object fileName) {
         return hasExtension(fileName, ".xlsx", ".xls");
     }
 
-    @QLFunction({"isExcelFile"})
     public boolean isExcelFile(Object fileName) {
         return isExcel(fileName);
     }
 
-    @QLFunction({"isCsv"})
     public boolean isCsv(Object fileName) {
         return hasExtension(fileName, ".csv");
     }
 
-    @QLFunction({"isCsvFile"})
     public boolean isCsvFile(Object fileName) {
         return isCsv(fileName);
     }
 
-    @QLFunction({"readExcelData"})
     public List<List<String>> readExcelData(Object source) {
         Path filePath = resolvePath(source);
         validateReadableFile(filePath);
@@ -157,7 +312,6 @@ public class TransferRuleFunctions {
         }
     }
 
-    @QLFunction({"readCsvData"})
     public List<List<String>> readCsvData(Object source) {
         Path filePath = resolvePath(source);
         validateReadableFile(filePath);
@@ -181,7 +335,6 @@ public class TransferRuleFunctions {
     /**
      * 只读取 Excel 前 N 行，适合大文件的表头预检。
      */
-    @QLFunction({"readExcelDataWithin"})
     public List<List<String>> readExcelDataWithin(Object source, Integer maxRows) {
         Path filePath = resolvePath(source);
         validateReadableFile(filePath);
@@ -195,7 +348,6 @@ public class TransferRuleFunctions {
     /**
      * 只读取 CSV 前 N 行，适合大文件的表头预检。
      */
-    @QLFunction({"readCsvDataWithin"})
     public List<List<String>> readCsvDataWithin(Object source, Integer maxRows) {
         Path filePath = resolvePath(source);
         validateReadableFile(filePath);
@@ -220,7 +372,6 @@ public class TransferRuleFunctions {
     /**
      * 在前 N 行中查找同时包含两个关键字的行号。
      */
-    @QLFunction({"findHeaderRowIndexWithin"})
     public int findHeaderRowIndexWithin(Object source, Integer maxRows, String keyword1, String keyword2) {
         List<List<String>> rows = readPreviewRows(source, maxRows);
         return findHeaderRowIndex(rows, keyword1, keyword2);
@@ -229,7 +380,6 @@ public class TransferRuleFunctions {
     /**
      * 在前 N 行中判断是否存在同时包含两个关键字的表头行。
      */
-    @QLFunction({"hasHeaderKeywordsWithinFirstRows"})
     public boolean hasHeaderKeywordsWithinFirstRows(Object source, Integer maxRows, String keyword1, String keyword2) {
         return findHeaderRowIndexWithin(source, maxRows, keyword1, keyword2) >= 0;
     }
@@ -237,7 +387,6 @@ public class TransferRuleFunctions {
     /**
      * 在前 N 行中判断是否存在同时包含多个关键字的表头行。
      */
-    @QLFunction({"hasHeaderKeywordsWithinFirstRowsByList"})
     public boolean hasHeaderKeywordsWithinFirstRowsByList(Object source, Integer maxRows, Collection<?> keywords) {
         return findHeaderRowIndexWithin(source, maxRows, keywords) >= 0;
     }
@@ -245,7 +394,6 @@ public class TransferRuleFunctions {
     /**
      * 识别估值表：在前 N 行内同时找到“科目代码”和“科目名称”即可认为是估值表。
      */
-    @QLFunction({"isValuationTable"})
     public boolean isValuationTable(Object source, Integer maxRows) {
         return hasHeaderKeywordsWithinFirstRows(source, maxRows, "科目代码", "科目名称");
     }
@@ -253,7 +401,6 @@ public class TransferRuleFunctions {
     /**
      * 按关键词集合识别估值表。
      */
-    @QLFunction({"isValuationTableByKeywords"})
     public boolean isValuationTableByKeywords(Object source, Integer maxRows, Collection<?> keywords) {
         return hasHeaderKeywordsWithinFirstRowsByList(source, maxRows, keywords);
     }
@@ -261,7 +408,6 @@ public class TransferRuleFunctions {
     /**
      * 按标签扩展配置识别估值表。
      */
-    @QLFunction({"isValuationTableByMeta"})
     public boolean isValuationTableByMeta(Object source, Object meta) {
         Integer scanLimit = normalizeScanLimit(extractScanLimit(meta));
         Collection<?> keywords = extractHeaderKeywords(meta);
@@ -399,7 +545,6 @@ public class TransferRuleFunctions {
     /**
      * 判断文本是否命中任意一个关键词，供 QLExpress 直接调用。
      */
-    @QLFunction({"containsAnyText"})
     public boolean containsAnyText(Object source, Object keywords) {
         return containsAny(source, keywords);
     }
@@ -407,7 +552,6 @@ public class TransferRuleFunctions {
     /**
      * 判断文本是否同时命中所有关键词，供 QLExpress 直接调用。
      */
-    @QLFunction({"containsAllText"})
     public boolean containsAllText(Object source, Object keywords) {
         return containsAll(source, keywords);
     }

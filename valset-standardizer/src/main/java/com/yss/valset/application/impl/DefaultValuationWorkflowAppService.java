@@ -35,6 +35,10 @@ import com.yss.valset.domain.model.WorkflowTask;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.TaskStage;
 import com.yss.valset.domain.model.TaskType;
+import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
+import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
+import com.yss.valset.transfer.domain.model.TransferObjectTag;
+import com.yss.valset.transfer.domain.model.TransferTagDefinition;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,8 +46,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Locale;
 
@@ -53,6 +59,12 @@ import java.util.Locale;
 @Slf4j
 @Service
 public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppService {
+
+    private static final String VALUATION_TAG_CODE = "VALUATION_TABLE";
+    private static final String VALUATION_TAG_NAME = "估值表";
+    private static final String VALUATION_UPLOAD_TAG_SOURCE = "valuation-workflow-upload";
+    private static final String LEGACY_FILE_INFO_GATEWAY_SOURCE = "file-info-gateway";
+    private static final String LEGACY_FILE_INFO_GATEWAY_MATCH_REASON = "文件主数据自动标记为估值表";
 
     private final UploadedFileStorageService uploadedFileStorageService;
     private final WorkflowTaskGateway taskGateway;
@@ -69,6 +81,8 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
     private final WorkflowCommonContextBuilder workflowCommonContextBuilder;
     private final WorkflowBusinessContextBuilder workflowBusinessContextBuilder;
     private final WorkflowContextEnvelopeBuilder workflowContextEnvelopeBuilder;
+    private final TransferTagGateway transferTagGateway;
+    private final TransferObjectTagGateway transferObjectTagGateway;
 
     public DefaultValuationWorkflowAppService(UploadedFileStorageService uploadedFileStorageService,
                                               WorkflowTaskGateway taskGateway,
@@ -84,7 +98,9 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                                               WorkflowExecutionContextResolver workflowExecutionContextResolver,
                                               WorkflowCommonContextBuilder workflowCommonContextBuilder,
                                               WorkflowBusinessContextBuilder workflowBusinessContextBuilder,
-                                              WorkflowContextEnvelopeBuilder workflowContextEnvelopeBuilder) {
+                                              WorkflowContextEnvelopeBuilder workflowContextEnvelopeBuilder,
+                                              TransferTagGateway transferTagGateway,
+                                              TransferObjectTagGateway transferObjectTagGateway) {
         this.uploadedFileStorageService = uploadedFileStorageService;
         this.taskGateway = taskGateway;
         this.taskQueryAppService = taskQueryAppService;
@@ -100,6 +116,8 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
         this.workflowCommonContextBuilder = workflowCommonContextBuilder;
         this.workflowBusinessContextBuilder = workflowBusinessContextBuilder;
         this.workflowContextEnvelopeBuilder = workflowContextEnvelopeBuilder;
+        this.transferTagGateway = transferTagGateway;
+        this.transferObjectTagGateway = transferObjectTagGateway;
     }
 
     @Override
@@ -523,6 +541,7 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 .storageMetaJson(buildStorageMetaJson(storedFile))
                 .build();
         subjectMatchFileInfoGateway.save(fileInfo);
+        ensureValuationUploadTag(fileInfo);
         subjectMatchFileIngestLogGateway.save(ValsetFileIngestLog.builder()
                 .fileId(fileInfo.getFileId())
                 .sourceChannel(ValsetFileSourceChannel.MANUAL_UPLOAD)
@@ -533,6 +552,61 @@ public class DefaultValuationWorkflowAppService implements ValuationWorkflowAppS
                 .createdBy(createdBy)
                 .build());
         return fileInfo;
+    }
+
+    private void ensureValuationUploadTag(ValsetFileInfo fileInfo) {
+        if (fileInfo == null || fileInfo.getFileId() == null) {
+            return;
+        }
+        String transferId = String.valueOf(fileInfo.getFileId());
+        List<TransferObjectTag> existingTags = transferObjectTagGateway.listByTransferId(transferId);
+        boolean exists = existingTags.stream().anyMatch(tag ->
+                tag != null
+                        && !isFileInfoGatewayGeneratedValuationTag(tag)
+                        && (matchesValuationKey(tag.tagCode()) || matchesValuationKey(tag.tagName()) || matchesValuationKey(tag.tagValue())));
+        if (exists) {
+            return;
+        }
+        TransferTagDefinition tagDefinition = transferTagGateway.findByTagCode(VALUATION_TAG_CODE).orElse(null);
+        if (tagDefinition == null) {
+            log.warn("估值上传文件未配置估值表标签定义，跳过显式打标，transferId={}，tagCode={}", transferId, VALUATION_TAG_CODE);
+            return;
+        }
+        TransferObjectTag valuationTag = new TransferObjectTag(
+                null,
+                transferId,
+                tagDefinition.tagId(),
+                tagDefinition.tagCode(),
+                tagDefinition.tagName(),
+                tagDefinition.tagValue(),
+                "VALUATION_WORKFLOW_UPLOAD",
+                "估值解析上传入口确认",
+                "uploadAndExtract",
+                tagDefinition.tagValue(),
+                java.util.Collections.singletonMap("source", VALUATION_UPLOAD_TAG_SOURCE),
+                Instant.now()
+        );
+        transferObjectTagGateway.saveAll(java.util.Collections.singletonList(valuationTag));
+    }
+
+    private boolean isFileInfoGatewayGeneratedValuationTag(TransferObjectTag tag) {
+        if (tag == null) {
+            return false;
+        }
+        if (LEGACY_FILE_INFO_GATEWAY_MATCH_REASON.equals(tag.matchReason())) {
+            return true;
+        }
+        Map<String, Object> snapshot = tag.matchSnapshot();
+        Object source = snapshot == null ? null : snapshot.get("source");
+        return source != null && LEGACY_FILE_INFO_GATEWAY_SOURCE.equalsIgnoreCase(String.valueOf(source));
+    }
+
+    private boolean matchesValuationKey(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return false;
+        }
+        String normalized = value.trim().toUpperCase(Locale.ROOT);
+        return VALUATION_TAG_CODE.equals(normalized) || VALUATION_TAG_NAME.equals(normalized);
     }
 
     private String resolveSourceUri(StoredFileDTO storedFile) {

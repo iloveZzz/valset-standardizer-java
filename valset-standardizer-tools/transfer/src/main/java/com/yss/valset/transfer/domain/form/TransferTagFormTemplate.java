@@ -14,14 +14,14 @@ import java.util.Map;
 @Component
 public class TransferTagFormTemplate extends FormTemplate {
 
-    private static final String DEFAULT_VALUATION_TABLE_SCRIPT = "String source = hasText(filePath) ? filePath : path;\n"
+    private static final String DEFAULT_VALUATION_TABLE_SCRIPT = "source = hasText(filePath) ? filePath : path;\n"
             + "if (!hasText(source)) {\n"
             + "    return false;\n"
             + "}\n"
             + "if (!(isExcelFile(source) || isCsvFile(source))) {\n"
             + "    return false;\n"
             + "}\n"
-            + "return isValuationTableByMeta(source, tagMeta);";
+            + "return isValuationTableByMeta(previewRows, tagMeta);";
 
     @Override
     public String getName() {
@@ -91,7 +91,7 @@ public class TransferTagFormTemplate extends FormTemplate {
                                 .options(
                                         YssFormilyDsl.option("qlexpress4", "QLExpress4")
                                 )
-                                .gridSpan(1),
+                                .gridSpan(2),
                         YssFormilyDsl.slot("scriptBody", "脚本内容", "scriptBody")
                                 .visibleExpr("{{ $values.matchStrategy === 'SCRIPT_RULE' || $values.matchStrategy === 'SCRIPT_AND_REGEX' || $values.matchStrategy === 'SCRIPT_OR_REGEX' }}")
                                 .placeholder("返回 true/false，或返回包含命中信息的对象")

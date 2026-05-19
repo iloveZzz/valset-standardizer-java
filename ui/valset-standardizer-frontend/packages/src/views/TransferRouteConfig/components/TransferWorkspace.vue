@@ -671,33 +671,6 @@ watch(
 
           <section class="route-detail-panel">
             <div class="route-detail-panel-header">
-              <h4>收取消息</h4>
-            </div>
-            <div
-              v-if="page.getSourceIngestMessages(page.selectedRow).length"
-              class="route-message-list"
-            >
-              <div
-                v-for="(item, index) in page.getSourceIngestMessages(
-                  page.selectedRow,
-                )"
-                :key="`${item.timeText}-${index}`"
-                class="route-message-item"
-              >
-                <div class="route-message-item__head">
-                  <strong>{{ item.title }}</strong>
-                  <span>{{ item.timeText }}</span>
-                </div>
-                <div class="route-message-item__content">
-                  {{ item.content }}
-                </div>
-              </div>
-            </div>
-            <a-empty v-else description="暂无收取消息" />
-          </section>
-
-          <section class="route-detail-panel">
-            <div class="route-detail-panel-header">
               <h4>目标信息</h4>
               <a-button
                 type="link"

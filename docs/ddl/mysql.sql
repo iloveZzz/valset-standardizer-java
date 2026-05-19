@@ -62,6 +62,18 @@ CREATE TABLE t_ods_valuation_sheet_style (
     created_at DATETIME
 );
 
+CREATE TABLE t_qlexpress_function (
+    function_id BIGINT PRIMARY KEY,
+    function_cn_name VARCHAR(256) NOT NULL,
+    function_name VARCHAR(128) NOT NULL,
+    remark VARCHAR(1024),
+    script_body TEXT NOT NULL,
+    enabled TINYINT(1) NOT NULL,
+    ext_info_json TEXT,
+    created_at DATETIME,
+    updated_at DATETIME
+);
+
 CREATE TABLE t_dwd_external_valuation (
     id BIGINT PRIMARY KEY,
     task_id BIGINT NOT NULL,
@@ -163,6 +175,8 @@ CREATE INDEX idx_ods_filedata_task_row ON t_ods_valuation_filedata(task_id, row_
 CREATE UNIQUE INDEX uk_ods_sheet_style_file_sheet_scope
     ON t_ods_valuation_sheet_style(file_id, sheet_name, style_scope);
 CREATE INDEX idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
+CREATE UNIQUE INDEX uk_qlexpress_function_name
+    ON t_qlexpress_function(function_name);
 
 CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 

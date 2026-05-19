@@ -217,7 +217,7 @@ public class ParseQueueObserverJob implements ParseQueueObservationUseCase {
                 failQueue(queueId, TaskFailureClassifier.resolveReadableMessage(exception));
             }
             Map<String, Object> failedAttributes = new LinkedHashMap<>(buildParseTaskAttributes(parseTaskCommand));
-            failedAttributes.put("errorMessage", exception.getMessage());
+            failedAttributes.put("errorMessage", TaskFailureClassifier.resolveReadableMessage(exception));
             log.warn("待解析事件处理失败，queueId={}, attributes={}", queueId, failedAttributes);
             return ProcessOutcome.FAILED;
         }

@@ -3,6 +3,7 @@ package com.yss.valset.task.infrastructure.query;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.cloud.dto.result.PageResult;
+import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStageSummaryDTO;
@@ -153,13 +154,42 @@ public class OutsourcedDataTaskBatchQueryRepository {
         row.setBatchName(resolveBatchName(row));
         row.setDurationText(formatDuration(row.getDurationMs(), row.getStatus()));
         row.setLastErrorCode(firstText(row.getLastErrorCode(), row.getStepStatus()));
-        row.setLastErrorMessage(firstText(row.getLastErrorMessage(), row.getTransferErrorMessage()));
+        row.setLastErrorMessage(resolveBatchErrorMessage(row));
         row.setSourceTypeName(resolveTaskTypeLabel(row.getSourceType()));
         row.setTaskStageName(stageLabel(row.getTaskStage()));
         row.setCurrentStageName(stageLabel(row.getCurrentStage()));
         row.setCurrentStepName(stageLabel(row.getCurrentStep()));
         row.setStatusName(stageCatalog.resolveStatusLabel(row.getStatus()));
         return row;
+    }
+
+    private String resolveBatchErrorMessage(OutsourcedDataTaskBatchDTO row) {
+        if (row == null || !isFailedStatus(row.getStatus())) {
+            return null;
+        }
+        String message = resolveBatchExecutionErrorMessage(row.getExecutionId());
+        return firstText(message, row.getLastErrorMessage(), row.getTransferErrorMessage());
+    }
+
+    private String resolveBatchExecutionErrorMessage(Long executionId) {
+        if (executionId == null || jobExplorer == null) {
+            return null;
+        }
+        JobExecution execution = jobExplorer.getJobExecution(executionId);
+        if (execution == null) {
+            return null;
+        }
+        List<Throwable> failures = execution.getAllFailureExceptions();
+        if (failures == null || failures.isEmpty()) {
+            return null;
+        }
+        for (Throwable failure : failures) {
+            String message = TaskFailureClassifier.resolveReadableMessage(failure);
+            if (StringUtils.hasText(message)) {
+                return message;
+            }
+        }
+        return null;
     }
 
     private OutsourcedDataTaskStageSummaryDTO enrichStageSummary(OutsourcedDataTaskStageSummaryDTO summary) {
@@ -656,14 +686,21 @@ public class OutsourcedDataTaskBatchQueryRepository {
         if (stepExecution == null) {
             return null;
         }
+        if (stepExecution.getFailureExceptions() != null && !stepExecution.getFailureExceptions().isEmpty()) {
+            Throwable throwable = stepExecution.getFailureExceptions().get(0);
+            String message = TaskFailureClassifier.resolveReadableMessage(throwable);
+            if (StringUtils.hasText(message)) {
+                return message;
+            }
+        }
         if (stepExecution.getExitStatus() != null && StringUtils.hasText(stepExecution.getExitStatus().getExitDescription())) {
             return stepExecution.getExitStatus().getExitDescription();
         }
-        if (stepExecution.getFailureExceptions() != null && !stepExecution.getFailureExceptions().isEmpty()) {
-            Throwable throwable = stepExecution.getFailureExceptions().get(0);
-            return throwable == null ? null : throwable.getMessage();
-        }
         return null;
+    }
+
+    private static boolean isFailedStatus(String status) {
+        return "FAILED".equalsIgnoreCase(status) || "STOPPED".equalsIgnoreCase(status);
     }
 
     private static LocalDateTime toLocalDateTime(java.util.Date date) {

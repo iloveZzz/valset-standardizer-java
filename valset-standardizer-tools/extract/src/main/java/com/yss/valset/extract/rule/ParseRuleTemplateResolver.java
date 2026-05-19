@@ -1,19 +1,13 @@
 package com.yss.valset.extract.rule;
 
-import com.yss.valset.extract.repository.entity.ParseRuleProfilePO;
+import com.yss.valset.domain.rule.ParseRuleType;
 
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * 解析模板运行时解析器。
  */
 public interface ParseRuleTemplateResolver {
-
-    /**
-     * 解析已发布模板。
-     */
-    ParseRuleProfilePO resolvePublishedProfile(String fileScene, String fileTypeName);
 
     /**
      * 解析表头规则表达式。
@@ -43,5 +37,10 @@ public interface ParseRuleTemplateResolver {
     /**
      * 解析科目代码正则表达式。
      */
-    Pattern resolveSubjectCodePattern(String fileScene, String fileTypeName);
+    String resolveSubjectCodePattern(String fileScene, String fileTypeName);
+
+    /**
+     * 解析启用的规则步骤。
+     */
+    ParseRuleStepDescriptor resolveRuleStep(String fileScene, String fileTypeName, ParseRuleType ruleType);
 }

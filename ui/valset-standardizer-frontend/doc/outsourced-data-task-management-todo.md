@@ -188,7 +188,7 @@
 - [x] 新增样式文件：`packages/src/views/OutsourcedDataTask/index.less`。
 - [x] 在路由中新增入口：`/outsourced-data-tasks`。
 - [x] 菜单名称：`估值表解析任务`。
-- [x] 新增只读 批量任务 页面：`packages/src/views/SpringBatchValuationTask`。
+- [x] 新增只读 批量任务 页面：`packages/src/views/BatchValuationTask`。
 - [x] 旧页面入口重定向到 批量任务 页面，历史步骤、日志和批次聚合不再单独展示。
 
 ### P0. 顶部统计区

@@ -1,6 +1,7 @@
 package com.yss.valset.task.infrastructure.gateway;
 
 import com.yss.cloud.dto.result.PageResult;
+import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
@@ -311,12 +312,15 @@ public class OutsourcedDataTaskGatewayImpl implements OutsourcedDataTaskGateway 
         if (stepExecution == null) {
             return null;
         }
-        if (stepExecution.getExitStatus() != null && StringUtils.hasText(stepExecution.getExitStatus().getExitDescription())) {
-            return stepExecution.getExitStatus().getExitDescription();
-        }
         if (stepExecution.getFailureExceptions() != null && !stepExecution.getFailureExceptions().isEmpty()) {
             Throwable throwable = stepExecution.getFailureExceptions().get(0);
-            return throwable == null ? null : throwable.getMessage();
+            String message = TaskFailureClassifier.resolveReadableMessage(throwable);
+            if (StringUtils.hasText(message)) {
+                return message;
+            }
+        }
+        if (stepExecution.getExitStatus() != null && StringUtils.hasText(stepExecution.getExitStatus().getExitDescription())) {
+            return stepExecution.getExitStatus().getExitDescription();
         }
         return null;
     }

@@ -166,12 +166,74 @@ export type OutsourcedDataTaskBatchCommand = {
   reason?: string;
 };
 
+export type OutsourcedDataTaskStandardDataExportCommand = {
+  tab?: string;
+  sheetName?: string;
+  workbookData?: Record<string, unknown>;
+};
+
 export type OutsourcedDataTaskActionResultDTO = {
   batchId?: string;
   stepId?: string;
   accepted?: boolean;
   action?: string;
   message?: string;
+};
+
+export type OutsourcedDataTaskStandardBasicRowDTO = {
+  category?: string;
+  fieldName?: string;
+  fieldValue?: string;
+};
+
+export type OutsourcedDataTaskStandardRawColumnDTO = {
+  fieldKey?: string;
+  title?: string;
+  columnIndex?: number;
+};
+
+export type OutsourcedDataTaskStandardBasicDTO = {
+  batchId?: string;
+  valuationId?: number;
+  fileId?: number;
+  taskId?: number;
+  workbookPath?: string;
+  sheetName?: string;
+  title?: string;
+  headerRowNumber?: number;
+  dataStartRowNumber?: number;
+  basicInfoCount?: number;
+  subjectCount?: number;
+  metricCount?: number;
+  basicRows?: OutsourcedDataTaskStandardBasicRowDTO[];
+  rawColumns?: OutsourcedDataTaskStandardRawColumnDTO[];
+};
+
+export type OutsourcedDataTaskStandardSubjectDTO = {
+  id?: number;
+  valuationId?: number;
+  sheetName?: string;
+  rowDataNumber?: number;
+  subjectCode?: string;
+  subjectName?: string;
+  levelNo?: number;
+  parentCode?: string;
+  rootCode?: string;
+  leaf?: boolean;
+  rawValuesJson?: string;
+  rawValues?: Record<string, string>;
+};
+
+export type OutsourcedDataTaskStandardMetricDTO = {
+  id?: number;
+  valuationId?: number;
+  sheetName?: string;
+  rowDataNumber?: number;
+  metricName?: string;
+  metricType?: string;
+  metricValue?: string;
+  rawValuesJson?: string;
+  rawValues?: Record<string, string>;
 };
 
 export type PageResultOutsourcedDataTaskBatchDTO = {
@@ -183,6 +245,10 @@ export type PageResultOutsourcedDataTaskBatchDTO = {
 
 export type SingleResultOutsourcedDataTaskSummaryDTO = {
   data?: OutsourcedDataTaskSummaryDTO;
+};
+
+export type SingleResultOutsourcedDataTaskStandardBasicDTO = {
+  data?: OutsourcedDataTaskStandardBasicDTO;
 };
 
 export type SingleResultOutsourcedDataTaskBatchDetailDTO = {
@@ -199,6 +265,14 @@ export type MultiResultOutsourcedDataTaskActionResultDTO = {
 
 export type MultiResultOutsourcedDataTaskStepDTO = {
   data?: OutsourcedDataTaskStepDTO[];
+};
+
+export type MultiResultOutsourcedDataTaskStandardSubjectDTO = {
+  data?: OutsourcedDataTaskStandardSubjectDTO[];
+};
+
+export type MultiResultOutsourcedDataTaskStandardMetricDTO = {
+  data?: OutsourcedDataTaskStandardMetricDTO[];
 };
 
 export type SingleResultOutsourcedDataTaskActionResultDTO = {
@@ -224,6 +298,43 @@ export const getValuationParseTaskTrace = (batchId: string) =>
   customInstance<SingleResultOutsourcedDataTaskTraceDTO>({
     url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/trace`,
     method: "GET",
+  });
+
+export const getValuationParseTaskStandardBasic = (batchId: string) =>
+  customInstance<SingleResultOutsourcedDataTaskStandardBasicDTO>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/basic`,
+    method: "GET",
+  });
+
+export const listValuationParseTaskStandardSubjects = (
+  batchId: string,
+  params?: { keyword?: string },
+) =>
+  customInstance<MultiResultOutsourcedDataTaskStandardSubjectDTO>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/subjects`,
+    method: "GET",
+    params,
+  });
+
+export const listValuationParseTaskStandardMetrics = (
+  batchId: string,
+  params?: { keyword?: string },
+) =>
+  customInstance<MultiResultOutsourcedDataTaskStandardMetricDTO>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/metrics`,
+    method: "GET",
+    params,
+  });
+
+export const exportValuationParseTaskStandardDataSheet = (
+  batchId: string,
+  command: OutsourcedDataTaskStandardDataExportCommand,
+) =>
+  customInstance<Blob>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/export`,
+    method: "POST",
+    data: command,
+    responseType: "blob",
   });
 
 export const listValuationParseTaskSteps = (batchId: string) =>
@@ -277,6 +388,10 @@ export const getOutsourcedDataTaskSummary = getValuationParseTaskSummary;
 export const pageOutsourcedDataTasks = pageValuationParseTasks;
 export const getOutsourcedDataTask = getValuationParseTask;
 export const getOutsourcedDataTaskTrace = getValuationParseTaskTrace;
+export const getOutsourcedDataTaskStandardBasic = getValuationParseTaskStandardBasic;
+export const listOutsourcedDataTaskStandardSubjects = listValuationParseTaskStandardSubjects;
+export const listOutsourcedDataTaskStandardMetrics = listValuationParseTaskStandardMetrics;
+export const exportOutsourcedDataTaskStandardDataSheet = exportValuationParseTaskStandardDataSheet;
 export const listOutsourcedDataTaskSteps = listValuationParseTaskSteps;
 export const executeOutsourcedDataTask = executeValuationParseTask;
 export const retryOutsourcedDataTask = retryValuationParseTask;

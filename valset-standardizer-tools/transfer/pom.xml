@@ -19,6 +19,10 @@
             <artifactId>valset-standardizer-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-qlexpress</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.yss.cloud</groupId>
             <artifactId>yss-component-dto</artifactId>
         </dependency>

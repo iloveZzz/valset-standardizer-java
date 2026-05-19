@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.dto.TaskViewDTO;
 import com.yss.valset.application.service.WorkflowTaskQueryAppService;
+import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.model.TaskStatus;
 import com.yss.valset.domain.model.WorkflowTask;
@@ -164,14 +165,15 @@ public class DefaultWorkflowTaskQueryAppService implements WorkflowTaskQueryAppS
             }
         }
         if (jobExecution != null) {
-            if (jobExecution.getExitStatus() != null && StringUtils.hasText(jobExecution.getExitStatus().getExitDescription())) {
-                return jobExecution.getExitStatus().getExitDescription();
-            }
             if (jobExecution.getAllFailureExceptions() != null && !jobExecution.getAllFailureExceptions().isEmpty()) {
                 Throwable throwable = jobExecution.getAllFailureExceptions().get(0);
-                if (throwable != null && StringUtils.hasText(throwable.getMessage())) {
-                    return throwable.getMessage();
+                String message = TaskFailureClassifier.resolveReadableMessage(throwable);
+                if (StringUtils.hasText(message)) {
+                    return message;
                 }
+            }
+            if (jobExecution.getExitStatus() != null && StringUtils.hasText(jobExecution.getExitStatus().getExitDescription())) {
+                return jobExecution.getExitStatus().getExitDescription();
             }
         }
         return StringUtils.hasText(rawPayload) ? rawPayload.trim() : null;

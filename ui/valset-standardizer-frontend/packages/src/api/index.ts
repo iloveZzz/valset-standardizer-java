@@ -25,4 +25,6 @@ export * from "./etlWorkflowTaskInstance";
 export * from "./transferRunLog";
 export * from "./transferDeliveryRecord";
 export * from "./outsourcedDataTask";
-export * from "./springBatchValuationTaskTrace";
+export * from "./batchValuationTask";
+export * from "./batchValuationTaskTrace";
+export * from "./qlexpressFunction";

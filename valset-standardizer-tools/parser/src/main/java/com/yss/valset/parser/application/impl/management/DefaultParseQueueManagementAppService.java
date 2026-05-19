@@ -56,6 +56,8 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
 
     private static final String VALUATION_TAG_NAME = "估值表";
     private static final String VALUATION_TAG_CODE = "VALUATION_TABLE";
+    private static final String LEGACY_FILE_INFO_GATEWAY_SOURCE = "file-info-gateway";
+    private static final String LEGACY_FILE_INFO_GATEWAY_MATCH_REASON = "文件主数据自动标记为估值表";
 
     private final ParseQueueGateway transferParseQueueGateway;
     private final TransferObjectGateway transferObjectGateway;
@@ -416,7 +418,22 @@ public class DefaultParseQueueManagementAppService implements ParseQueueManageme
         if (tag == null) {
             return false;
         }
+        if (isFileInfoGatewayGeneratedValuationTag(tag)) {
+            return false;
+        }
         return matchesValuationKey(tag.tagCode()) || matchesValuationKey(tag.tagName()) || matchesValuationKey(tag.tagValue());
+    }
+
+    private boolean isFileInfoGatewayGeneratedValuationTag(TransferObjectTag tag) {
+        if (tag == null) {
+            return false;
+        }
+        if (LEGACY_FILE_INFO_GATEWAY_MATCH_REASON.equals(tag.matchReason())) {
+            return true;
+        }
+        Map<String, Object> snapshot = tag.matchSnapshot();
+        Object source = snapshot == null ? null : snapshot.get("source");
+        return source != null && LEGACY_FILE_INFO_GATEWAY_SOURCE.equalsIgnoreCase(String.valueOf(source));
     }
 
     private boolean matchesValuationKey(String value) {

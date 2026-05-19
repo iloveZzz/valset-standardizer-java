@@ -5,6 +5,7 @@ import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEvent;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
+import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.common.support.Java8Maps;
 import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
 import com.yss.valset.domain.gateway.DwdJjhzgzbGateway;
@@ -19,8 +20,6 @@ import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.domain.model.WorkflowTask;
 import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.domain.parser.ValuationDataParserProvider;
-import com.yss.valset.domain.rule.ParseRuleTraceContext;
-import com.yss.valset.domain.rule.ParseRuleTraceContextHolder;
 import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,28 +77,25 @@ public class ParseBatchStepSupport {
         WorkflowTask workflowTask = requireTask(taskId);
         ParseTaskCommand command = readCommand(workflowTask);
         ParseLifecycleStage currentStage = ParseLifecycleStage.FILE_PARSE;
-        ParseRuleTraceContext traceContext = buildTraceContext(workflowTask, taskId);
         long startedAt = System.currentTimeMillis();
-        try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
-            try {
-                DataSourceType type = resolveDataSourceType(command);
-                DataSourceConfig config = buildAnalysisConfig(type, resolveAnalysisWorkbookPath(command), command.getFileId());
-                ValuationDataParser parser = parserProvider.getParser(type);
-                log.info("批量任务 解析文件阶段开始，taskId={}, parser={}, sourceType={}, sourceUri={}",
-                        taskId, parser.getClass().getSimpleName(), type, config.getSourceUri());
-                ParsedValuationData parsedValuationData = parser.parse(config);
-                validateParsedValuationData(parsedValuationData, command);
-                String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-                ParsedValuationData normalizedParsedData = parsedValuationData.toBuilder()
-                        .fileNameOriginal(fileNameOriginal)
-                        .build();
-                dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), normalizedParsedData);
-                publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
-                jobExecutionContext.putLong(JOB_CONTEXT_FILE_PARSE_MS, System.currentTimeMillis() - startedAt);
-            } catch (Exception exception) {
-                publishFailureEvent(currentStage, taskId, command, exception);
-                throw new IllegalStateException("批量任务 文件解析阶段失败，taskId=" + taskId, exception);
-            }
+        try {
+            DataSourceType type = resolveDataSourceType(command);
+            DataSourceConfig config = buildAnalysisConfig(type, resolveAnalysisWorkbookPath(command), command.getFileId());
+            ValuationDataParser parser = parserProvider.getParser(type);
+            log.info("批量任务 解析文件阶段开始，taskId={}, parser={}, sourceType={}, sourceUri={}",
+                    taskId, parser.getClass().getSimpleName(), type, config.getSourceUri());
+            ParsedValuationData parsedValuationData = parser.parse(config);
+            validateParsedValuationData(parsedValuationData, command);
+            String fileNameOriginal = resolveFileNameOriginal(workflowTask);
+            ParsedValuationData normalizedParsedData = parsedValuationData.toBuilder()
+                    .fileNameOriginal(fileNameOriginal)
+                    .build();
+            dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), normalizedParsedData);
+            publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
+            jobExecutionContext.putLong(JOB_CONTEXT_FILE_PARSE_MS, System.currentTimeMillis() - startedAt);
+        } catch (Exception exception) {
+            publishFailureEvent(currentStage, taskId, command, exception);
+            throw new IllegalStateException("批量任务 文件解析阶段失败，taskId=" + taskId, exception);
         }
     }
 
@@ -116,25 +112,22 @@ public class ParseBatchStepSupport {
         WorkflowTask workflowTask = requireTask(taskId);
         ParseTaskCommand command = readCommand(workflowTask);
         ParseLifecycleStage currentStage = ParseLifecycleStage.STRUCTURE_STANDARDIZE;
-        ParseRuleTraceContext traceContext = buildTraceContext(workflowTask, taskId);
         long startedAt = System.currentTimeMillis();
-        try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
-            try {
-                ParsedValuationData parsedValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
-                if (parsedValuationData == null) {
-                    throw new IllegalStateException("批量任务 结构标准化阶段缺少文件解析结果，taskId=" + taskId);
-                }
-                ParsedValuationData standardizedValuationData = standardizationService.standardize(parsedValuationData);
-                String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-                ParsedValuationData normalizedStandardizedData = standardizedValuationData == null ? null
-                        : standardizedValuationData.toBuilder().fileNameOriginal(fileNameOriginal).build();
-                standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), normalizedStandardizedData);
-                publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
-                jobExecutionContext.putLong(JOB_CONTEXT_STANDARDIZE_MS, System.currentTimeMillis() - startedAt);
-            } catch (Exception exception) {
-                publishFailureEvent(currentStage, taskId, command, exception);
-                throw new IllegalStateException("批量任务 结构标准化阶段失败，taskId=" + taskId, exception);
+        try {
+            ParsedValuationData parsedValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
+            if (parsedValuationData == null) {
+                throw new IllegalStateException("批量任务 结构标准化阶段缺少文件解析结果，taskId=" + taskId);
             }
+            ParsedValuationData standardizedValuationData = standardizationService.standardize(parsedValuationData);
+            String fileNameOriginal = resolveFileNameOriginal(workflowTask);
+            ParsedValuationData normalizedStandardizedData = standardizedValuationData == null ? null
+                    : standardizedValuationData.toBuilder().fileNameOriginal(fileNameOriginal).build();
+            standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), normalizedStandardizedData);
+            publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
+            jobExecutionContext.putLong(JOB_CONTEXT_STANDARDIZE_MS, System.currentTimeMillis() - startedAt);
+        } catch (Exception exception) {
+            publishFailureEvent(currentStage, taskId, command, exception);
+            throw new IllegalStateException("批量任务 结构标准化阶段失败，taskId=" + taskId, exception);
         }
     }
 
@@ -151,33 +144,30 @@ public class ParseBatchStepSupport {
         WorkflowTask workflowTask = requireTask(taskId);
         ParseTaskCommand command = readCommand(workflowTask);
         ParseLifecycleStage currentStage = ParseLifecycleStage.STANDARD_LANDING;
-        ParseRuleTraceContext traceContext = buildTraceContext(workflowTask, taskId);
-        try (ParseRuleTraceContextHolder.TraceScope ignored = ParseRuleTraceContextHolder.withContext(traceContext)) {
-            try {
-                ParsedValuationData standardizedValuationData = standardizedExternalValuationGateway.findByValuationId(taskId);
-                if (standardizedValuationData == null) {
-                    throw new IllegalStateException("批量任务 标准表落地阶段缺少标准化结果，taskId=" + taskId);
-                }
-                DataSourceType type = resolveDataSourceType(command);
-                String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-                ParsedValuationData sourceValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
-                ParsedValuationData finalStandardizedValuationData = mergeSourceMetadata(standardizedValuationData, sourceValuationData, fileNameOriginal);
-                String sourceTypeName = type.name();
-                String sourceSign = fileNameOriginal;
-                dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-                trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
-                String resultPayload = buildResultPayload(finalStandardizedValuationData);
-                taskGateway.updateTaskTimings(taskId,
-                        jobExecutionContext.getLong(JOB_CONTEXT_FILE_PARSE_MS, 0L),
-                        jobExecutionContext.getLong(JOB_CONTEXT_STANDARDIZE_MS, 0L),
-                        null);
-                taskGateway.markSuccess(taskId, resultPayload);
-                publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
-            } catch (Exception exception) {
-                log.error("批量任务 标准表落地阶段失败，taskId={}, fileId={}", taskId, workflowTask.getFileId(), exception);
-                publishFailureEvent(currentStage, taskId, command, exception);
-                throw new IllegalStateException("批量任务 标准表落地阶段失败，taskId=" + taskId, exception);
+        try {
+            ParsedValuationData standardizedValuationData = standardizedExternalValuationGateway.findByValuationId(taskId);
+            if (standardizedValuationData == null) {
+                throw new IllegalStateException("批量任务 标准表落地阶段缺少标准化结果，taskId=" + taskId);
             }
+            DataSourceType type = resolveDataSourceType(command);
+            String fileNameOriginal = resolveFileNameOriginal(workflowTask);
+            ParsedValuationData sourceValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
+            ParsedValuationData finalStandardizedValuationData = mergeSourceMetadata(standardizedValuationData, sourceValuationData, fileNameOriginal);
+            String sourceTypeName = type.name();
+            String sourceSign = fileNameOriginal;
+            dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
+            trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
+            String resultPayload = buildResultPayload(finalStandardizedValuationData);
+            taskGateway.updateTaskTimings(taskId,
+                    jobExecutionContext.getLong(JOB_CONTEXT_FILE_PARSE_MS, 0L),
+                    jobExecutionContext.getLong(JOB_CONTEXT_STANDARDIZE_MS, 0L),
+                    null);
+            taskGateway.markSuccess(taskId, resultPayload);
+            publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
+        } catch (Exception exception) {
+            log.error("批量任务 标准表落地阶段失败，taskId={}, fileId={}", taskId, workflowTask.getFileId(), exception);
+            publishFailureEvent(currentStage, taskId, command, exception);
+            throw new IllegalStateException("批量任务 标准表落地阶段失败，taskId=" + taskId, exception);
         }
     }
 
@@ -234,25 +224,6 @@ public class ParseBatchStepSupport {
         command.setCreatedBy("file-manage-reanalyse");
         command.setForceRebuild(Boolean.TRUE);
         return command;
-    }
-
-    /**
-     * 构造规则链路的跟踪上下文。
-     *
-     * <p>
-     * 这里主要是为了让解析规则、日志和异常分类都能拿到同一个 taskId/fileId 视角。
-     * </p>
-     */
-    private ParseRuleTraceContext buildTraceContext(WorkflowTask workflowTask, Long taskId) {
-        return ParseRuleTraceContext.builder()
-                .profileId(null)
-                .profileCode("runtime")
-                .version("runtime")
-                .fileId(workflowTask == null ? null : workflowTask.getFileId())
-                .taskId(taskId)
-                .traceEnabled(Boolean.FALSE)
-                .traceScope("RUNTIME_PARSE")
-                .build();
     }
 
     /**
@@ -436,7 +407,7 @@ public class ParseBatchStepSupport {
 
     private void publishFailureEvent(ParseLifecycleStage stage, Long taskId, ParseTaskCommand command, Exception exception) {
         publishLifecycleEvent(stage, taskId, command, "解析任务执行失败", Java8Maps.of(
-                "errorMessage", exception == null ? null : (exception.getMessage() == null ? exception.getClass().getName() : exception.getMessage()),
+                "errorMessage", exception == null ? null : TaskFailureClassifier.resolveReadableMessage(exception),
                 "errorType", exception == null ? null : exception.getClass().getName()
         ));
     }

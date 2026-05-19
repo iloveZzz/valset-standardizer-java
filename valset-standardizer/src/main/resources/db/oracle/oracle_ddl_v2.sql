@@ -1036,6 +1036,22 @@ CREATE TABLE "T_TRANSFER_RULE" (
 ;
 
 -- ----------------------------
+-- Table structure for t_qlexpress_function
+-- ----------------------------
+CREATE TABLE "T_QLEXPRESS_FUNCTION" (
+  "FUNCTION_ID" NUMBER(20) NOT NULL,
+  "FUNCTION_CN_NAME" VARCHAR2(256) NOT NULL,
+  "FUNCTION_NAME" VARCHAR2(128) NOT NULL,
+  "REMARK" VARCHAR2(1024),
+  "SCRIPT_BODY" CLOB NOT NULL,
+  "ENABLED" NUMBER(4) NOT NULL,
+  "EXT_INFO_JSON" CLOB,
+  "CREATED_AT" DATE,
+  "UPDATED_AT" DATE
+)
+;
+
+-- ----------------------------
 -- Table structure for t_transfer_run_log
 -- ----------------------------
 CREATE TABLE "T_TRANSFER_RUN_LOG" (
@@ -1725,6 +1741,17 @@ CREATE INDEX "IDX_TRANSFER_SOURCE_CHECKPOINT_ITEM_PROCESSED_AT"
 -- Primary Key structure for table t_transfer_tag
 -- ----------------------------
 ALTER TABLE "T_TRANSFER_TAG" ADD PRIMARY KEY ("TAG_ID");
+
+-- ----------------------------
+-- Primary Key structure for table t_qlexpress_function
+-- ----------------------------
+ALTER TABLE "T_QLEXPRESS_FUNCTION" ADD PRIMARY KEY ("FUNCTION_ID");
+
+-- ----------------------------
+-- Indexes structure for table t_qlexpress_function
+-- ----------------------------
+CREATE UNIQUE INDEX "UK_QLEXPRESS_FUNCTION_NAME"
+  ON "T_QLEXPRESS_FUNCTION" ("FUNCTION_NAME" ASC);
 
 -- ----------------------------
 -- Indexes structure for table t_transfer_tag

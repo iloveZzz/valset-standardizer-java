@@ -174,14 +174,9 @@ export const useTransferObjectColumns = () =>
       width: 320,
     },
     {
-      field: "sourceCode",
-      title: "来源编码",
-      width: 120,
-    },
-    {
       field: "deliveryStatus",
       title: "投递状态",
-      width: 120,
+      width: 100,
       formatter: (params: any) => {
         const value = String(
           params?.cellValue ?? params?.row?.deliveryStatus ?? "",
@@ -204,7 +199,7 @@ export const useTransferObjectColumns = () =>
     {
       field: "status",
       title: "文件状态",
-      width: 120,
+      width: 100,
     },
     {
       field: "sizeBytes",
@@ -231,13 +226,13 @@ export const useTransferObjectColumns = () =>
     {
       field: "receivedAt",
       title: "收取时间",
-      width: 180,
+      width: 150,
       formatter: (params: any) => formatDateTime(params?.cellValue),
     },
     {
       field: "tags",
       title: "标签",
-      width: 180,
+      width: 320,
     },
   ]);
 

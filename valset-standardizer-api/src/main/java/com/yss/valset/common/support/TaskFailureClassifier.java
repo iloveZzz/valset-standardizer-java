@@ -64,11 +64,38 @@ public final class TaskFailureClassifier {
     }
 
     public static String resolveReadableMessage(Throwable throwable) {
-        String rootMessage = rootCauseMessage(throwable);
-        if (rootMessage != null && !rootMessage.trim().isEmpty()) {
-            return rootMessage.trim();
+        String message = resolveMostSpecificMessage(throwable);
+        if (message != null && !message.trim().isEmpty()) {
+            return message.trim();
         }
         return throwable == null ? null : throwable.getMessage();
+    }
+
+    public static String resolveMostSpecificMessage(Throwable throwable) {
+        if (throwable == null) {
+            return null;
+        }
+        String fallback = null;
+        String matched = null;
+        Throwable current = throwable;
+        int depth = 0;
+        while (current != null && depth++ < 32) {
+            String message = normalizeMessage(current.getMessage());
+            if (message != null) {
+                if (fallback == null) {
+                    fallback = message;
+                }
+                if (!isWrapperMessage(message)) {
+                    matched = message;
+                }
+            }
+            Throwable cause = current.getCause();
+            if (cause == null || cause == current) {
+                break;
+            }
+            current = cause;
+        }
+        return matched == null ? fallback : matched;
     }
 
     public static String rootCauseMessage(Throwable throwable) {
@@ -109,6 +136,30 @@ public final class TaskFailureClassifier {
             }
         }
         return null;
+    }
+
+    private static String normalizeMessage(String message) {
+        if (message == null) {
+            return null;
+        }
+        String text = message.trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    private static boolean isWrapperMessage(String message) {
+        if (message == null) {
+            return false;
+        }
+        String normalized = message.toLowerCase(Locale.ROOT);
+        return normalized.startsWith("批量任务 文件解析阶段失败")
+                || normalized.startsWith("批量任务 结构标准化阶段失败")
+                || normalized.startsWith("批量任务 标准表落地阶段失败")
+                || normalized.startsWith("批量任务 作业执行失败")
+                || normalized.startsWith("failed to execute parse task")
+                || normalized.startsWith("failed to execute match task")
+                || normalized.startsWith("failed to execute mapping evaluation task")
+                || normalized.startsWith("failed to execute step")
+                || normalized.startsWith("failed to execute job");
     }
 
     private static String firstMeaningfulMessage(Throwable rootCause, Throwable throwable) {

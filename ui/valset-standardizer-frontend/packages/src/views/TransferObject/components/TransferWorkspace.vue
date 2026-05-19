@@ -13,13 +13,30 @@ import { formatDate, formatDateTime } from "@/utils/format";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import { useTransferObjectColumns } from "../../TransferShared/hooks/useTransferTableColumns";
-import type { ObjectPage } from "../types";
+import type { ObjectPage, TransferObjectTagViewDTO } from "../types";
 
 const { page } = defineProps<{
   page: ObjectPage;
 }>();
 
+const VISIBLE_TAG_COUNT = 2;
 const columns = useTransferObjectColumns();
+
+const getTagKey = (tag: TransferObjectTagViewDTO, index: number) => {
+  return tag.id || tag.tagId || `${tag.tagCode}-${tag.tagValue}-${index}`;
+};
+
+const getTagText = (tag: TransferObjectTagViewDTO) => {
+  return page.formatTagLabel(tag.tagName);
+};
+
+const getVisibleTags = (tags: TransferObjectTagViewDTO[] | undefined) => {
+  return (tags ?? []).slice(0, VISIBLE_TAG_COUNT);
+};
+
+const getHiddenTagCount = (tags: TransferObjectTagViewDTO[] | undefined) => {
+  return Math.max((tags?.length ?? 0) - VISIBLE_TAG_COUNT, 0);
+};
 
 const confirmRedeliver = (row: any) => {
   Modal.confirm({
@@ -289,18 +306,42 @@ const actionConfig = useTableActionConfig({
           {{ row.sizeBytes ?? 0 }}
         </template>
         <template #tags="{ row }">
-          <div class="object-tag-list">
+          <div class="object-tag-list object-tag-list--table">
             <template v-if="row.tags?.length">
               <a-tag
-                v-for="tag in row.tags.slice(0, 3)"
-                :key="tag.id || `${tag.tagCode}-${tag.tagValue}`"
+                v-for="(tag, index) in getVisibleTags(row.tags)"
+                :key="getTagKey(tag, index)"
+                class="object-tag-chip"
                 color="blue"
+                :title="getTagText(tag)"
               >
-                {{ tag.tagName || tag.tagCode || tag.tagValue || "-" }}
+                {{ getTagText(tag) }}
               </a-tag>
-              <a-tag v-if="row.tags.length > 3" color="default">
-                +{{ row.tags.length - 3 }}
-              </a-tag>
+              <a-popover
+                v-if="getHiddenTagCount(row.tags) >0"
+                trigger="click"
+                placement="topLeft"
+                overlay-class-name="object-tag-popover"
+              >
+                <template #content>
+                  <div class="object-tag-popover-list">
+                    <a-tag
+                      v-for="(tag, index) in row.tags"
+                      :key="getTagKey(tag, index)"
+                      class="object-tag-chip object-tag-chip--popover"
+                      color="blue"
+                    >
+                      {{ getTagText(tag) }}
+                    </a-tag>
+                  </div>
+                </template>
+                <a-tag
+                  class="object-tag-more"
+                  color="blue"
+                >
+                  {{ `更多` }}
+                </a-tag>
+              </a-popover>
             </template>
             <span v-else class="object-tag-empty">-</span>
           </div>

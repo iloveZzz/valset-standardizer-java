@@ -13,13 +13,29 @@ public enum ParseRuleType {
      */
     HEADER_DETECT,
     /**
+     * 数据起始行识别。
+     */
+    DATA_START,
+    /**
      * 行分类。
      */
     ROW_CLASSIFY,
     /**
+     * 科目字段抽取。
+     */
+    SUBJECT_EXTRACT,
+    /**
+     * 指标字段抽取。
+     */
+    METRIC_EXTRACT,
+    /**
      * 字段映射。
      */
     COLUMN_MAP,
+    /**
+     * 字段映射，兼容 t_file_parse_rule_step 历史数据。
+     */
+    FIELD_MAP,
     /**
      * 值转换。
      */

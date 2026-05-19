@@ -1,20 +1,19 @@
 package com.yss.valset.extract.standardization.mapping;
 
-import com.alibaba.qlexpress4.Express4Runner;
-import com.alibaba.qlexpress4.InitOptions;
-import com.alibaba.qlexpress4.QLOptions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.domain.model.MappingDecision;
-import com.yss.valset.domain.rule.ParseRuleTraceContext;
-import com.yss.valset.domain.rule.ParseRuleTraceContextHolder;
-import com.yss.valset.domain.rule.ParseRuleTraceRecord;
-import com.yss.valset.domain.rule.ParseRuleTraceRecorder;
+import com.yss.valset.extract.rule.QlexpressRuleEngine;
+import com.yss.valset.qlexpress.domain.runtime.ManagedQlexpressRunner;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressCommonContextContributor;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressCommonFunctionFacade;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressExecutionContextEnhancer;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressRunnerRegistry;
+import com.yss.valset.qlexpress.domain.runtime.SystemQlexpressFunctionSeedScripts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,23 +30,44 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
     private static final String TRACE_TYPE_KEY = "__traceType";
     private static final String TRACE_STEP_KEY = "__traceStep";
     private static final String TRACE_TYPE_HEADER = "HEADER_MAPPING";
+    private static final String RUNNER_SCOPE = "extract.headerMapping";
 
-    private final Express4Runner runner;
+    private final QlexpressRuleEngine ruleEngine;
     private final DefaultHeaderMappingEngine legacyEngine;
-    private final ObjectMapper objectMapper;
-    private final ParseRuleTraceRecorder traceRecorder;
 
     public QlexpressHeaderMappingEngine() {
-        this(new ObjectMapper(), null);
+        this(new ObjectMapper());
+    }
+
+    public QlexpressHeaderMappingEngine(ObjectMapper objectMapper) {
+        QlexpressExecutionContextEnhancer contextEnhancer = new QlexpressExecutionContextEnhancer(java.util.Arrays.asList(
+                new QlexpressCommonContextContributor(new QlexpressCommonFunctionFacade()),
+                new QlexpressHeaderContextContributor(new QlexpressHeaderFunctionFacade())
+        ));
+        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(SystemQlexpressFunctionSeedScripts::scripts, contextEnhancer);
+        ManagedQlexpressRunner runner = registry.createManagedRunner(RUNNER_SCOPE);
+        this.ruleEngine = new QlexpressRuleEngine(
+                runner,
+                RUNNER_SCOPE,
+                contextEnhancer,
+                objectMapper,
+                "QLExpress 表头映射执行失败"
+        );
+        this.legacyEngine = new DefaultHeaderMappingEngine();
     }
 
     @Autowired
-    public QlexpressHeaderMappingEngine(ObjectMapper objectMapper, ParseRuleTraceRecorder traceRecorder) {
-        this.runner = new Express4Runner(InitOptions.DEFAULT_OPTIONS);
+    public QlexpressHeaderMappingEngine(ObjectMapper objectMapper,
+                                        QlexpressRunnerRegistry qlexpressRunnerRegistry,
+                                        QlexpressExecutionContextEnhancer contextEnhancer) {
+        this.ruleEngine = new QlexpressRuleEngine(
+                qlexpressRunnerRegistry.createManagedRunner(RUNNER_SCOPE),
+                RUNNER_SCOPE,
+                contextEnhancer,
+                objectMapper,
+                "QLExpress 表头映射执行失败"
+        );
         this.legacyEngine = new DefaultHeaderMappingEngine();
-        this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
-        this.traceRecorder = traceRecorder;
-        registerBuiltInFunctions();
     }
 
     @Override
@@ -142,36 +162,11 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
     }
 
     private Object evaluate(String expression, Map<String, Object> context) {
-        long startedAt = System.currentTimeMillis();
-        Map<String, Object> safeContext = context == null ? java.util.Collections.emptyMap() : new HashMap<>(context);
-        try {
-            Object result = runner.execute(expression, safeContext, QLOptions.DEFAULT_OPTIONS).getResult();
-            recordTraceIfNeeded(expression, safeContext, result, null, true, System.currentTimeMillis() - startedAt);
-            return result;
-        } catch (Exception exception) {
-            recordTraceIfNeeded(expression, safeContext, null, exception, false, System.currentTimeMillis() - startedAt);
-            log.warn("QLExpress 表头映射执行失败，expression={}", expression, exception);
-            throw new IllegalStateException("QLExpress 表头映射执行失败: " + expression, exception);
-        }
+        return ruleEngine.evaluate(expression, context, TRACE_TYPE_HEADER, "HEADER_MAPPING");
     }
 
     private String evaluateString(String expression, Map<String, Object> context) {
-        Object result = evaluate(expression, context);
-        return result == null ? "" : String.valueOf(result);
-    }
-
-    private void registerBuiltInFunctions() {
-        runner.addVarArgsFunction("hasCandidate", params -> params != null
-                && params.length > 0
-                && params[0] != null);
-        runner.addVarArgsFunction("headerContainsAnySegment", params -> HeaderMappingRuleSupport.headerContainsAnySegment(
-                asString(params, 0, ""),
-                asStringList(params, 1)
-        ));
-        runner.addVarArgsFunction("headerContainsAllSegments", params -> HeaderMappingRuleSupport.headerContainsAllSegments(
-                asString(params, 0, ""),
-                asStringList(params, 1)
-        ));
+        return ruleEngine.evaluateString(expression, context, TRACE_TYPE_HEADER, "HEADER_MAPPING");
     }
 
     private MappingDecision fallback(HeaderMappingInput input, HeaderMappingLookup lookup) {
@@ -208,76 +203,4 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
                 .build();
     }
 
-    private void recordTraceIfNeeded(String expression,
-                                     Map<String, Object> context,
-                                     Object result,
-                                     Exception exception,
-                                     boolean success,
-                                     long costMs) {
-        if (traceRecorder == null) {
-            return;
-        }
-        ParseRuleTraceContext traceContext = ParseRuleTraceContextHolder.get();
-        if (traceContext == null || !Boolean.TRUE.equals(traceContext.getTraceEnabled())) {
-            return;
-        }
-        String traceType = asString(context.get(TRACE_TYPE_KEY), TRACE_TYPE_HEADER);
-        String stepName = asString(context.get(TRACE_STEP_KEY), "HEADER_MAPPING");
-        try {
-            Map<String, Object> sanitizedContext = new HashMap<>(context);
-            sanitizedContext.remove(TRACE_TYPE_KEY);
-            sanitizedContext.remove(TRACE_STEP_KEY);
-            ParseRuleTraceRecord record = ParseRuleTraceRecord.builder()
-                    .traceScope(traceContext.getTraceScope())
-                    .traceType(traceType)
-                    .profileId(traceContext.getProfileId())
-                    .profileCode(traceContext.getProfileCode())
-                    .version(traceContext.getVersion())
-                    .fileId(traceContext.getFileId())
-                    .taskId(traceContext.getTaskId())
-                    .stepName(stepName)
-                    .expression(expression)
-                    .inputJson(objectMapper.writeValueAsString(sanitizedContext))
-                    .outputJson(result == null ? "null" : objectMapper.writeValueAsString(result))
-                    .success(success)
-                    .costMs(costMs)
-                    .errorMessage(exception == null ? null : exception.getMessage())
-                    .traceTime(LocalDateTime.now())
-                    .build();
-            traceRecorder.record(record);
-        } catch (Exception traceException) {
-            log.warn("记录表头映射追踪失败，stepName={}, traceType={}", stepName, traceType, traceException);
-        }
-    }
-
-    private String asString(Object value, String defaultValue) {
-        if (value == null) {
-            return defaultValue;
-        }
-        String text = String.valueOf(value);
-        return text.trim().isEmpty() ? defaultValue : text;
-    }
-
-    private String asString(Object[] params, int index, String defaultValue) {
-        if (params == null || index < 0 || index >= params.length) {
-            return defaultValue;
-        }
-        return asString(params[index], defaultValue);
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<String> asStringList(Object[] params, int index) {
-        if (params == null || index < 0 || index >= params.length) {
-            return java.util.Arrays.asList();
-        }
-        Object value = params[index];
-        if (value instanceof List<?>) {
-            List<?> list = (List<?>) value;
-            return list.stream().map(item -> item == null ? "" : String.valueOf(item)).collect(java.util.stream.Collectors.toList());
-        }
-        if (value == null) {
-            return java.util.Arrays.asList();
-        }
-        return java.util.Arrays.asList(String.valueOf(value));
-    }
 }

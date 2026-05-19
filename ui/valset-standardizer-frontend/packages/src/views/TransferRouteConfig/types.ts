@@ -58,12 +58,6 @@ export interface RouteFlowFactMessage {
   timeText: string;
 }
 
-export interface SourceIngestMessage {
-  title: string;
-  content: string;
-  timeText: string;
-}
-
 export interface SourceIngestConnectionState {
   state: TransferIngestProgressConnectionState;
   message?: string;
@@ -139,7 +133,6 @@ export interface RouteConfigPage {
   >;
   sourceIngestConnectionStates: Record<string, SourceIngestConnectionState>;
   routeFlowFactMessages: Record<string, RouteFlowFactMessage[]>;
-  sourceIngestMessages: Record<string, SourceIngestMessage[]>;
   getSourceIngestChainItems: (
     row: TransferRouteViewDTO | null,
   ) => RouteFlowChainNode[];
@@ -172,7 +165,6 @@ export interface RouteConfigPage {
   getSourceIngestProgressPercent: (row: TransferRouteViewDTO | null) => number;
   getSourceIngestProgressText: (row: TransferRouteViewDTO | null) => string;
   getRouteFlowFactMessages: (row: TransferRouteViewDTO | null) => RouteFlowFactMessage[];
-  getSourceIngestMessages: (row: TransferRouteViewDTO | null) => SourceIngestMessage[];
   getSourceIngestConnectionState: (
     row: TransferRouteViewDTO | null,
   ) => SourceIngestConnectionState | null;

@@ -23,6 +23,10 @@
             <artifactId>valset-standardizer-transfer</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-qlexpress</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.yss.cloud</groupId>
             <artifactId>yss-component-mybatis-starter</artifactId>
         </dependency>

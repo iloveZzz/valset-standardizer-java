@@ -6,17 +6,28 @@ import com.yss.cloud.dto.result.MultiResult;
 import com.yss.valset.task.application.command.OutsourcedDataTaskActionCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskBatchCommand;
 import com.yss.valset.task.application.command.OutsourcedDataTaskQueryCommand;
+import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExportCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskActionResultDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardDataExportDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardBasicDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardMetricDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardSubjectDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStepDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskSummaryDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskTraceDTO;
+import com.yss.valset.task.application.service.OutsourcedDataTaskStandardDataService;
 import com.yss.valset.task.application.service.OutsourcedDataTaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import javax.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,6 +36,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * 估值表解析任务管理接口。
@@ -35,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class OutsourcedDataTaskController {
 
     private final OutsourcedDataTaskService outsourcedDataTaskService;
+    private final OutsourcedDataTaskStandardDataService standardDataService;
 
     @GetMapping("/summary")
     @Operation(summary = "查询 批量任务 估值表解析任务总览")
@@ -90,6 +104,44 @@ public class OutsourcedDataTaskController {
     @Operation(summary = "查询 批量任务 估值表解析任务步骤明细")
     public MultiResult<OutsourcedDataTaskStepDTO> listSteps(@PathVariable String batchId) {
         return MultiResult.of(outsourcedDataTaskService.listSteps(batchId));
+    }
+
+    @GetMapping("/{batchId}/standard-data/basic")
+    @Operation(summary = "查询估值解析任务标准数据基础信息")
+    public SingleResult<OutsourcedDataTaskStandardBasicDTO> queryStandardBasic(@PathVariable String batchId) {
+        return SingleResult.of(standardDataService.queryBasic(batchId));
+    }
+
+    @GetMapping("/{batchId}/standard-data/subjects")
+    @Operation(summary = "查询估值解析任务标准数据明细")
+    public MultiResult<OutsourcedDataTaskStandardSubjectDTO> listStandardSubjects(
+            @PathVariable String batchId,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return MultiResult.of(standardDataService.listSubjects(batchId, keyword));
+    }
+
+    @GetMapping("/{batchId}/standard-data/metrics")
+    @Operation(summary = "查询估值解析任务标准数据指标")
+    public MultiResult<OutsourcedDataTaskStandardMetricDTO> listStandardMetrics(
+            @PathVariable String batchId,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return MultiResult.of(standardDataService.listMetrics(batchId, keyword));
+    }
+
+    @PostMapping(value = "/{batchId}/standard-data/export", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    @Operation(summary = "导出估值解析任务当前标准数据 Sheet")
+    public ResponseEntity<Resource> exportStandardDataSheet(@PathVariable String batchId,
+            @RequestBody OutsourcedDataTaskStandardDataExportCommand command) {
+        OutsourcedDataTaskStandardDataExportDTO export = standardDataService.exportSheet(batchId, command);
+        ByteArrayResource resource = new ByteArrayResource(export.getContent());
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(export.getFileName(), StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(export.getContent() == null ? 0 : export.getContent().length)
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(resource);
     }
 
     @PostMapping("/{batchId}/execute")

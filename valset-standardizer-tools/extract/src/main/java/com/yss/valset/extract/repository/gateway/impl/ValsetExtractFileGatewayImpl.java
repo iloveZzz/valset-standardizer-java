@@ -8,10 +8,8 @@ import com.yss.valset.domain.model.ValsetFileStatus;
 import com.yss.valset.domain.model.ValsetFileStorageType;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectTagGateway;
-import com.yss.valset.transfer.domain.gateway.TransferTagGateway;
 import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferObjectTag;
-import com.yss.valset.transfer.domain.model.TransferTagDefinition;
 import com.yss.valset.transfer.domain.model.TransferStatus;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectPO;
 import com.yss.valset.transfer.infrastructure.mapper.TransferObjectRepository;
@@ -31,8 +29,8 @@ import java.util.Map;
 /**
  * 文件主数据网关实现。
  *
- * <p>文件主数据不再单独落 {@code t_valset_file_info}，统一写入 {@code t_transfer_object}
- * 以及对应的 {@code t_transfer_object_tag} 记录。</p>
+ * <p>文件主数据不再单独落 {@code t_valset_file_info}，统一写入 {@code t_transfer_object}。
+ * 估值表标签必须由分拣标签识别或明确的估值解析入口产生，文件主数据保存本身不再自动打标。</p>
  */
 @Repository
 @RequiredArgsConstructor
@@ -41,6 +39,8 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
     private static final String VALUATION_TAG_CODE = "VALUATION_TABLE";
     private static final String VALUATION_TAG_VALUE = "VALUATION_TABLE";
     private static final String VALUATION_TAG_NAME = "估值表";
+    private static final String LEGACY_FILE_INFO_GATEWAY_SOURCE = "file-info-gateway";
+    private static final String LEGACY_FILE_INFO_GATEWAY_MATCH_REASON = "文件主数据自动标记为估值表";
 
     private static final String META_FILE_NAME_NORMALIZED = "fileNameNormalized";
     private static final String META_SOURCE_CHANNEL = "sourceChannel";
@@ -64,7 +64,6 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
     private final TransferObjectRepository transferObjectRepository;
     private final TransferObjectTagGateway transferObjectTagGateway;
     private final TransferObjectGateway transferObjectGateway;
-    private final TransferTagGateway transferTagGateway;
 
     @Override
     public Long save(ValsetFileInfo fileInfo) {
@@ -74,7 +73,6 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
         TransferObject existing = resolveExistingTransferObject(fileInfo);
         TransferObject merged = existing == null ? createTransferObject(fileInfo) : mergeTransferObject(existing, fileInfo);
         TransferObject saved = transferObjectGateway.save(merged);
-        ensureValuationTag(saved);
         Long fileId = parseLong(saved.transferId());
         fileInfo.setFileId(fileId);
         return fileId;
@@ -239,20 +237,26 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
             if (tag == null) {
                 continue;
             }
+            if (isFileInfoGatewayGeneratedValuationTag(tag)) {
+                continue;
+            }
             if (matchesValuationKey(tag.tagCode()) || matchesValuationKey(tag.tagName()) || matchesValuationKey(tag.tagValue())) {
                 return true;
             }
         }
-        return hasValuationMeta(transferObject.fileMeta());
+        return false;
     }
 
-    private boolean hasValuationMeta(Map<String, Object> meta) {
-        return meta != null && (
-                meta.containsKey(META_FILE_STATUS)
-                        || meta.containsKey(META_FILE_FORMAT)
-                        || meta.containsKey(META_SOURCE_META_JSON)
-                        || meta.containsKey(META_STORAGE_META_JSON)
-        );
+    private boolean isFileInfoGatewayGeneratedValuationTag(TransferObjectTag tag) {
+        if (tag == null) {
+            return false;
+        }
+        if (LEGACY_FILE_INFO_GATEWAY_MATCH_REASON.equals(tag.matchReason())) {
+            return true;
+        }
+        Map<String, Object> snapshot = tag.matchSnapshot();
+        Object source = snapshot == null ? null : snapshot.get("source");
+        return source != null && LEGACY_FILE_INFO_GATEWAY_SOURCE.equalsIgnoreCase(String.valueOf(source));
     }
 
     private boolean matchesSearchFilters(ValsetFileInfo fileInfo,
@@ -345,35 +349,6 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
         )
                 .withBusinessFields(existing.businessDate(), existing.businessId(), existing.receiveDate())
                 .withRealStoragePath(firstNonBlank(fileInfo.getRealStoragePath(), existing.realStoragePath()));
-    }
-
-    private void ensureValuationTag(TransferObject transferObject) {
-        if (transferObject == null || !StringUtils.hasText(transferObject.transferId())) {
-            return;
-        }
-        List<TransferObjectTag> tags = transferObjectTagGateway.listByTransferId(transferObject.transferId());
-        boolean exists = tags.stream().anyMatch(tag ->
-                tag != null && (matchesValuationKey(tag.tagCode()) || matchesValuationKey(tag.tagName()) || matchesValuationKey(tag.tagValue())));
-        if (exists) {
-            return;
-        }
-        TransferTagDefinition tagDefinition = transferTagGateway.findByTagCode(VALUATION_TAG_CODE)
-                .orElseThrow(() -> new IllegalStateException("未配置估值表标签定义，tagCode=" + VALUATION_TAG_CODE));
-        TransferObjectTag valuationTag = new TransferObjectTag(
-                null,
-                transferObject.transferId(),
-                tagDefinition.tagId(),
-                tagDefinition.tagCode(),
-                tagDefinition.tagName(),
-                tagDefinition.tagValue(),
-                "SCRIPT_RULE",
-                "文件主数据自动标记为估值表",
-                "fileMeta",
-                tagDefinition.tagValue(),
-                com.yss.valset.common.support.Java8Maps.of("source", "file-info-gateway"),
-                Instant.now()
-        );
-        transferObjectTagGateway.saveAll(java.util.Arrays.asList(valuationTag));
     }
 
     private Map<String, Object> mergeFileMeta(Map<String, Object> existingMeta, ValsetFileInfo fileInfo) {
@@ -584,13 +559,15 @@ public class ValsetExtractFileGatewayImpl implements ValsetFileInfoGateway {
     }
 
     private String buildValuationTagSql() {
-        return "select transfer_id from t_transfer_object_tag where tag_code = '"
+        return "select transfer_id from t_transfer_object_tag where (tag_code = '"
                 + escapeSql(VALUATION_TAG_CODE)
                 + "' or tag_value = '"
                 + escapeSql(VALUATION_TAG_VALUE)
                 + "' or tag_name = '"
                 + escapeSql(VALUATION_TAG_NAME)
-                + "'";
+                + "') and (match_reason is null or match_reason <> '"
+                + escapeSql(LEGACY_FILE_INFO_GATEWAY_MATCH_REASON)
+                + "')";
     }
 
     private String stringValue(Map<String, Object> source, String key) {
