@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h } from "vue";
+import { computed, h, ref } from "vue";
 import dayjs, { type Dayjs } from "dayjs";
 import { Modal } from "ant-design-vue";
 import {
@@ -13,6 +13,7 @@ import {
   type YTableActionConfig,
   type YTableColumn,
 } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import type {
@@ -26,6 +27,12 @@ defineOptions({ name: "WorkflowInstanceWorkspace" });
 const { page } = defineProps<{
   page: WorkflowInstancePage;
 }>();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 
 const TIME_RANGE_FORMAT = "YYYY-MM-DD HH:mm:ss";
 
@@ -387,7 +394,7 @@ const stageFilterOptions = computed(() => [
       </div>
     </YCard>
 
-    <div class="workspace-body">
+    <div ref="tableAreaRef" class="workspace-body">
       <div class="workflow-instance-query-bar">
         <a-form layout="inline" class="workflow-instance-query-form">
           <a-form-item label="名称">
@@ -435,6 +442,7 @@ const stageFilterOptions = computed(() => [
         :border="false"
         :data="page.tableData"
         :loading="page.listLoading || page.loading || page.actionLoading"
+        :max-height="tableHeight"
         :row-config="{ keyField: 'instanceId' }"
         :expand-config="{ expandRowKeys: page.expandedRowKeys, trigger: 'row' }"
         :checkbox-config="{ highlight: true }"

@@ -13,6 +13,4 @@ public class OutsourcedDataTaskBatchDetailDTO implements java.io.Serializable{
     private OutsourcedDataTaskBatchDTO batch;
 
     private List<OutsourcedDataTaskStepDTO> steps;
-
-    private String currentBlockPoint;
 }

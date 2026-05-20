@@ -23,6 +23,7 @@ export {
 } from "./etlWorkflowInstance";
 export * from "./etlWorkflowTaskInstance";
 export * from "./transferRunLog";
+export * from "./systemOutputLog";
 export * from "./transferDeliveryRecord";
 export * from "./outsourcedDataTask";
 export * from "./batchValuationTask";

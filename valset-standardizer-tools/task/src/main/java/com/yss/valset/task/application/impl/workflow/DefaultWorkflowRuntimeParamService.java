@@ -66,11 +66,6 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
         return Boolean.TRUE.equals(getRuntimeParam().getSkipExcelStyleParsing());
     }
 
-    @Override
-    public boolean persistStandardizedDwdDetails() {
-        return Boolean.TRUE.equals(getRuntimeParam().getPersistStandardizedDwdDetails());
-    }
-
     private WorkflowRuntimeParamSaveCommand normalize(WorkflowRuntimeParamSaveCommand command) {
         WorkflowRuntimeParamSaveCommand normalized = command == null ? new WorkflowRuntimeParamSaveCommand() : command;
         if (!StringUtils.hasText(normalized.getParamNamespace())) {
@@ -82,9 +77,6 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
         if (normalized.getEnableMatchProcess() == null) {
             normalized.setEnableMatchProcess(defaultProperties.isEnableMatchProcess());
         }
-        if (normalized.getPersistStandardizedDwdDetails() == null) {
-            normalized.setPersistStandardizedDwdDetails(defaultProperties.isPersistStandardizedDwdDetails());
-        }
         return normalized;
     }
 
@@ -93,7 +85,6 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
         dto.setParamNamespace(DEFAULT_NAMESPACE);
         dto.setSkipExcelStyleParsing(defaultProperties.isSkipExcelStyleParsing());
         dto.setEnableMatchProcess(defaultProperties.isEnableMatchProcess());
-        dto.setPersistStandardizedDwdDetails(defaultProperties.isPersistStandardizedDwdDetails());
         return dto;
     }
 
@@ -105,7 +96,6 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
         dto.setParamNamespace(command.getParamNamespace());
         dto.setSkipExcelStyleParsing(command.getSkipExcelStyleParsing());
         dto.setEnableMatchProcess(command.getEnableMatchProcess());
-        dto.setPersistStandardizedDwdDetails(command.getPersistStandardizedDwdDetails());
         dto.setDescription(command.getDescription());
         return dto;
     }
@@ -119,7 +109,6 @@ public class DefaultWorkflowRuntimeParamService implements WorkflowRuntimeParamS
         copy.setParamNamespace(source.getParamNamespace());
         copy.setSkipExcelStyleParsing(source.getSkipExcelStyleParsing());
         copy.setEnableMatchProcess(source.getEnableMatchProcess());
-        copy.setPersistStandardizedDwdDetails(source.getPersistStandardizedDwdDetails());
         copy.setDescription(source.getDescription());
         copy.setCreatedAt(source.getCreatedAt());
         copy.setUpdatedAt(source.getUpdatedAt());

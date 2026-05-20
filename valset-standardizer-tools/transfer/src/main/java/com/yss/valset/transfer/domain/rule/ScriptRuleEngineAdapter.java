@@ -4,7 +4,6 @@ import com.alibaba.qlexpress4.QLOptions;
 import com.yss.valset.qlexpress.domain.runtime.ManagedQlexpressRunner;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressExecutionContextEnhancer;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressRunnerRegistry;
-import com.yss.valset.qlexpress.domain.runtime.SystemQlexpressFunctionSeedScripts;
 import com.yss.valset.transfer.domain.model.RuleContext;
 import com.yss.valset.transfer.domain.model.RuleDefinition;
 import com.yss.valset.transfer.domain.model.RuleEvaluationResult;
@@ -28,7 +27,7 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
     private final QlexpressExecutionContextEnhancer contextEnhancer;
 
     public ScriptRuleEngineAdapter() {
-        this(new QlexpressRunnerRegistry(SystemQlexpressFunctionSeedScripts::scripts, QlexpressExecutionContextEnhancer.empty()),
+        this(new QlexpressRunnerRegistry(Collections::emptyList, QlexpressExecutionContextEnhancer.empty()),
                 QlexpressExecutionContextEnhancer.empty());
     }
 

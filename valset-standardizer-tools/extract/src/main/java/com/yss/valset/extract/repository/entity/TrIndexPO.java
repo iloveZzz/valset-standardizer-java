@@ -10,10 +10,10 @@ import javax.persistence.Id;
 import java.time.LocalDateTime;
 
 /**
- * 资产估值指标信息（原始数据）。
+ * SPV 产品指标主表。
  */
 @Data
-@TableName("t_tr_index")
+@TableName("tr_spv_index")
 public class TrIndexPO {
 
     @Id
@@ -47,6 +47,10 @@ public class TrIndexPO {
     /** 来源标记 */
     @TableField("source_sign")
     private String sourceSign;
+
+    /** 序号 */
+    @TableField("sn")
+    private Integer sn;
 
     /** 时间戳 */
     @TableField("time_stamp")

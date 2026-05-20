@@ -153,7 +153,7 @@ public class QlexpressRunnerRegistry {
         }
         String scope = isBlank(runnerScope) ? firstScope(script) : runnerScope;
         BatchAddFunctionResult result = runner.addFunctionsDefinedInScript(
-                script.getScriptBody(),
+                normalizeScriptBody(script.getScriptBody()),
                 new MapExpressContext(contextEnhancer.enhance(scope, Collections.emptyMap())),
                 QLOptions.DEFAULT_OPTIONS
         );
@@ -172,5 +172,14 @@ public class QlexpressRunnerRegistry {
     private String firstScope(QlexpressFunctionScript script) {
         List<String> modules = script.getSourceModules();
         return modules == null || modules.isEmpty() ? null : modules.get(0);
+    }
+
+    private String normalizeScriptBody(String scriptBody) {
+        if (scriptBody == null || scriptBody.trim().isEmpty()) {
+            return scriptBody;
+        }
+        return scriptBody
+                .replaceAll("\\r?\\n\\s*&&", " &&")
+                .replaceAll("\\r?\\n\\s*\\|\\|", " ||");
     }
 }

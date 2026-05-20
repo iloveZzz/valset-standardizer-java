@@ -2,6 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: 100%;
+  min-height: 0;
 }
 
 .workflow-instance-workspace .workspace-header {
@@ -208,7 +210,9 @@
 }
 
 .workflow-instance-workspace .workspace-body {
+  flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .workflow-instance-query-bar {

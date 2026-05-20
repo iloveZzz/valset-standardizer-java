@@ -8,11 +8,11 @@ import com.yss.valset.qlexpress.domain.runtime.QlexpressCommonFunctionFacade;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressExecutionContextEnhancer;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressFunctionScriptProvider;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressRunnerRegistry;
-import com.yss.valset.qlexpress.domain.runtime.SystemQlexpressFunctionSeedScripts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +32,11 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
     private final QlexpressRuleEngine ruleEngine;
 
     public QlexpressParseRuleEngine() {
-        this(new ObjectMapper(), SystemQlexpressFunctionSeedScripts::scripts);
+        this(new ObjectMapper(), Collections::emptyList);
     }
 
     public QlexpressParseRuleEngine(ObjectMapper objectMapper) {
-        this(objectMapper, SystemQlexpressFunctionSeedScripts::scripts);
+        this(objectMapper, Collections::emptyList);
     }
 
     public QlexpressParseRuleEngine(ObjectMapper objectMapper,
@@ -143,10 +143,60 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
     }
 
     /**
+     * 按表头定位到的“科目代码”列判断当前行是否是单值指标数据。
+     */
+    public boolean matchesMetricDataRowByColumn(List<Object> rowValues, Integer subjectCodeColumnIndex, String subjectCodePattern) {
+        return evaluateBoolean(
+                "isMetricDataRowByColumn(row, subjectCodeColumnIndex, subjectCodePattern)",
+                buildColumnRowContext(rowValues, subjectCodeColumnIndex, subjectCodePattern, "METRIC_DATA_ROW_BY_COLUMN")
+        );
+    }
+
+    /**
      * 判断当前行是否是多列型指标行。
      */
     public boolean matchesMetricRow(List<Object> rowValues, String subjectCodePattern) {
         return evaluateBoolean("isMetricRowWithPattern(row, subjectCodePattern)", buildRowContext(rowValues, subjectCodePattern, "METRIC_ROW"));
+    }
+
+    /**
+     * 按表头定位到的“科目代码”列判断当前行是否是多值指标行。
+     */
+    public boolean matchesMetricRowByColumn(List<Object> rowValues, Integer subjectCodeColumnIndex, String subjectCodePattern) {
+        return evaluateBoolean(
+                "isMetricRowByColumn(row, subjectCodeColumnIndex, subjectCodePattern)",
+                buildColumnRowContext(rowValues, subjectCodeColumnIndex, subjectCodePattern, "METRIC_ROW_BY_COLUMN")
+        );
+    }
+
+    /**
+     * 按表头定位到的“科目代码”列判断当前行是否是估值明细科目行。
+     */
+    public boolean matchesSubjectDetailRowByColumn(List<Object> rowValues, Integer subjectCodeColumnIndex, String subjectCodePattern) {
+        return evaluateBoolean(
+                "isSubjectDetailRowByColumn(row, subjectCodeColumnIndex, subjectCodePattern)",
+                buildColumnRowContext(rowValues, subjectCodeColumnIndex, subjectCodePattern, "SUBJECT_DETAIL_ROW")
+        );
+    }
+
+    /**
+     * 按表头定位到的“科目代码”列判断当前行是否是指标行。
+     */
+    public boolean matchesMetricDetailRowByColumn(List<Object> rowValues, Integer subjectCodeColumnIndex, String subjectCodePattern) {
+        return evaluateBoolean(
+                "isMetricDetailRowByColumn(row, subjectCodeColumnIndex, subjectCodePattern)",
+                buildColumnRowContext(rowValues, subjectCodeColumnIndex, subjectCodePattern, "METRIC_DETAIL_ROW")
+        );
+    }
+
+    /**
+     * 按表头定位到的“科目代码”列判断当前行是否属于估值数据区。
+     */
+    public boolean matchesValuationDataRowByColumn(List<Object> rowValues, Integer subjectCodeColumnIndex, String subjectCodePattern) {
+        return evaluateBoolean(
+                "isValuationDataRowByColumn(row, subjectCodeColumnIndex, subjectCodePattern)",
+                buildColumnRowContext(rowValues, subjectCodeColumnIndex, subjectCodePattern, "VALUATION_DATA_ROW")
+        );
     }
 
     /**
@@ -194,6 +244,12 @@ public class QlexpressParseRuleEngine implements ParseRuleEngine {
         context.put("subjectCodePattern", subjectCodePattern);
         context.put(TRACE_TYPE_KEY, TRACE_TYPE_PARSER);
         context.put(TRACE_STEP_KEY, traceStep);
+        return context;
+    }
+
+    private Map<String, Object> buildColumnRowContext(List<Object> rowValues, Integer subjectCodeColumnIndex, String subjectCodePattern, String traceStep) {
+        Map<String, Object> context = buildRowContext(rowValues, subjectCodePattern, traceStep);
+        context.put("subjectCodeColumnIndex", subjectCodeColumnIndex);
         return context;
     }
 

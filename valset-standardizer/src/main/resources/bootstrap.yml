@@ -125,8 +125,6 @@ subject:
       skip-excel-style-parsing: false
       # 是否启用匹配流程
       enable-match-process: false
-      # 是否持久化标准化后的 DWD 明细
-      persist-standardized-dwd-details: false
     run-log-cleanup:
       # 运行日志清理定时表达式
       cron: ${TRANSFER_RUN_LOG_CLEANUP_CRON:0 0 23 * * ?}

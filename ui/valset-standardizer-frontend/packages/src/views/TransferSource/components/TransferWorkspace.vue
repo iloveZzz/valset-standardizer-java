@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
 import { YButton, YCard, YssFormily, YTable } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import TransferTypeSelector from "../../TransferShared/components/TransferTypeSelector.vue";
 import MailConditionBuilder from "../../TransferShared/components/MailConditionBuilder.vue";
 import TransferTemplateDialog from "../../TransferShared/components/TransferTemplateDialog.vue";
@@ -17,6 +19,12 @@ import type { SourcePage } from "../types";
 const { page } = defineProps<{
   page: SourcePage;
 }>();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 
 const columns = useTransferSourceColumns();
 const checkpointColumns = [
@@ -148,12 +156,13 @@ const actionConfig = useTableActionConfig({
       </div>
     </YCard>
 
-    <div class="workspace-body">
+    <div ref="tableAreaRef" class="workspace-body">
       <YTable
         :columns="columns"
         :action-config="actionConfig"
         :data="page.tableData"
         :loading="page.loading"
+        :max-height="tableHeight"
         :row-config="{ keyField: 'sourceId' }"
         :checkbox-config="{ highlight: true }"
         :pageable="true"

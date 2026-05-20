@@ -11,6 +11,7 @@ import {
   type YTableActionConfig,
   type YTableColumn,
 } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import type {
   EtlWorkflowConfigPage,
   EtlWorkflowStageFormState,
@@ -21,6 +22,12 @@ defineOptions({ name: "EtlWorkflowStageWorkspace" });
 const { page } = defineProps<{
   page: EtlWorkflowConfigPage;
 }>();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 
 const workflowRows = computed(() => unref(page.tableData) ?? []);
 const tableLoading = computed(() => Boolean(unref(page.loading)));
@@ -467,17 +474,19 @@ const handleDragEnd = (rows: any[]) => {
         <div class="etl-workflow-query-meta">{{ stageCountLabel }}</div>
       </div>
 
-      <YTable
-        :columns="columnsWithAction"
-        :data="workflowRows"
-        :loading="tableLoading"
-        :border="false"
-        :pageable="true"
-        :pagination="tablePagination"
-        :toolbar-config="{ custom: false }"
-        :row-config="{ keyField: 'workflowKey' }"
-        @page-change="page.handlePageChange"
-      >
+      <div ref="tableAreaRef" class="etl-workflow-table-body">
+        <YTable
+          :columns="columnsWithAction"
+          :data="workflowRows"
+          :loading="tableLoading"
+          :max-height="tableHeight"
+          :border="false"
+          :pageable="true"
+          :pagination="tablePagination"
+          :toolbar-config="{ custom: false }"
+          :row-config="{ keyField: 'workflowKey' }"
+          @page-change="page.handlePageChange"
+        >
         <template #statusLabel="{ row }">
           <a-tag :color="row.enabled === false ? 'red' : 'green'">
             {{ row.statusLabel }}
@@ -537,7 +546,8 @@ const handleDragEnd = (rows: any[]) => {
             </YTable>
           </div>
         </template>
-      </YTable>
+        </YTable>
+      </div>
     </YCard>
 
     <a-modal

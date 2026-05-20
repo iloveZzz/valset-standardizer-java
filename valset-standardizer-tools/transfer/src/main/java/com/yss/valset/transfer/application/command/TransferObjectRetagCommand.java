@@ -57,4 +57,14 @@ public class TransferObjectRetagCommand {
      * 标签值。
      */
     private String tagValue;
+
+    /**
+     * 业务日期。
+     */
+    private String businessDate;
+
+    /**
+     * 收取日期。
+     */
+    private String receiveDate;
 }

@@ -1,5 +1,8 @@
 package com.yss.valset.transfer.application.impl.tagging;
 
+import com.yss.valset.qlexpress.domain.runtime.QlexpressExecutionContextEnhancer;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressFunctionScript;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressRunnerRegistry;
 import com.yss.valset.transfer.application.impl.query.DefaultTransferObjectQueryService;
 import com.yss.valset.transfer.application.service.TransferObjectBusinessFieldProjectionUseCase;
 import com.yss.valset.transfer.domain.gateway.ProductMatchRuleGateway;
@@ -93,8 +96,25 @@ class DefaultTransferTaggingServiceTest {
                 objectTagGateway,
                 new NoopProjectionService(),
                 new StaticProductMatchRuleGateway(productMatchRules),
-                new ScriptRuleEngineAdapter()
+                new ScriptRuleEngineAdapter(new QlexpressRunnerRegistry(DefaultTransferTaggingServiceTest::qlexpressScripts, QlexpressExecutionContextEnhancer.empty()), QlexpressExecutionContextEnhancer.empty())
         );
+    }
+
+    private static List<QlexpressFunctionScript> qlexpressScripts() {
+        return java.util.Arrays.asList(
+                script("hasText", "function hasText(value) { return value != null && (\"\" + value) != \"\"; }"),
+                script("transferText", "function transferText(value) { return value == null ? \"\" : \"\" + value; }"),
+                script("textMatches", "function textMatches(source, keyword) { text = transferText(source); kw = transferText(keyword); if (text == \"\" || kw == \"\") { return false; }; return text == kw || kw in text || text in kw || text like kw; }"),
+                script("containsAllText", "function containsAllText(source, keywords) { if (source == null || keywords == null || keywords.length == 0) { return false; }; for (keyword : keywords) { if (!textMatches(source, keyword)) { return false; }; }; return true; }"),
+                script("productRuleValue", "function productRuleValue(rule, fieldName) { if (rule == null || fieldName == null) { return null; }; return rule[fieldName]; }"),
+                script("productRuleMatches", "function productRuleMatches(fileName, rule) { keywords = productRuleValue(rule, \"matchKeywords\"); if (keywords != null && keywords.length > 0) { return containsAllText(fileName, keywords); }; return textMatches(fileName, productRuleValue(rule, \"matchRules\")); }"),
+                script("firstProductMatchRule", "function firstProductMatchRule(fileName, productMatchRules) { if (fileName == null || productMatchRules == null) { return null; }; for (rule : productMatchRules) { if (productRuleMatches(fileName, rule)) { return rule; }; }; return null; }"),
+                script("productMatchResult", "function productMatchResult(rule, fileName) { if (rule == null) { return null; }; snapshot = {\"ruleId\": productRuleValue(rule, \"id\"), \"pdCd\": productRuleValue(rule, \"pdCd\"), \"pdNm\": productRuleValue(rule, \"pdNm\"), \"orgCd\": productRuleValue(rule, \"orgCd\"), \"orgNm\": productRuleValue(rule, \"orgNm\"), \"pdType\": productRuleValue(rule, \"pdType\"), \"fileType\": productRuleValue(rule, \"fileType\"), \"fileTypeName\": productRuleValue(rule, \"fileTypeName\"), \"matchRules\": productRuleValue(rule, \"matchRules\"), \"jobName\": productRuleValue(rule, \"jobName\"), \"jobScene\": productRuleValue(rule, \"jobScene\")}; return {\"matched\": true, \"message\": \"产品匹配规则命中\", \"tagValue\": snapshot[\"ruleId\"], \"matchedField\": \"fileName\", \"matchedValue\": fileName, \"snapshot\": snapshot}; }")
+        );
+    }
+
+    private static QlexpressFunctionScript script(String functionName, String scriptBody) {
+        return new QlexpressFunctionScript(functionName, scriptBody, Collections.singletonList("transfer.rule"));
     }
 
     private TransferTagDefinition tag(String tagId, String tagCode, String tagValue, String scriptBody) {
@@ -251,12 +271,12 @@ class DefaultTransferTaggingServiceTest {
         }
 
         @Override
-        public TransferObjectPage pageObjects(String sourceId, String sourceType, String sourceCode, String originalName, String status, String deliveryStatus, String mailId, String fingerprint, String routeId, String tagId, String tagCode, String tagValue, String taskDate, Integer pageIndex, Integer pageSize) {
+        public TransferObjectPage pageObjects(String sourceId, String sourceType, String sourceCode, String originalName, String status, String deliveryStatus, String mailId, String fingerprint, String routeId, String tagId, String tagCode, String tagValue, String businessDate, String receiveDate, String taskDate, Integer pageIndex, Integer pageSize) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public TransferObjectAnalysis analyzeObjects(String sourceId, String sourceType, String sourceCode, String originalName, String status, String deliveryStatus, String mailId, String fingerprint, String routeId, String tagId, String tagCode, String tagValue, String taskDate) {
+        public TransferObjectAnalysis analyzeObjects(String sourceId, String sourceType, String sourceCode, String originalName, String status, String deliveryStatus, String mailId, String fingerprint, String routeId, String tagId, String tagCode, String tagValue, String businessDate, String receiveDate, String taskDate) {
             throw new UnsupportedOperationException();
         }
 

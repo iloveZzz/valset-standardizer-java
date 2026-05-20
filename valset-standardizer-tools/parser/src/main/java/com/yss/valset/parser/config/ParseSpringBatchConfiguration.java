@@ -22,7 +22,7 @@ import org.springframework.transaction.PlatformTransactionManager;
  *
  * <p>
  * 这里把估值表解析拆成固定的三段式作业：
- * 文件解析 -> 结构标准化 -> 标准表落地。
+ * 文件解析 -> 结构标准化 -> 估值贴源数据落地。
  * Job 只负责调度顺序，真正的业务处理都下沉到 {@link ParseBatchStepSupport}。
  * </p>
  */

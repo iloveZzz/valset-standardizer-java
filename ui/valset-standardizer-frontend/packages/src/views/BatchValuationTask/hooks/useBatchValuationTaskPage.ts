@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
-import { computed, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, reactive, ref } from "vue";
 import { message } from "ant-design-vue";
 import type {
   BatchValuationTaskBatchRow,
+  BatchValuationTaskAutoRefreshInterval,
   BatchValuationTaskPageState,
   BatchValuationTaskStage,
   BatchValuationTaskStandardTab,
@@ -11,8 +12,10 @@ import type {
 } from "../types";
 import {
   batchRetryBatchValuationTasks,
+  downloadBatchValuationTaskRawWorkbook,
   exportBatchValuationTaskStandardDataSheet,
   getBatchValuationTask,
+  getBatchValuationTaskRawWorkbook,
   getBatchValuationTaskSummary,
   getBatchValuationTaskStandardBasic,
   listBatchValuationTaskStandardMetrics,
@@ -22,6 +25,7 @@ import {
   type BatchValuationTaskBatchDetailDTO,
   type BatchValuationTaskBatchDTO,
   type BatchValuationTaskQueryParams,
+  type BatchValuationTaskRawWorkbookDTO,
   type BatchValuationTaskStandardBasicDTO,
   type BatchValuationTaskStandardMetricDTO,
   type BatchValuationTaskStandardSubjectDTO,
@@ -35,10 +39,22 @@ import {
 } from "../constants";
 
 const PAGE_SIZE = 10;
+const AUTO_REFRESH_OPTIONS: Array<{
+  label: string;
+  value: BatchValuationTaskAutoRefreshInterval;
+}> = [
+  { label: "0s（停止）", value: 0 },
+  { label: "5s", value: 5 },
+  { label: "10s", value: 10 },
+  { label: "30s", value: 30 },
+  { label: "60s", value: 60 },
+];
+const DEFAULT_AUTO_REFRESH_INTERVAL: BatchValuationTaskAutoRefreshInterval = 10;
 
 const defaultQuery = (): BatchValuationTaskQueryParams & {
   batchId: string;
   taskDate: string;
+  businessDate: string;
   managerName: string;
   productKeyword: string;
   taskStage: string;
@@ -48,6 +64,7 @@ const defaultQuery = (): BatchValuationTaskQueryParams & {
 } => ({
   batchId: "",
   taskDate: dayjs().format("YYYY-MM-DD"),
+  businessDate: "",
   managerName: "",
   productKeyword: "",
   taskStage: "",
@@ -116,6 +133,14 @@ const formatTime = (value?: string) => {
   }
   return text.replace("T", " ");
 };
+
+const formatLastUpdatedAt = () => dayjs().format("HH:mm:ss");
+
+const normalizeAutoRefreshInterval = (
+  value?: number,
+): BatchValuationTaskAutoRefreshInterval =>
+  AUTO_REFRESH_OPTIONS.find((item) => item.value === Number(value))?.value ??
+  DEFAULT_AUTO_REFRESH_INTERVAL;
 
 const toBatchRow = (
   row: BatchValuationTaskBatchDTO,
@@ -200,6 +225,11 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
   const detailLoading = ref(false);
   const batchRetryLoading = ref(false);
   const tableRef = ref<any>(null);
+  const autoRefreshInterval = ref<BatchValuationTaskAutoRefreshInterval>(
+    DEFAULT_AUTO_REFRESH_INTERVAL,
+  );
+  const lastUpdatedAt = ref("");
+  let autoRefreshTimer: number | null = null;
   const rows = ref<BatchValuationTaskBatchRow[]>([]);
   const totalCount = ref(0);
   const summary = reactive<BatchValuationTaskSummaryDTO>({
@@ -226,12 +256,17 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
   const standardDataActiveTab = ref<BatchValuationTaskStandardTab>("basic");
   const standardDataSelectedRow = ref<BatchValuationTaskBatchRow | null>(null);
   const standardDataBasic = ref<BatchValuationTaskStandardBasicDTO | null>(null);
+  const standardDataRawWorkbook = ref<BatchValuationTaskRawWorkbookDTO | null>(null);
   const standardDataSubjects = ref<BatchValuationTaskStandardSubjectDTO[]>([]);
   const standardDataMetrics = ref<BatchValuationTaskStandardMetricDTO[]>([]);
   const standardDataBasicLoading = ref(false);
   const standardDataSubjectsLoading = ref(false);
   const standardDataMetricsLoading = ref(false);
+  const standardDataRawLoading = ref(false);
+  const standardDataRawLoaded = ref(false);
+  const standardDataRawError = ref("");
   const standardDataExportLoading = ref(false);
+  const standardDataRawDownloadLoading = ref(false);
   const standardDataSubjectsLoaded = ref(false);
   const standardDataMetricsLoaded = ref(false);
   const standardDataSubjectsKeyword = ref("");
@@ -241,7 +276,10 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     tableRef.value = instance;
   };
 
-  const load = async () => {
+  const load = async (options?: { silent?: boolean; skipWhenLoading?: boolean }) => {
+    if (options?.skipWhenLoading && loading.value) {
+      return;
+    }
     loading.value = true;
     try {
       const requestQuery = {
@@ -275,12 +313,37 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
         .map((item) => item.batchId)
         .filter((batchId): batchId is string => Boolean(batchId));
       void syncTableSelection(selectedRows.value);
+      lastUpdatedAt.value = formatLastUpdatedAt();
     } catch (error) {
-      message.error("加载 批量任务 元数据失败");
+      if (!options?.silent) {
+        message.error("加载 批量任务 元数据失败");
+      }
       console.error(error);
     } finally {
       loading.value = false;
     }
+  };
+
+  const stopAutoRefresh = () => {
+    if (autoRefreshTimer !== null) {
+      window.clearInterval(autoRefreshTimer);
+      autoRefreshTimer = null;
+    }
+  };
+
+  const startAutoRefresh = () => {
+    stopAutoRefresh();
+    if (autoRefreshInterval.value <= 0) {
+      return;
+    }
+    autoRefreshTimer = window.setInterval(() => {
+      void load({ silent: true, skipWhenLoading: true });
+    }, autoRefreshInterval.value * 1000);
+  };
+
+  const setAutoRefreshInterval = (value: number) => {
+    autoRefreshInterval.value = normalizeAutoRefreshInterval(value);
+    startAutoRefresh();
   };
 
   const loadDetail = async (row: BatchValuationTaskBatchRow) => {
@@ -381,6 +444,34 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     }
   };
 
+  const loadStandardDataRawWorkbook = async (force = false) => {
+    const batchId = currentStandardDataBatchId();
+    if (!batchId) {
+      standardDataRawWorkbook.value = null;
+      standardDataRawLoaded.value = false;
+      standardDataRawError.value = "";
+      return;
+    }
+    if (standardDataRawLoaded.value && !force) {
+      return;
+    }
+    standardDataRawLoading.value = true;
+    standardDataRawError.value = "";
+    try {
+      const resp = await getBatchValuationTaskRawWorkbook(batchId);
+      standardDataRawWorkbook.value = resp.data ?? null;
+      standardDataRawLoaded.value = true;
+    } catch (error) {
+      standardDataRawWorkbook.value = null;
+      standardDataRawLoaded.value = false;
+      standardDataRawError.value = "目标源下载失败，无法展示原始估值表";
+      message.error("加载原始估值表失败");
+      console.error(error);
+    } finally {
+      standardDataRawLoading.value = false;
+    }
+  };
+
   const runQuery = () => {
     pagination.current = 1;
     void load();
@@ -411,6 +502,9 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     }
     if (query.taskDate) {
       parts.push(`任务日期 ${query.taskDate}`);
+    }
+    if (query.businessDate) {
+      parts.push(`业务日期 ${query.businessDate}`);
     }
     if (query.managerName) {
       parts.push(`管理机构 ${query.managerName}`);
@@ -505,27 +599,15 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     syncSelectionFromTable();
   };
 
-  const refreshAfterBatchAction = async (preferredBatchId?: string) => {
+  const closeDetailState = () => {
+    detail.value = null;
+    selectedRow.value = null;
+    detailVisible.value = false;
+  };
+
+  const refreshAfterBatchAction = async () => {
+    closeDetailState();
     await load();
-    const nextRows = rows.value.map((row) => ({
-      ...row,
-      steps: row.steps ?? [],
-    }));
-    const current = preferredBatchId
-      ? nextRows.find((row) => row.batchId === preferredBatchId) ?? null
-      : selectedRow.value
-        ? nextRows.find((row) => row.batchId === selectedRow.value?.batchId) ?? null
-        : null;
-    if (current) {
-      selectedRow.value = current;
-      await loadDetail(current);
-      return;
-    }
-    if (detailVisible.value) {
-      detail.value = null;
-      selectedRow.value = null;
-      detailVisible.value = false;
-    }
   };
 
   const batchRetrySelected = async () => {
@@ -568,7 +650,7 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
         reason: "单批次重新解析",
       });
       message.success("已提交批次重新解析");
-      await refreshAfterBatchAction(row.batchId);
+      await refreshAfterBatchAction();
     } catch (error) {
       message.error("重新解析提交失败");
       console.error(error);
@@ -594,10 +676,13 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
   const resetStandardDataState = () => {
     standardDataActiveTab.value = "basic";
     standardDataBasic.value = null;
+    standardDataRawWorkbook.value = null;
     standardDataSubjects.value = [];
     standardDataMetrics.value = [];
     standardDataSubjectsLoaded.value = false;
     standardDataMetricsLoaded.value = false;
+    standardDataRawLoaded.value = false;
+    standardDataRawError.value = "";
     standardDataSubjectsKeyword.value = "";
     standardDataMetricsKeyword.value = "";
   };
@@ -614,7 +699,8 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
   };
 
   const handleStandardDataTabChange = (tab: BatchValuationTaskStandardTab | string) => {
-    const normalizedTab = tab === "subjects" || tab === "metrics" ? tab : "basic";
+    const normalizedTab =
+      tab === "subjects" || tab === "metrics" || tab === "raw" ? tab : "basic";
     standardDataActiveTab.value = normalizedTab;
     if (normalizedTab === "subjects" && !standardDataSubjectsLoaded.value) {
       void loadStandardDataSubjects();
@@ -622,9 +708,16 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     if (normalizedTab === "metrics" && !standardDataMetricsLoaded.value) {
       void loadStandardDataMetrics();
     }
+    if (normalizedTab === "raw") {
+      void loadStandardDataRawWorkbook();
+    }
   };
 
   const refreshStandardData = () => {
+    if (standardDataActiveTab.value === "raw") {
+      void loadStandardDataRawWorkbook(true);
+      return;
+    }
     if (standardDataActiveTab.value === "subjects") {
       void loadStandardDataSubjects();
       return;
@@ -643,6 +736,9 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     if (standardDataActiveTab.value === "metrics") {
       return "指标数据";
     }
+    if (standardDataActiveTab.value === "raw") {
+      return "原始估值表";
+    }
     return "基础信息";
   };
 
@@ -650,6 +746,16 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     const row = standardDataSelectedRow.value;
     const batchName = row?.batchName || row?.batchId || "标准数据";
     return `估值标准数据_${batchName}_${standardDataTabName()}.xlsx`;
+  };
+
+  const defaultRawWorkbookDownloadFileName = () => {
+    const fileName = standardDataRawWorkbook.value?.fileName;
+    if (fileName) {
+      return fileName;
+    }
+    const row = standardDataSelectedRow.value;
+    const batchName = row?.batchName || row?.batchId || "原始估值表";
+    return `${batchName}.xlsx`;
   };
 
   const exportStandardDataSheet = async (
@@ -696,6 +802,39 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     }
   };
 
+  const downloadRawWorkbook = async () => {
+    const batchId = currentStandardDataBatchId();
+    if (!batchId) {
+      message.warning("请先选择要下载的批次");
+      return;
+    }
+    if (standardDataRawDownloadLoading.value) {
+      return;
+    }
+    standardDataRawDownloadLoading.value = true;
+    try {
+      const response = (await downloadBatchValuationTaskRawWorkbook(batchId)) as {
+        data?: Blob;
+        headers?: Record<string, string>;
+      } | Blob;
+      const blob = response instanceof Blob ? response : response.data;
+      if (!blob) {
+        throw new Error("下载响应为空");
+      }
+      const headers = response instanceof Blob ? undefined : response.headers;
+      const fileName =
+        parseContentDispositionFileName(headers?.["content-disposition"] || headers?.["Content-Disposition"]) ||
+        defaultRawWorkbookDownloadFileName();
+      triggerBrowserDownload(blob, fileName);
+      message.success("下载成功");
+    } catch (error) {
+      console.error("下载原始估值表失败:", error);
+      message.error("下载失败，请稍后重试");
+    } finally {
+      standardDataRawDownloadLoading.value = false;
+    }
+  };
+
   const searchStandardDataSubjects = () => {
     standardDataSubjectsKeyword.value = normalizeStandardDataKeyword(standardDataSubjectsKeyword.value);
     void loadStandardDataSubjects();
@@ -707,6 +846,8 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
   };
 
   void load();
+  startAutoRefresh();
+  onBeforeUnmount(stopAutoRefresh);
 
   return reactive({
     tableRef,
@@ -714,6 +855,12 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     loading: computed(() => loading.value),
     detailLoading: computed(() => detailLoading.value),
     batchRetryLoading: computed(() => batchRetryLoading.value),
+    autoRefreshInterval: computed({
+      get: () => autoRefreshInterval.value,
+      set: setAutoRefreshInterval,
+    }),
+    autoRefreshOptions: AUTO_REFRESH_OPTIONS,
+    lastUpdatedAt: computed(() => lastUpdatedAt.value),
     rows: computed(() => rows.value),
     totalCount: computed(() => totalCount.value),
     summary,
@@ -729,13 +876,17 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     standardDataActiveTab: computed(() => standardDataActiveTab.value),
     standardDataSelectedRow: computed(() => standardDataSelectedRow.value),
     standardDataBasic: computed(() => standardDataBasic.value),
+    standardDataRawWorkbook: computed(() => standardDataRawWorkbook.value),
     standardDataBasicRows: computed(() => standardDataBasic.value?.basicRows ?? []),
     standardDataSubjects: computed(() => standardDataSubjects.value),
     standardDataMetrics: computed(() => standardDataMetrics.value),
     standardDataBasicLoading: computed(() => standardDataBasicLoading.value),
     standardDataSubjectsLoading: computed(() => standardDataSubjectsLoading.value),
     standardDataMetricsLoading: computed(() => standardDataMetricsLoading.value),
+    standardDataRawLoading: computed(() => standardDataRawLoading.value),
+    standardDataRawError: computed(() => standardDataRawError.value),
     standardDataExportLoading: computed(() => standardDataExportLoading.value),
+    standardDataRawDownloadLoading: computed(() => standardDataRawDownloadLoading.value),
     standardDataSubjectsKeyword: computed({
       get: () => standardDataSubjectsKeyword.value,
       set: (value) => {
@@ -769,8 +920,10 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     handleStandardDataTabChange,
     refreshStandardData,
     exportStandardDataSheet,
+    downloadRawWorkbook,
     searchStandardDataSubjects,
     searchStandardDataMetrics,
+    setAutoRefreshInterval,
     formatStatusColor,
   }) as unknown as BatchValuationTaskPageState;
 };

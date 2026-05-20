@@ -7,6 +7,8 @@ import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Color;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -22,11 +24,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Excel 到 Univer 数据结构的转换辅助器。
@@ -41,6 +45,7 @@ public class ExcelUniverSnapshotSupport implements Closeable {
 
     private static final int XML_DEFAULT_COLUMN_WIDTH = 56;
     private static final int XML_DEFAULT_ROW_HEIGHT = 20;
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final Workbook workbook;
     private final SpreadsheetXmlSupport.SpreadsheetXmlWorkbook spreadsheetXmlWorkbook;
@@ -143,6 +148,16 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         return workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
     }
 
+    /**
+     * 构建完整 Univer workbook snapshot，覆盖工作簿内所有 Sheet。
+     */
+    public WorkbookSnapshot buildWorkbookSnapshot(String workbookName) {
+        if (workbook != null) {
+            return buildPoiWorkbookSnapshot(workbookName);
+        }
+        return buildSpreadsheetXmlWorkbookSnapshot(workbookName);
+    }
+
     @Override
     public void close() throws IOException {
         if (workbook != null) {
@@ -150,7 +165,7 @@ public class ExcelUniverSnapshotSupport implements Closeable {
         }
     }
 
-    private Map<String, Object> buildCellData(Cell cell, String rawValue, boolean includeStyle) {
+    private Map<String, Object> buildCellData(Cell cell, Object rawValue, boolean includeStyle) {
         Map<String, Object> cellData = new LinkedHashMap<>();
         if (rawValue != null) {
             cellData.put("v", rawValue);
@@ -162,6 +177,231 @@ public class ExcelUniverSnapshotSupport implements Closeable {
             }
         }
         return cellData;
+    }
+
+    private WorkbookSnapshot buildPoiWorkbookSnapshot(String workbookName) {
+        Map<String, Object> workbookData = baseWorkbookData(workbookName);
+        List<String> sheetOrder = new ArrayList<>();
+        Map<String, Object> sheets = new LinkedHashMap<>();
+        int totalRows = 0;
+        int sheetCount = workbook == null ? 0 : workbook.getNumberOfSheets();
+        for (int sheetIndex = 0; sheetIndex < sheetCount; sheetIndex++) {
+            Sheet sheet = workbook.getSheetAt(sheetIndex);
+            String sheetId = buildSheetId(sheetIndex);
+            sheetOrder.add(sheetId);
+            sheets.put(sheetId, buildPoiSheetData(sheetId, sheet));
+            totalRows += Math.max(0, sheet == null ? 0 : sheet.getLastRowNum() + 1);
+        }
+        workbookData.put("sheetOrder", sheetOrder);
+        workbookData.put("sheets", sheets);
+        return new WorkbookSnapshot(workbookData, sheetCount, totalRows);
+    }
+
+    private Map<String, Object> buildPoiSheetData(String sheetId, Sheet sheet) {
+        Map<String, Object> sheetData = new LinkedHashMap<>();
+        int rowCount = Math.max(1, sheet == null ? 0 : sheet.getLastRowNum() + 1);
+        int columnCount = Math.max(1, resolveColumnCount(sheet));
+        sheetData.put("id", sheetId);
+        sheetData.put("name", sheet == null ? "Sheet" : sheet.getSheetName());
+        sheetData.put("rowCount", Math.max(rowCount, 30));
+        sheetData.put("columnCount", Math.max(columnCount, 8));
+        sheetData.put("defaultColumnWidth", resolveDefaultColumnWidth(sheet));
+        sheetData.put("defaultRowHeight", resolveDefaultRowHeight(sheet));
+        sheetData.put("cellData", buildPoiCellData(sheet, rowCount, columnCount));
+        sheetData.put("mergeData", buildMergeData(sheet));
+        Map<Integer, Map<String, Object>> columnData = buildPoiColumnData(sheet, columnCount);
+        if (!columnData.isEmpty()) {
+            sheetData.put("columnData", columnData);
+        }
+        Map<Integer, Map<String, Object>> rowData = buildPoiRowData(sheet, rowCount);
+        if (!rowData.isEmpty()) {
+            sheetData.put("rowData", rowData);
+        }
+        return sheetData;
+    }
+
+    private Map<Integer, Map<Integer, Map<String, Object>>> buildPoiCellData(Sheet sheet, int rowCount, int columnCount) {
+        Map<Integer, Map<Integer, Map<String, Object>>> cellData = new LinkedHashMap<>();
+        if (sheet == null) {
+            return cellData;
+        }
+        for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null) {
+                continue;
+            }
+            Map<Integer, Map<String, Object>> rowCellData = new LinkedHashMap<>();
+            int rowColumnCount = Math.max(columnCount, row.getLastCellNum());
+            for (int columnIndex = 0; columnIndex < rowColumnCount; columnIndex++) {
+                Cell cell = row.getCell(columnIndex, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+                if (cell == null) {
+                    continue;
+                }
+                Map<String, Object> cellSnapshot = buildCellData(cell, cellValue(cell), true);
+                Integer valueType = cellType(cell);
+                if (valueType != null) {
+                    cellSnapshot.put("t", valueType);
+                }
+                if (!cellSnapshot.isEmpty()) {
+                    rowCellData.put(columnIndex, cellSnapshot);
+                }
+            }
+            if (!rowCellData.isEmpty()) {
+                cellData.put(rowIndex, rowCellData);
+            }
+        }
+        return cellData;
+    }
+
+    private Map<Integer, Map<String, Object>> buildPoiColumnData(Sheet sheet, int columnCount) {
+        Map<Integer, Map<String, Object>> columnData = new LinkedHashMap<>();
+        if (sheet == null) {
+            return columnData;
+        }
+        for (int columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+            int width = Math.max(0, Math.round(sheet.getColumnWidth(columnIndex) / 256f * 7f));
+            if (width > 0) {
+                columnData.put(columnIndex, com.yss.valset.common.support.Java8Maps.of("w", width));
+            }
+        }
+        return columnData;
+    }
+
+    private Map<Integer, Map<String, Object>> buildPoiRowData(Sheet sheet, int rowCount) {
+        Map<Integer, Map<String, Object>> rowData = new LinkedHashMap<>();
+        if (sheet == null) {
+            return rowData;
+        }
+        for (int rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null) {
+                continue;
+            }
+            int height = Math.max(0, Math.round(row.getHeightInPoints() * 96 / 72f));
+            if (height > 0) {
+                rowData.put(rowIndex, com.yss.valset.common.support.Java8Maps.of("h", height));
+            }
+        }
+        return rowData;
+    }
+
+    private WorkbookSnapshot buildSpreadsheetXmlWorkbookSnapshot(String workbookName) {
+        Map<String, Object> workbookData = baseWorkbookData(workbookName);
+        List<String> sheetOrder = new ArrayList<>();
+        Map<String, Object> sheets = new LinkedHashMap<>();
+        int totalRows = 0;
+        List<SpreadsheetXmlSupport.SpreadsheetXmlSheet> xmlSheets = spreadsheetXmlWorkbook == null
+                ? Collections.emptyList()
+                : spreadsheetXmlWorkbook.sheets();
+        for (int sheetIndex = 0; sheetIndex < xmlSheets.size(); sheetIndex++) {
+            SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet = xmlSheets.get(sheetIndex);
+            String sheetId = buildSheetId(sheetIndex);
+            sheetOrder.add(sheetId);
+            sheets.put(sheetId, buildSpreadsheetXmlSheetData(sheetId, sheet));
+            totalRows += sheet == null || sheet.rows() == null ? 0 : sheet.rows().size();
+        }
+        workbookData.put("sheetOrder", sheetOrder);
+        workbookData.put("sheets", sheets);
+        return new WorkbookSnapshot(workbookData, xmlSheets.size(), totalRows);
+    }
+
+    private Map<String, Object> buildSpreadsheetXmlSheetData(String sheetId, SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet) {
+        int rowCount = Math.max(1, sheet == null || sheet.rows() == null ? 0 : sheet.rows().size());
+        int columnCount = Math.max(1, resolveColumnCount(sheet));
+        Map<String, Object> sheetData = new LinkedHashMap<>();
+        sheetData.put("id", sheetId);
+        sheetData.put("name", sheet == null ? "Sheet" : sheet.sheetName());
+        sheetData.put("rowCount", Math.max(rowCount, 30));
+        sheetData.put("columnCount", Math.max(columnCount, 8));
+        sheetData.put("defaultColumnWidth", XML_DEFAULT_COLUMN_WIDTH);
+        sheetData.put("defaultRowHeight", XML_DEFAULT_ROW_HEIGHT);
+        sheetData.put("cellData", buildSpreadsheetXmlCellData(sheet));
+        sheetData.put("mergeData", buildMergeData(sheet));
+        return sheetData;
+    }
+
+    private Map<Integer, Map<Integer, Map<String, Object>>> buildSpreadsheetXmlCellData(SpreadsheetXmlSupport.SpreadsheetXmlSheet sheet) {
+        Map<Integer, Map<Integer, Map<String, Object>>> cellData = new LinkedHashMap<>();
+        if (sheet == null || sheet.rows() == null) {
+            return cellData;
+        }
+        List<List<String>> rows = sheet.rows();
+        for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+            List<String> row = rows.get(rowIndex);
+            if (row == null || row.isEmpty()) {
+                continue;
+            }
+            Map<Integer, Map<String, Object>> rowCellData = new LinkedHashMap<>();
+            for (int columnIndex = 0; columnIndex < row.size(); columnIndex++) {
+                String value = row.get(columnIndex);
+                if (value != null) {
+                    rowCellData.put(columnIndex, com.yss.valset.common.support.Java8Maps.of("v", value));
+                }
+            }
+            if (!rowCellData.isEmpty()) {
+                cellData.put(rowIndex, rowCellData);
+            }
+        }
+        return cellData;
+    }
+
+    private Map<String, Object> baseWorkbookData(String workbookName) {
+        Map<String, Object> workbookData = new LinkedHashMap<>();
+        workbookData.put("id", "raw_workbook_" + UUID.randomUUID().toString().replace("-", ""));
+        workbookData.put("name", workbookName == null || workbookName.trim().isEmpty() ? "原始估值表" : workbookName.trim());
+        workbookData.put("appVersion", "3.0.0");
+        workbookData.put("locale", "zhCN");
+        workbookData.put("styles", Collections.emptyMap());
+        return workbookData;
+    }
+
+    private String buildSheetId(int sheetIndex) {
+        return "sheet_" + (sheetIndex + 1);
+    }
+
+    private Object cellValue(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+        try {
+            CellType cellType = cell.getCellType() == CellType.FORMULA ? cell.getCachedFormulaResultType() : cell.getCellType();
+            switch (cellType) {
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell) && cell.getDateCellValue() != null) {
+                        return DATE_TIME_FORMATTER.format(cell.getDateCellValue().toInstant()
+                                .atZone(java.time.ZoneId.systemDefault())
+                                .toLocalDateTime());
+                    }
+                    return cell.getNumericCellValue();
+                case BOOLEAN:
+                    return cell.getBooleanCellValue();
+                case STRING:
+                    return cell.getStringCellValue();
+                case BLANK:
+                    return null;
+                default:
+                    return cell.toString();
+            }
+        } catch (Exception exception) {
+            return cell.toString();
+        }
+    }
+
+    private Integer cellType(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+        CellType cellType = cell.getCellType() == CellType.FORMULA ? cell.getCachedFormulaResultType() : cell.getCellType();
+        switch (cellType) {
+            case NUMERIC:
+                return 2;
+            case BOOLEAN:
+                return 4;
+            case STRING:
+                return 1;
+            default:
+                return null;
+        }
     }
 
     private Map<String, Object> convertStyle(CellStyle cellStyle) {
@@ -453,6 +693,22 @@ public class ExcelUniverSnapshotSupport implements Closeable {
             this.sheetName = sheetName;
             this.rowIndex = rowIndex;
             this.rowCellData = rowCellData == null ? Collections.emptyMap() : rowCellData;
+        }
+    }
+
+    /**
+     * 完整工作簿快照。
+     */
+    @Getter
+    public static final class WorkbookSnapshot {
+        private final Map<String, Object> workbookData;
+        private final int sheetCount;
+        private final int rowCount;
+
+        public WorkbookSnapshot(Map<String, Object> workbookData, int sheetCount, int rowCount) {
+            this.workbookData = workbookData == null ? Collections.emptyMap() : workbookData;
+            this.sheetCount = sheetCount;
+            this.rowCount = rowCount;
         }
     }
 }

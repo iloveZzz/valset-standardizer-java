@@ -10,9 +10,11 @@ import com.yss.valset.extract.rule.ParseRuleStepDescriptor;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import com.yss.valset.extract.standardization.mapping.QlexpressHeaderMappingEngine;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressFunctionScript;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -76,9 +78,17 @@ class ExternalValuationStandardizationServiceDynamicRuleTest {
                 objectMapper,
                 null,
                 null,
-                new QlexpressParseRuleEngine(),
+                new QlexpressParseRuleEngine(objectMapper, ExternalValuationStandardizationServiceDynamicRuleTest::qlexpressScripts),
                 new QlexpressHeaderMappingEngine(),
                 resolver);
+    }
+
+    private static List<QlexpressFunctionScript> qlexpressScripts() {
+        return Collections.singletonList(new QlexpressFunctionScript(
+                "mapOf",
+                "function mapOf(k1, v1, k2, v2, k3, v3, k4, v4, k5, v5, k6, v6, k7, v7, k8, v8, k9, v9, k10, v10) { m = {:}; if (k1 != null) { m[k1] = v1; }; if (k2 != null) { m[k2] = v2; }; if (k3 != null) { m[k3] = v3; }; if (k4 != null) { m[k4] = v4; }; if (k5 != null) { m[k5] = v5; }; if (k6 != null) { m[k6] = v6; }; if (k7 != null) { m[k7] = v7; }; if (k8 != null) { m[k8] = v8; }; if (k9 != null) { m[k9] = v9; }; if (k10 != null) { m[k10] = v10; }; return m; }",
+                Collections.singletonList("extract.parse")
+        ));
     }
 
     private ParsedValuationData parsedData() {

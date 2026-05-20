@@ -10,13 +10,18 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class SourceFileManagePage extends SourceFileManageQuery {
 
+    /** 页码 */
     private Integer pageIndex;
 
+    /** 每页条数 */
     private Integer pageSize;
 
+    /** 分组字段 */
     private String groupBy;
 
+    /** 排序字段 */
     private String orderBy;
 
+    /** 排序方向 (ASC/DESC) */
     private String orderDirection;
 }

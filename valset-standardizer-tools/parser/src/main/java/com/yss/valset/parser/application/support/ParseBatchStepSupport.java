@@ -9,7 +9,6 @@ import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.common.support.Java8Maps;
 import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
 import com.yss.valset.domain.gateway.DwdJjhzgzbGateway;
-import com.yss.valset.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.valset.domain.gateway.TrIndexGateway;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
@@ -56,7 +55,6 @@ public class ParseBatchStepSupport {
     private final WorkflowTaskGateway taskGateway;
     private final ValuationDataParserProvider parserProvider;
     private final DwdExternalValuationGateway dwdExternalValuationGateway;
-    private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
     private final DwdJjhzgzbGateway dwdJjhzgzbGateway;
     private final TrIndexGateway trIndexGateway;
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
@@ -119,10 +117,9 @@ public class ParseBatchStepSupport {
                 throw new IllegalStateException("批量任务 结构标准化阶段缺少文件解析结果，taskId=" + taskId);
             }
             ParsedValuationData standardizedValuationData = standardizationService.standardize(parsedValuationData);
-            String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-            ParsedValuationData normalizedStandardizedData = standardizedValuationData == null ? null
-                    : standardizedValuationData.toBuilder().fileNameOriginal(fileNameOriginal).build();
-            standardizedExternalValuationGateway.saveStandardizedExternalValuation(taskId, workflowTask.getFileId(), normalizedStandardizedData);
+            if (standardizedValuationData == null) {
+                throw new IllegalStateException("批量任务 结构标准化阶段未返回标准化结果，taskId=" + taskId);
+            }
             publishLifecycleEvent(ParseLifecycleStage.STRUCTURE_STANDARDIZE, taskId, command, "结构标准化完成");
             jobExecutionContext.putLong(JOB_CONTEXT_STANDARDIZE_MS, System.currentTimeMillis() - startedAt);
         } catch (Exception exception) {
@@ -132,7 +129,7 @@ public class ParseBatchStepSupport {
     }
 
     /**
-     * 标准表落地步骤。
+     * 估值贴源数据落地步骤。
      *
      * <p>
      * 这是整条 批量任务 流水线的最后一步，负责把标准化结果写入业务目标表，
@@ -145,13 +142,16 @@ public class ParseBatchStepSupport {
         ParseTaskCommand command = readCommand(workflowTask);
         ParseLifecycleStage currentStage = ParseLifecycleStage.STANDARD_LANDING;
         try {
-            ParsedValuationData standardizedValuationData = standardizedExternalValuationGateway.findByValuationId(taskId);
-            if (standardizedValuationData == null) {
-                throw new IllegalStateException("批量任务 标准表落地阶段缺少标准化结果，taskId=" + taskId);
-            }
             DataSourceType type = resolveDataSourceType(command);
             String fileNameOriginal = resolveFileNameOriginal(workflowTask);
             ParsedValuationData sourceValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
+            if (sourceValuationData == null) {
+                throw new IllegalStateException("批量任务 估值贴源数据落地阶段缺少最新 STG 贴源结果，taskId=" + taskId);
+            }
+            ParsedValuationData standardizedValuationData = standardizationService.standardize(sourceValuationData);
+            if (standardizedValuationData == null) {
+                throw new IllegalStateException("批量任务 估值贴源数据落地阶段未返回标准化结果，taskId=" + taskId);
+            }
             ParsedValuationData finalStandardizedValuationData = mergeSourceMetadata(standardizedValuationData, sourceValuationData, fileNameOriginal);
             String sourceTypeName = type.name();
             String sourceSign = fileNameOriginal;
@@ -165,9 +165,9 @@ public class ParseBatchStepSupport {
             taskGateway.markSuccess(taskId, resultPayload);
             publishLifecycleEvent(ParseLifecycleStage.STANDARD_LANDING, taskId, command, "标准数据落地完成");
         } catch (Exception exception) {
-            log.error("批量任务 标准表落地阶段失败，taskId={}, fileId={}", taskId, workflowTask.getFileId(), exception);
+            log.error("批量任务 估值贴源数据落地阶段失败，taskId={}, fileId={}", taskId, workflowTask.getFileId(), exception);
             publishFailureEvent(currentStage, taskId, command, exception);
-            throw new IllegalStateException("批量任务 标准表落地阶段失败，taskId=" + taskId, exception);
+            throw new IllegalStateException("批量任务 估值贴源数据落地阶段失败，taskId=" + taskId, exception);
         }
     }
 

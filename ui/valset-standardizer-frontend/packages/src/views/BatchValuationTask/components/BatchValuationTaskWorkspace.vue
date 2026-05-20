@@ -4,10 +4,12 @@ import dayjs, { type Dayjs } from "dayjs";
 import { Modal } from "ant-design-vue";
 import { LocaleType, type IWorkbookData } from "@univerjs/presets";
 import {
+  DownloadOutlined,
   ExportOutlined,
   ExclamationCircleOutlined,
   ReloadOutlined,
   SearchOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons-vue";
 import {
   YButton,
@@ -15,6 +17,7 @@ import {
   YTable,
   type YTableColumn,
 } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import NativeUniverSheet from "@/components/NativeUniverSheet/index.vue";
 import WorkspaceTableToolbar from "../../TransferShared/components/WorkspaceTableToolbar.vue";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
@@ -34,12 +37,18 @@ const { page } = defineProps<{
   page: BatchValuationTaskPageState;
 }>();
 const yTableRef = ref<InstanceType<typeof YTable> | null>(null);
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 type NativeUniverSheetInstance = InstanceType<typeof NativeUniverSheet> & {
   save: () => IWorkbookData | null;
 };
 const standardBasicSheetRef = ref<NativeUniverSheetInstance | null>(null);
 const standardSubjectSheetRef = ref<NativeUniverSheetInstance | null>(null);
 const standardMetricSheetRef = ref<NativeUniverSheetInstance | null>(null);
+const standardRawSheetRef = ref<NativeUniverSheetInstance | null>(null);
 
 watch(
   yTableRef,
@@ -204,7 +213,7 @@ const columns = computed<YTableColumn[]>(() => [
   {
     type: "action",
     title: batchValuationTaskPageText.table.action,
-    width: 120,
+    width: 240,
     fixed: "right",
     align: "center",
   },
@@ -223,25 +232,36 @@ const taskDateValue = computed<Dayjs | undefined>({
   },
 });
 
+const businessDateValue = computed<Dayjs | undefined>({
+  get: () => {
+    const text = String(page.query.businessDate ?? "").trim();
+    const parsed = dayjs(text);
+    return parsed.isValid() ? parsed : undefined;
+  },
+  set: (value) => {
+    page.query.businessDate = value ? value.format(TASK_DATE_FORMAT) : "";
+  },
+});
+
 const actionConfig = useTableActionConfig({
-  width: 180,
+  width: 240,
   fixed: "right",
-  displayLimit: 1,
+  displayLimit: 3,
   moreRenderType: "moreButton",
   buttons: [
+  {
+    text: "查看数据",
+    key: "standardData",
+    type: "link",
+    clickFn: ({ row }: { row: BatchValuationTaskBatchRow }) =>
+    page.openStandardDataModal(row),
+  },
     {
       text: "查看详情",
       key: "detail",
       type: "link",
       clickFn: ({ row }: { row: BatchValuationTaskBatchRow }) =>
         page.openDetailDrawer(row),
-    },
-    {
-      text: "标准数据",
-      key: "standardData",
-      type: "link",
-      clickFn: ({ row }: { row: BatchValuationTaskBatchRow }) =>
-        page.openStandardDataModal(row),
     },
     {
       text: "重新解析",
@@ -745,9 +765,33 @@ const standardSubjectRows = computed(() =>
   })),
 );
 
+const semanticMetricType = (value?: string) => {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "metric_row") {
+    return "指标行";
+  }
+  if (normalized === "metric_data") {
+    return "指标值";
+  }
+  return value ?? "";
+};
+
+const semanticMetricValue = (type?: string, value?: string) => {
+  const normalized = String(type ?? "").trim().toLowerCase();
+  if (normalized === "metric_row") {
+    return "-";
+  }
+  if (normalized === "metric_data") {
+    return value ?? "";
+  }
+  return value ?? "";
+};
+
 const standardMetricRows = computed(() =>
   page.standardDataMetrics.map((row) => ({
     ...row,
+    metricType: semanticMetricType(row.metricType),
+    metricValue: semanticMetricValue(row.metricType, row.metricValue),
     ...Object.fromEntries(
       standardRawColumns.value
         .filter((column) => column.fieldKey && column.title)
@@ -837,6 +881,9 @@ const standardDataSubtitleTags = computed(() => {
 });
 
 const standardDataTotalRows = computed(() => {
+  if (page.standardDataActiveTab === "raw") {
+    return page.standardDataRawWorkbook?.rowCount ?? 0;
+  }
   if (page.standardDataActiveTab === "subjects") {
     return standardSubjectRows.value.length;
   }
@@ -847,6 +894,9 @@ const standardDataTotalRows = computed(() => {
 });
 
 const standardDataTableLoading = computed(() => {
+  if (page.standardDataActiveTab === "raw") {
+    return page.standardDataRawLoading;
+  }
   if (page.standardDataActiveTab === "subjects") {
     return page.standardDataSubjectsLoading;
   }
@@ -870,10 +920,13 @@ const standardDataExportDisabled = computed(() => {
 });
 
 const standardDataSkeletonColumns = computed(() =>
-  page.standardDataActiveTab === "basic" ? 3 : 6,
+  page.standardDataActiveTab === "basic" ? 3 : page.standardDataActiveTab === "raw" ? 8 : 6,
 );
 
 const currentStandardDataSheet = () => {
+  if (page.standardDataActiveTab === "raw") {
+    return standardRawSheetRef.value;
+  }
   if (page.standardDataActiveTab === "subjects") {
     return standardSubjectSheetRef.value;
   }
@@ -884,6 +937,9 @@ const currentStandardDataSheet = () => {
 };
 
 const currentStandardDataSheetName = () => {
+  if (page.standardDataActiveTab === "raw") {
+    return "原始估值表";
+  }
   if (page.standardDataActiveTab === "subjects") {
     return "估值明细";
   }
@@ -948,23 +1004,15 @@ const handleSummaryCardClick = (status?: string) => {
   page.handleStatusSelect(status);
 };
 
+const rawWorkbookData = computed(
+  () => page.standardDataRawWorkbook?.workbookData as IWorkbookData | undefined,
+);
+
 </script>
 
 <template>
   <div class="batch-task-page">
     <YCard class="batch-task-header" :bordered="false" :padding="12">
-      <div class="batch-task-header__top">
-        <div class="batch-task-header__copy">
-          <h2>{{ batchValuationTaskPageText.title }}</h2>
-        </div>
-      </div>
-
-      <div class="batch-task-header__meta">
-        <span class="batch-task-pill">
-          {{ summaryDescription }}
-        </span>
-      </div>
-
       <div class="batch-task-metrics">
         <div
           v-for="card in summaryCards"
@@ -1023,6 +1071,12 @@ const handleSummaryCardClick = (status?: string) => {
           </button>
         </div>
       </div>
+
+    <div class="batch-task-header__meta">
+            <span class="batch-task-pill">
+              {{ summaryDescription }}
+            </span>
+    </div>
     </YCard>
 
     <YCard class="batch-task-list-card" :bordered="false" :padding="12">
@@ -1041,6 +1095,24 @@ const handleSummaryCardClick = (status?: string) => {
             <a-date-picker
               v-model:value="taskDateValue"
               format="YYYY-MM-DD"
+              allow-clear
+              style="width: 150px"
+              size="small"
+            />
+          </a-form-item>
+          <a-form-item :label="batchValuationTaskPageText.query.businessDate">
+            <a-date-picker
+              v-model:value="businessDateValue"
+              format="YYYY-MM-DD"
+              allow-clear
+              style="width: 150px"
+              size="small"
+            />
+          </a-form-item>
+          <a-form-item :label="batchValuationTaskPageText.query.managerName">
+            <a-input
+              v-model:value="page.query.managerName"
+              placeholder="管理机构"
               allow-clear
               style="width: 150px"
               size="small"
@@ -1089,35 +1161,63 @@ const handleSummaryCardClick = (status?: string) => {
               </a-select-option>
             </a-select>
           </a-form-item>
-        </a-form>
-        <div class="batch-task-query-actions">
-          <YButton size="small" type="primary" @click="page.runQuery">
-            <template #icon><SearchOutlined /></template>
-            查询
-          </YButton>
-          <YButton
-            size="small"
-            type="primary"
-            ghost
+          <a-form-item>
+            <div class="batch-task-query-actions">
+              <div class="batch-task-auto-refresh">
+            <span class="batch-task-auto-refresh__time">
+              <ClockCircleOutlined />
+              最近更新 {{ page.lastUpdatedAt || "--:--:--" }}
+            </span>
+                <span class="batch-task-auto-refresh__label">
+              <ReloadOutlined />
+              自动刷新
+            </span>
+                <a-select
+                    class="batch-task-auto-refresh__select"
+                :value="page.autoRefreshInterval"
+                size="small"
+                @change="(value) => page.setAutoRefreshInterval(Number(value))"
+                >
+                <a-select-option
+                    v-for="item in page.autoRefreshOptions"
+                :key="item.value"
+                :value="item.value"
+                >
+                {{ item.label }}
+              </a-select-option>
+            </a-select>
+          </div>
+<YButton size="small" type="primary" @click="page.runQuery">
+    <template #icon><SearchOutlined /></template>
+查询
+</YButton>
+<YButton
+    size="small"
+    type="primary"
+    ghost
             :loading="page.batchRetryLoading"
-            :disabled="!page.selectedBatchIds.length"
-            @click="confirmBatchRetry"
-          >
-            批量重新解析
-          </YButton>
-          <YButton size="small" @click="page.resetQuery">
-            <template #icon><ReloadOutlined /></template>
-            重置
-          </YButton>
-        </div>
+:disabled="!page.selectedBatchIds.length"
+@click="confirmBatchRetry"
+    >
+    批量重新解析
+    </YButton>
+<YButton size="small" @click="page.resetQuery">
+    <template #icon><ReloadOutlined /></template>
+重置
+</YButton>
+</div>
+          </a-form-item>
+        </a-form>
+
       </div>
-      <div class="batch-task-table">
+      <div ref="tableAreaRef" class="batch-task-table">
         <YTable
           ref="yTableRef"
           :columns="columnsWithAction"
           :action-config="actionConfig"
           :data="page.rows"
           :loading="page.loading || page.detailLoading"
+          :max-height="tableHeight"
           :row-config="{ keyField: 'batchId' }"
           :checkbox-config="{ highlight: true }"
           :pageable="true"
@@ -1214,18 +1314,9 @@ const handleSummaryCardClick = (status?: string) => {
           <a-descriptions-item :label="batchValuationTaskPageText.detail.originalFileName" :span="2">
             {{ selectedDetail?.originalFileName || "-" }}
           </a-descriptions-item>
-          <a-descriptions-item :label="batchValuationTaskPageText.detail.lastErrorMessage" :span="2">
-            {{ selectedDetail?.lastErrorMessage || "-" }}
-          </a-descriptions-item>
-          <a-descriptions-item :label="batchValuationTaskPageText.detail.currentBlockPoint" :span="2">
-            {{ page.detail?.currentBlockPoint || "-" }}
-          </a-descriptions-item>
         </a-descriptions>
 
         <a-descriptions :column="1" bordered size="small" class="batch-task-detail__summary">
-          <a-descriptions-item :label="batchValuationTaskPageText.detail.errorMessage">
-            {{ selectedDetail?.lastErrorMessage || "-" }}
-          </a-descriptions-item>
           <a-descriptions-item :label="batchValuationTaskPageText.detail.logRef">
             {{ selectedDetail?.batchId || "-" }}
           </a-descriptions-item>
@@ -1347,6 +1438,14 @@ const handleSummaryCardClick = (status?: string) => {
           >
             指标数据
           </button>
+          <button
+            type="button"
+            class="batch-standard-tab"
+            :class="page.standardDataActiveTab === 'raw' ? 'batch-standard-tab--active' : ''"
+            @click="page.handleStandardDataTabChange('raw')"
+          >
+            原始估值表
+          </button>
         </div>
 
         <div class="batch-standard-panel">
@@ -1371,6 +1470,16 @@ const handleSummaryCardClick = (status?: string) => {
               @change="!page.standardDataMetricsKeyword && page.searchStandardDataMetrics()"
               @search="page.searchStandardDataMetrics"
             />
+            <div v-else-if="page.standardDataActiveTab === 'raw'" class="batch-standard-toolbar__placeholder">
+              文件：{{ page.standardDataRawWorkbook?.fileName || "-" }} · Sheet：{{ page.standardDataRawWorkbook?.sheetCount ?? 0 }} · 行数：{{ page.standardDataRawWorkbook?.rowCount ?? 0 }}
+              <a-tag
+                v-if="page.standardDataRawWorkbook?.downloadedFromTarget"
+                color="orange"
+                class="batch-standard-raw-tip"
+              >
+                {{ page.standardDataRawWorkbook?.fallbackMessage || "已重新下载源文件" }}
+              </a-tag>
+            </div>
             <div v-else class="batch-standard-toolbar__placeholder">
               估值ID：{{ page.standardDataBasic?.valuationId || "-" }} · Sheet：{{ page.standardDataBasic?.sheetName || "-" }}
             </div>
@@ -1380,6 +1489,17 @@ const handleSummaryCardClick = (status?: string) => {
             刷新
           </YButton>
           <YButton
+            v-if="page.standardDataActiveTab === 'raw'"
+            size="small"
+            :loading="page.standardDataRawDownloadLoading"
+            :disabled="standardDataTableLoading"
+            @click="page.downloadRawWorkbook"
+          >
+            <template #icon><DownloadOutlined /></template>
+            下载
+          </YButton>
+          <YButton
+              v-else
               size="small"
           :loading="page.standardDataExportLoading"
           :disabled="standardDataExportDisabled"
@@ -1440,7 +1560,7 @@ const handleSummaryCardClick = (status?: string) => {
               <template v-else>
                 <div class="batch-standard-empty">
                   <strong>还没有估值基础数据</strong>
-                  <span>标准表落地完成后，这里会展示估值主表和基础信息。</span>
+                  <span>估值贴源数据落地完成后，这里会展示估值主表和基础信息。</span>
                 </div>
               </template>
             </template>
@@ -1463,12 +1583,12 @@ const handleSummaryCardClick = (status?: string) => {
               <template v-else>
                 <div class="batch-standard-empty">
                   <strong>还没有估值明细</strong>
-                  <span>标准表落地完成后，这里会展示科目明细数据。</span>
+                  <span>估值贴源数据落地完成后，这里会展示科目明细数据。</span>
                 </div>
               </template>
             </template>
 
-            <template v-else>
+            <template v-else-if="page.standardDataActiveTab === 'metrics'">
               <template v-if="standardMetricRows.length">
                 <NativeUniverSheet
                   ref="standardMetricSheetRef"
@@ -1486,7 +1606,30 @@ const handleSummaryCardClick = (status?: string) => {
               <template v-else>
                 <div class="batch-standard-empty">
                   <strong>还没有指标数据</strong>
-                  <span>标准表落地完成后，这里会展示指标明细数据。</span>
+                  <span>估值贴源数据落地完成后，这里会展示指标明细数据。</span>
+                </div>
+              </template>
+            </template>
+
+            <template v-else>
+              <template v-if="rawWorkbookData">
+                <NativeUniverSheet
+                  ref="standardRawSheetRef"
+                  :model-value="rawWorkbookData"
+                  :readonly="true"
+                  :config="{
+                    header: false,
+                    toolbar: false,
+                    formulaBar: false,
+                    footer: { addSheetButtonConfig: { show: false } },
+                    contextMenu: false
+                  }"
+                />
+              </template>
+              <template v-else>
+                <div class="batch-standard-empty">
+                  <strong>原始估值表不可用</strong>
+                  <span>{{ page.standardDataRawError || "切换到原始估值表后将从源文件加载全工作簿内容。" }}</span>
                 </div>
               </template>
             </template>

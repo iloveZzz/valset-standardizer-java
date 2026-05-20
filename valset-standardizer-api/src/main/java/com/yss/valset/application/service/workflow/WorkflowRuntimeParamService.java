@@ -42,10 +42,4 @@ public interface WorkflowRuntimeParamService {
      */
     boolean skipExcelStyleParsing();
 
-    /**
-     * 是否持久化标准化后的 DWD 明细。
-     *
-     * @return 是否持久化
-     */
-    boolean persistStandardizedDwdDetails();
 }

@@ -14,7 +14,5 @@ public class WorkflowRuntimeParamSaveCommand {
 
     private Boolean enableMatchProcess;
 
-    private Boolean persistStandardizedDwdDetails;
-
     private String description;
 }

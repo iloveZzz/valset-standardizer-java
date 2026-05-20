@@ -101,7 +101,6 @@ export type OutsourcedDataTaskSummaryDTO = {
 export type OutsourcedDataTaskBatchDetailDTO = {
   batch?: OutsourcedDataTaskBatchDTO;
   steps?: OutsourcedDataTaskStepDTO[];
-  currentBlockPoint?: string;
 };
 
 export type OutsourcedDataTaskTraceRecordDTO = {
@@ -170,6 +169,18 @@ export type OutsourcedDataTaskStandardDataExportCommand = {
   tab?: string;
   sheetName?: string;
   workbookData?: Record<string, unknown>;
+};
+
+export type OutsourcedDataTaskRawWorkbookDTO = {
+  batchId?: string;
+  fileId?: number;
+  fileName?: string;
+  sourceType?: string;
+  sheetCount?: number;
+  rowCount?: number;
+  workbookData?: Record<string, unknown>;
+  downloadedFromTarget?: boolean;
+  fallbackMessage?: string;
 };
 
 export type OutsourcedDataTaskActionResultDTO = {
@@ -259,6 +270,10 @@ export type SingleResultOutsourcedDataTaskTraceDTO = {
   data?: OutsourcedDataTaskTraceDTO;
 };
 
+export type SingleResultOutsourcedDataTaskRawWorkbookDTO = {
+  data?: OutsourcedDataTaskRawWorkbookDTO;
+};
+
 export type MultiResultOutsourcedDataTaskActionResultDTO = {
   data?: OutsourcedDataTaskActionResultDTO[];
 };
@@ -326,6 +341,19 @@ export const listValuationParseTaskStandardMetrics = (
     params,
   });
 
+export const getValuationParseTaskRawWorkbook = (batchId: string) =>
+  customInstance<SingleResultOutsourcedDataTaskRawWorkbookDTO>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/raw-workbook`,
+    method: "GET",
+  });
+
+export const downloadValuationParseTaskRawWorkbook = (batchId: string) =>
+  customInstance<Blob>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/raw-workbook/download`,
+    method: "GET",
+    responseType: "blob",
+  });
+
 export const exportValuationParseTaskStandardDataSheet = (
   batchId: string,
   command: OutsourcedDataTaskStandardDataExportCommand,
@@ -391,6 +419,7 @@ export const getOutsourcedDataTaskTrace = getValuationParseTaskTrace;
 export const getOutsourcedDataTaskStandardBasic = getValuationParseTaskStandardBasic;
 export const listOutsourcedDataTaskStandardSubjects = listValuationParseTaskStandardSubjects;
 export const listOutsourcedDataTaskStandardMetrics = listValuationParseTaskStandardMetrics;
+export const getOutsourcedDataTaskRawWorkbook = getValuationParseTaskRawWorkbook;
 export const exportOutsourcedDataTaskStandardDataSheet = exportValuationParseTaskStandardDataSheet;
 export const listOutsourcedDataTaskSteps = listValuationParseTaskSteps;
 export const executeOutsourcedDataTask = executeValuationParseTask;

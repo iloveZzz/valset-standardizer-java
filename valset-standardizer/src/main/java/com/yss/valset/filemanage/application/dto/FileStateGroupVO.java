@@ -10,9 +10,12 @@ import lombok.Data;
 @Builder
 public class FileStateGroupVO implements java.io.Serializable {
 
+    /** 状态编码 */
     private String code;
 
+    /** 分组名称 */
     private String groupName;
 
+    /** 分组统计数量 */
     private Long groupCount;
 }

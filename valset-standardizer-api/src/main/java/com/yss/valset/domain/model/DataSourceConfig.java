@@ -14,18 +14,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DataSourceConfig {
     
-    /**
-     * 数据源类型（Excel、CSV、API、DB）。
-     */
+    /** 数据源类型（Excel、CSV、API、DB） */
     private DataSourceType sourceType;
     
-    /**
-     * 数据源资源定位符或路径参数（例如文件路径、API URL）。
-     */
+    /** 数据源资源定位符或路径参数（例如文件路径、API URL） */
     private String sourceUri;
     
-    /**
-     * 附加参数（例如原始数据文件 ID、表名、认证 token）。
-     */
+    /** 附加参数（例如原始数据文件 ID、表名、认证 token） */
     private String additionalParams;
 }

@@ -116,7 +116,6 @@ public class DefaultOutsourcedDataTaskService implements OutsourcedDataTaskServi
         OutsourcedDataTaskBatchDetailDTO detail = new OutsourcedDataTaskBatchDetailDTO();
         detail.setBatch(batch);
         detail.setSteps(listSteps(batchId));
-        detail.setCurrentBlockPoint(batch.getLastErrorMessage());
         return detail;
     }
 

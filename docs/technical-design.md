@@ -276,12 +276,12 @@ flowchart TD
     O --> P["Step 2: STRUCTURE_STANDARDIZE"]
     P --> P1["加载标准字典<br/>t_file_parse_rule / t_file_parse_source"]
     P1 --> P2["表头映射 / 科目标准化 / 指标标准化"]
-    P2 --> P3["写入标准化 DWD<br/>StandardizedExternalValuationGateway"]
-    P3 --> Q["ExecutionContext 写入<br/>standardizeMs"]
+    P2 --> Q["ExecutionContext 写入<br/>standardizeMs"]
 
     Q --> R["Step 3: STANDARD_LANDING"]
-    R --> R1["科目投影为 t_tr_jjhzgzb"]
-    R --> R2["指标投影为 t_tr_index"]
+    R --> R0["读取最新 STG 并运行时标准化"]
+    R0 --> R1["科目投影为 tr_spv_jjhzgzb"]
+    R0 --> R2["指标投影为 tr_spv_index"]
     R --> R3["回写任务 resultPayload / SUCCESS"]
 
     R3 --> S["批量任务 元数据 + WorkflowTask 状态回写"]
@@ -298,15 +298,15 @@ flowchart TD
 4. `ParseBatchStepSupport` 承载三段式真实业务处理：
    - `FILE_PARSE`：读取原始文件，选择解析器，生成 `ParsedValuationData`，写入 DWD 解析结果。
    - `STRUCTURE_STANDARDIZE`：加载 `t_file_parse_rule` 和 `t_file_parse_source`，完成表头、科目、指标标准化。
-   - `STANDARD_LANDING`：把标准化结果投影到 `t_tr_jjhzgzb` 和 `t_tr_index`，并回写任务结果。
+   - `STANDARD_LANDING`：把标准化结果投影到 `tr_spv_jjhzgzb` 和 `tr_spv_index`，并回写任务结果。
 5. `OutsourcedDataTaskController` 和任务页只消费 批量任务 元数据与任务读模型，用于展示、查询和人工控制。
 
 从数据层看，这条链路会形成四层产物：
 
 - `DWD` 保存原始解析事实
 - 标准化 DWD 保存标准化事实
-- `t_tr_jjhzgzb` 保存科目/持仓类业务结果
-- `t_tr_index` 保存指标类业务结果
+- `tr_spv_jjhzgzb` 保存科目/持仓类业务结果
+- `tr_spv_index` 保存指标类业务结果
 
 从任务层看，这条链路会形成三类状态：
 
@@ -317,8 +317,8 @@ flowchart TD
 从字段来源看，这条链路主要遵循以下规则：
 
 - `basicInfo` 用于机构、产品、业务日期等公共字段兜底
-- `subjects` 主要驱动 `t_tr_jjhzgzb`
-- `metrics` 主要驱动 `t_tr_index`
+- `subjects` 主要驱动 `tr_spv_jjhzgzb`
+- `metrics` 主要驱动 `tr_spv_index`
 - `fileNameOriginal`、`sourceTp`、`sourceSign` 用于贯穿三层表的溯源
 
 因此，批量估值解析任务本质上是一条“原始文件抽取 -> 结构化解析 -> 字段标准化 -> 业务落地 -> 任务回写”的离线 ETL 流水线。
@@ -434,8 +434,8 @@ flowchart TD
 典型表：
 
 - `t_stg_external_valuation*`
-- `t_dwd_external_valuation_subject`
-- `t_dwd_external_valuation_metric`
+- `tr_spv_jjhzgzb`
+- `tr_spv_index`
 
 职责：
 

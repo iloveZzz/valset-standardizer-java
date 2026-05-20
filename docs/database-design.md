@@ -349,30 +349,9 @@ sheet 样式快照表。
 - 保存解析出的指标行
 - 记录指标名称、类型和值
 
-### 6.6 `t_dwd_external_valuation_subject`
+### 6.6 DWD 外部估值中间表移除说明
 
-标准化后的外部估值明细事实表。
-
-对应实体：
-
-- `DwdExternalValuationStandardSubjectPO`
-
-主要职责：
-
-- 保存标准化后的外部估值科目事实
-- 保留标准列值、原始值、映射依据
-
-### 6.7 `t_dwd_external_valuation_metric`
-
-标准化后的指标事实表。
-
-对应实体：
-
-- `DwdExternalValuationStandardMetricPO`
-
-主要职责：
-
-- 保存标准化后的指标事实
+`t_dwd_external_valuation_subject` 和 `t_dwd_external_valuation_metric` 已移除。标准化结果不再保存中间快照，改为基于最新 `t_stg_external_valuation*` 运行时标准化，并直接落到 `tr_spv_jjhzgzb` / `tr_spv_index`。
 - 保留标准指标码、标准值和映射依据
 
 ## 7. 匹配结果层

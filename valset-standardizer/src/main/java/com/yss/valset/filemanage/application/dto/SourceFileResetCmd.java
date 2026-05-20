@@ -11,6 +11,7 @@ import java.util.List;
 @Data
 public class SourceFileResetCmd implements java.io.Serializable {
 
+    /** 需要重置的文件ID列表 */
     @NotEmpty(message = "重置异常文件id不能为空")
     private List<String> ids;
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h } from "vue";
+import { computed, h, ref } from "vue";
 import dayjs, { type Dayjs } from "dayjs";
 import { Modal } from "ant-design-vue";
 import { ExclamationCircleOutlined, ReloadOutlined } from "@ant-design/icons-vue";
@@ -9,6 +9,7 @@ import {
   YTable,
   type YTableColumn,
 } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import { useTableActionConfig } from "../../TransferShared/hooks/useTableActionConfig";
 import type {
   WorkflowTaskInstancePage,
@@ -20,6 +21,12 @@ defineOptions({ name: "WorkflowTaskInstanceWorkspace" });
 const { page } = defineProps<{
   page: WorkflowTaskInstancePage;
 }>();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 
 const TIME_RANGE_FORMAT = "YYYY-MM-DD HH:mm:ss";
 
@@ -309,11 +316,12 @@ const columnsWithAction = computed<YTableColumn[]>(() => [
       </div>
     </YCard>
 
-    <div class="workflow-task-instance-table">
+    <div ref="tableAreaRef" class="workflow-task-instance-table">
       <YTable
         :columns="columnsWithAction"
         :data="page.tableData"
         :loading="page.listLoading || page.loading || page.actionLoading"
+        :max-height="tableHeight"
         :row-config="{ keyField: 'taskKey' }"
         :pageable="true"
         :autoFlexColumn="false"

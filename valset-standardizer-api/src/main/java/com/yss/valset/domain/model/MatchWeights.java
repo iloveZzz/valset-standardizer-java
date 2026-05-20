@@ -15,10 +15,16 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MatchWeights {
+    /** 名称匹配权重 */
     private BigDecimal nameWeight;
+    /** 路径匹配权重 */
     private BigDecimal pathWeight;
+    /** 关键词匹配权重 */
     private BigDecimal keywordWeight;
+    /** 代码匹配权重 */
     private BigDecimal codeWeight;
+    /** 历史匹配权重 */
     private BigDecimal historyWeight;
+    /** Embedding匹配权重 */
     private BigDecimal embeddingWeight;
 }

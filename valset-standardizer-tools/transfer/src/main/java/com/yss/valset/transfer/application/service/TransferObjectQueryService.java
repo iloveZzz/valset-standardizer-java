@@ -49,6 +49,8 @@ public interface TransferObjectQueryService {
      * @param mailId 邮件唯一标识
      * @param fingerprint 文件指纹
      * @param routeId 路由主键
+     * @param businessDate 业务日期
+     * @param receiveDate 收取日期
      * @param taskDate 任务日期
      * @param pageIndex 页码
      * @param pageSize 每页条数
@@ -66,6 +68,8 @@ public interface TransferObjectQueryService {
                                                   String tagId,
                                                   String tagCode,
                                                   String tagValue,
+                                                  String businessDate,
+                                                  String receiveDate,
                                                   String taskDate,
                                                   Integer pageIndex,
                                                   Integer pageSize);
@@ -96,6 +100,8 @@ public interface TransferObjectQueryService {
      * @param mailId 邮件唯一标识
      * @param fingerprint 文件指纹
      * @param routeId 路由主键
+     * @param businessDate 业务日期
+     * @param receiveDate 收取日期
      * @param taskDate 任务日期
      * @return 文件主对象统计分析结果
      */
@@ -111,6 +117,8 @@ public interface TransferObjectQueryService {
                                                  String tagId,
                                                  String tagCode,
                                                  String tagValue,
+                                                 String businessDate,
+                                                 String receiveDate,
                                                  String taskDate);
 
     /**

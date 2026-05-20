@@ -111,3 +111,4 @@ coverage
 ${project.build.directory}
 logs
 **/marquez/**
+.playwright-cli

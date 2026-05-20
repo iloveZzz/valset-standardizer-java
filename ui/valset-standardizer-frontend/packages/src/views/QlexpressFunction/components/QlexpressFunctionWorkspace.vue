@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import {
   YButton,
   YCard,
@@ -7,6 +8,7 @@ import {
   YTable,
   type YTableColumn,
 } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -20,6 +22,12 @@ import type { QlexpressFunctionPageState } from "../types";
 const { page } = defineProps<{
   page: QlexpressFunctionPageState;
 }>();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 
 const actionConfig = useTableActionConfig({
   width: 300,
@@ -114,12 +122,13 @@ const columns: YTableColumn[] = [
       </div>
     </YCard>
 
-    <div class="workspace-body">
+    <div ref="tableAreaRef" class="workspace-body">
       <YTable
         :columns="columns"
         :action-config="actionConfig"
         :data="page.tableData"
         :loading="page.loading"
+        :max-height="tableHeight"
         :row-config="{ keyField: 'functionId' }"
         :pageable="true"
         v-model:pagination="page.pagination"

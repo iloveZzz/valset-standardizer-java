@@ -31,7 +31,7 @@ DECLARE
       WHEN 'isMetricDataRowWithPattern' THEN RETURN '使用场景：估值表解析时按可选科目代码模式识别两列型指标数据行。上下文变量要求：row 为当前行单元格 List，pattern 为科目代码模式参数。';
       WHEN 'isMetricRow' THEN RETURN '使用场景：估值表解析时识别多列型指标行。上下文变量要求：row 为当前行单元格 List。';
       WHEN 'isMetricRowWithPattern' THEN RETURN '使用场景：估值表解析时按可选科目代码模式识别多列型指标行。上下文变量要求：row 为当前行单元格 List，pattern 为科目代码模式参数。';
-      WHEN 'isFooterRow' THEN RETURN '使用场景：估值表解析时识别制表、复核、打印、备注等页脚行。上下文变量要求：row 为当前行单元格 List，footerKeywords 为可选页脚关键字 List。';
+      WHEN 'isFooterRow' THEN RETURN '使用场景：估值表解析时识别制表、复核、经办等无效行。上下文变量要求：row 为当前行单元格 List，footerKeywords 为可选页脚关键字 List。';
       WHEN 'classifyRow' THEN RETURN '使用场景：估值表解析时将当前行归类为科目、指标、页脚或忽略。上下文变量要求：row 为当前行单元格 List，footerKeywords 为可选页脚关键字 List。';
       WHEN 'classifyRowWithPattern' THEN RETURN '使用场景：估值表解析时按科目代码模式完成行分类。上下文变量要求：row 为当前行单元格 List，footerKeywords 为页脚关键字 List，pattern 为科目代码模式参数。';
       WHEN 'firstMeaningfulTextContainsAny' THEN RETURN '使用场景：解析脚本内判断一行首个有效单元格是否命中任一关键字。上下文变量要求：row 为当前行单元格 List，keywords 为关键字 List。';
@@ -41,12 +41,21 @@ DECLARE
       WHEN 'valueAt' THEN RETURN '使用场景：解析脚本内安全读取指定列原始值。上下文变量要求：row 为当前行单元格 List，index 为从 0 开始的列序号。';
       WHEN 'rowNonBlankCount' THEN RETURN '使用场景：解析脚本内统计当前行有效单元格数量。上下文变量要求：row 为当前行单元格 List，空值和 - 不计入有效值。';
       WHEN 'firstMeaningfulText' THEN RETURN '使用场景：解析脚本内提取当前行首个有效文本，用于页脚和关键字判断。上下文变量要求：row 为当前行单元格 List。';
+      WHEN 'containsChineseText' THEN RETURN '使用场景：解析脚本内判断单元格文本是否包含中文。上下文变量要求：value 为待判断值。';
+      WHEN 'isNumericText' THEN RETURN '使用场景：解析脚本内判断单元格文本是否为数字，支持负数、千分位、小数和百分号。上下文变量要求：value 为待判断值。';
+      WHEN 'isRightNextNumeric' THEN RETURN '使用场景：估值表解析时判断指定列紧邻右侧单元格是否为数字。上下文变量要求：row 为当前行单元格 List，startIndex 为锚点列序号。';
+      WHEN 'rightNumericCount' THEN RETURN '使用场景：估值表解析时统计指定列右侧数字单元格数量。上下文变量要求：row 为当前行单元格 List，startIndex 为锚点列序号。';
       WHEN 'newMap' THEN RETURN '使用场景：解析脚本内兼容旧规则构造结果 Map。上下文变量要求：按 k1/v1 到 k10/v10 传入键值对；新规则优先使用 QLExpress Map 字面量。';
       WHEN 'mapOf' THEN RETURN '使用场景：解析脚本内按键值对构造结果 Map。上下文变量要求：按 k1/v1 到 k10/v10 传入键值对，key 为空的项会被跳过。';
       WHEN 'put' THEN RETURN '使用场景：解析脚本内向结果 Map 写入字段。上下文变量要求：map 为可为空的 Map，key 为字段名，value 为字段值。';
       WHEN 'matchesKeyword' THEN RETURN '使用场景：解析脚本内执行宽松关键字匹配，支持相等和互相包含。上下文变量要求：source 为待匹配文本或单元格值，keyword 为关键字。';
       WHEN 'isSubjectCodeText' THEN RETURN '使用场景：估值表解析时判断文本是否像科目代码。上下文变量要求：value 为待判断文本，pattern 为可选科目代码正则；未传 pattern 时使用本函数脚本内配置的默认规则。';
       WHEN 'hasSubjectNameAfterCode' THEN RETURN '使用场景：估值表解析时判断科目代码后是否存在科目名称。上下文变量要求：row 为当前行单元格 List，codeIndex 为科目代码所在列序号。';
+      WHEN 'isSubjectDetailRowByColumn' THEN RETURN '使用场景：估值表解析时按已定位的科目代码列识别科目明细行。上下文变量要求：row 为当前行单元格 List，subjectCodeColumnIndex 为科目代码列序号，pattern 为可选科目代码正则。';
+      WHEN 'isMetricDataRowByColumn' THEN RETURN '使用场景：估值表解析时按已定位的科目代码列识别指标数据行。上下文变量要求：科目代码列文本包含中文，且紧邻右侧单元格为数字。';
+      WHEN 'isMetricRowByColumn' THEN RETURN '使用场景：估值表解析时按已定位的科目代码列识别指标行。上下文变量要求：科目代码列文本包含中文，紧邻右侧不是数字，但右侧任一单元格包含数字。';
+      WHEN 'isMetricDetailRowByColumn' THEN RETURN '使用场景：估值表解析时按已定位的科目代码列识别指标明细行。上下文变量要求：科目代码列文本包含中文，且右侧至少存在一个数字单元格。';
+      WHEN 'isValuationDataRowByColumn' THEN RETURN '使用场景：估值表解析时按已定位的科目代码列识别估值数据区明细行。上下文变量要求：row 为当前行单元格 List，subjectCodeColumnIndex 为科目代码列序号，pattern 为可选科目代码正则。';
       WHEN 'hasCandidate' THEN RETURN '使用场景：表头映射时判断候选映射值是否存在。上下文变量要求：candidate 为候选值；运行范围 extract.headerMapping 需注入 qlHeaderFns。';
       WHEN 'headerContainsAnySegment' THEN RETURN '使用场景：表头映射时判断表头文本是否包含任一分段。上下文变量要求：headerText 为表头文本，segments 为分段 List；需注入 qlHeaderFns。';
       WHEN 'headerContainsAllSegments' THEN RETURN '使用场景：表头映射时判断表头文本是否包含全部分段。上下文变量要求：headerText 为表头文本，segments 为分段 List；需注入 qlHeaderFns。';
@@ -219,7 +228,7 @@ function hasText(value) {
     'regexMatches',
     TO_CLOB(q'[
 function regexMatches(source, regex) {
-  return qlCommonFns.matchesRegex(source, regex);
+  return qlCommonFns["matchesRegex"](source, regex);
 }
 ]'),
     TO_CLOB('["common"]')
@@ -423,9 +432,9 @@ function isMetricRowWithPattern(row, pattern) {
 function isFooterRow(row, footerKeywords) {
   keywords = footerKeywords;
   if (keywords == null || keywords.length == 0) {
-    keywords = ["制表", "复核", "打印", "备注"];
+    keywords = ["制表", "复核", "经办"];
   };
-  return containsAny(firstMeaningfulText(row), keywords);
+  return rowContainsAny(row, keywords);
 }
 ]'),
     TO_CLOB('["extract.parse"]')
@@ -567,6 +576,79 @@ function firstMeaningfulText(row) {
     TO_CLOB('["extract.parse"]')
   );
   seed_function(
+    920000000000000070,
+    '中文文本判断',
+    'containsChineseText',
+    TO_CLOB(q'[
+function containsChineseText(value) {
+  if (value == null) {
+    return false;
+  };
+  text = "" + value;
+  if (text == "" || text == "-" || text == "0") {
+    return false;
+  };
+  chineseTextPattern = ".*[一-龥].*";
+  return regexMatches(text, chineseTextPattern);
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000071,
+    '数字文本判断',
+    'isNumericText',
+    TO_CLOB(q'[
+function isNumericText(value) {
+  if (value == null) {
+    return false;
+  };
+  text = "" + value;
+  if (text == "" || text == "-") {
+    return false;
+  };
+  numberWithThousandsPattern = "^-?[0-9]+(,[0-9]{3})*([.][0-9]+)?%?\$";
+  numberPattern = "^-?[0-9]+([.][0-9]+)?%?\$";
+  return regexMatches(text, numberWithThousandsPattern) || regexMatches(text, numberPattern);
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000072,
+    '右侧数字数量',
+    'rightNumericCount',
+    TO_CLOB(q'[
+function rightNumericCount(row, startIndex) {
+  if (row == null || startIndex == null || startIndex < 0 || startIndex >= row.length) {
+    return 0;
+  };
+  count = 0;
+  for (i = startIndex + 1; i < row.length; i++) {
+    if (isNumericText(textAt(row, i))) {
+      count = count + 1;
+    };
+  };
+  return count;
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000075,
+    '紧邻右侧数字判断',
+    'isRightNextNumeric',
+    TO_CLOB(q'[
+function isRightNextNumeric(row, startIndex) {
+  if (row == null || startIndex == null || startIndex < 0 || startIndex + 1 >= row.length) {
+    return false;
+  };
+  return isNumericText(textAt(row, startIndex + 1));
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
     920000000000000028,
     '新建Map',
     'newMap',
@@ -666,13 +748,15 @@ function isSubjectCodeText(value, pattern) {
   if (text == "" || text == "-") {
     return false;
   };
-  if (regexMatches(text, ".*[一-龥].*")) {
+  chineseTextPattern = ".*[一-龥].*";
+  if (regexMatches(text, chineseTextPattern)) {
     return false;
   };
-  if ("科" in text || "目" in text || "名" in text || "称" in text || "：" in text || ":" in text || " " in text || "," in text || "，" in text) {
+  if ("科" in text || "目" in text || "名" in text || "称" in text || "：" in text || ":" in text || "," in text || "，" in text) {
     return false;
   };
-  subjectCodePattern = pattern == null || pattern == "" ? "^\\d{4}[A-Za-z0-9]*\$" : pattern;
+  defaultSubjectCodePattern = "^([0-9]{4}[A-Za-z0-9._ -]*|[A-Za-z][A-Za-z0-9._ -]*[0-9][A-Za-z0-9._ -]*)\$";
+  subjectCodePattern = pattern == null || pattern == "" ? defaultSubjectCodePattern : pattern;
   return regexMatches(text, subjectCodePattern);
 }
 ]'),
@@ -694,6 +778,71 @@ function hasSubjectNameAfterCode(row, codeIndex) {
     };
   };
   return false;
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000067,
+    '科目明细行判断',
+    'isSubjectDetailRowByColumn',
+    TO_CLOB(q'[
+function isSubjectDetailRowByColumn(row, subjectCodeColumnIndex, pattern) {
+  if (row == null || subjectCodeColumnIndex == null || subjectCodeColumnIndex < 0 || subjectCodeColumnIndex >= row.length) {
+    return false;
+  };
+  return isSubjectCodeText(textAt(row, subjectCodeColumnIndex), pattern) && hasSubjectNameAfterCode(row, subjectCodeColumnIndex);
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000068,
+    '指标明细行判断',
+    'isMetricDetailRowByColumn',
+    TO_CLOB(q'[
+function isMetricDetailRowByColumn(row, subjectCodeColumnIndex, pattern) {
+  if (row == null || subjectCodeColumnIndex == null || subjectCodeColumnIndex < 0 || subjectCodeColumnIndex >= row.length || isFooterRow(row, null)) {
+    return false;
+  };
+  metricName = textAt(row, subjectCodeColumnIndex);
+  if (!containsChineseText(metricName)) {
+    return false;
+  };
+  return rightNumericCount(row, subjectCodeColumnIndex) >= 1;
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000073,
+    '指标数据行判断(按科目代码列)',
+    'isMetricDataRowByColumn',
+    TO_CLOB(q'[
+function isMetricDataRowByColumn(row, subjectCodeColumnIndex, pattern) {
+  return isMetricDetailRowByColumn(row, subjectCodeColumnIndex, pattern) && isRightNextNumeric(row, subjectCodeColumnIndex);
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000074,
+    '指标行判断(按科目代码列)',
+    'isMetricRowByColumn',
+    TO_CLOB(q'[
+function isMetricRowByColumn(row, subjectCodeColumnIndex, pattern) {
+  return isMetricDetailRowByColumn(row, subjectCodeColumnIndex, pattern) && !isRightNextNumeric(row, subjectCodeColumnIndex);
+}
+]'),
+    TO_CLOB('["extract.parse"]')
+  );
+  seed_function(
+    920000000000000069,
+    '估值数据明细行判断',
+    'isValuationDataRowByColumn',
+    TO_CLOB(q'[
+function isValuationDataRowByColumn(row, subjectCodeColumnIndex, pattern) {
+  return isSubjectDetailRowByColumn(row, subjectCodeColumnIndex, pattern) || isMetricDetailRowByColumn(row, subjectCodeColumnIndex, pattern);
 }
 ]'),
     TO_CLOB('["extract.parse"]')

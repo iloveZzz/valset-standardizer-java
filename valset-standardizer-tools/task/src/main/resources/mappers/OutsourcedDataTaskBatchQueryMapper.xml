@@ -232,6 +232,31 @@
         </choose>
     </sql>
 
+    <sql id="productRuleIdExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                TO_CHAR(pmr.id)
+            </when>
+            <when test="_databaseId == 'PostgreSQL'">
+                CAST(pmr.id AS VARCHAR)
+            </when>
+            <otherwise>
+                CAST(pmr.id AS CHAR)
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="notBlankExpr">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                TRIM(${column}) IS NOT NULL
+            </when>
+            <otherwise>
+                TRIM(${column}) != ''
+            </otherwise>
+        </choose>
+    </sql>
+
     <sql id="likeExpr">
         <choose>
             <when test="_databaseId == 'Oracle'">
@@ -310,9 +335,9 @@
     <sql id="executionEnrichedSharedColumns">
         <include refid="batchIdExpr"/> AS batch_id,
         <include refid="businessDateExpr"/> AS business_date,
-        NULL AS product_code,
-        NULL AS product_name,
-        NULL AS manager_name,
+        pmrt.product_code,
+        pmrt.product_name,
+        pmrt.manager_name,
         <include refid="comparableCharExpr">
             <property name="column" value="tto.source_type"/>
         </include> AS source_type,
@@ -332,6 +357,7 @@
         LEFT JOIN current_step cs ON cs.JOB_EXECUTION_ID = eb.JOB_EXECUTION_ID
         LEFT JOIN step_stage_history ssh ON ssh.JOB_EXECUTION_ID = eb.JOB_EXECUTION_ID
         LEFT JOIN t_transfer_object tto ON tto.transfer_id = <include refid="transferIdJoinExpr"/>
+        LEFT JOIN product_match_rule_tag pmrt ON pmrt.transfer_id = tto.transfer_id AND pmrt.rn = 1
     </sql>
 
     <sql id="batchBaseCte">
@@ -390,6 +416,31 @@
             SELECT sr.JOB_EXECUTION_ID, sr.step_status, sr.stage_code
             FROM step_ranked sr
             WHERE sr.rn = 1
+        ),
+        product_match_rule_tag AS (
+            SELECT
+                ranked.transfer_id,
+                ranked.product_code,
+                ranked.product_name,
+                ranked.manager_name,
+                ranked.rn
+            FROM (
+                SELECT
+                    ttag.transfer_id,
+                    pmr.pd_cd AS product_code,
+                    pmr.pd_nm AS product_name,
+                    pmr.org_nm AS manager_name,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ttag.transfer_id
+                        ORDER BY ttag.created_at DESC, ttag.id DESC
+                    ) AS rn
+                FROM t_transfer_object_tag ttag
+                LEFT JOIN tp_match_rules pmr ON TRIM(ttag.tag_value) = <include refid="productRuleIdExpr"/>
+                WHERE ttag.tag_code = 'PRODUCT_MATCH_RULE'
+                    AND ttag.tag_value IS NOT NULL
+                    AND <include refid="notBlankExpr"><property name="column" value="ttag.tag_value"/></include>
+            ) ranked
+            WHERE ranked.rn = 1
         )
     </sql>
 

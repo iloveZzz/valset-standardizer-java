@@ -7,15 +7,18 @@ import type {
   TransferObjectAnalysisViewDTO,
   TransferObjectExtensionCountViewDTO,
   TransferObjectMailFolderCountViewDTO,
+  TransferTagViewDTO,
   TransferObjectSourceAnalysisViewDTO,
   TransferObjectStatusCountViewDTO,
   TransferObjectSizeAnalysisViewDTO,
+  TransferObjectRetagCommand,
 } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
 import { unwrapSingleResult } from "@/utils/api-response";
 import type {
   ObjectAnalysis,
   ObjectPage,
+  ObjectTagOption,
   ObjectTagFilter,
   ObjectQueryState,
   TransferObjectRetagResponse,
@@ -26,12 +29,21 @@ type PageObjectsRequestParams = PageObjectsParams & {
   tagId?: string;
   tagCode?: string;
   tagValue?: string;
+  businessDate?: string;
+  receiveDate?: string;
 };
 
 type AnalyzeObjectsRequestParams = AnalyzeObjectsParams & {
   tagId?: string;
   tagCode?: string;
   tagValue?: string;
+  businessDate?: string;
+  receiveDate?: string;
+};
+
+type RetagObjectsRequestParams = TransferObjectRetagCommand & {
+  businessDate?: string;
+  receiveDate?: string;
 };
 
 const api = getJavaSpringBootQuartzApi();
@@ -60,8 +72,11 @@ const defaultQuery = (): ObjectQueryState => ({
   fingerprint: "",
   routeId: "",
   tagId: "",
+  tagIds: [],
   tagCode: "",
   tagValue: "",
+  businessDate: "",
+  receiveDate: "",
 });
 
 const safeJson = (value: unknown) => {
@@ -270,6 +285,7 @@ export const useTransferPage = () => {
     pageSizeOptions: ["10", "20", "50", "100"],
   });
   const selectedRow = ref<TransferObjectViewDTO | null>(null);
+  const tagOptions = ref<ObjectTagOption[]>([]);
   const detailVisible = ref(false);
   const redeliverLoading = ref(false);
   const retagLoading = ref(false);
@@ -350,6 +366,36 @@ export const useTransferPage = () => {
     });
   });
 
+  const normalizeSelectedTagIds = () => {
+    if (query.tagIds.length > 0) {
+      query.tagId = query.tagIds.join(",");
+      return;
+    }
+    query.tagId = "";
+  };
+
+  const loadTagOptions = async () => {
+    try {
+      const res = await api.pageTags({
+        enabled: true,
+        pageIndex: 0,
+        pageSize: 500,
+      });
+      const records = ((res as { data?: TransferTagViewDTO[] })?.data ?? [])
+        .filter((tag) => String(tag.tagId ?? "").trim())
+        .map((tag) => ({
+          tagId: String(tag.tagId ?? "").trim(),
+          tagCode: tag.tagCode,
+          tagName: tag.tagName,
+          tagValue: tag.tagValue,
+        }));
+      tagOptions.value = records;
+    } catch (error) {
+      console.error("加载标签选项失败:", error);
+      tagOptions.value = [];
+    }
+  };
+
   const mapQuery = (
     pageIndex = pagination.value.current || 1,
     pageSizeValue = pagination.value.pageSize || 10,
@@ -363,9 +409,12 @@ export const useTransferPage = () => {
     mailId: query.mailId || undefined,
     fingerprint: query.fingerprint || undefined,
     routeId: query.routeId || undefined,
-    tagId: query.tagId || undefined,
+    tagId:
+      query.tagIds.length > 0 ? query.tagIds.join(",") : query.tagId || undefined,
     tagCode: query.tagCode || undefined,
     tagValue: query.tagValue || undefined,
+    businessDate: query.businessDate || undefined,
+    receiveDate: query.receiveDate || undefined,
     pageIndex: Math.max(pageIndex - 1, 0),
     pageSize: pageSizeValue,
   });
@@ -380,9 +429,12 @@ export const useTransferPage = () => {
     mailId: query.mailId || undefined,
     fingerprint: query.fingerprint || undefined,
     routeId: query.routeId || undefined,
-    tagId: query.tagId || undefined,
+    tagId:
+      query.tagIds.length > 0 ? query.tagIds.join(",") : query.tagId || undefined,
     tagCode: query.tagCode || undefined,
     tagValue: query.tagValue || undefined,
+    businessDate: query.businessDate || undefined,
+    receiveDate: query.receiveDate || undefined,
   });
 
   const loadList = async (
@@ -552,7 +604,7 @@ export const useTransferPage = () => {
 
     retagLoading.value = true;
     try {
-      const res = (await api.retag({
+      const params: RetagObjectsRequestParams = {
         sourceId: query.sourceId || undefined,
         sourceType: query.sourceType || undefined,
         sourceCode: query.sourceCode || undefined,
@@ -560,10 +612,16 @@ export const useTransferPage = () => {
         mailId: query.mailId || undefined,
         fingerprint: query.fingerprint || undefined,
         routeId: query.routeId || undefined,
-        tagId: query.tagId || undefined,
+        tagId:
+          query.tagIds.length > 0
+            ? query.tagIds.join(",")
+            : query.tagId || undefined,
         tagCode: query.tagCode || undefined,
         tagValue: query.tagValue || undefined,
-      })) as TransferObjectRetagResponse;
+        businessDate: query.businessDate || undefined,
+        receiveDate: query.receiveDate || undefined,
+      };
+      const res = (await api.retag(params)) as TransferObjectRetagResponse;
       const result = unwrapSingleResult(res);
       const requestedCount = Number(result?.requestedCount ?? 0);
       const successCount = Number(result?.successCount ?? 0);
@@ -602,6 +660,7 @@ export const useTransferPage = () => {
   };
 
   const runQuery = async () => {
+    normalizeSelectedTagIds();
     pagination.value.current = 1;
     await reloadAnalysisAndList();
   };
@@ -678,15 +737,23 @@ export const useTransferPage = () => {
     void runQuery();
   };
 
+  const handleTagSelectChange = () => {
+    normalizeSelectedTagIds();
+    query.tagCode = "";
+    query.tagValue = "";
+  };
+
   const applyTagFilter = (filter: ObjectTagFilter) => {
+    query.tagIds = filter.tagId ? [filter.tagId] : [];
     query.tagId = filter.tagId ?? "";
-    query.tagCode = filter.tagCode ?? "";
-    query.tagValue = filter.tagValue ?? "";
+    query.tagCode = filter.tagId ? "" : filter.tagCode ?? "";
+    query.tagValue = filter.tagId ? "" : filter.tagValue ?? "";
     pagination.value.current = 1;
     void runQuery();
   };
 
   const clearTagFilter = () => {
+    query.tagIds = [];
     query.tagId = "";
     query.tagCode = "";
     query.tagValue = "";
@@ -694,6 +761,7 @@ export const useTransferPage = () => {
     void runQuery();
   };
 
+  void loadTagOptions();
   void reloadAnalysisAndList();
 
   const page = reactive({
@@ -713,6 +781,7 @@ export const useTransferPage = () => {
     sourceCount,
     statusCount,
     tagFilters,
+    tagOptions,
     query,
     selectedRow,
     detailVisible,
@@ -726,6 +795,7 @@ export const useTransferPage = () => {
     applySourceFilter,
     applySourceStatusFilter,
     applyDeliveryStatusFilter,
+    handleTagSelectChange,
     applyTagFilter,
     clearTagFilter,
     closeDetail: () => {

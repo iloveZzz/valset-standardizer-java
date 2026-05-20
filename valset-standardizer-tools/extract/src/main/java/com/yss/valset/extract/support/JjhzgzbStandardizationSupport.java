@@ -18,7 +18,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * 将标准化后的估值解析结果转换为 t_tr_jjhzgzb 行。
+ * 将标准化后的估值解析结果转换为 tr_spv_jjhzgzb 行。
  */
 public final class JjhzgzbStandardizationSupport {
 
@@ -30,14 +30,17 @@ public final class JjhzgzbStandardizationSupport {
     private JjhzgzbStandardizationSupport() {
     }
 
-    public static List<TrDwdJjhzgzbPO> buildRows(ParsedValuationData standardizedValuationData, String sourceTp, String sourceSign) {
+    public static List<TrDwdJjhzgzbPO> buildRows(ParsedValuationData standardizedValuationData,
+                                                 String sourceTp,
+                                                 String sourceSign,
+                                                 ProductBusinessFields productBusinessFields) {
         if (standardizedValuationData == null || standardizedValuationData.getSubjects() == null || standardizedValuationData.getSubjects().isEmpty()) {
             return java.util.Arrays.asList();
         }
         List<TrDwdJjhzgzbPO> result = new ArrayList<>();
         int droppedSubjectEmpty = 0;
         for (SubjectRecord subject : standardizedValuationData.getSubjects()) {
-            TrDwdJjhzgzbPO row = buildRow(subject, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign);
+            TrDwdJjhzgzbPO row = buildRow(subject, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign, productBusinessFields);
             if (row != null) {
                 result.add(row);
             } else {
@@ -45,22 +48,28 @@ public final class JjhzgzbStandardizationSupport {
             }
         }
         if (droppedSubjectEmpty > 0) {
-            log.warn("t_tr_jjhzgzb 落地时存在被丢弃科目行，reason={}, droppedCount={}", DROP_REASON_SUBJECT_EMPTY, droppedSubjectEmpty);
+            log.warn("tr_spv_jjhzgzb 落地时存在被丢弃科目行，reason={}, droppedCount={}", DROP_REASON_SUBJECT_EMPTY, droppedSubjectEmpty);
         }
         return result;
     }
 
-    private static TrDwdJjhzgzbPO buildRow(SubjectRecord subject, Map<String, String> basicInfo, String sourceTp, String sourceSign) {
+    private static TrDwdJjhzgzbPO buildRow(SubjectRecord subject,
+                                           Map<String, String> basicInfo,
+                                           String sourceTp,
+                                           String sourceSign,
+                                           ProductBusinessFields productBusinessFields) {
         Map<String, Object> standardValues = subject == null || subject.getStandardValues() == null
                 ? java.util.Collections.emptyMap()
                 : new LinkedHashMap<>(subject.getStandardValues());
 
         TrDwdJjhzgzbPO row = new TrDwdJjhzgzbPO();
         row.setOrgCd(firstNonBlank(
+                productBusinessFields == null ? null : productBusinessFields.getOrgCode(),
                 stringValue(standardValues, "org_cd"),
                 lookupBasicInfo(basicInfo, "org_cd", "orgCd", "机构代码")
         ));
         row.setPdCd(firstNonBlank(
+                productBusinessFields == null ? null : productBusinessFields.getProductCode(),
                 stringValue(standardValues, "pd_cd"),
                 lookupBasicInfo(basicInfo, "pd_cd", "pdCd", "产品代码")
         ));
@@ -70,9 +79,18 @@ public final class JjhzgzbStandardizationSupport {
                 normalizeBizDate(basicInfo, "日期"),
                 extractBizDate(sourceSign)
         )));
-        row.setSubjectCd(firstNonBlank(stringValue(standardValues, "subject_cd"), subject.getSubjectCode()));
-        row.setSubjectNm(firstNonBlank(stringValue(standardValues, "subject_nm"), subject.getSubjectName()));
-        row.setPaSubjectCd(firstNonBlank(stringValue(standardValues, "pa_subject_cd"), subject.getParentCode()));
+        row.setSubjectCd(firstNonBlank(
+                subject == null ? null : subject.getSubjectCode(),
+                stringValue(standardValues, "subject_cd")
+        ));
+        row.setSubjectNm(firstNonBlank(
+                subject == null ? null : subject.getSubjectName(),
+                stringValue(standardValues, "subject_nm")
+        ));
+        row.setPaSubjectCd(firstNonBlank(
+                subject == null ? null : subject.getParentCode(),
+                stringValue(standardValues, "pa_subject_cd")
+        ));
         row.setPaSubjectNm(stringValue(standardValues, "pa_subject_nm"));
         row.setNHldamt(decimalValue(standardValues, "n_hldamt"));
         row.setNHldcst(decimalValue(standardValues, "n_hldcst"));

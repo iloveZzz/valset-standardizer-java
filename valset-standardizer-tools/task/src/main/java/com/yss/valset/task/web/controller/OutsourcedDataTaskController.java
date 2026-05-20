@@ -10,6 +10,8 @@ import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExp
 import com.yss.valset.task.application.dto.OutsourcedDataTaskActionResultDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDownloadDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardDataExportDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardBasicDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardMetricDTO;
@@ -24,8 +26,10 @@ import javax.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
@@ -128,6 +132,32 @@ public class OutsourcedDataTaskController {
         return MultiResult.of(standardDataService.listMetrics(batchId, keyword));
     }
 
+    @GetMapping("/{batchId}/standard-data/raw-workbook")
+    @Operation(summary = "查询估值解析任务原始估值表工作簿")
+    public SingleResult<OutsourcedDataTaskRawWorkbookDTO> queryRawWorkbook(@PathVariable String batchId) {
+        return SingleResult.of(standardDataService.queryRawWorkbook(batchId));
+    }
+
+    @GetMapping(value = "/{batchId}/standard-data/raw-workbook/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @Operation(summary = "下载估值解析任务原始估值表源文件")
+    public ResponseEntity<Resource> downloadRawWorkbook(@PathVariable String batchId) {
+        OutsourcedDataTaskRawWorkbookDownloadDTO download = standardDataService.downloadRawWorkbook(batchId);
+        Resource resource = new FileSystemResource(download.getFilePath());
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(download.getFileName(), StandardCharsets.UTF_8)
+                .build();
+        ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
+                .contentType(resolveContentType(download.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0");
+        if (download.getContentLength() != null && download.getContentLength() >= 0) {
+            builder.contentLength(download.getContentLength());
+        }
+        return builder.body(resource);
+    }
+
     @PostMapping(value = "/{batchId}/standard-data/export", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     @Operation(summary = "导出估值解析任务当前标准数据 Sheet")
     public ResponseEntity<Resource> exportStandardDataSheet(@PathVariable String batchId,
@@ -142,6 +172,17 @@ public class OutsourcedDataTaskController {
                 .contentLength(export.getContent() == null ? 0 : export.getContent().length)
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(resource);
+    }
+
+    private MediaType resolveContentType(String contentType) {
+        if (!StringUtils.hasText(contentType)) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(contentType);
+        } catch (Exception exception) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
     @PostMapping("/{batchId}/execute")

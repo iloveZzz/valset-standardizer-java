@@ -54,12 +54,12 @@ export const batchValuationTaskStageCatalog: Array<{
   {
     stage: "STANDARD_LANDING",
     step: "STANDARD_LANDING",
-    stageName: "标准表落地",
-    stepName: "标准表落地",
-    stageDescription: "查看标准表写入、落地和后续加工执行状态",
-    stepDescription: "查看标准表写入、落地和后续加工执行状态",
-    label: "标准表落地",
-    description: "查看标准表写入、落地和后续加工执行状态",
+    stageName: "估值贴源数据落地",
+    stepName: "估值贴源数据落地",
+    stageDescription: "查看加工执行状态和估值表贴源数据",
+    stepDescription: "查看加工执行状态和估值表贴源数据",
+    label: "估值贴源数据落地",
+    description: "查看加工执行状态和估值表贴源数据",
   },
 ];
 
@@ -85,6 +85,8 @@ export const batchValuationTaskPageText = {
   query: {
     batchId: "批次ID",
     taskDate: "任务日期",
+    businessDate: "业务日期",
+    managerName: "管理机构",
     productKeyword: "产品名称/代码",
     stage: "任务阶段",
     status: "状态",
@@ -122,11 +124,8 @@ export const batchValuationTaskPageText = {
     fileId: "文件ID",
     filesysFileId: "文件服务ID",
     originalFileName: "原始文件名",
-    lastErrorMessage: "异常摘要",
-    currentBlockPoint: "当前阻塞点",
     inputSummary: "输入摘要",
     outputSummary: "输出摘要",
-    errorMessage: "错误摘要",
     logRef: "日志定位",
   },
 } as const;

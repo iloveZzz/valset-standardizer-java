@@ -7,6 +7,7 @@ import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.rule.ParseRuleType;
 import com.yss.valset.extract.rule.ParseRuleStepDescriptor;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
+import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -30,7 +31,7 @@ class CsvValuationDataParserDynamicRuleTest {
                 row("1001", "银行存款", "10"),
                 row("资产净值", "20")
         );
-        CsvValuationDataParser parser = new CsvValuationDataParser(objectMapper);
+        CsvValuationDataParser parser = parser(null);
 
         ParsedValuationData result = parser.parse(config(csv));
 
@@ -40,6 +41,7 @@ class CsvValuationDataParserDynamicRuleTest {
         assertThat(result.getSubjects().get(0).getSubjectCode()).isEqualTo("1001");
         assertThat(result.getMetrics()).hasSize(1);
         assertThat(result.getMetrics().get(0).getMetricName()).isEqualTo("资产净值");
+        assertThat(result.getMetrics().get(0).getMetricType()).isEqualTo("metric_data");
     }
 
     @Test
@@ -52,10 +54,10 @@ class CsvValuationDataParserDynamicRuleTest {
                 row("资产净值", "20")
         );
         TestRuleResolver resolver = new TestRuleResolver()
-                .with(ParseRuleType.DATA_START, "rowIndex >= 3 && isSubjectRowWithPattern(row, subjectCodePattern)", "FAIL_FAST")
+                .with(ParseRuleType.DATA_START, "rowIndex >= 3", "FAIL_FAST")
                 .with(ParseRuleType.SUBJECT_EXTRACT, "{\"subjectCode\":\"CSV-\" + row[0],\"subjectName\":\"CSV动态科目\"}", "FAIL_FAST")
                 .with(ParseRuleType.METRIC_EXTRACT, "{\"metricName\":\"CSV动态指标\",\"value\":\"888\",\"rawValues\":{\"value\":\"888\"}}", "FAIL_FAST");
-        CsvValuationDataParser parser = new CsvValuationDataParser(objectMapper, resolver);
+        CsvValuationDataParser parser = parser(resolver);
 
         ParsedValuationData result = parser.parse(config(csv));
 
@@ -69,7 +71,7 @@ class CsvValuationDataParserDynamicRuleTest {
     }
 
     @Test
-    void shouldUseDynamicRowClassifyRule() throws Exception {
+    void shouldIgnoreDynamicRowClassifyRuleForSplitFilters() throws Exception {
         Path csv = createCsv(
                 row("估值表"),
                 row("科目代码", "科目名称", "市值"),
@@ -78,12 +80,38 @@ class CsvValuationDataParserDynamicRuleTest {
         );
         TestRuleResolver resolver = new TestRuleResolver()
                 .rowClassifyExpr("isSubjectRowWithPattern(row, subjectCodePattern) ? 'SUBJECT' : 'IGNORE'");
-        CsvValuationDataParser parser = new CsvValuationDataParser(objectMapper, resolver);
+        CsvValuationDataParser parser = parser(resolver);
 
         ParsedValuationData result = parser.parse(config(csv));
 
         assertThat(result.getSubjects()).hasSize(1);
-        assertThat(result.getMetrics()).isEmpty();
+        assertThat(result.getMetrics()).hasSize(1);
+        assertThat(result.getMetrics().get(0).getMetricName()).isEqualTo("资产净值");
+    }
+
+    @Test
+    void shouldFilterSubjectAndMetricRowsBySubjectCodeColumn() throws Exception {
+        Path csv = createCsv(
+                row("估值表"),
+                row("科目代码", "科目名称", "市值"),
+                row("1001", "银行存款", "10"),
+                row("ABC001", "字母科目", "11"),
+                row("0", "999"),
+                row("", "888"),
+                row("资产净值", "1001", "20"),
+                row("其他指标", "-", "40"),
+                row("制表", "经办人"),
+                row("2001", "页脚后科目", "99")
+        );
+        CsvValuationDataParser parser = parser(null);
+
+        ParsedValuationData result = parser.parse(config(csv));
+
+        assertThat(result.getSubjects()).hasSize(2);
+        assertThat(result.getSubjects()).extracting("subjectCode").containsExactly("1001", "ABC001");
+        assertThat(result.getMetrics()).hasSize(2);
+        assertThat(result.getMetrics()).extracting("metricName").containsExactly("资产净值", "其他指标");
+        assertThat(result.getMetrics()).extracting("metricType").containsExactly("metric_data", "metric_row");
     }
 
     private static DataSourceConfig config(Path csv) {
@@ -91,6 +119,14 @@ class CsvValuationDataParserDynamicRuleTest {
                 .sourceType(DataSourceType.CSV)
                 .sourceUri(csv.toString())
                 .build();
+    }
+
+    private CsvValuationDataParser parser(ParseRuleTemplateResolver resolver) {
+        return new CsvValuationDataParser(
+                objectMapper,
+                resolver,
+                new QlexpressParseRuleEngine(objectMapper, ExtractParserQlexpressTestScripts::scripts)
+        );
     }
 
     private static Path createCsv(List<String>... rows) throws Exception {

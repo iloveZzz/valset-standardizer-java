@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
+import com.yss.valset.domain.model.ValsetFileInfo;
+import com.yss.valset.extract.support.ExcelUniverSnapshotSupport;
 import com.yss.valset.extract.repository.entity.DwdExternalValuationBasicInfoPO;
 import com.yss.valset.extract.repository.entity.DwdExternalValuationHeaderPO;
 import com.yss.valset.extract.repository.entity.DwdExternalValuationMetricPO;
@@ -18,6 +21,8 @@ import com.yss.valset.extract.repository.mapper.DwdExternalValuationSubjectRepos
 import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExportCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDownloadDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardBasicDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardBasicRowDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardDataExportDTO;
@@ -27,12 +32,20 @@ import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardSubjectDTO;
 import com.yss.valset.task.application.port.OutsourcedDataTaskGateway;
 import com.yss.valset.task.application.service.OutsourcedDataTaskStandardDataService;
 import com.yss.valset.task.application.support.UniverWorkbookExportSupport;
+import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
+import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
+import com.yss.valset.transfer.domain.model.TransferObject;
+import com.yss.valset.transfer.domain.model.TransferSource;
+import com.yss.valset.transfer.infrastructure.connector.SourceConnectorRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -70,6 +83,10 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
     private final DatabaseDialectSupport databaseDialectSupport;
     private final ObjectMapper objectMapper;
     private final UniverWorkbookExportSupport univerWorkbookExportSupport;
+    private final ValsetFileInfoGateway valsetFileInfoGateway;
+    private final TransferObjectGateway transferObjectGateway;
+    private final TransferSourceGateway transferSourceGateway;
+    private final SourceConnectorRegistry sourceConnectorRegistry;
 
     @Override
     public OutsourcedDataTaskStandardBasicDTO queryBasic(String batchId) {
@@ -160,6 +177,50 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
     }
 
     @Override
+    public OutsourcedDataTaskRawWorkbookDTO queryRawWorkbook(String batchId) {
+        OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
+        RawWorkbookSource source = resolveRawWorkbookSource(batch);
+        try (ExcelUniverSnapshotSupport snapshotSupport = new ExcelUniverSnapshotSupport(source.path)) {
+            ExcelUniverSnapshotSupport.WorkbookSnapshot snapshot = snapshotSupport.buildWorkbookSnapshot(source.fileName);
+            OutsourcedDataTaskRawWorkbookDTO dto = new OutsourcedDataTaskRawWorkbookDTO();
+            dto.setBatchId(batch.getBatchId());
+            dto.setFileId(source.fileId);
+            dto.setFileName(source.fileName);
+            dto.setSourceType(source.sourceType);
+            dto.setSheetCount(snapshot.getSheetCount());
+            dto.setRowCount(snapshot.getRowCount());
+            dto.setWorkbookData(objectMapper.valueToTree(snapshot.getWorkbookData()));
+            dto.setDownloadedFromTarget(source.downloadedFromTarget);
+            dto.setFallbackMessage(source.fallbackMessage);
+            return dto;
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "原始估值表转换失败", exception);
+        }
+    }
+
+    @Override
+    public OutsourcedDataTaskRawWorkbookDownloadDTO downloadRawWorkbook(String batchId) {
+        OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
+        RawWorkbookSource source = resolveRawWorkbookSource(batch);
+        try {
+            return new OutsourcedDataTaskRawWorkbookDownloadDTO(
+                    batch.getBatchId(),
+                    source.fileId,
+                    source.fileName,
+                    resolveContentType(source.mimeType, source.path),
+                    Files.size(source.path),
+                    source.path
+            );
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "原始估值表下载准备失败", exception);
+        }
+    }
+
+    @Override
     public OutsourcedDataTaskStandardDataExportDTO exportSheet(String batchId, OutsourcedDataTaskStandardDataExportCommand command) {
         OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
         if (command == null || isEmptyWorkbook(command.getWorkbookData())) {
@@ -175,6 +236,123 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
         } catch (Exception exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "导出标准数据 Sheet 失败", exception);
+        }
+    }
+
+    private RawWorkbookSource resolveRawWorkbookSource(OutsourcedDataTaskBatchDTO batch) {
+        Long fileId = parseLong(batch.getFileId());
+        DwdExternalValuationPO valuation = findValuation(batch);
+        ValsetFileInfo fileInfo = fileId == null ? null : valsetFileInfoGateway.findById(fileId);
+        TransferObject transferObject = fileId == null ? null : transferObjectGateway.findById(String.valueOf(fileId)).orElse(null);
+        String fileName = firstText(
+                batch.getOriginalFileName(),
+                fileInfo == null ? null : fileInfo.getFileNameOriginal(),
+                transferObject == null ? null : transferObject.originalName(),
+                "原始估值表"
+        );
+        String mimeType = firstText(
+                transferObject == null ? null : transferObject.mimeType(),
+                fileInfo == null ? null : fileInfo.getMimeType()
+        );
+        String sourceType = firstText(
+                batch.getSourceType(),
+                transferObject == null ? null : transferObject.sourceType(),
+                fileInfo == null || fileInfo.getSourceChannel() == null ? null : fileInfo.getSourceChannel().name()
+        );
+        Path localPath = firstReadablePath(
+                fileInfo == null ? null : fileInfo.getLocalTempPath(),
+                valuation == null ? null : valuation.getWorkbookPath(),
+                fileInfo == null ? null : fileInfo.getRealStoragePath(),
+                fileInfo == null ? null : fileInfo.getStorageUri(),
+                transferObject == null ? null : transferObject.localTempPath(),
+                transferObject == null ? null : transferObject.realStoragePath()
+        );
+        if (localPath != null) {
+            return new RawWorkbookSource(localPath, fileId, fileName, mimeType, sourceType, false, null);
+        }
+        if (transferObject == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "批次没有可定位的源文件");
+        }
+        Path materialized = materializeFromSource(transferObject);
+        String fallbackMessage = "本地临时文件不可读，已从来源配置重新下载";
+        return new RawWorkbookSource(materialized, fileId, fileName, mimeType, sourceType, true, fallbackMessage);
+    }
+
+    private Path materializeFromSource(TransferObject transferObject) {
+        if (!StringUtils.hasText(transferObject.sourceId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "批次源文件不可读，且缺少来源配置");
+        }
+        TransferSource source = transferSourceGateway.findById(transferObject.sourceId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "未找到批次关联的来源配置"));
+        try {
+            Path path = sourceConnectorRegistry.getRequired(source).materialize(source, transferObject);
+            if (!isReadableFile(path)) {
+                throw new IllegalStateException("来源连接器未返回可读文件，path=" + path);
+            }
+            return path;
+        } catch (UnsupportedOperationException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前来源不支持重新下载原始文件", exception);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "目标源下载原始估值表失败", exception);
+        }
+    }
+
+    private Path firstReadablePath(String... candidates) {
+        if (candidates == null) {
+            return null;
+        }
+        for (String candidate : candidates) {
+            if (!StringUtils.hasText(candidate)) {
+                continue;
+            }
+            try {
+                Path path = Paths.get(candidate.trim());
+                if (isReadableFile(path)) {
+                    return path;
+                }
+            } catch (Exception ignored) {
+                // ignore invalid local path candidates
+            }
+        }
+        return null;
+    }
+
+    private boolean isReadableFile(Path path) {
+        return path != null && Files.exists(path) && Files.isRegularFile(path) && Files.isReadable(path);
+    }
+
+    private String resolveContentType(String mimeType, Path filePath) {
+        if (StringUtils.hasText(mimeType)) {
+            return mimeType.trim();
+        }
+        try {
+            String contentType = Files.probeContentType(filePath);
+            return StringUtils.hasText(contentType) ? contentType : "application/octet-stream";
+        } catch (Exception exception) {
+            return "application/octet-stream";
+        }
+    }
+
+    private static final class RawWorkbookSource {
+        private final Path path;
+        private final Long fileId;
+        private final String fileName;
+        private final String mimeType;
+        private final String sourceType;
+        private final boolean downloadedFromTarget;
+        private final String fallbackMessage;
+
+        private RawWorkbookSource(Path path, Long fileId, String fileName, String mimeType, String sourceType,
+                boolean downloadedFromTarget, String fallbackMessage) {
+            this.path = path;
+            this.fileId = fileId;
+            this.fileName = fileName;
+            this.mimeType = mimeType;
+            this.sourceType = sourceType;
+            this.downloadedFromTarget = downloadedFromTarget;
+            this.fallbackMessage = fallbackMessage;
         }
     }
 
@@ -207,6 +385,9 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         if ("metrics".equals(normalized)) {
             return "指标数据";
         }
+        if ("raw".equals(normalized)) {
+            return "原始估值表";
+        }
         return StringUtils.hasText(sheetName) ? sheetName.trim() : "Sheet";
     }
 
@@ -216,6 +397,23 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         }
         if (StringUtils.hasText(second)) {
             return second.trim();
+        }
+        return defaultValue;
+    }
+
+    private String firstText(String first, String second) {
+        return firstText(first, second, null);
+    }
+
+    private String firstText(String first, String second, String third, String defaultValue) {
+        if (StringUtils.hasText(first)) {
+            return first.trim();
+        }
+        if (StringUtils.hasText(second)) {
+            return second.trim();
+        }
+        if (StringUtils.hasText(third)) {
+            return third.trim();
         }
         return defaultValue;
     }

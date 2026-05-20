@@ -35,7 +35,7 @@ public class WorkflowRuntimeCatalog {
     private static final List<StageDefinition> STAGES = Collections.unmodifiableList(Arrays.asList(
             stage(OutsourcedDataTaskStage.FILE_PARSE, "原始文件抽取与解析"),
             stage(OutsourcedDataTaskStage.STRUCTURE_STANDARDIZE, "字段映射与结构标准化"),
-            stage(OutsourcedDataTaskStage.STANDARD_LANDING, "标准表落地")
+            stage(OutsourcedDataTaskStage.STANDARD_LANDING, "估值贴源数据落地")
     ));
 
     private static final ActiveWorkflowDefinition ACTIVE_WORKFLOW_DEFINITION;

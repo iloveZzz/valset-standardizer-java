@@ -131,11 +131,15 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                                                          String tagId,
                                                          String tagCode,
                                                          String tagValue,
+                                                         String businessDate,
+                                                         String receiveDate,
                                                          String taskDate,
                                                          Integer pageIndex,
                                                          Integer pageSize) {
         String normalizedStatus = normalizeStatus(status);
         String normalizedTaskDate = normalizeTaskDate(taskDate);
+        String normalizedBusinessDate = normalizeTransferDate(businessDate, "业务日期");
+        String normalizedReceiveDate = normalizeTransferDate(receiveDate, "收取日期");
         TransferObjectPage page = transferObjectGateway.pageObjects(
                 sourceId,
                 sourceType,
@@ -149,6 +153,8 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                 tagId,
                 tagCode,
                 tagValue,
+                normalizedBusinessDate,
+                normalizedReceiveDate,
                 normalizedTaskDate,
                 pageIndex,
                 pageSize);
@@ -205,10 +211,14 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
                                                          String tagId,
                                                          String tagCode,
                                                          String tagValue,
+                                                         String businessDate,
+                                                         String receiveDate,
                                                          String taskDate) {
         String normalizedStatus = normalizeStatus(status);
         String normalizedTaskDate = normalizeTaskDate(taskDate);
-        TransferObjectAnalysis analysis = transferObjectGateway.analyzeObjects(sourceId, sourceType, sourceCode, originalName, normalizedStatus, normalizeDeliveryStatus(deliveryStatus), mailId, fingerprint, routeId, tagId, tagCode, tagValue, normalizedTaskDate);
+        String normalizedBusinessDate = normalizeTransferDate(businessDate, "业务日期");
+        String normalizedReceiveDate = normalizeTransferDate(receiveDate, "收取日期");
+        TransferObjectAnalysis analysis = transferObjectGateway.analyzeObjects(sourceId, sourceType, sourceCode, originalName, normalizedStatus, normalizeDeliveryStatus(deliveryStatus), mailId, fingerprint, routeId, tagId, tagCode, tagValue, normalizedBusinessDate, normalizedReceiveDate, normalizedTaskDate);
         return TransferObjectAnalysisViewDTO.builder()
                 .totalCount(analysis.totalCount())
                 .taggedCount(analysis.taggedCount())
@@ -295,6 +305,18 @@ public class DefaultTransferObjectQueryService implements TransferObjectQuerySer
             return taskDate.trim();
         } catch (DateTimeParseException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的任务日期: " + taskDate, exception);
+        }
+    }
+
+    private String normalizeTransferDate(String date, String label) {
+        if (!StringUtils.hasText(date)) {
+            return null;
+        }
+        try {
+            LocalDate.parse(date.trim());
+            return date.trim();
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不支持的" + label + ": " + date, exception);
         }
     }
 

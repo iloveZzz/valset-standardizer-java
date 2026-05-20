@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import {
   YButton,
   YCard,
@@ -6,6 +7,7 @@ import {
   YssFormily,
   YTable,
 } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -20,6 +22,12 @@ import type { TagPage } from "../types";
 const { page } = defineProps<{
   page: TagPage;
 }>();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 
 const actionConfig = useTableActionConfig({
   width: 280,
@@ -119,12 +127,13 @@ const columns: YTableColumn[] = [
       </div>
     </YCard>
 
-    <div class="workspace-body">
+    <div ref="tableAreaRef" class="workspace-body">
       <YTable
         :columns="columns"
         :action-config="actionConfig"
         :data="page.tableData"
         :loading="page.loading"
+        :max-height="tableHeight"
         :row-config="{ keyField: 'tagId' }"
         :checkbox-config="{ highlight: true }"
         :pageable="true"

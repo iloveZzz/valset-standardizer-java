@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { h } from "vue";
+import { h, ref } from "vue";
 import { Modal } from "ant-design-vue";
 import { YButton, YCard, YTable } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import {
   ExclamationCircleOutlined,
   DownloadOutlined,
@@ -18,6 +19,12 @@ import type { ObjectPage, TransferObjectTagViewDTO } from "../types";
 const { page } = defineProps<{
   page: ObjectPage;
 }>();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: true,
+});
 
 const VISIBLE_TAG_COUNT = 2;
 const columns = useTransferObjectColumns();
@@ -136,6 +143,45 @@ const actionConfig = useTableActionConfig({
               allow-clear
             />
           </a-form-item>
+          <a-form-item label="业务日期">
+            <a-date-picker
+              v-model:value="page.query.businessDate"
+              value-format="YYYY-MM-DD"
+              style="width: 150px"
+              size="small"
+              placeholder="选择业务日期"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="收取日期">
+            <a-date-picker
+              v-model:value="page.query.receiveDate"
+              value-format="YYYY-MM-DD"
+              style="width: 150px"
+              size="small"
+              placeholder="选择收取日期"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item label="标签名称">
+            <a-select
+              v-model:value="page.query.tagIds"
+              mode="multiple"
+              style="width: 260px"
+              size="small"
+              placeholder="选择标签名称"
+              allow-clear
+              show-search
+              option-filter-prop="label"
+              @change="page.handleTagSelectChange"
+              :options="
+                page.tagOptions.map((tag) => ({
+                  value: tag.tagId,
+                  label: page.formatTagLabel(tag.tagName || tag.tagCode),
+                }))
+              "
+            />
+          </a-form-item>
         </a-form>
         <div class="workspace-query-actions">
           <a-space>
@@ -160,12 +206,13 @@ const actionConfig = useTableActionConfig({
       </div>
     </YCard>
 
-    <div class="workspace-body">
+    <div ref="tableAreaRef" class="workspace-body">
       <YTable
         :columns="columns"
         :action-config="actionConfig"
         :data="page.tableData"
         :loading="page.loading || page.redeliverLoading || page.retagLoading"
+        :max-height="tableHeight"
         :autoFlexColumn="true"
         :row-config="{ keyField: 'transferId' }"
         :checkbox-config="{ highlight: true }"
@@ -198,22 +245,6 @@ const actionConfig = useTableActionConfig({
                   v-model:value="page.query.routeId"
                   style="width: 140px"
                   placeholder="路由ID"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="标签编码">
-                <a-input
-                  v-model:value="page.query.tagCode"
-                  style="width: 180px"
-                  placeholder="标签编码"
-                  allow-clear
-                />
-              </a-form-item>
-              <a-form-item label="标签值">
-                <a-input
-                  v-model:value="page.query.tagValue"
-                  style="width: 160px"
-                  placeholder="标签值"
                   allow-clear
                 />
               </a-form-item>

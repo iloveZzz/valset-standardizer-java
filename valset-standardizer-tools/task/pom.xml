@@ -27,6 +27,10 @@
             <artifactId>valset-standardizer-extract</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.yss.datamiddle</groupId>
+            <artifactId>valset-standardizer-transfer</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.yss.cloud</groupId>
             <artifactId>yss-component-dto</artifactId>
         </dependency>

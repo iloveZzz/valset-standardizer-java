@@ -75,20 +75,7 @@ SQL 文件：
 
 ### DWD 外部估值标准表
 
-- `t_dwd_external_valuation_subject`
-- `t_dwd_external_valuation_metric`
-
-SQL 文件：
-
-- `yss-valset-standardizer/src/main/resources/db/migration/t_dwd_external_valuation.sql`
-
-用途：
-
-- 保存外部估值标准化后的主数据
-- 支撑 `/api/valuation-workflows/{fileId}/dwd-data` 查询
-- 支撑匹配阶段优先从 DWD 读取标准化结果
-- `t_dwd_external_valuation_subject` 保存标准化后的外部估值明细事实，并保留标准列值、映射依据和原始列
-- `t_dwd_external_valuation_metric` 保存标准化后的指标事实，并保留标准指标码、标准值和映射依据
+`t_dwd_external_valuation_subject` 和 `t_dwd_external_valuation_metric` 已移除。标准化结果不再单独持久化，统一从最新 `t_stg_external_valuation*` 运行时标准化后直接进入 `tr_spv_jjhzgzb` / `tr_spv_index`。
 
 ### 匹配结果表
 
@@ -123,7 +110,7 @@ SQL 文件：
 
 1. 初始化文件主对象层 `t_transfer_object` / `t_transfer_object_tag` / `t_valset_file_ingest_log`
 2. 初始化 ODS 表 `t_ods_valuation_filedata` / `t_ods_valuation_sheet_style`
-3. 初始化 STG 表 `t_stg_external_valuation*` 和 DWD 表 `t_dwd_external_valuation_subject` / `t_dwd_external_valuation_metric`
+3. 初始化 STG 表 `t_stg_external_valuation*` 和 TR_SPV 标准表 `tr_spv_jjhzgzb` / `tr_spv_index`
 4. 初始化任务与匹配结果相关表
 5. 启动应用
 

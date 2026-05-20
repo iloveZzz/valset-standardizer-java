@@ -7,13 +7,14 @@ import com.yss.valset.qlexpress.domain.runtime.ManagedQlexpressRunner;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressCommonContextContributor;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressCommonFunctionFacade;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressExecutionContextEnhancer;
+import com.yss.valset.qlexpress.domain.runtime.QlexpressFunctionScriptProvider;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressRunnerRegistry;
-import com.yss.valset.qlexpress.domain.runtime.SystemQlexpressFunctionSeedScripts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,15 +37,20 @@ public class QlexpressHeaderMappingEngine implements HeaderMappingEngine {
     private final DefaultHeaderMappingEngine legacyEngine;
 
     public QlexpressHeaderMappingEngine() {
-        this(new ObjectMapper());
+        this(new ObjectMapper(), Collections::emptyList);
     }
 
     public QlexpressHeaderMappingEngine(ObjectMapper objectMapper) {
+        this(objectMapper, Collections::emptyList);
+    }
+
+    public QlexpressHeaderMappingEngine(ObjectMapper objectMapper,
+                                        QlexpressFunctionScriptProvider scriptProvider) {
         QlexpressExecutionContextEnhancer contextEnhancer = new QlexpressExecutionContextEnhancer(java.util.Arrays.asList(
                 new QlexpressCommonContextContributor(new QlexpressCommonFunctionFacade()),
                 new QlexpressHeaderContextContributor(new QlexpressHeaderFunctionFacade())
         ));
-        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(SystemQlexpressFunctionSeedScripts::scripts, contextEnhancer);
+        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(scriptProvider, contextEnhancer);
         ManagedQlexpressRunner runner = registry.createManagedRunner(RUNNER_SCOPE);
         this.ruleEngine = new QlexpressRuleEngine(
                 runner,

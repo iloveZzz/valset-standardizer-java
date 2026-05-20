@@ -23,7 +23,42 @@
   white-space: nowrap;
   vertical-align: middle;
 }
+.transfer-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+.workspace-query-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 
+.workspace-query-form {
+  display: flex;
+  flex: 1 1 760px;
+  flex-wrap: wrap;
+  gap: 8px 0;
+  min-width: 0;
+}
+
+.workspace-query-actions {
+  flex: 0 0 auto;
+}
+
+.workspace-query-actions .ant-space {
+  flex-wrap: wrap;
+}
+
+.workspace-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 .object-tag-more {
   display: inline-flex;
   flex: 0 0 auto;

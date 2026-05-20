@@ -7,8 +7,14 @@
     <!-- You can override this to have a custom pattern -->
     <property name="CONSOLE_LOG_PATTERN"
               value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"/>
+    <appender name="SYSTEM_OUTPUT" class="com.yss.valset.transfer.infrastructure.logging.SystemOutputLogAppender">
+        <maxLines>10000</maxLines>
+        <serviceName>${APP_NAME}</serviceName>
+        <serverPort>${server.port:-8080}</serverPort>
+    </appender>
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="SYSTEM_OUTPUT"/>
     </root>
     <springProperty name="APP_NAME" scope="context" source="spring.application.name"
                     defaultValue="valset-standardizer"/>
@@ -55,6 +61,7 @@
         <root level="INFO">
             <appender-ref ref="FILE"/>
             <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="SYSTEM_OUTPUT"/>
         </root>
     </springProfile>
 

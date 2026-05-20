@@ -9,25 +9,27 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
- * 将标准化后的估值解析结果转换为 t_tr_index 行。
+ * 将标准化后的估值解析结果转换为 tr_spv_index 行。
  */
 public final class TrIndexStandardizationSupport {
 
     private TrIndexStandardizationSupport() {
     }
 
-    public static List<TrIndexPO> buildRows(ParsedValuationData standardizedValuationData, String sourceTp, String sourceSign) {
+    public static List<TrIndexPO> buildRows(ParsedValuationData standardizedValuationData,
+                                            String sourceTp,
+                                            String sourceSign,
+                                            ProductBusinessFields productBusinessFields) {
         if (standardizedValuationData == null || standardizedValuationData.getMetrics() == null || standardizedValuationData.getMetrics().isEmpty()) {
             return java.util.Arrays.asList();
         }
         LocalDateTime timeStamp = LocalDateTime.now();
         List<TrIndexPO> result = new ArrayList<>(standardizedValuationData.getMetrics().size());
         for (MetricRecord metric : standardizedValuationData.getMetrics()) {
-            TrIndexPO row = buildRow(metric, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign, timeStamp);
+            TrIndexPO row = buildRow(metric, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign, productBusinessFields, timeStamp);
             if (row != null) {
                 result.add(row);
             }
@@ -40,6 +42,7 @@ public final class TrIndexStandardizationSupport {
             Map<String, String> basicInfo,
             String sourceTp,
             String sourceSign,
+            ProductBusinessFields productBusinessFields,
             LocalDateTime timeStamp
     ) {
         Map<String, Object> standardValues = metric == null || metric.getStandardValues() == null
@@ -48,11 +51,13 @@ public final class TrIndexStandardizationSupport {
 
         TrIndexPO row = new TrIndexPO();
         row.setOrgCd(truncate(firstNonBlank(
+                productBusinessFields == null ? null : productBusinessFields.getOrgCode(),
                 stringValue(standardValues, "org_cd"),
                 lookupBasicInfo(basicInfo, "org_cd", "机构代码"),
                 lookupBasicInfo(basicInfo, "orgCd", "机构代码")
         ), 30));
         row.setPdCd(truncate(firstNonBlank(
+                productBusinessFields == null ? null : productBusinessFields.getProductCode(),
                 stringValue(standardValues, "pd_cd"),
                 lookupBasicInfo(basicInfo, "pd_cd", "产品代码"),
                 lookupBasicInfo(basicInfo, "pdCd", "产品代码")
@@ -64,10 +69,10 @@ public final class TrIndexStandardizationSupport {
                 extractBizDate(sourceSign)
         )), 8));
         row.setIndxNm(truncate(firstNonBlank(
+                metric == null ? null : metric.getMetricName(),
                 stringValue(standardValues, "indx_nm"),
                 stringValue(standardValues, "metric_name"),
-                metric == null ? null : metric.getStandardName(),
-                metric == null ? null : metric.getMetricName()
+                metric == null ? null : metric.getStandardName()
         ), 300));
         row.setIndxValu(truncate(firstNonBlank(
                 stringValue(standardValues, "indx_valu"),
@@ -77,6 +82,7 @@ public final class TrIndexStandardizationSupport {
         ), 300));
         row.setSourceTp(truncate(firstNonBlank(stringValue(standardValues, "source_tp"), sourceTp), 30));
         row.setSourceSign(truncate(sourceSign, 300));
+        row.setSn(metric == null ? null : metric.getRowDataNumber());
         row.setTimeStamp(timeStamp);
         return row;
     }

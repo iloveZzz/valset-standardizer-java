@@ -9,7 +9,6 @@ import com.yss.valset.domain.exporter.ResultExporter;
 import com.yss.valset.domain.gateway.MatchResultGateway;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.gateway.StandardSubjectGateway;
-import com.yss.valset.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.valset.domain.matcher.ValsetMatcher;
 
 import com.yss.valset.domain.model.DataSourceType;
@@ -17,6 +16,7 @@ import com.yss.valset.domain.model.DataSourceType;
 import com.yss.valset.domain.model.*;
 import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.domain.parser.ValuationDataParserProvider;
+import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,9 +41,9 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
     private final StandardSubjectGateway standardSubjectGateway;
     private final MappingHintGateway mappingHintGateway;
     private final ValsetMatcher subjectMatcher;
-    private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
     private final DwdExternalValuationGateway dwdExternalValuationGateway;
     private final MatchResultGateway matchResultGateway;
+    private final ExternalValuationStandardizationService standardizationService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -100,17 +100,12 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
         }
 
         if ((type == DataSourceType.EXCEL || type == DataSourceType.CSV) && command.getFileId() != null) {
-            ParsedValuationData standardizedSnapshot = standardizedExternalValuationGateway.findLatestByFileId(command.getFileId());
-            if (standardizedSnapshot != null) {
-                log.info("匹配任务优先使用标准化落地数据，fileId={}", command.getFileId());
-                return standardizedSnapshot;
+            ParsedValuationData stgSnapshot = dwdExternalValuationGateway.findLatestByFileId(command.getFileId());
+            if (stgSnapshot != null) {
+                log.info("匹配任务使用最新 STG 贴源快照运行时标准化，fileId={}", command.getFileId());
+                return standardizationService.standardize(stgSnapshot);
             }
-            ParsedValuationData dwdSnapshot = dwdExternalValuationGateway.findLatestByFileId(command.getFileId());
-            if (dwdSnapshot != null) {
-                log.info("匹配任务未找到标准化落地数据，回退使用 DWD 外部估值标准数据，fileId={}", command.getFileId());
-                return dwdSnapshot;
-            }
-            log.warn("匹配任务未找到标准化落地数据，回退到解析器分析，fileId={}", command.getFileId());
+            log.warn("匹配任务未找到最新 STG 贴源快照，回退到解析器分析，fileId={}", command.getFileId());
         }
 
         DataSourceConfig config = buildAnalysisConfig(type, command.getWorkbookPath(), command.getFileId());

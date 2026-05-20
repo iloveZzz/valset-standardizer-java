@@ -21,9 +21,11 @@ public class QlexpressCommonContextContributor implements QlexpressContextContri
 
     @Override
     public void contribute(String runnerScope, Map<String, Object> context) {
-        context.putIfAbsent("qlCommonFns", new QlexpressFunctionFacadeAdapter()
+        QlexpressFunctionFacadeAdapter commonFns = new QlexpressFunctionFacadeAdapter()
                 .bind("hasText", args -> commonFunctionFacade.hasText(valueAt(args, 0)))
-                .bind("matchesRegex", args -> commonFunctionFacade.matchesRegex(valueAt(args, 0), valueAt(args, 1))));
+                .bind("matchesRegex", args -> commonFunctionFacade.matchesRegex(valueAt(args, 0), valueAt(args, 1)));
+        context.putIfAbsent("qlCommonFns", commonFns);
+        context.putIfAbsent("matchesRegex", commonFns.get("matchesRegex"));
     }
 
     private Object valueAt(Object[] args, int index) {

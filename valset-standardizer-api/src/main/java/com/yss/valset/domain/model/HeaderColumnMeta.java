@@ -17,28 +17,18 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class HeaderColumnMeta {
-    /**
-     * 列序号，从 0 开始。
-     */
+    /** 列序号，从 0 开始 */
     private Integer columnIndex;
 
-    /**
-     * 扁平化后的表头名称，通常由多级路径通过 "|" 拼接而成。
-     */
+    /** 扁平化后的表头名称，通常由多级路径通过 "|" 拼接而成 */
     private String headerName;
 
-    /**
-     * 表头层级路径段列表。
-     */
+    /** 表头层级路径段列表 */
     private List<String> pathSegments;
 
-    /**
-     * 完整表头路径。
-     */
+    /** 完整表头路径 */
     private String headerPath;
 
-    /**
-     * 是否为空列。
-     */
+    /** 是否为空列 */
     private Boolean blankColumn;
 }

@@ -153,7 +153,7 @@ public final class TaskFailureClassifier {
         String normalized = message.toLowerCase(Locale.ROOT);
         return normalized.startsWith("批量任务 文件解析阶段失败")
                 || normalized.startsWith("批量任务 结构标准化阶段失败")
-                || normalized.startsWith("批量任务 标准表落地阶段失败")
+                || normalized.startsWith("批量任务 估值贴源数据落地阶段失败")
                 || normalized.startsWith("批量任务 作业执行失败")
                 || normalized.startsWith("failed to execute parse task")
                 || normalized.startsWith("failed to execute match task")

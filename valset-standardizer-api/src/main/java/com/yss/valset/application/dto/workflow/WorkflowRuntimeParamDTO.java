@@ -14,7 +14,6 @@ public class WorkflowRuntimeParamDTO implements java.io.Serializable {
     private String paramNamespace;
     private Boolean skipExcelStyleParsing;
     private Boolean enableMatchProcess;
-    private Boolean persistStandardizedDwdDetails;
     private String description;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

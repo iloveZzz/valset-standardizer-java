@@ -9,7 +9,6 @@ import com.yss.valset.application.dto.RawValuationSheetDTO;
 import com.yss.valset.application.dto.RawValuationRowDTO;
 import com.yss.valset.application.dto.StgExternalValuationViewDTO;
 import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
-import com.yss.valset.domain.gateway.StandardizedExternalValuationGateway;
 import com.yss.valset.application.service.ValuationWorkflowQueryService;
 import com.yss.valset.domain.gateway.MatchResultGateway;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
@@ -20,6 +19,7 @@ import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
 import com.yss.valset.extract.repository.mapper.ValuationSheetStyleMapper;
+import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -40,7 +40,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
     private final ValuationSheetStyleMapper valuationSheetStyleMapper;
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final DwdExternalValuationGateway dwdExternalValuationGateway;
-    private final StandardizedExternalValuationGateway standardizedExternalValuationGateway;
+    private final ExternalValuationStandardizationService standardizationService;
     private final MatchResultGateway matchResultGateway;
     private final ObjectMapper objectMapper;
 
@@ -48,14 +48,14 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
                                                 ValuationSheetStyleMapper valuationSheetStyleMapper,
                                                 ValsetFileInfoGateway subjectMatchFileInfoGateway,
                                                 DwdExternalValuationGateway dwdExternalValuationGateway,
-                                                StandardizedExternalValuationGateway standardizedExternalValuationGateway,
+                                                ExternalValuationStandardizationService standardizationService,
                                                 MatchResultGateway matchResultGateway,
                                                 ObjectMapper objectMapper) {
         this.valuationFileDataMapper = valuationFileDataMapper;
         this.valuationSheetStyleMapper = valuationSheetStyleMapper;
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.dwdExternalValuationGateway = dwdExternalValuationGateway;
-        this.standardizedExternalValuationGateway = standardizedExternalValuationGateway;
+        this.standardizationService = standardizationService;
         this.matchResultGateway = matchResultGateway;
         this.objectMapper = objectMapper;
     }
@@ -109,23 +109,22 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
     @Override
     public DwdExternalValuationViewDTO queryDwdData(Long fileId) {
         ParsedValuationData stgValuationData = dwdExternalValuationGateway.findLatestByFileId(fileId);
-        ParsedValuationData standardizedValuationData = standardizedExternalValuationGateway.findLatestByFileId(fileId);
-        if (stgValuationData == null && standardizedValuationData == null) {
+        if (stgValuationData == null) {
             throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的 DWD 外部估值数据");
         }
-        ParsedValuationData viewData = standardizedValuationData == null ? stgValuationData : standardizedValuationData;
+        ParsedValuationData viewData = standardizationService.standardize(stgValuationData);
         return DwdExternalValuationViewDTO.builder()
                 .fileId(fileId == null ? null : String.valueOf(fileId))
-                .workbookPath(stgValuationData == null ? null : stgValuationData.getWorkbookPath())
-                .sheetName(stgValuationData == null ? null : stgValuationData.getSheetName())
-                .headerRowNumber(stgValuationData == null ? null : stgValuationData.getHeaderRowNumber())
-                .dataStartRowNumber(stgValuationData == null ? null : stgValuationData.getDataStartRowNumber())
-                .fileNameOriginal(stgValuationData == null ? null : stgValuationData.getFileNameOriginal())
-                .title(stgValuationData == null ? null : stgValuationData.getTitle())
-                .basicInfo(stgValuationData == null ? null : stgValuationData.getBasicInfo())
-                .headers(stgValuationData == null ? null : stgValuationData.getHeaders())
-                .headerDetails(stgValuationData == null ? null : stgValuationData.getHeaderDetails())
-                .headerColumns(stgValuationData == null ? null : stgValuationData.getHeaderColumns())
+                .workbookPath(stgValuationData.getWorkbookPath())
+                .sheetName(stgValuationData.getSheetName())
+                .headerRowNumber(stgValuationData.getHeaderRowNumber())
+                .dataStartRowNumber(stgValuationData.getDataStartRowNumber())
+                .fileNameOriginal(stgValuationData.getFileNameOriginal())
+                .title(stgValuationData.getTitle())
+                .basicInfo(stgValuationData.getBasicInfo())
+                .headers(stgValuationData.getHeaders())
+                .headerDetails(stgValuationData.getHeaderDetails())
+                .headerColumns(stgValuationData.getHeaderColumns())
                 .subjects(viewData.getSubjects())
                 .metrics(viewData.getMetrics())
                 .build();

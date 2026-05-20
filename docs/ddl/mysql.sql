@@ -74,7 +74,7 @@ CREATE TABLE t_qlexpress_function (
     updated_at DATETIME
 );
 
-CREATE TABLE t_dwd_external_valuation (
+CREATE TABLE t_stg_external_valuation (
     id BIGINT PRIMARY KEY,
     task_id BIGINT NOT NULL,
     file_id BIGINT NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE t_dwd_external_valuation (
     title VARCHAR(512)
 );
 
-CREATE TABLE t_dwd_external_valuation_basic_info (
+CREATE TABLE t_stg_external_valuation_basic_info (
     id BIGINT PRIMARY KEY,
     valuation_id BIGINT NOT NULL,
     sort_order INT NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE t_dwd_external_valuation_basic_info (
     info_value VARCHAR(512)
 );
 
-CREATE TABLE t_dwd_external_valuation_header (
+CREATE TABLE t_stg_external_valuation_header (
     id BIGINT PRIMARY KEY,
     valuation_id BIGINT NOT NULL,
     column_index INT NOT NULL,
@@ -102,7 +102,7 @@ CREATE TABLE t_dwd_external_valuation_header (
     header_column_meta_json TEXT
 );
 
-CREATE TABLE t_dwd_external_valuation_subject (
+CREATE TABLE t_stg_external_valuation_subject (
     id BIGINT PRIMARY KEY,
     valuation_id BIGINT NOT NULL,
     sheet_name VARCHAR(128),
@@ -118,7 +118,7 @@ CREATE TABLE t_dwd_external_valuation_subject (
     raw_values_json TEXT
 );
 
-CREATE TABLE t_dwd_external_valuation_metric (
+CREATE TABLE t_stg_external_valuation_metric (
     id BIGINT PRIMARY KEY,
     valuation_id BIGINT NOT NULL,
     sheet_name VARCHAR(128),
@@ -180,11 +180,11 @@ CREATE UNIQUE INDEX uk_qlexpress_function_name
 
 CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 
-CREATE INDEX idx_dwd_val_file_id ON t_dwd_external_valuation(file_id);
-CREATE INDEX idx_dwd_basic_info_vid_order ON t_dwd_external_valuation_basic_info(valuation_id, sort_order);
-CREATE INDEX idx_dwd_header_vid_col ON t_dwd_external_valuation_header(valuation_id, column_index);
-CREATE INDEX idx_dwd_subject_vid_row ON t_dwd_external_valuation_subject(valuation_id, row_data_number);
-CREATE INDEX idx_dwd_metric_vid_row ON t_dwd_external_valuation_metric(valuation_id, row_data_number);
+CREATE UNIQUE INDEX uk_stg_external_valuation_file ON t_stg_external_valuation(file_id);
+CREATE INDEX idx_stg_basic_info_vid_order ON t_stg_external_valuation_basic_info(valuation_id, sort_order);
+CREATE INDEX idx_stg_header_vid_col ON t_stg_external_valuation_header(valuation_id, column_index);
+CREATE INDEX idx_stg_subject_vid_row ON t_stg_external_valuation_subject(valuation_id, row_data_number);
+CREATE INDEX idx_stg_metric_vid_row ON t_stg_external_valuation_metric(valuation_id, row_data_number);
 
 CREATE INDEX idx_valset_ingest_file_id
     ON t_valset_file_ingest_log(file_id);
@@ -195,14 +195,14 @@ CREATE INDEX idx_ods_mapping_sample_org ON t_ods_mapping_sample(org_name);
 CREATE INDEX idx_ods_mapping_sample_ext_code ON t_ods_mapping_sample(external_code);
 CREATE INDEX idx_ods_mapping_sample_std_code ON t_ods_mapping_sample(standard_code);
 
-CREATE TABLE t_tr_jjhzgzb (
-    id BIGINT PRIMARY KEY,
+CREATE TABLE tr_spv_jjhzgzb (
+    id BIGINT NOT NULL,
     org_cd VARCHAR(30),
-    pd_cd VARCHAR(30),
-    biz_date VARCHAR(8),
-    subject_cd VARCHAR(200),
+    pd_cd VARCHAR(60),
+    biz_date VARCHAR(8) NOT NULL,
+    subject_cd VARCHAR(100),
     subject_nm VARCHAR(300),
-    pa_subject_cd VARCHAR(100),
+    pa_subject_cd VARCHAR(60),
     pa_subject_nm VARCHAR(300),
     n_hldamt DECIMAL(26, 4),
     n_hldcst DECIMAL(26, 4),
@@ -223,28 +223,37 @@ CREATE TABLE t_tr_jjhzgzb (
     fin_attr_id_d VARCHAR(30),
     fin_mkt_cd VARCHAR(30),
     time_stamp DATETIME,
-    cons_float_tp_cd VARCHAR(30),
+    cons_float_tp_cd VARCHAR(100),
     source_tp VARCHAR(30),
     source_sign VARCHAR(300),
-    sn SMALLINT,
-    data_dt VARCHAR(8),
-    isin_cd VARCHAR(30) COMMENT 'ISIN代码'
-) COMMENT='基金持仓估值表';
+    sn BIGINT,
+    data_dt VARCHAR(30),
+    isin_cd VARCHAR(30) COMMENT 'ISIN代码',
+    PRIMARY KEY (id, biz_date)
+) COMMENT='资产估值信息(原始数据)';
 
-CREATE TABLE t_tr_index (
-    id BIGINT PRIMARY KEY,
+CREATE TABLE tr_spv_index (
+    id BIGINT NOT NULL,
     org_cd VARCHAR(30),
     pd_cd VARCHAR(60),
-    biz_date VARCHAR(8),
+    biz_date VARCHAR(8) NOT NULL,
     indx_nm VARCHAR(300),
     indx_valu VARCHAR(300),
     source_tp VARCHAR(30),
     source_sign VARCHAR(300),
-    time_stamp DATETIME
-) COMMENT='资产估值指标信息（原始数据）';
+    sn INT,
+    time_stamp DATETIME,
+    is_audt TINYINT,
+    audt_id VARCHAR(30),
+    PRIMARY KEY (id, biz_date)
+) COMMENT='SPV产品指标主表';
 
-CREATE INDEX idx_t_tr_jjhzgzb_org ON t_tr_jjhzgzb(org_cd);
-CREATE INDEX idx_t_tr_jjhzgzb_subject ON t_tr_jjhzgzb(subject_cd);
-CREATE INDEX idx_t_tr_jjhzgzb_biz_date ON t_tr_jjhzgzb(biz_date);
-CREATE INDEX idx_t_tr_jjhzgzb_pd ON t_tr_jjhzgzb(pd_cd);
-CREATE INDEX idx_t_tr_index_date_org_pd ON t_tr_index(biz_date, org_cd, pd_cd);
+CREATE INDEX idx_tr_spv_jjhzgzb_org ON tr_spv_jjhzgzb(org_cd);
+CREATE INDEX idx_tr_spv_jjhzgzb_subject ON tr_spv_jjhzgzb(subject_cd);
+CREATE INDEX idx_tr_spv_jjhzgzb_biz_date ON tr_spv_jjhzgzb(biz_date);
+CREATE INDEX idx_tr_spv_jjhzgzb_pd ON tr_spv_jjhzgzb(pd_cd);
+CREATE INDEX idx_tr_spv_jjhzgzb_date_pd ON tr_spv_jjhzgzb(biz_date, pd_cd);
+CREATE UNIQUE INDEX uk_tr_spv_jjhzgzb_pd_org_date_subject_sn ON tr_spv_jjhzgzb(pd_cd, org_cd, biz_date, subject_cd, sn);
+CREATE INDEX idx_tr_spv_index_date_org_pd ON tr_spv_index(biz_date, org_cd, pd_cd);
+CREATE INDEX idx_tr_spv_index_date_pd ON tr_spv_index(biz_date, pd_cd);
+CREATE UNIQUE INDEX uk_tr_spv_index_pd_org_date_name_sn ON tr_spv_index(pd_cd, org_cd, biz_date, indx_nm, sn);

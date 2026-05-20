@@ -3,7 +3,7 @@ import "./index.less";
 import "@vue-flow/core/dist/style.css";
 import "@vue-flow/core/dist/theme-default.css";
 import "@vue-flow/controls/dist/style.css";
-import { computed, h } from "vue";
+import { computed, h, ref } from "vue";
 import dayjs, { type Dayjs } from "dayjs";
 import { Modal } from "ant-design-vue";
 import {
@@ -16,6 +16,7 @@ import {
   YTable,
   type YTableColumn,
 } from "@yss-ui/components";
+import { useTableHeight } from "@yss-ui/hooks";
 import WorkflowFlowCanvas from "./components/WorkflowFlowCanvas.vue";
 import { useWorkflowMonitorPage } from "./hooks/useWorkflowMonitorPage";
 import type { WorkflowMonitorInstanceRow } from "./types";
@@ -23,6 +24,12 @@ import type { WorkflowMonitorInstanceRow } from "./types";
 defineOptions({ name: "EtlWorkflowMonitorPage" });
 
 const { page } = useWorkflowMonitorPage();
+
+const tableAreaRef = ref<HTMLDivElement>();
+const { tableHeight } = useTableHeight(tableAreaRef, {
+  withPagination: true,
+  withToolbar: false,
+});
 
 const TIME_RANGE_FORMAT = "YYYY-MM-DD HH:mm:ss";
 
@@ -162,25 +169,27 @@ const selectRow = (row: WorkflowMonitorInstanceRow) => {
           </a-form>
         </div>
 
-        <YTable
-          class="workflow-monitor-instance-table"
-          :columns="columns"
-          :data="page.tableData"
-          :loading="page.listLoading || page.loading"
-          :border="false"
-          :pageable="true"
-          :autoFlexColumn="false"
-          :row-config="{ keyField: 'instanceId', isCurrent: true }"
-          v-model:pagination="page.pagination"
-          @page-change="page.handlePageChange"
-          @cell-click="({ row }) => selectRow(row)"
-        >
-          <template #status="{ row }">
-            <a-tag :color="formatStatusColor(row.status)">
-              {{ row.statusLabel }}
-            </a-tag>
-          </template>
-        </YTable>
+        <div ref="tableAreaRef" class="workflow-monitor-instance-table">
+          <YTable
+            :columns="columns"
+            :data="page.tableData"
+            :loading="page.listLoading || page.loading"
+            :max-height="tableHeight"
+            :border="false"
+            :pageable="true"
+            :autoFlexColumn="false"
+            :row-config="{ keyField: 'instanceId', isCurrent: true }"
+            v-model:pagination="page.pagination"
+            @page-change="page.handlePageChange"
+            @cell-click="({ row }) => selectRow(row)"
+          >
+            <template #status="{ row }">
+              <a-tag :color="formatStatusColor(row.status)">
+                {{ row.statusLabel }}
+              </a-tag>
+            </template>
+          </YTable>
+        </div>
       </YCard>
 
       <YCard class="workflow-monitor-main" :bordered="false" :padding="0">

@@ -30,6 +30,8 @@ public interface TransferObjectGateway {
                                    String tagId,
                                    String tagCode,
                                    String tagValue,
+                                   String businessDate,
+                                   String receiveDate,
                                    String taskDate,
                                    Integer pageIndex,
                                    Integer pageSize);
@@ -46,6 +48,8 @@ public interface TransferObjectGateway {
                                           String tagId,
                                           String tagCode,
                                           String tagValue,
+                                          String businessDate,
+                                          String receiveDate,
                                           String taskDate);
 
     List<TransferObjectTrend> trendObjects(String taskDate, Integer days);

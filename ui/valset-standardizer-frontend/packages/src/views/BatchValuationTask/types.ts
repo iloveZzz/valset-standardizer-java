@@ -3,6 +3,7 @@ import type {
   BatchValuationTaskBatchDetailDTO,
   BatchValuationTaskBatchDTO,
   BatchValuationTaskQueryParams,
+  BatchValuationTaskRawWorkbookDTO,
   BatchValuationTaskStandardBasicDTO,
   BatchValuationTaskStandardMetricDTO,
   BatchValuationTaskStandardRawColumnDTO,
@@ -26,6 +27,7 @@ export type BatchValuationTaskStage =
 export type BatchValuationTaskQueryState = BatchValuationTaskQueryParams & {
   batchId: string;
   taskDate: string;
+  businessDate: string;
   managerName: string;
   productKeyword: string;
   taskStage: string;
@@ -43,15 +45,23 @@ export type BatchValuationTaskStepRow = BatchValuationTaskStepDTO & {
   currentFlag?: boolean;
 };
 
-export type BatchValuationTaskStandardTab = "basic" | "subjects" | "metrics";
+export type BatchValuationTaskStandardTab = "basic" | "subjects" | "metrics" | "raw";
 
 export type BatchValuationTaskStandardRawColumn = BatchValuationTaskStandardRawColumnDTO;
+
+export type BatchValuationTaskAutoRefreshInterval = 0 | 5 | 10 | 30 | 60;
 
 export type BatchValuationTaskPageState = {
   tableRef: any;
   loading: boolean;
   detailLoading: boolean;
   batchRetryLoading: boolean;
+  autoRefreshInterval: BatchValuationTaskAutoRefreshInterval;
+  autoRefreshOptions: Array<{
+    label: string;
+    value: BatchValuationTaskAutoRefreshInterval;
+  }>;
+  lastUpdatedAt: string;
   rows: BatchValuationTaskBatchRow[];
   totalCount: number;
   summary: BatchValuationTaskSummaryDTO;
@@ -67,13 +77,17 @@ export type BatchValuationTaskPageState = {
   standardDataActiveTab: BatchValuationTaskStandardTab;
   standardDataSelectedRow: BatchValuationTaskBatchRow | null;
   standardDataBasic: BatchValuationTaskStandardBasicDTO | null;
+  standardDataRawWorkbook: BatchValuationTaskRawWorkbookDTO | null;
   standardDataBasicRows: NonNullable<BatchValuationTaskStandardBasicDTO["basicRows"]>;
   standardDataSubjects: BatchValuationTaskStandardSubjectDTO[];
   standardDataMetrics: BatchValuationTaskStandardMetricDTO[];
   standardDataBasicLoading: boolean;
   standardDataSubjectsLoading: boolean;
   standardDataMetricsLoading: boolean;
+  standardDataRawLoading: boolean;
+  standardDataRawError: string;
   standardDataExportLoading: boolean;
+  standardDataRawDownloadLoading: boolean;
   standardDataSubjectsKeyword: string;
   standardDataMetricsKeyword: string;
   runQuery: () => void;
@@ -98,7 +112,9 @@ export type BatchValuationTaskPageState = {
   handleStandardDataTabChange: (tab: BatchValuationTaskStandardTab | string) => void;
   refreshStandardData: () => void;
   exportStandardDataSheet: (workbookData: Record<string, unknown> | null, sheetName?: string) => Promise<void>;
+  downloadRawWorkbook: () => Promise<void>;
   searchStandardDataSubjects: () => void;
   searchStandardDataMetrics: () => void;
+  setAutoRefreshInterval: (value: number) => void;
   formatStatusColor: (status?: string) => string;
 };

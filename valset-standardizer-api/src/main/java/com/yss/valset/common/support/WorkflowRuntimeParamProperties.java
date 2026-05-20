@@ -23,9 +23,4 @@ public class WorkflowRuntimeParamProperties {
     @Value("${subject.match.workflow.enable-match-process:true}")
     private boolean enableMatchProcess;
 
-    /**
-     * 是否持久化标准化后的 DWD 明细。
-     */
-    @Value("${subject.match.workflow.persist-standardized-dwd-details:false}")
-    private boolean persistStandardizedDwdDetails;
 }

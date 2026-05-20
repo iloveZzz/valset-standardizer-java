@@ -1,6 +1,8 @@
 package com.yss.valset.task.application.service;
 
 import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExportCommand;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDownloadDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardBasicDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardDataExportDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardMetricDTO;
@@ -18,6 +20,10 @@ public interface OutsourcedDataTaskStandardDataService {
     List<OutsourcedDataTaskStandardSubjectDTO> listSubjects(String batchId, String keyword);
 
     List<OutsourcedDataTaskStandardMetricDTO> listMetrics(String batchId, String keyword);
+
+    OutsourcedDataTaskRawWorkbookDTO queryRawWorkbook(String batchId);
+
+    OutsourcedDataTaskRawWorkbookDownloadDTO downloadRawWorkbook(String batchId);
 
     OutsourcedDataTaskStandardDataExportDTO exportSheet(String batchId, OutsourcedDataTaskStandardDataExportCommand command);
 }

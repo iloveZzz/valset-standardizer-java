@@ -1,242 +1,92 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import dayjs, { type Dayjs } from "dayjs";
-import { message } from "ant-design-vue";
-import { YButton, YCard } from "@yss-ui/components";
 import {
-  ReloadOutlined,
-  SearchOutlined,
+  ArrowDownOutlined,
+  ClearOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
 } from "@ant-design/icons-vue";
-import OverviewRunLogConsole from "../../TransferOverview/components/OverviewRunLogConsole.vue";
+import { YButton, YMonaco } from "@yss-ui/components";
 import type { RunLogPage } from "../types";
 
 const { page } = defineProps<{
   page: RunLogPage;
 }>();
 
-type CleanupMode = "1" | "3" | "5" | "15" | "30" | "custom";
-
-const cleanupModalVisible = ref(false);
-const cleanupMode = ref<CleanupMode>("1");
-const cleanupRange = ref<[Dayjs, Dayjs] | undefined>(undefined);
-
-const cleanupModeOptions = [
-  { label: "近1天", value: "1" },
-  { label: "近3天", value: "3" },
-  { label: "近5天", value: "5" },
-  { label: "近15天", value: "15" },
-  { label: "近30天", value: "30" },
-  { label: "自定义", value: "custom" },
-] as const;
-
-const buildPresetRange = (days: number): [Dayjs, Dayjs] => [
-  dayjs().subtract(days, "day"),
-  dayjs(),
-];
-
-const formatRangeLabel = (range: [Dayjs, Dayjs]) =>
-  `${range[0].format("YYYY-MM-DD HH:mm:ss")} 至 ${range[1].format(
-    "YYYY-MM-DD HH:mm:ss",
-  )}`;
-
-const syncPresetRange = () => {
-  const days = Number(cleanupMode.value);
-  if (Number.isFinite(days) && days > 0) {
-    cleanupRange.value = buildPresetRange(days);
-  }
+const handleNodeChange = (value: unknown) => {
+  page.changeNode(typeof value === "string" ? value : "");
 };
-
-const openCleanupDialog = () => {
-  cleanupMode.value = "1";
-  cleanupRange.value = buildPresetRange(1);
-  cleanupModalVisible.value = true;
-};
-
-const closeCleanupDialog = () => {
-  cleanupModalVisible.value = false;
-};
-
-const handleCleanupModeChange = () => {
-  if (cleanupMode.value === "custom") {
-    cleanupRange.value ??= buildPresetRange(1);
-    return;
-  }
-  syncPresetRange();
-};
-
-const confirmCleanupLogs = async () => {
-  if (cleanupMode.value === "custom") {
-    if (!cleanupRange.value || cleanupRange.value.length !== 2) {
-      message.warning("请选择清理时间区间");
-      return;
-    }
-    if (!cleanupRange.value[0].isBefore(cleanupRange.value[1])) {
-      message.warning("清理开始时间必须早于结束时间");
-      return;
-    }
-  } else {
-    syncPresetRange();
-  }
-
-  const range = cleanupRange.value;
-  if (!range) {
-    message.warning("请选择清理时间区间");
-    return;
-  }
-
-  const cleanupLabel =
-    cleanupMode.value === "custom"
-      ? formatRangeLabel(range)
-      : `近${cleanupMode.value}天`;
-
-  await page.cleanupLogs({
-    startInclusive: range[0].format("YYYY-MM-DDTHH:mm:ss"),
-    endExclusive: range[1].format("YYYY-MM-DDTHH:mm:ss"),
-    cleanupLabel,
-  });
-  closeCleanupDialog();
-};
-
-watch(cleanupMode, handleCleanupModeChange);
 </script>
 
 <template>
-  <div class="transfer-workspace">
-    <YCard class="workspace-query-card" :bordered="false" :padding="12">
-      <div class="workspace-query-bar">
-        <div class="workspace-query-banner">
-          <h2>运行日志</h2>
-          <p>按执行阶段查看日志，支持筛选和清理历史记录。</p>
-        </div>
-        <div class="workspace-query-actions">
-          <a-space>
-            <YButton type="primary" size="small" @click="page.runQuery">
-              <template #icon><SearchOutlined /></template>
-              查询日志
-            </YButton>
-            <YButton size="small" @click="page.resetQuery">
-              <template #icon><ReloadOutlined /></template>
-              重置条件
-            </YButton>
-            <YButton
-              danger
-              size="small"
-              :loading="page.cleanupLoading"
-              @click="openCleanupDialog"
-            >
-              清理日志
-            </YButton>
-          </a-space>
-        </div>
+  <div class="transfer-run-log-page">
+    <div class="system-output-log-toolbar">
+      <div class="system-output-log-title">
+        <h2>运行日志</h2>
+        <span>系统输出日志</span>
       </div>
-    </YCard>
-
-    <div class="workspace-summary">
-      <a-spin :spinning="page.analysisLoading">
-        <div class="workspace-analysis-grid">
-            <div
-              v-for="stageItem in page.analysis.stageAnalyses"
-              :key="stageItem.runStage"
-              class="analysis-card-shell"
-              @click="page.applyStageFilter(stageItem.runStage)"
-            >
-              <YCard class="analysis-card" :bordered="false" :padding="18">
-                <div class="analysis-card-header">
-                  <div>
-                    <div class="analysis-card-label">
-                      {{ stageItem.stageLabel }}
-                    </div>
-                    <div class="analysis-card-desc">
-                      {{
-                        page.formatStageLabel(stageItem.runStage)
-                      }}阶段日志统计
-                    </div>
-                  </div>
-                  <a-tag color="blue">{{ stageItem.totalCount }} 条</a-tag>
-                </div>
-                <div class="analysis-card-status-list">
-                  <button
-                    v-for="statusItem in stageItem.statusCounts"
-                    :key="`${stageItem.runStage}-${statusItem.runStatus}`"
-                    type="button"
-                    class="analysis-status-chip"
-                    :class="page.getStatusChipClass(statusItem.runStatus)"
-                    @click.stop="
-                      page.applyStageStatusFilter(
-                        stageItem.runStage,
-                        statusItem.runStatus,
-                      )
-                    "
-                  >
-                    <span class="analysis-status-chip-label">
-                      {{ statusItem.statusLabel }}
-                    </span>
-                    <span class="analysis-status-chip-value">
-                      {{ statusItem.count }}
-                    </span>
-                  </button>
-                  <div
-                    v-if="!stageItem.statusCounts.length"
-                    class="analysis-card-empty"
-                  >
-                    当前筛选下暂无日志
-                  </div>
-                </div>
-              </YCard>
-            </div>
-          </div>
-        </a-spin>
-    </div>
-
-    <div class="workspace-body">
-      <div class="run-log-console-slot">
-        <OverviewRunLogConsole :items="page.consoleItems" />
-      </div>
-    </div>
-
-    <a-modal
-      v-model:open="cleanupModalVisible"
-      title="清理日志"
-      :confirm-loading="page.cleanupLoading"
-      ok-text="确定清理"
-      cancel-text="取消"
-      centered
-      @ok="confirmCleanupLogs"
-      @cancel="closeCleanupDialog"
-    >
-      <div class="cleanup-modal">
-        <div class="cleanup-modal-tip">
-          请选择要清理的日志时间范围。预设项按当前时间计算，自定义区间支持精确到秒。
-        </div>
-        <a-radio-group
-          v-model:value="cleanupMode"
-          button-style="solid"
-          class="cleanup-mode-group"
+      <a-space wrap>
+        <a-select
+          :value="page.selectedNodeId"
+          :loading="page.nodeLoading"
+          :options="page.nodeOptions"
+          class="system-output-log-node-select"
+          placeholder="选择日志节点"
+          @change="handleNodeChange"
+        />
+        <a-tag color="blue">日志 {{ page.logCount }}</a-tag>
+        <a-tag color="green">行数 {{ page.totalLines }}</a-tag>
+        <a-tag v-if="page.isStreaming" color="orange">
+          <span class="blinking-dot">●</span>
+          实时流式
+        </a-tag>
+        <YButton
+          v-if="!page.isStreaming"
+          type="primary"
+          size="small"
+          @click="page.startLogStream"
         >
-          <a-radio-button
-            v-for="item in cleanupModeOptions"
-            :key="item.value"
-            :value="item.value"
-            class="cleanup-mode-button"
-          >
-            {{ item.label }}
-          </a-radio-button>
-        </a-radio-group>
+          <template #icon><PlayCircleOutlined /></template>
+          开始实时日志
+        </YButton>
+        <YButton v-else danger size="small" @click="page.stopLogStream">
+          <template #icon><PauseCircleOutlined /></template>
+          停止日志流
+        </YButton>
+        <YButton
+          size="small"
+          :loading="page.cleanupLoading"
+          @click="page.clearLogs"
+        >
+          <template #icon><ClearOutlined /></template>
+          清空日志
+        </YButton>
+        <YButton size="small" @click="page.scrollToBottom">
+          <template #icon><ArrowDownOutlined /></template>
+          滚动到底部
+        </YButton>
+      </a-space>
+    </div>
 
-        <div v-if="cleanupMode === 'custom'" class="cleanup-range-block">
-          <a-range-picker
-            v-model:value="cleanupRange"
-            allow-clear
-            show-time
-            format="YYYY-MM-DD HH:mm:ss"
-            class="cleanup-range-picker"
-          />
-        </div>
-
-        <div class="cleanup-range-preview">
-          当前将清理：{{ cleanupMode === "custom" ? (cleanupRange ? formatRangeLabel(cleanupRange) : "请选择时间区间") : `近${cleanupMode}天` }}
-        </div>
-      </div>
-    </a-modal>
+    <div class="system-output-log-editor">
+      <YMonaco
+        :ref="page.setMonacoRef"
+        :model-value="''"
+        :log-mode="true"
+        :max-lines="10000"
+        height="100%"
+        :scroll-threshold="10"
+        :auto-scroll="true"
+        language="shell"
+        :readonly="true"
+        :options="{
+          fontSize: 13,
+          lineNumbers: 'on',
+          scrollBeyondLastLine: false,
+          minimap: { enabled: false },
+          wordWrap: 'off',
+        }"
+        @line-exceed="page.handleLineExceed"
+      />
+    </div>
   </div>
 </template>

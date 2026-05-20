@@ -8,7 +8,7 @@ import com.yss.valset.domain.model.ParsedValuationData;
 public interface DwdJjhzgzbGateway {
 
     /**
-     * 将标准化后的基金持仓估值明细落入 t_tr_jjhzgzb。
+     * 将标准化后的基金持仓估值明细落入 tr_spv_jjhzgzb。
      */
     void saveStandardizedJjhzgzb(Long taskId, Long fileId, String sourceTp, String sourceSign, ParsedValuationData standardizedValuationData);
 }

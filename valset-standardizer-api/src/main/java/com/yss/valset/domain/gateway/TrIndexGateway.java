@@ -8,7 +8,7 @@ import com.yss.valset.domain.model.ParsedValuationData;
 public interface TrIndexGateway {
 
     /**
-     * 将标准化后的指标明细落入 t_tr_index。
+     * 将标准化后的指标明细落入 tr_spv_index。
      */
     void saveStandardizedIndex(Long taskId, Long fileId, String sourceTp, String sourceSign, ParsedValuationData standardizedValuationData);
 }

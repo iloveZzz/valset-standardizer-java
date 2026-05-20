@@ -98,6 +98,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                                           String tagId,
                                           String tagCode,
                                           String tagValue,
+                                          String businessDate,
+                                          String receiveDate,
                                           String taskDate,
                                           Integer pageIndex,
                                           Integer pageSize) {
@@ -105,6 +107,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
         int size = pageSize == null || pageSize <= 0 ? DEFAULT_PAGE_SIZE : pageSize;
         Long sourceIdValue = parseLong(sourceId);
         Long routeIdValue = parseLong(routeId);
+        LocalDate businessDay = resolveFilterDate(businessDate, "业务日期");
+        LocalDate receiveDay = resolveFilterDate(receiveDate, "收取日期");
         LocalDateTime taskStart = resolveTaskStart(taskDate);
         LocalDateTime taskEnd = resolveTaskEnd(taskDate);
         String mailFilterSql = buildMailFilterSql(mailId);
@@ -118,6 +122,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                         .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
                         .like(originalName != null && !originalName.trim().isEmpty(), TransferObjectPO::getOriginalName, originalName)
                         .eq(status != null && !status.trim().isEmpty(), TransferObjectPO::getStatus, status)
+                        .eq(businessDay != null, TransferObjectPO::getBusinessDate, businessDay)
+                        .eq(receiveDay != null, TransferObjectPO::getReceiveDate, receiveDay)
                         .ge(taskStart != null, TransferObjectPO::getReceivedAt, taskStart)
                         .lt(taskEnd != null, TransferObjectPO::getReceivedAt, taskEnd)
                         .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
@@ -220,9 +226,13 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                                           String tagId,
                                           String tagCode,
                                           String tagValue,
+                                          String businessDate,
+                                          String receiveDate,
                                           String taskDate) {
         Long sourceIdValue = parseLong(sourceId);
         Long routeIdValue = parseLong(routeId);
+        LocalDate businessDay = resolveFilterDate(businessDate, "业务日期");
+        LocalDate receiveDay = resolveFilterDate(receiveDate, "收取日期");
         LocalDateTime taskStart = resolveTaskStart(taskDate);
         LocalDateTime taskEnd = resolveTaskEnd(taskDate);
         String mailFilterSql = buildMailFilterSql(mailId);
@@ -235,6 +245,8 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
                         .eq(sourceCode != null && !sourceCode.trim().isEmpty(), TransferObjectPO::getSourceCode, sourceCode)
                         .like(originalName != null && !originalName.trim().isEmpty(), TransferObjectPO::getOriginalName, originalName)
                         .eq(status != null && !status.trim().isEmpty(), TransferObjectPO::getStatus, status)
+                                .eq(businessDay != null, TransferObjectPO::getBusinessDate, businessDay)
+                                .eq(receiveDay != null, TransferObjectPO::getReceiveDate, receiveDay)
                                 .ge(taskStart != null, TransferObjectPO::getReceivedAt, taskStart)
                                 .lt(taskEnd != null, TransferObjectPO::getReceivedAt, taskEnd)
                                 .inSql("DELIVERED".equalsIgnoreCase(deliveryStatus) && deliveryFilterSql != null, TransferObjectPO::getTransferId, deliveryFilterSql)
@@ -453,8 +465,13 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
     private String buildTagFilterSql(String tagId, String tagCode, String tagValue) {
         StringBuilder sql = new StringBuilder("select transfer_id from t_transfer_object_tag where 1 = 1");
         boolean hasFilter = false;
-        if (tagId != null && !tagId.trim().isEmpty()) {
-            sql.append(" and tag_id = '").append(escapeSql(tagId.trim())).append("'");
+        List<String> tagIds = splitFilterValues(tagId);
+        if (!tagIds.isEmpty()) {
+            sql.append(" and tag_id in (")
+                    .append(tagIds.stream()
+                            .map(value -> "'" + escapeSql(value) + "'")
+                            .collect(Collectors.joining(",")))
+                    .append(")");
             hasFilter = true;
         }
         if (tagCode != null && !tagCode.trim().isEmpty()) {
@@ -466,6 +483,17 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
             hasFilter = true;
         }
         return hasFilter ? sql.toString() : null;
+    }
+
+    private List<String> splitFilterValues(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+        return java.util.Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     private String buildDeliveryFilterSql(String deliveryStatus) {
@@ -526,6 +554,17 @@ public class TransferObjectGatewayImpl implements TransferObjectGateway {
             return LocalDate.parse(taskDate.trim());
         } catch (DateTimeParseException exception) {
             throw new IllegalArgumentException("不支持的任务日期: " + taskDate, exception);
+        }
+    }
+
+    private LocalDate resolveFilterDate(String date, String label) {
+        if (date == null || date.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(date.trim());
+        } catch (DateTimeParseException exception) {
+            throw new IllegalArgumentException("不支持的" + label + ": " + date, exception);
         }
     }
 

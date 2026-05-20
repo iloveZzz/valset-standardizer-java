@@ -85,8 +85,11 @@ export type ObjectQueryState = {
   fingerprint: string;
   routeId: string;
   tagId: string;
+  tagIds: string[];
   tagCode: string;
   tagValue: string;
+  businessDate: string;
+  receiveDate: string;
 };
 
 export type ObjectTagFilter = {
@@ -95,6 +98,13 @@ export type ObjectTagFilter = {
   tagName?: string;
   tagValue?: string;
   count: number;
+};
+
+export type ObjectTagOption = {
+  tagId: string;
+  tagCode?: string;
+  tagName?: string;
+  tagValue?: string;
 };
 
 export type ObjectPage = {
@@ -115,6 +125,7 @@ export type ObjectPage = {
   sourceCount: number;
   statusCount: number;
   tagFilters: ObjectTagFilter[];
+  tagOptions: ObjectTagOption[];
   detailVisible: boolean;
   selectedRow: TransferObjectViewDTO | null;
   openDetailDrawer: (row: TransferObjectViewDTO) => void;
@@ -131,6 +142,7 @@ export type ObjectPage = {
     sourceType?: string,
     deliveryStatus?: string,
   ) => void;
+  handleTagSelectChange: () => void;
   applyTagFilter: (filter: ObjectTagFilter) => void;
   clearTagFilter: () => void;
   formatStatus: (value: string | undefined) => string;

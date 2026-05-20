@@ -177,61 +177,6 @@ CREATE TABLE "SCHEDULED_TASKS" (
 ;
 
 -- ----------------------------
--- Table structure for t_dwd_external_valuation_metric
--- ----------------------------
-CREATE TABLE "T_DWD_EXTERNAL_VALUATION_METRIC" (
-  "ID" NUMBER(20) NOT NULL,
-  "VALUATION_ID" NUMBER(20) NOT NULL,
-  "FILE_ID" NUMBER(20) NOT NULL,
-  "SHEET_NAME" VARCHAR2(128),
-  "ROW_DATA_NUMBER" NUMBER(11),
-  "METRIC_NAME" VARCHAR2(256),
-  "METRIC_TYPE" VARCHAR2(64),
-  "METRIC_CODE" VARCHAR2(128),
-  "METRIC_STANDARD_NAME" VARCHAR2(512),
-  "STANDARD_VALUE_TEXT" VARCHAR2(512),
-  "STANDARD_VALUE_NUM" NUMBER,
-  "STANDARD_VALUE_UNIT" VARCHAR2(64),
-  "STANDARD_VALUES_JSON" CLOB,
-  "MAPPING_RULE_ID" NUMBER(20),
-  "MAPPING_SOURCE_ID" NUMBER(20),
-  "MAPPING_STATUS" VARCHAR2(32),
-  "MAPPING_REASON" VARCHAR2(512),
-  "MAPPING_CONFIDENCE" NUMBER,
-  "RAW_VALUES_JSON" CLOB
-)
-;
-
--- ----------------------------
--- Table structure for t_dwd_external_valuation_subject
--- ----------------------------
-CREATE TABLE "T_DWD_EXTERNAL_VALUATION_SUBJECT" (
-  "ID" NUMBER(20) NOT NULL,
-  "VALUATION_ID" NUMBER(20) NOT NULL,
-  "FILE_ID" NUMBER(20) NOT NULL,
-  "SHEET_NAME" VARCHAR2(128),
-  "ROW_DATA_NUMBER" NUMBER(11),
-  "SUBJECT_CODE" VARCHAR2(128),
-  "SUBJECT_NAME" VARCHAR2(512),
-  "LEVEL_NO" NUMBER(11),
-  "PARENT_CODE" VARCHAR2(128),
-  "ROOT_CODE" VARCHAR2(128),
-  "SEGMENT_COUNT" NUMBER(11),
-  "PATH_CODES_JSON" CLOB,
-  "IS_LEAF" NUMBER(4),
-  "STANDARD_CODE" VARCHAR2(128),
-  "STANDARD_NAME" VARCHAR2(512),
-  "STANDARD_VALUES_JSON" CLOB,
-  "MAPPING_RULE_ID" NUMBER(20),
-  "MAPPING_SOURCE_ID" NUMBER(20),
-  "MAPPING_STATUS" VARCHAR2(32),
-  "MAPPING_REASON" VARCHAR2(512),
-  "MAPPING_CONFIDENCE" NUMBER,
-  "RAW_VALUES_JSON" CLOB
-)
-;
-
--- ----------------------------
 -- Table structure for t_etl_workflow_definition
 -- ----------------------------
 CREATE TABLE "T_ETL_WORKFLOW_DEFINITION" (
@@ -813,105 +758,121 @@ CREATE TABLE "T_SUBJECT_MATCH_RESULT" (
 )
 ;
 
--- ----------------------------
--- Table structure for t_tr_index
--- ----------------------------
-CREATE TABLE "T_TR_INDEX" (
-  "ID" NUMBER(20) NOT NULL,
-  "ORG_CD" VARCHAR2(30),
-  "PD_CD" VARCHAR2(60),
-  "BIZ_DATE" VARCHAR2(8),
-  "INDX_NM" VARCHAR2(300),
-  "INDX_VALU" VARCHAR2(300),
-  "SOURCE_TP" VARCHAR2(30),
-  "SOURCE_SIGN" VARCHAR2(300),
-  "TIME_STAMP" DATE
-)
-;
-COMMENT ON COLUMN "T_TR_INDEX"."ID" IS '主键';
-COMMENT ON COLUMN "T_TR_INDEX"."ORG_CD" IS '机构代码';
-COMMENT ON COLUMN "T_TR_INDEX"."PD_CD" IS '产品代码';
-COMMENT ON COLUMN "T_TR_INDEX"."BIZ_DATE" IS '业务日期';
-COMMENT ON COLUMN "T_TR_INDEX"."INDX_NM" IS '指标名称';
-COMMENT ON COLUMN "T_TR_INDEX"."INDX_VALU" IS '指标值';
-COMMENT ON COLUMN "T_TR_INDEX"."SOURCE_TP" IS '来源类型';
-COMMENT ON COLUMN "T_TR_INDEX"."SOURCE_SIGN" IS '来源标记';
-COMMENT ON COLUMN "T_TR_INDEX"."TIME_STAMP" IS '时间戳';
-COMMENT ON TABLE "T_TR_INDEX" IS '资产估值指标信息（原始数据）';
+-- 创建表
+CREATE TABLE tr_spv_index (
+                              id            NUMBER(19,0),
+                              org_cd        VARCHAR2(30),
+                              pd_cd         VARCHAR2(60),
+                              biz_date      VARCHAR2(8),
+                              indx_nm       VARCHAR2(300),
+                              indx_valu     VARCHAR2(300),
+                              source_tp     VARCHAR2(30),
+                              source_sign   VARCHAR2(300),
+                              sn            NUMBER(6),
+                              time_stamp    DATE,
+                              is_audt       NUMBER(1,0),
+                              audt_id       VARCHAR2(30),
+                              CONSTRAINT PK_TR_SPV_INDEX PRIMARY KEY (id, biz_date)
+);
 
--- ----------------------------
--- Table structure for t_tr_jjhzgzb
--- ----------------------------
-CREATE TABLE "T_TR_JJHZGZB" (
-  "ID" NUMBER(20) NOT NULL,
-  "ORG_CD" VARCHAR2(30),
-  "PD_CD" VARCHAR2(30),
-  "BIZ_DATE" VARCHAR2(8),
-  "SUBJECT_CD" VARCHAR2(200),
-  "SUBJECT_NM" VARCHAR2(300),
-  "PA_SUBJECT_CD" VARCHAR2(100),
-  "PA_SUBJECT_NM" VARCHAR2(300),
-  "N_HLDAMT" NUMBER,
-  "N_HLDCST" NUMBER,
-  "N_HLDCST_LOCL" NUMBER,
-  "N_HLDMKV" NUMBER,
-  "N_HLDMKV_LOCL" NUMBER,
-  "N_HLDVVA" NUMBER,
-  "N_HLDVVA_L" NUMBER,
-  "CCY_CD" VARCHAR2(3),
-  "N_VALRATE" NUMBER,
-  "N_PRICE_COST" NUMBER,
-  "N_VALPRICE" NUMBER,
-  "N_CB_JZ_BL" NUMBER,
-  "N_SZ_JZ_BL" NUMBER,
-  "N_ZC_BL" NUMBER,
-  "SUSP_INFO" VARCHAR2(300),
-  "VALUAT_EQUITY" VARCHAR2(30),
-  "FIN_ATTR_ID_D" VARCHAR2(30),
-  "FIN_MKT_CD" VARCHAR2(30),
-  "TIME_STAMP" DATE,
-  "CONS_FLOAT_TP_CD" VARCHAR2(30),
-  "SOURCE_TP" VARCHAR2(30),
-  "SOURCE_SIGN" VARCHAR2(300),
-  "SN" NUMBER(6),
-  "DATA_DT" VARCHAR2(8),
-  "ISIN_CD" VARCHAR2(30)
-)
-;
-COMMENT ON COLUMN "T_TR_JJHZGZB"."ID" IS '主键';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."ORG_CD" IS '机构代码';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."PD_CD" IS '产品代码';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."BIZ_DATE" IS '业务日期';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."SUBJECT_CD" IS '科目代码';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."SUBJECT_NM" IS '科目名称';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."PA_SUBJECT_CD" IS '父级科目代码';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."PA_SUBJECT_NM" IS '父级科目名称';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_HLDAMT" IS '持仓数量';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_HLDCST" IS '原币持仓成本';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_HLDCST_LOCL" IS '本币持仓成本';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_HLDMKV" IS '原币持仓市值';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_HLDMKV_LOCL" IS '本币持仓市值';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_HLDVVA" IS '原币证券估增';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_HLDVVA_L" IS '本币证券估增';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."CCY_CD" IS '币种';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_VALRATE" IS '汇率';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_PRICE_COST" IS '单位成本';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_VALPRICE" IS '估值价格';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_CB_JZ_BL" IS '成本占比';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_SZ_JZ_BL" IS '市值占比';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."N_ZC_BL" IS '资产占比';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."SUSP_INFO" IS '停牌信息';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."VALUAT_EQUITY" IS '权益信息';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."FIN_ATTR_ID_D" IS '金融属性';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."FIN_MKT_CD" IS '交易市场';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."TIME_STAMP" IS '时间戳';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."CONS_FLOAT_TP_CD" IS '浮动类型';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."SOURCE_TP" IS '来源类型';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."SOURCE_SIGN" IS '来源标记';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."SN" IS '序号';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."DATA_DT" IS '数据日期';
-COMMENT ON COLUMN "T_TR_JJHZGZB"."ISIN_CD" IS 'ISIN代码';
-COMMENT ON TABLE "T_TR_JJHZGZB" IS '基金持仓估值表';
+-- 创建索引
+CREATE INDEX tr_spv_index_idx ON tr_spv_index (biz_date, pd_cd);
+
+-- 表注释
+COMMENT ON TABLE tr_spv_index IS 'SPV产品指标主表';
+
+-- 列注释
+COMMENT ON COLUMN tr_spv_index.id IS '流水号';
+COMMENT ON COLUMN tr_spv_index.org_cd IS '机构代码';
+COMMENT ON COLUMN tr_spv_index.pd_cd IS '产品代码';
+COMMENT ON COLUMN tr_spv_index.biz_date IS '业务日期';
+COMMENT ON COLUMN tr_spv_index.indx_nm IS '指标名称';
+COMMENT ON COLUMN tr_spv_index.indx_valu IS '指标值';
+COMMENT ON COLUMN tr_spv_index.source_tp IS '来源类型';
+COMMENT ON COLUMN tr_spv_index.source_sign IS '来源标记';
+COMMENT ON COLUMN tr_spv_index.sn IS '序号';
+COMMENT ON COLUMN tr_spv_index.time_stamp IS '时间戳';
+COMMENT ON COLUMN tr_spv_index.is_audt IS '是否审核(0-未审核 1-已审核)';
+COMMENT ON COLUMN tr_spv_index.audt_id IS '审核ID';
+
+
+-- 建表（数值字段精度已调整）
+CREATE TABLE tr_spv_jjhzgzb (
+                                id                NUMBER(19,0) DEFAULT tr_spv_jjhzgzb_id_seq.NEXTVAL,
+                                org_cd            VARCHAR2(30),
+                                pd_cd             VARCHAR2(60),
+                                biz_date          VARCHAR2(8),
+                                subject_cd        VARCHAR2(100),
+                                subject_nm        VARCHAR2(300),
+                                pa_subject_cd     VARCHAR2(60),
+                                pa_subject_nm     VARCHAR2(300),
+                                n_hldamt          NUMBER(22,4),       -- 持仓数量 (原 NUMBER(10,4)，扩大整数位)
+                                n_hldcst          NUMBER(22,4),       -- 原币持仓成本 (扩大整数位)
+                                n_hldcst_locl     NUMBER(22,4),       -- 本币持仓成本 (扩大整数位，解决 ORA-01438)
+                                n_hldmkv          NUMBER(22,4),       -- 原币持仓市值 (扩大整数位)
+                                n_hldmkv_locl     NUMBER(22,4),       -- 本币持仓市值 (扩大整数位，解决 ORA-01438)
+                                n_hldvva          NUMBER(22,4),       -- 原币证券估增 (扩大整数位)
+                                n_hldvva_l        NUMBER(22,4),       -- 本币证券估值 (扩大整数位)
+                                ccy_cd            VARCHAR2(3),
+                                n_valrate         NUMBER(18,8),       -- 货币估值汇率 (原 NUMBER(10,4)，提高小数位)
+                                n_price_cost      NUMBER(18,8),       -- 单位成本 (提高小数位)
+                                n_valprice        NUMBER(18,8),       -- 证券估值行情 (提高小数位)
+                                n_cb_jz_bl        NUMBER(18,8),       -- 本币成本占比 (原 NUMBER(10,4)，提高小数位)
+                                n_sz_jz_bl        NUMBER(18,8),       -- 本币市值占比 (提高小数位)
+                                n_zc_bl           NUMBER(18,8),       -- 资产占比 (原 NUMBER(10,8)，扩大整数位且保留 8 位小数)
+                                susp_info         VARCHAR2(300),
+                                valuat_equity     VARCHAR2(30),
+                                fin_attr_id_d     VARCHAR2(30),
+                                fin_mkt_cd        VARCHAR2(30),
+                                time_stamp        DATE,
+                                cons_float_tp_cd  VARCHAR2(100),
+                                source_tp         VARCHAR2(30),
+                                source_sign       VARCHAR2(300),
+                                sn                NUMBER(19,0),
+                                data_dt           VARCHAR2(30),
+                                isin_cd           VARCHAR2(30),
+                                CONSTRAINT pk_tr_spv_jjhzgzb PRIMARY KEY (id, biz_date)
+);
+
+-- 索引
+CREATE INDEX tr_spv_jjhzgzb_idx ON tr_spv_jjhzgzb (biz_date, pd_cd);
+
+-- 注释
+COMMENT ON TABLE tr_spv_jjhzgzb IS '资产估值信息(原始数据)';
+
+COMMENT ON COLUMN tr_spv_jjhzgzb.id IS '流水号';
+COMMENT ON COLUMN tr_spv_jjhzgzb.org_cd IS '机构代码';
+COMMENT ON COLUMN tr_spv_jjhzgzb.pd_cd IS '产品代码';
+COMMENT ON COLUMN tr_spv_jjhzgzb.biz_date IS '业务日期';
+COMMENT ON COLUMN tr_spv_jjhzgzb.subject_cd IS '科目代码';
+COMMENT ON COLUMN tr_spv_jjhzgzb.subject_nm IS '科目名称';
+COMMENT ON COLUMN tr_spv_jjhzgzb.pa_subject_cd IS '父科目代码';
+COMMENT ON COLUMN tr_spv_jjhzgzb.pa_subject_nm IS '父级科目名称';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_hldamt IS '持仓数量';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_hldcst IS '原币持仓成本';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_hldcst_locl IS '本币持仓成本';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_hldmkv IS '原币持仓市值';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_hldmkv_locl IS '本币持仓市值';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_hldvva IS '原币证券估增';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_hldvva_l IS '本币证券估值';
+COMMENT ON COLUMN tr_spv_jjhzgzb.ccy_cd IS '币种代码';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_valrate IS '货币估值汇率';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_price_cost IS '单位成本';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_valprice IS '证券估值行情';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_cb_jz_bl IS '本币成本占比';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_sz_jz_bl IS '本币市值占比';
+COMMENT ON COLUMN tr_spv_jjhzgzb.n_zc_bl IS '资产占比';
+COMMENT ON COLUMN tr_spv_jjhzgzb.susp_info IS '停牌信息';
+COMMENT ON COLUMN tr_spv_jjhzgzb.valuat_equity IS '估值权益';
+COMMENT ON COLUMN tr_spv_jjhzgzb.fin_attr_id_d IS '财务属性-投资意图';
+COMMENT ON COLUMN tr_spv_jjhzgzb.fin_mkt_cd IS '财务市场代码';
+COMMENT ON COLUMN tr_spv_jjhzgzb.time_stamp IS '时间戳';
+COMMENT ON COLUMN tr_spv_jjhzgzb.cons_float_tp_cd IS '受限流通类别代码';
+COMMENT ON COLUMN tr_spv_jjhzgzb.source_tp IS '来源类型';
+COMMENT ON COLUMN tr_spv_jjhzgzb.source_sign IS '来源标记';
+COMMENT ON COLUMN tr_spv_jjhzgzb.sn IS '序号';
+COMMENT ON COLUMN tr_spv_jjhzgzb.data_dt IS '数据日期';
+COMMENT ON COLUMN tr_spv_jjhzgzb.isin_cd IS 'ISIN代码';
 
 -- ----------------------------
 -- Table structure for t_transfer_delivery_record
@@ -1278,16 +1239,6 @@ CREATE INDEX "LAST_HEARTBEAT_IDX"
   ON "SCHEDULED_TASKS" ("LAST_HEARTBEAT" ASC);
 
 -- ----------------------------
--- Primary Key structure for table t_dwd_external_valuation_metric
--- ----------------------------
-ALTER TABLE "T_DWD_EXTERNAL_VALUATION_METRIC" ADD PRIMARY KEY ("ID");
-
--- ----------------------------
--- Primary Key structure for table t_dwd_external_valuation_subject
--- ----------------------------
-ALTER TABLE "T_DWD_EXTERNAL_VALUATION_SUBJECT" ADD PRIMARY KEY ("ID");
-
--- ----------------------------
 -- Primary Key structure for table t_etl_workflow_definition
 -- ----------------------------
 ALTER TABLE "T_ETL_WORKFLOW_DEFINITION" ADD PRIMARY KEY ("WORKFLOW_ID");
@@ -1531,9 +1482,9 @@ CREATE INDEX "IDX_PARSE_QUEUE_PARSE_STATUS"
 ALTER TABLE "T_STG_EXTERNAL_VALUATION" ADD PRIMARY KEY ("ID");
 
 -- ----------------------------
--- Indexes structure for table t_stg_external_valuation
+-- Unique Indexes structure for table t_stg_external_valuation
 -- ----------------------------
-CREATE INDEX "IDX_STG_VAL_FILE_ID"
+CREATE UNIQUE INDEX "UK_STG_EXTERNAL_VALUATION_FILE"
   ON "T_STG_EXTERNAL_VALUATION" ("FILE_ID" ASC);
 
 -- ----------------------------
@@ -1591,33 +1542,11 @@ ALTER TABLE "T_SUBJECT_MATCH_RESULT" ADD PRIMARY KEY ("ID");
 CREATE INDEX "IDX_MATCH_RESULT_FILE_ID"
   ON "T_SUBJECT_MATCH_RESULT" ("FILE_ID" ASC);
 
--- ----------------------------
--- Primary Key structure for table t_tr_index
--- ----------------------------
-ALTER TABLE "T_TR_INDEX" ADD PRIMARY KEY ("ID");
+CREATE UNIQUE INDEX "UK_TR_SPV_INDEX_PD_ORG_DATE_NAME_SN"
+  ON tr_spv_index (pd_cd ASC, org_cd ASC, biz_date ASC, indx_nm ASC, sn ASC);
 
--- ----------------------------
--- Indexes structure for table t_tr_index
--- ----------------------------
-CREATE INDEX "IDX_T_TR_INDEX_DATE_ORG_PD"
-  ON "T_TR_INDEX" ("BIZ_DATE" ASC, "ORG_CD" ASC, "PD_CD" ASC);
-
--- ----------------------------
--- Primary Key structure for table t_tr_jjhzgzb
--- ----------------------------
-ALTER TABLE "T_TR_JJHZGZB" ADD PRIMARY KEY ("ID");
-
--- ----------------------------
--- Indexes structure for table t_tr_jjhzgzb
--- ----------------------------
-CREATE INDEX "IDX_TR_JJHZGZB_ORG"
-  ON "T_TR_JJHZGZB" ("ORG_CD" ASC);
-CREATE INDEX "IDX_TR_JJHZGZB_SUBJECT"
-  ON "T_TR_JJHZGZB" ("SUBJECT_CD" ASC);
-CREATE INDEX "IDX_TR_JJHZGZB_BIZ_DATE"
-  ON "T_TR_JJHZGZB" ("BIZ_DATE" ASC);
-CREATE INDEX "IDX_TR_JJHZGZB_PD"
-  ON "T_TR_JJHZGZB" ("PD_CD" ASC);
+CREATE UNIQUE INDEX "UK_TR_SPV_JJHZGZB_PD_ORG_DATE_SUBJECT_SN"
+  ON tr_spv_jjhzgzb (pd_cd ASC, org_cd ASC, biz_date ASC, subject_cd ASC, sn ASC);
 
 -- ----------------------------
 -- Primary Key structure for table t_transfer_delivery_record

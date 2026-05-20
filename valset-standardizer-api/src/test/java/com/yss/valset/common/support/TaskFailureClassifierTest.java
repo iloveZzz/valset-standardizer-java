@@ -17,8 +17,8 @@ class TaskFailureClassifierTest {
     @Test
     void resolveReadableMessageUsesDeepestNonWrapperMessage() {
         RuntimeException realCause = new RuntimeException("ORA-00933: SQL 命令未正确结束");
-        IllegalStateException stepWrapper = new IllegalStateException("批量任务 标准表落地阶段失败，taskId=1", realCause);
-        IllegalStateException jobWrapper = new IllegalStateException("批量任务 作业执行失败：批量任务 标准表落地阶段失败，taskId=1", stepWrapper);
+        IllegalStateException stepWrapper = new IllegalStateException("批量任务 估值贴源数据落地阶段失败，taskId=1", realCause);
+        IllegalStateException jobWrapper = new IllegalStateException("批量任务 作业执行失败：批量任务 估值贴源数据落地阶段失败，taskId=1", stepWrapper);
 
         assertEquals("ORA-00933: SQL 命令未正确结束", TaskFailureClassifier.resolveReadableMessage(jobWrapper));
     }

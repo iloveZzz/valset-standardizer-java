@@ -186,6 +186,35 @@ const save = () => {
   }
 };
 
+const isReadonlyEditKey = (event: KeyboardEvent) => {
+  if (event.metaKey || event.ctrlKey || event.altKey) {
+    return false;
+  }
+  if (event.key.length === 1) {
+    return true;
+  }
+  return [
+    "Backspace",
+    "Delete",
+    "Enter",
+    "F2",
+  ].includes(event.key);
+};
+
+const preventReadonlyEdit = (event: Event) => {
+  if (!props.readonly) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+};
+
+const handleReadonlyKeydown = (event: KeyboardEvent) => {
+  if (props.readonly && isReadonlyEditKey(event)) {
+    preventReadonlyEdit(event);
+  }
+};
+
 const resolveCorePluginEntries = (): NativeUniverPlugin[] => {
   const {
     container = containerRef.value,
@@ -366,6 +395,12 @@ defineExpose({
     ref="containerRef"
     class="native-univer-sheet"
     :style="{ height: containerHeight }"
+    @keydown.capture="handleReadonlyKeydown"
+    @beforeinput.capture="preventReadonlyEdit"
+    @paste.capture="preventReadonlyEdit"
+    @drop.capture="preventReadonlyEdit"
+    @dblclick.capture="preventReadonlyEdit"
+    @contextmenu.capture="preventReadonlyEdit"
   />
 </template>
 

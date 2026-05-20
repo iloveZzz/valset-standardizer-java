@@ -83,7 +83,7 @@ flowchart LR
     A --> PQ["待解析事件队列<br/>t_parse_queue"]
     PQ --> E2
     E2 --> STG["STG / DWD 结构化结果<br/>t_dwd_external_valuation_* / t_stg_external_valuation_*"]
-    E2 --> TR["标准落地表<br/>t_tr_jjhzgzb / t_tr_index"]
+    E2 --> TR["标准落地表<br/>tr_spv_jjhzgzb / tr_spv_index"]
     E3 --> RES["匹配结果表<br/>t_subject_match_result"]
     A --> QRY["查询服务<br/>DefaultValuationWorkflowQueryService"]
     QRY --> ODS
@@ -242,15 +242,13 @@ flowchart LR
 
 用于保存解析后的结构化视图。
 
-### 6.6 DWD 层
+### 6.6 标准结果层
 
-- `t_dwd_external_valuation`
-- `t_dwd_external_valuation_basic_info`
-- `t_dwd_external_valuation_header`
-- `t_dwd_external_valuation_subject`
-- `t_dwd_external_valuation_metric`
+- `t_stg_external_valuation*`
+- `tr_spv_jjhzgzb`
+- `tr_spv_index`
 
-用于保存标准化后的结构化事实。
+STG 保存最新贴源解析快照，标准化结果运行时生成后直接写入 TR_SPV 标准业务表。
 
 ### 6.7 知识层
 
@@ -263,8 +261,8 @@ flowchart LR
 ### 6.8 结果层
 
 - `t_subject_match_result`
-- `t_tr_jjhzgzb`
-- `t_tr_index`
+- `tr_spv_jjhzgzb`
+- `tr_spv_index`
 
 用于保存匹配结果和标准落地表。
 

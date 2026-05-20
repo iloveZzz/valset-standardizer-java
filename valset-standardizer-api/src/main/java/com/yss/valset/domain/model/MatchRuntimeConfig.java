@@ -13,8 +13,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MatchRuntimeConfig {
+    /** Embedding策略 */
     private String embeddingStrategy;
+    /** Embedding模型 */
     private String embeddingModel;
+    /** Embedding查询指令 */
     private String embeddingQueryInstruction;
+    /** Embedding Top K值 */
     private Integer embeddingTopK;
 }

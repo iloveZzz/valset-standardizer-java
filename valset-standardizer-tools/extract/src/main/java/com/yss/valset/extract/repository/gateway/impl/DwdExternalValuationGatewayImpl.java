@@ -22,6 +22,7 @@ import com.yss.valset.extract.repository.entity.DwdExternalValuationSubjectPO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -50,7 +51,11 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
     private final DatabaseDialectSupport databaseDialectSupport;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void saveDwdExternalValuation(Long taskId, Long fileId, ParsedValuationData parsedValuationData) {
+        if (fileId == null) {
+            throw new IllegalStateException("解析文件ID为空，无法覆盖贴源快照，taskId=" + taskId);
+        }
         if (parsedValuationData == null) {
             throw new IllegalStateException("解析结果为空，无法落库，taskId=" + taskId + ", fileId=" + fileId);
         }
@@ -61,6 +66,8 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                     + ", headerRowNumber=" + parsedValuationData.getHeaderRowNumber()
                     + ", dataStartRowNumber=" + parsedValuationData.getDataStartRowNumber());
         }
+        deleteOldSnapshot(fileId);
+
         DwdExternalValuationPO valuationPO = new DwdExternalValuationPO();
         valuationPO.setTaskId(taskId);
         valuationPO.setFileId(fileId);
@@ -79,7 +86,7 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 parsedValuationData.getHeaderColumns());
         saveSubjects(valuationId, parsedValuationData.getSubjects());
         saveMetrics(valuationId, parsedValuationData.getMetrics());
-        log.info("DWD 外部估值标准数据落地完成，taskId={}, fileId={}, valuationId={}", taskId, fileId, valuationId);
+        log.info("STG 外部估值贴源数据落地完成，taskId={}, fileId={}, valuationId={}", taskId, fileId, valuationId);
     }
 
     @Override
@@ -116,6 +123,28 @@ public class DwdExternalValuationGatewayImpl implements DwdExternalValuationGate
                 .subjects(loadSubjects(valuationId))
                 .metrics(loadMetrics(valuationId))
                 .build();
+    }
+
+    private void deleteOldSnapshot(Long fileId) {
+        List<Long> oldValuationIds = valuationRepository.selectList(
+                        Wrappers.lambdaQuery(DwdExternalValuationPO.class)
+                                .eq(DwdExternalValuationPO::getFileId, fileId)
+                ).stream()
+                .map(DwdExternalValuationPO::getId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
+        if (!oldValuationIds.isEmpty()) {
+            basicInfoRepository.delete(Wrappers.lambdaQuery(DwdExternalValuationBasicInfoPO.class)
+                    .in(DwdExternalValuationBasicInfoPO::getValuationId, oldValuationIds));
+            headerRepository.delete(Wrappers.lambdaQuery(DwdExternalValuationHeaderPO.class)
+                    .in(DwdExternalValuationHeaderPO::getValuationId, oldValuationIds));
+            metricRepository.delete(Wrappers.lambdaQuery(DwdExternalValuationMetricPO.class)
+                    .in(DwdExternalValuationMetricPO::getValuationId, oldValuationIds));
+            subjectRepository.delete(Wrappers.lambdaQuery(DwdExternalValuationSubjectPO.class)
+                    .in(DwdExternalValuationSubjectPO::getValuationId, oldValuationIds));
+        }
+        valuationRepository.delete(Wrappers.lambdaQuery(DwdExternalValuationPO.class)
+                .eq(DwdExternalValuationPO::getFileId, fileId));
     }
 
     private void saveBasicInfos(Long valuationId, Map<String, String> basicInfo) {
