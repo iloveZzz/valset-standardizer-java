@@ -1,6 +1,7 @@
 import type { YTablePagination } from "@yss-ui/components";
 import type {
   QlexpressFunctionDebugResultDTO,
+  QlexpressFunctionUsageDTO,
   QlexpressFunctionViewDTO,
 } from "@/api/qlexpressFunction";
 
@@ -23,6 +24,8 @@ export interface QlexpressFunctionPageState {
   pagination: YTablePagination;
   query: QlexpressFunctionQueryState;
   selectedRow: QlexpressFunctionViewDTO | null;
+  selectedUsage: QlexpressFunctionUsageDTO | null;
+  usageLoading: boolean;
   detailVisible: boolean;
   formVisible: boolean;
   formMode: "create" | "edit";
@@ -52,6 +55,7 @@ export interface QlexpressFunctionPageState {
   closeForm: () => void;
   submitForm: () => Promise<void> | void;
   openDetailDrawer: (row: QlexpressFunctionViewDTO) => void;
+  openUsageDrawer: (row: QlexpressFunctionViewDTO) => void;
   closeDetail: () => void;
   confirmDelete: (row: QlexpressFunctionViewDTO) => void;
   toggleEnabled: (row: QlexpressFunctionViewDTO, checked: boolean) => Promise<void> | void;

@@ -33,7 +33,7 @@ public enum ParseRuleType {
      */
     COLUMN_MAP,
     /**
-     * 字段映射，兼容 t_file_parse_rule_step 历史数据。
+     * 字段映射。
      */
     FIELD_MAP,
     /**

@@ -103,11 +103,6 @@ const isSummaryCardActive = (status?: string) => {
   return normalized === String(status ?? "").trim().toUpperCase();
 };
 
-const summaryDescription = computed(
-  () =>
-    `当前筛选：${page.currentFilterSummary}。总批次 ${page.summary.totalCount ?? 0} 条；处理中 ${page.summary.runningCount ?? 0} 条，已完成 ${page.summary.successCount ?? 0} 条，失败或停止 ${page.summary.failedCount ?? 0} 条。`,
-);
-
 const stageCards = computed(() => {
   const summaryMap = new Map(
     (page.summary.stepSummaries ?? []).map((item) => [String(item.stage ?? "").trim().toUpperCase(), item]),
@@ -1072,11 +1067,6 @@ const rawWorkbookData = computed(
         </div>
       </div>
 
-    <div class="batch-task-header__meta">
-            <span class="batch-task-pill">
-              {{ summaryDescription }}
-            </span>
-    </div>
     </YCard>
 
     <YCard class="batch-task-list-card" :bordered="false" :padding="12">

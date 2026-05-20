@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import {
   YButton,
   YCard,
@@ -30,9 +30,15 @@ const { tableHeight } = useTableHeight(tableAreaRef, {
 });
 
 const actionConfig = useTableActionConfig({
-  width: 300,
+  width: 360,
   displayLimit: 5,
   buttons: [
+    {
+      text: "查看使用",
+      key: "usage",
+      type: "link",
+      clickFn: ({ row }: any) => page.openUsageDrawer(row),
+    },
     {
       text: "详情",
       key: "detail",
@@ -65,10 +71,43 @@ const actionConfig = useTableActionConfig({
 const columns: YTableColumn[] = [
   { field: "functionCnName", title: "函数中文名称", width: 180 },
   { field: "functionName", title: "函数名称", width: 180 },
+  { field: "sourceModules", title: "作用域", minWidth: 220 },
+  { field: "flowLabels", title: "核心流程", minWidth: 240 },
+  { field: "usageStatusName", title: "使用状态", width: 170 },
   { field: "enabled", title: "启用", width: 110 },
   { field: "remark", title: "备注", minWidth: 220 },
   { field: "updatedAt", title: "更新时间", width: 180 },
 ];
+
+const usageReferenceColumns: YTableColumn[] = [
+  { field: "flowName", title: "流程", width: 160 },
+  { field: "runnerScope", title: "Runner Scope", width: 180 },
+  { field: "sourceTypeName", title: "来源类型", width: 120 },
+  { field: "sourceName", title: "来源名称", minWidth: 180 },
+  { field: "enabled", title: "启用", width: 90 },
+  { field: "expression", title: "引用表达式", minWidth: 260 },
+];
+
+const flowUsages = computed(() => page.selectedUsage?.flowUsages ?? []);
+const directReferences = computed(() => page.selectedUsage?.directReferences ?? []);
+const dependencyReferences = computed(() => page.selectedUsage?.dependencyReferences ?? []);
+const allReferences = computed(() => [
+  ...directReferences.value,
+  ...dependencyReferences.value,
+]);
+
+const usageStatusColor = (status?: string) => {
+  if (status === "DIRECT_REFERENCED") {
+    return "green";
+  }
+  if (status === "DEPENDENCY_ONLY") {
+    return "blue";
+  }
+  return "default";
+};
+
+const formatList = (values?: string[]) =>
+  values && values.length > 0 ? values : ["-"];
 </script>
 
 <template>
@@ -135,6 +174,25 @@ const columns: YTableColumn[] = [
         :toolbar-config="{ custom: false }"
         @page-change="page.handlePageChange"
       >
+        <template #sourceModules="{ row }">
+          <a-space :size="4" wrap>
+            <a-tag v-for="item in formatList(row.sourceModules)" :key="item">
+              {{ item }}
+            </a-tag>
+          </a-space>
+        </template>
+        <template #flowLabels="{ row }">
+          <a-space :size="4" wrap>
+            <a-tag v-for="item in formatList(row.flowLabels)" :key="item" color="blue">
+              {{ item }}
+            </a-tag>
+          </a-space>
+        </template>
+        <template #usageStatusName="{ row }">
+          <a-tag :color="usageStatusColor(row.usageStatus)">
+            {{ row.usageStatusName || "-" }}
+          </a-tag>
+        </template>
         <template #enabled="{ row }">
           <a-switch
             :checked="Boolean(row.enabled)"
@@ -208,7 +266,7 @@ const columns: YTableColumn[] = [
       class="source-detail-drawer"
       :open="page.detailVisible"
       title="函数详情"
-      :width="760"
+      :width="920"
       @close="page.closeDetail"
     >
       <template v-if="page.selectedRow">
@@ -232,6 +290,58 @@ const columns: YTableColumn[] = [
             {{ page.selectedRow.updatedAt || "-" }}
           </a-descriptions-item>
         </a-descriptions>
+
+        <div class="usage-section">
+          <div class="usage-section-header">
+            <div>
+              <h4>使用关系</h4>
+              <p>
+                作用域说明函数在哪些 Runner 可用；引用来源说明当前规则表达式是否真实调用该函数。
+              </p>
+            </div>
+            <a-tag :color="usageStatusColor(page.selectedUsage?.usageStatus)">
+              {{ page.selectedUsage?.usageStatusName || page.selectedRow.usageStatusName || "-" }}
+            </a-tag>
+          </div>
+
+          <a-spin :spinning="page.usageLoading">
+            <div class="usage-flow">
+              <div
+                v-for="item in flowUsages"
+                :key="item.flowCode"
+                class="usage-flow-item"
+                :class="{ 'usage-flow-item--active': item.matched }"
+              >
+                <div class="usage-flow-dot" />
+                <div class="usage-flow-name">{{ item.flowName }}</div>
+                <div class="usage-flow-scope">{{ item.runnerScope || "未接入规则" }}</div>
+              </div>
+            </div>
+
+            <a-empty
+              v-if="!page.usageLoading && allReferences.length === 0"
+              description="暂无直接引用，仅按作用域可用"
+            />
+            <YTable
+              v-else
+              :columns="usageReferenceColumns"
+              :data="allReferences"
+              :pageable="false"
+              :toolbar-config="{ custom: false }"
+              :row-config="{ keyField: 'sourceId' }"
+            >
+              <template #enabled="{ row }">
+                <a-tag :color="row.enabled ? 'green' : 'default'">
+                  {{ row.enabled ? "启用" : "停用" }}
+                </a-tag>
+              </template>
+              <template #expression="{ row }">
+                <code class="usage-expression">{{ row.expression || "-" }}</code>
+              </template>
+            </YTable>
+          </a-spin>
+        </div>
+
         <div class="detail-json-block">
           <h4>函数脚本</h4>
           <pre>{{ page.selectedRow.scriptBody || "" }}</pre>

@@ -11,8 +11,10 @@ import com.yss.valset.qlexpress.application.command.QlexpressFunctionDebugComman
 import com.yss.valset.qlexpress.application.command.QlexpressFunctionUpsertCommand;
 import com.yss.valset.qlexpress.application.dto.QlexpressFunctionDebugResultDTO;
 import com.yss.valset.qlexpress.application.dto.QlexpressFunctionMutationResponse;
+import com.yss.valset.qlexpress.application.dto.QlexpressFunctionUsageDTO;
 import com.yss.valset.qlexpress.application.dto.QlexpressFunctionViewDTO;
 import com.yss.valset.qlexpress.application.service.QlexpressFunctionManagementAppService;
+import com.yss.valset.qlexpress.application.service.QlexpressFunctionUsageAppService;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressFunctionScript;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressFunctionScriptProvider;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressExecutionContextEnhancer;
@@ -48,6 +50,7 @@ public class DefaultQlexpressFunctionManagementAppService implements QlexpressFu
     private final QlexpressRunnerRegistry qlexpressRunnerRegistry;
     private final QlexpressExecutionContextEnhancer contextEnhancer;
     private final ObjectMapper objectMapper;
+    private final QlexpressFunctionUsageAppService qlexpressFunctionUsageAppService;
 
     @Override
     public PageResult<QlexpressFunctionViewDTO> pageFunctions(String functionCnName, String functionName, Boolean enabled, Integer pageIndex, Integer pageSize) {
@@ -62,9 +65,10 @@ public class DefaultQlexpressFunctionManagementAppService implements QlexpressFu
                         .orderByDesc(QlexpressFunctionPO::getUpdatedAt)
                         .orderByDesc(QlexpressFunctionPO::getFunctionId)
         );
+        Map<String, QlexpressFunctionUsageDTO> usageCache = qlexpressFunctionUsageAppService.summarizeUsages(page.getRecords());
         List<QlexpressFunctionViewDTO> records = page.getRecords() == null
                 ? Collections.emptyList()
-                : page.getRecords().stream().map(this::toView).collect(Collectors.toList());
+                : page.getRecords().stream().map(po -> toView(po, usageCache)).collect(Collectors.toList());
         return PageResult.of(records, page.getTotal(), (int) page.getSize(), (int) page.getCurrent() - 1);
     }
 
@@ -333,6 +337,11 @@ public class DefaultQlexpressFunctionManagementAppService implements QlexpressFu
     }
 
     private QlexpressFunctionViewDTO toView(QlexpressFunctionPO po) {
+        return toView(po, new LinkedHashMap<>());
+    }
+
+    private QlexpressFunctionViewDTO toView(QlexpressFunctionPO po, Map<String, QlexpressFunctionUsageDTO> usageCache) {
+        QlexpressFunctionUsageDTO usage = usageSummary(po, usageCache);
         return QlexpressFunctionViewDTO.builder()
                 .functionId(po.getFunctionId())
                 .functionCnName(po.getFunctionCnName())
@@ -341,9 +350,36 @@ public class DefaultQlexpressFunctionManagementAppService implements QlexpressFu
                 .scriptBody(po.getScriptBody())
                 .enabled(Boolean.TRUE.equals(po.getEnabled()))
                 .extInfo(fromJson(po.getExtInfoJson()))
+                .sourceModules(sourceModules(po.getExtInfoJson()))
+                .flowLabels(flowLabels(usage))
+                .usageStatus(usage == null ? null : usage.getUsageStatus())
+                .usageStatusName(usage == null ? null : usage.getUsageStatusName())
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt())
                 .build();
+    }
+
+    private List<String> flowLabels(QlexpressFunctionUsageDTO usage) {
+        if (usage == null || usage.getFlowUsages() == null) {
+            return Collections.emptyList();
+        }
+        return usage.getFlowUsages().stream()
+                .filter(item -> Boolean.TRUE.equals(item.getMatched()))
+                .map(item -> item.getFlowName())
+                .filter(this::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    private QlexpressFunctionUsageDTO usageSummary(QlexpressFunctionPO po) {
+        return usageSummary(po, new LinkedHashMap<>());
+    }
+
+    private QlexpressFunctionUsageDTO usageSummary(QlexpressFunctionPO po, Map<String, QlexpressFunctionUsageDTO> usageCache) {
+        if (po == null || !hasText(po.getFunctionId())) {
+            return qlexpressFunctionUsageAppService.summarizeUsage(po);
+        }
+        return usageCache.computeIfAbsent(po.getFunctionId(), ignored -> qlexpressFunctionUsageAppService.summarizeUsage(po));
     }
 
     private String toJson(Object value) {

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * QLExpress 自定义函数视图。
@@ -28,6 +29,14 @@ public class QlexpressFunctionViewDTO implements Serializable {
     private Boolean enabled;
 
     private Object extInfo;
+
+    private List<String> sourceModules;
+
+    private List<String> flowLabels;
+
+    private String usageStatus;
+
+    private String usageStatusName;
 
     private LocalDateTime createdAt;
 

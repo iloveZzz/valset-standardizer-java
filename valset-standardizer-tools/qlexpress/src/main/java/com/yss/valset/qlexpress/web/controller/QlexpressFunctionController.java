@@ -6,8 +6,10 @@ import com.yss.valset.qlexpress.application.command.QlexpressFunctionDebugComman
 import com.yss.valset.qlexpress.application.command.QlexpressFunctionUpsertCommand;
 import com.yss.valset.qlexpress.application.dto.QlexpressFunctionDebugResultDTO;
 import com.yss.valset.qlexpress.application.dto.QlexpressFunctionMutationResponse;
+import com.yss.valset.qlexpress.application.dto.QlexpressFunctionUsageDTO;
 import com.yss.valset.qlexpress.application.dto.QlexpressFunctionViewDTO;
 import com.yss.valset.qlexpress.application.service.QlexpressFunctionManagementAppService;
+import com.yss.valset.qlexpress.application.service.QlexpressFunctionUsageAppService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,6 +35,7 @@ import javax.validation.Valid;
 public class QlexpressFunctionController {
 
     private final QlexpressFunctionManagementAppService qlexpressFunctionManagementAppService;
+    private final QlexpressFunctionUsageAppService qlexpressFunctionUsageAppService;
 
     @GetMapping
     @Operation(summary = "分页查询 QLExpress 函数")
@@ -48,6 +51,12 @@ public class QlexpressFunctionController {
     @Operation(summary = "查询 QLExpress 函数详情")
     public SingleResult<QlexpressFunctionViewDTO> getFunction(@PathVariable String functionId) {
         return SingleResult.of(qlexpressFunctionManagementAppService.getFunction(functionId));
+    }
+
+    @GetMapping("/{functionId}/usage")
+    @Operation(summary = "查询 QLExpress 函数使用关系")
+    public SingleResult<QlexpressFunctionUsageDTO> getFunctionUsage(@PathVariable String functionId) {
+        return SingleResult.of(qlexpressFunctionUsageAppService.getUsage(functionId));
     }
 
     @PostMapping

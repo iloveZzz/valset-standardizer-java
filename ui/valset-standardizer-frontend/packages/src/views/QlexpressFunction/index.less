@@ -38,6 +38,92 @@
   word-break: break-word;
 }
 
+.usage-section {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.usage-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.usage-section-header h4 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.usage-section-header p {
+  margin: 4px 0 0;
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.usage-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.usage-flow-item {
+  position: relative;
+  min-height: 72px;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.usage-flow-item--active {
+  border-color: rgba(22, 119, 255, 0.35);
+  background: rgba(22, 119, 255, 0.06);
+}
+
+.usage-flow-dot {
+  width: 8px;
+  height: 8px;
+  margin-bottom: 8px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.usage-flow-item--active .usage-flow-dot {
+  background: #1677ff;
+}
+
+.usage-flow-name {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.usage-flow-scope {
+  margin-top: 4px;
+  color: rgba(15, 23, 42, 0.58);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.usage-expression {
+  display: block;
+  max-height: 72px;
+  overflow: auto;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .source-form-banner,
 .source-detail-banner {
   display: flex;

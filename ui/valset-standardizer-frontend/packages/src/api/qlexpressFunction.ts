@@ -8,6 +8,10 @@ export type QlexpressFunctionViewDTO = {
   scriptBody?: string;
   enabled?: boolean;
   extInfo?: Record<string, any> | string;
+  sourceModules?: string[];
+  flowLabels?: string[];
+  usageStatus?: string;
+  usageStatusName?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -39,6 +43,37 @@ export type QlexpressFunctionDebugResultDTO = {
   outVarNames?: string[];
 };
 
+export type QlexpressFunctionFlowUsageDTO = {
+  flowCode?: string;
+  flowName?: string;
+  runnerScope?: string;
+  matched?: boolean;
+};
+
+export type QlexpressFunctionUsageReferenceDTO = {
+  flowCode?: string;
+  flowName?: string;
+  runnerScope?: string;
+  expression?: string;
+  sourceType?: string;
+  sourceTypeName?: string;
+  sourceId?: string;
+  sourceName?: string;
+  enabled?: boolean;
+  referencedFunctions?: string[];
+};
+
+export type QlexpressFunctionUsageDTO = {
+  functionId?: string;
+  functionName?: string;
+  sourceModules?: string[];
+  flowUsages?: QlexpressFunctionFlowUsageDTO[];
+  directReferences?: QlexpressFunctionUsageReferenceDTO[];
+  dependencyReferences?: QlexpressFunctionUsageReferenceDTO[];
+  usageStatus?: string;
+  usageStatusName?: string;
+};
+
 export type PageResultQlexpressFunctionViewDTO = {
   data?: QlexpressFunctionViewDTO[];
   totalCount?: number;
@@ -62,6 +97,10 @@ export type SingleResultQlexpressFunctionDebugResultDTO = {
   data?: QlexpressFunctionDebugResultDTO;
 };
 
+export type SingleResultQlexpressFunctionUsageDTO = {
+  data?: QlexpressFunctionUsageDTO;
+};
+
 export type QlexpressFunctionPageParams = {
   functionCnName?: string;
   functionName?: string;
@@ -80,6 +119,12 @@ export const pageQlexpressFunctions = (params?: QlexpressFunctionPageParams) =>
 export const getQlexpressFunction = (functionId: string) =>
   customInstance<SingleResultQlexpressFunctionViewDTO>({
     url: `/qlexpress-functions/${functionId}`,
+    method: "GET",
+  });
+
+export const getQlexpressFunctionUsage = (functionId: string) =>
+  customInstance<SingleResultQlexpressFunctionUsageDTO>({
+    url: `/qlexpress-functions/${functionId}/usage`,
     method: "GET",
   });
 

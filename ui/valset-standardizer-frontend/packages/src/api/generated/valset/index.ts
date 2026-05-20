@@ -20,19 +20,15 @@ import type {
   ListCheckpointsParams,
   ListInstancesParams,
   ListLogsParams,
-  ListProfilesParams,
   ListRoutes1Params,
   ListRoutesParams,
   ListRulesParams,
   ListSourcesParams,
   ListTargetsParams,
   ListTaskInstancesParams,
-  ListTracesParams,
   MultiResultOutsourcedDataTaskActionResultDTO,
   MultiResultOutsourcedDataTaskStepDTO,
   MultiResultParseQueueViewDTO,
-  MultiResultParseRuleProfileViewDTO,
-  MultiResultParseRuleTraceViewDTO,
   MultiResultString,
   MultiResultTransferFormTemplateGroupDTO,
   MultiResultTransferFormTemplateViewDTO,
@@ -68,9 +64,6 @@ import type {
   ParseQueueGenerateCommand,
   ParseQueueRetryCommand,
   ParseQueueSubscribeCommand,
-  ParseRuleProfileUpsertCommand,
-  ParseRulePublishCommand,
-  ParseRuleRollbackCommand,
   QueryFileInfoByPathParams,
   QueryIngestLogsByPathParams,
   QuerySchedulesParams,
@@ -83,10 +76,6 @@ import type {
   SingleResultOutsourcedDataTaskSummaryDTO,
   SingleResultParseQueueObserverRunSummary,
   SingleResultParseQueueViewDTO,
-  SingleResultParseRuleBundleViewDTO,
-  SingleResultParseRuleMutationResponse,
-  SingleResultParseRuleRegressionViewDTO,
-  SingleResultParseRuleValidationViewDTO,
   SingleResultString,
   SingleResultTransferDeliveryRecordSummaryViewDTO,
   SingleResultTransferFormTemplateViewDTO,
@@ -1642,132 +1631,6 @@ export const getJavaApi = () => {
   };
 
   /**
-   * @summary 创建解析模板。
-   */
-  const createProfile = (
-    parseRuleProfileUpsertCommand: ParseRuleProfileUpsertCommand,
-  ) => {
-    return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/parse-rules/profiles`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: parseRuleProfileUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 查询解析模板列表。
-   */
-  const listProfiles = (params?: ListProfilesParams) => {
-    return customInstance<MultiResultParseRuleProfileViewDTO>({
-      url: `/parse-rules/profiles`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 查询解析模板详情。
-   */
-  const getProfile = (profileId: number) => {
-    return customInstance<SingleResultParseRuleBundleViewDTO>({
-      url: `/parse-rules/profiles/${profileId}`,
-      method: "GET",
-    });
-  };
-
-  /**
-   * @summary 更新解析模板。
-   */
-  const updateProfile = (
-    profileId: number,
-    parseRuleProfileUpsertCommand: ParseRuleProfileUpsertCommand,
-  ) => {
-    return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/parse-rules/profiles/${profileId}`,
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      data: parseRuleProfileUpsertCommand,
-    });
-  };
-
-  /**
-   * @summary 校验解析模板。
-   */
-  const validateProfile = (profileId: number) => {
-    return customInstance<SingleResultParseRuleValidationViewDTO>({
-      url: `/parse-rules/profiles/${profileId}/validate`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 执行解析模板样例回归。
-   */
-  const runRegression = (profileId: number) => {
-    return customInstance<SingleResultParseRuleRegressionViewDTO>({
-      url: `/parse-rules/profiles/${profileId}/regression`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 发布解析模板。
-   */
-  const publishProfile = (
-    profileId: number,
-    parseRulePublishCommand: ParseRulePublishCommand,
-  ) => {
-    return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/parse-rules/profiles/${profileId}/publish`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: parseRulePublishCommand,
-    });
-  };
-
-  /**
-   * @summary 回滚解析模板。
-   */
-  const rollbackProfile = (
-    profileId: number,
-    parseRuleRollbackCommand: ParseRuleRollbackCommand,
-  ) => {
-    return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/parse-rules/profiles/${profileId}/rollback`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: parseRuleRollbackCommand,
-    });
-  };
-
-  /**
-   * @summary 导入解析模板。
-   */
-  const importProfile = (importProfileRequest: number) => {
-    const formData = new FormData();
-    formData.append("data", importProfileRequest.toString());
-
-    return customInstance<SingleResultParseRuleMutationResponse>({
-      url: `/parse-rules/profiles/import`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 查询解析规则追踪。
-   */
-  const listTraces = (params?: ListTracesParams) => {
-    return customInstance<MultiResultParseRuleTraceViewDTO>({
-      url: `/parse-rules/traces`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
    * @summary 统计当天文件投递结果。
    */
   const summarizeToday = () => {
@@ -1902,16 +1765,6 @@ export const getJavaApi = () => {
     batchExecute,
     batchRetry,
     batchStop,
-    createProfile,
-    listProfiles,
-    getProfile,
-    updateProfile,
-    validateProfile,
-    runRegression,
-    publishProfile,
-    rollbackProfile,
-    importProfile,
-    listTraces,
     summarizeToday,
   };
 };
@@ -2286,36 +2139,6 @@ export type BatchRetryResult = NonNullable<
 >;
 export type BatchStopResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["batchStop"]>>
->;
-export type CreateProfileResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["createProfile"]>>
->;
-export type ListProfilesResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listProfiles"]>>
->;
-export type GetProfileResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["getProfile"]>>
->;
-export type UpdateProfileResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["updateProfile"]>>
->;
-export type ValidateProfileResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["validateProfile"]>>
->;
-export type RunRegressionResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["runRegression"]>>
->;
-export type PublishProfileResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["publishProfile"]>>
->;
-export type RollbackProfileResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["rollbackProfile"]>>
->;
-export type ImportProfileResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["importProfile"]>>
->;
-export type ListTracesResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listTraces"]>>
 >;
 export type SummarizeTodayResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["summarizeToday"]>>

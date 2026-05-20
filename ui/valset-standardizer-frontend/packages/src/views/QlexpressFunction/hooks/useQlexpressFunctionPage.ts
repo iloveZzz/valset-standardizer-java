@@ -8,6 +8,7 @@ import {
   disableQlexpressFunction,
   enableQlexpressFunction,
   getQlexpressFunction,
+  getQlexpressFunctionUsage,
   pageQlexpressFunctions,
   updateQlexpressFunction,
   type QlexpressFunctionUpsertCommand,
@@ -109,6 +110,8 @@ export const useQlexpressFunctionPage = (): QlexpressFunctionPageState => {
     pageSizeOptions: ["10", "20", "50", "100"],
   });
   const selectedRow = ref<QlexpressFunctionViewDTO | null>(null);
+  const selectedUsage = ref(null as QlexpressFunctionPageState["selectedUsage"]);
+  const usageLoading = ref(false);
   const detailVisible = ref(false);
   const formVisible = ref(false);
   const formMode = ref<"create" | "edit">("create");
@@ -299,13 +302,36 @@ export const useQlexpressFunctionPage = (): QlexpressFunctionPageState => {
     }
   };
 
+  const loadUsage = async (row: QlexpressFunctionViewDTO) => {
+    if (!row.functionId) {
+      selectedUsage.value = null;
+      return;
+    }
+    usageLoading.value = true;
+    try {
+      const res = await getQlexpressFunctionUsage(row.functionId);
+      selectedUsage.value = res?.data ?? null;
+    } catch (error: any) {
+      selectedUsage.value = null;
+      message.error(error?.message || "函数使用关系查询失败");
+    } finally {
+      usageLoading.value = false;
+    }
+  };
+
   const openDetailDrawer = (row: QlexpressFunctionViewDTO) => {
     selectedRow.value = row;
     detailVisible.value = true;
+    loadUsage(row);
+  };
+
+  const openUsageDrawer = (row: QlexpressFunctionViewDTO) => {
+    openDetailDrawer(row);
   };
 
   const closeDetail = () => {
     detailVisible.value = false;
+    selectedUsage.value = null;
   };
 
   const setOperating = (functionId: string | undefined, value: boolean) => {
@@ -405,6 +431,8 @@ export const useQlexpressFunctionPage = (): QlexpressFunctionPageState => {
     pagination,
     query,
     selectedRow,
+    selectedUsage,
+    usageLoading,
     detailVisible,
     formVisible,
     formMode,
@@ -434,6 +462,7 @@ export const useQlexpressFunctionPage = (): QlexpressFunctionPageState => {
     closeForm,
     submitForm,
     openDetailDrawer,
+    openUsageDrawer,
     closeDetail,
     confirmDelete,
     toggleEnabled,

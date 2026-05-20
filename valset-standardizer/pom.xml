@@ -13,7 +13,6 @@
     <artifactId>valset-standardizer</artifactId>
     <properties>
         <java.version>1.8</java.version>
-        <valset.features.parse-rules.enabled>true</valset.features.parse-rules.enabled>
         <valset.features.parse-lifecycle.enabled>true</valset.features.parse-lifecycle.enabled>
         <valset.features.parse-queue-observer.enabled>true</valset.features.parse-queue-observer.enabled>
     </properties>
@@ -337,7 +336,6 @@
         <profile>
             <id>parser</id>
             <properties>
-                <valset.features.parse-rules.enabled>true</valset.features.parse-rules.enabled>
                 <valset.features.parse-lifecycle.enabled>true</valset.features.parse-lifecycle.enabled>
                 <valset.features.parse-queue-observer.enabled>false</valset.features.parse-queue-observer.enabled>
             </properties>
@@ -345,7 +343,6 @@
         <profile>
             <id>workflow</id>
             <properties>
-                <valset.features.parse-rules.enabled>false</valset.features.parse-rules.enabled>
                 <valset.features.parse-lifecycle.enabled>false</valset.features.parse-lifecycle.enabled>
                 <valset.features.parse-queue-observer.enabled>true</valset.features.parse-queue-observer.enabled>
             </properties>
@@ -353,7 +350,6 @@
         <profile>
             <id>full</id>
             <properties>
-                <valset.features.parse-rules.enabled>true</valset.features.parse-rules.enabled>
                 <valset.features.parse-lifecycle.enabled>true</valset.features.parse-lifecycle.enabled>
                 <valset.features.parse-queue-observer.enabled>true</valset.features.parse-queue-observer.enabled>
             </properties>
