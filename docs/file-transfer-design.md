@@ -157,22 +157,11 @@
 - `errorMessage`
 - `deliveredAt`
 
-### 6. `TransferRunLog`
+### 6. 运行日志
 
-表示一次调度运行或扫描运行的日志。
+分拣过程不再把运行日志写入业务表，收取、路由、投递阶段只输出应用日志。
 
-字段建议：
-
-- `runId`
-- `sourceId`
-- `jobId`
-- `startAt`
-- `endAt`
-- `runStatus`
-- `processedCount`
-- `successCount`
-- `failedCount`
-- `logMessage`
+页面查看运行信息时使用系统输出日志能力，当前由内存环形缓冲区保留最近日志行，业务结果仍落在 `t_transfer_object` 和 `t_transfer_delivery_record`。
 
 ## 插件化识别设计
 
@@ -406,7 +395,7 @@ public interface RuleEngine {
 6. 生成一个或多个 `TransferRoute`
 7. `ActionPlugin` 执行投递动作
 8. 写入 `TransferDeliveryRecord`
-9. 写入 `TransferRunLog`
+9. 输出应用日志，页面通过系统输出日志查看
 10. 失败文件进入重试、隔离或人工处理队列
 
 ## 幂等与去重
@@ -458,7 +447,7 @@ public interface RuleEngine {
 
 ### `t_transfer_run_log`
 
-保存调度和扫描日志。
+历史运行日志表，当前流程已停止写入。第一阶段保留表结构兼容历史库，后续确认无外部报表依赖后再安排迁移删除。
 
 ### `t_transfer_source_cursor`
 

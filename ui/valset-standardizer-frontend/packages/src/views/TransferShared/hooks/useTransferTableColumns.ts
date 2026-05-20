@@ -284,63 +284,6 @@ export const useTransferLogColumns = () =>
     },
   ]);
 
-export const useTransferRunLogColumns = () =>
-  computed<YTableColumn[]>(() => [
-    {
-      type: "checkbox",
-      width: 50,
-      align: "center",
-      fixed: "left" as const,
-    },
-    {
-      field: "logMessage",
-      title: "运行说明",
-      minWidth: 260,
-      ellipsis: true,
-    },
-    {
-      field: "sourceName",
-      title: "来源名称",
-      width: 180,
-    },
-    {
-      field: "routeName",
-      title: "路由名称",
-      width: 240,
-    },
-    {
-      field: "sourceType",
-      title: "来源类型",
-      width: 120,
-      formatter: (params: any) => {
-        const value = String(params?.cellValue ?? "")
-          .trim()
-          .toUpperCase();
-        return value ? (SOURCE_TYPE_LABELS[value] ?? value) : "-";
-      },
-    },
-    {
-      field: "runStage",
-      title: "运行阶段",
-      width: 140,
-    },
-    {
-      field: "runStatus",
-      title: "运行状态",
-      width: 140,
-    },
-    {
-      field: "createdAt",
-      title: "创建时间",
-      width: 180,
-    },
-    {
-      field: "originalName",
-      title: "分拣文件",
-      width: 140,
-    },
-  ]);
-
 export const useTransferOverviewRecentDeliveryColumns = () =>
   computed<YTableColumn[]>(() => [
     {

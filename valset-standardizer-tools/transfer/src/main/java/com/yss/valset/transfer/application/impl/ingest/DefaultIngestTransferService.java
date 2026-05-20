@@ -4,13 +4,11 @@ import com.yss.valset.transfer.application.command.IngestTransferSourceCommand;
 import com.yss.valset.transfer.application.port.IngestTransferUseCase;
 import com.yss.valset.transfer.application.service.TransferIngestProgressAppService;
 import com.yss.valset.transfer.application.service.TransferTaggingUseCase;
-import com.yss.valset.transfer.domain.gateway.TransferRunLogGateway;
 import com.yss.valset.transfer.domain.gateway.TransferSourceCheckpointGateway;
 import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.model.ProbeResult;
 import com.yss.valset.transfer.domain.model.RecognitionContext;
-import com.yss.valset.transfer.domain.model.TransferRunLog;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpoint;
 import com.yss.valset.transfer.domain.model.TransferSourceCheckpointItem;
 import com.yss.valset.transfer.domain.model.TransferRunStage;
@@ -38,7 +36,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.Instant;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,7 +61,6 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     private final TransferSourceGateway transferSourceGateway;
     private final SourceConnectorRegistry sourceConnectorRegistry;
     private final TransferObjectGateway transferObjectGateway;
-    private final TransferRunLogGateway transferRunLogGateway;
     private final TransferSourceCheckpointGateway transferSourceCheckpointGateway;
     private final ObjectProvider<TransferJobScheduler> transferJobSchedulerProvider;
     private final FileProbePluginRegistry fileProbePluginRegistry;
@@ -75,7 +71,6 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
     public DefaultIngestTransferService(TransferSourceGateway transferSourceGateway,
                                         SourceConnectorRegistry sourceConnectorRegistry,
                                         TransferObjectGateway transferObjectGateway,
-                                        TransferRunLogGateway transferRunLogGateway,
                                         TransferSourceCheckpointGateway transferSourceCheckpointGateway,
                                         ObjectProvider<TransferJobScheduler> transferJobSchedulerProvider,
                                         FileProbePluginRegistry fileProbePluginRegistry,
@@ -85,7 +80,6 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
         this.transferSourceGateway = transferSourceGateway;
         this.sourceConnectorRegistry = sourceConnectorRegistry;
         this.transferObjectGateway = transferObjectGateway;
-        this.transferRunLogGateway = transferRunLogGateway;
         this.transferSourceCheckpointGateway = transferSourceCheckpointGateway;
         this.transferJobSchedulerProvider = transferJobSchedulerProvider;
         this.fileProbePluginRegistry = fileProbePluginRegistry;
@@ -1003,7 +997,6 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
                             String logMessage,
                             Throwable error) {
         logRunLog(source, transferId, routeId, runStage, runStatus, logMessage, error);
-        transferRunLogGateway.save(buildRunLog(source, transferId, routeId, triggerType, runStage, runStatus, logMessage, error));
     }
 
     /**
@@ -1176,34 +1169,6 @@ public class DefaultIngestTransferService implements IngestTransferUseCase {
             throw (RuntimeException) exception;
         }
         throw new IllegalStateException(exception.getMessage(), exception);
-    }
-
-    /**
-     * 构建运行日志实体，收口运行日志的持久化字段装配逻辑。
-     */
-    private TransferRunLog buildRunLog(TransferSource source,
-                                       String transferId,
-                                       String routeId,
-                                       String triggerType,
-                                       String runStage,
-                                       String runStatus,
-                                       String logMessage,
-                                       Throwable error) {
-        return new TransferRunLog(
-                null,
-                source == null ? null : source.sourceId(),
-                source == null || source.sourceType() == null ? null : source.sourceType().name(),
-                source == null ? null : source.sourceCode(),
-                source == null ? null : source.sourceName(),
-                transferId,
-                routeId,
-                triggerType,
-                runStage,
-                runStatus,
-                logMessage,
-                error == null ? null : buildErrorMessage(error),
-                LocalDateTime.now()
-        );
     }
 
     private boolean isAttachmentMaterializeFailed(RecognitionContext context) {

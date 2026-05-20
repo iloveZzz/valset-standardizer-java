@@ -6,14 +6,11 @@ import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import com.yss.valset.transfer.application.dto.TransferObjectRedeliverResponse;
 import com.yss.valset.transfer.application.port.TransferProcessUseCase;
 import com.yss.valset.transfer.application.service.TransferObjectManagementAppService;
-import com.yss.valset.transfer.application.port.TransferRunLogMaintenanceUseCase;
 import com.yss.valset.transfer.scheduler.task.TransferDeliverTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferIngestScheduledTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferIngestTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferObjectRedeliverScheduledTaskData;
-import com.yss.valset.transfer.scheduler.task.TransferObjectRedeliverTaskData;
 import com.yss.valset.transfer.scheduler.task.TransferRouteTaskData;
-import com.yss.valset.transfer.scheduler.task.TransferRunLogCleanupScheduledTaskData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -81,16 +78,4 @@ public class TransferSchedulerTaskConfiguration {
                 });
     }
 
-    @Bean
-    public RecurringTaskWithPersistentSchedule<TransferRunLogCleanupScheduledTaskData> transferRunLogCleanupTask(
-            TransferRunLogMaintenanceUseCase transferRunLogMaintenanceUseCase) {
-        return Tasks.recurringWithPersistentSchedule(TransferSchedulerTasks.RUN_LOG_CLEANUP_TASK)
-                .execute((taskInstance, executionContext) -> {
-                    try {
-                        transferRunLogMaintenanceUseCase.cleanupYesterdayLogs();
-                    } catch (RuntimeException exception) {
-                        log.warn("文件收发运行日志清理失败", exception);
-                    }
-                });
-    }
 }

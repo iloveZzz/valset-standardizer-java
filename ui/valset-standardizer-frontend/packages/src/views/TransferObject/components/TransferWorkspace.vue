@@ -122,16 +122,21 @@ const actionConfig = useTableActionConfig({
               allow-clear
             >
               <a-select-option value="">全部</a-select-option>
-              <a-select-option value="PENDING">待处理</a-select-option>
-              <a-select-option value="RECEIVED">已收取</a-select-option>
               <a-select-option value="IDENTIFIED">已识别</a-select-option>
-              <a-select-option value="ROUTED">已路由</a-select-option>
-              <a-select-option value="DELIVERING">投递中</a-select-option>
-              <a-select-option value="DELIVERED">已投递</a-select-option>
-              <a-select-option value="ARCHIVED">已归档</a-select-option>
               <a-select-option value="SKIPPED">已跳过</a-select-option>
-              <a-select-option value="QUARANTINED">已隔离</a-select-option>
-              <a-select-option value="FAILED">失败</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="投递状态">
+            <a-select
+              v-model:value="page.query.deliveryStatus"
+              style="width: 160px"
+              size="small"
+              placeholder="全部"
+              allow-clear
+            >
+              <a-select-option value="">全部</a-select-option>
+              <a-select-option value="DELIVERED">已投递</a-select-option>
+              <a-select-option value="UNDELIVERED">未投递</a-select-option>
             </a-select>
           </a-form-item>
           <a-form-item label="附件名称">
@@ -182,27 +187,29 @@ const actionConfig = useTableActionConfig({
               "
             />
           </a-form-item>
-        </a-form>
-        <div class="workspace-query-actions">
-          <a-space>
-            <YButton type="primary" size="small" @click="page.runQuery">
+        <a-form-item>
+          <div class="workspace-query-actions">
+            <a-space>
+              <YButton type="primary" size="small" @click="page.runQuery">
               <template #icon><SearchOutlined /></template>
-              查询对象
-            </YButton>
-            <YButton size="small" @click="page.resetQuery">
-              <template #icon><ReloadOutlined /></template>
-              重置条件
-            </YButton>
-            <YButton
+查询对象
+</YButton>
+<YButton size="small" @click="page.resetQuery">
+<template #icon><ReloadOutlined /></template>
+重置条件
+</YButton>
+<YButton
               :loading="page.retagLoading"
-              size="small"
-              @click="confirmRetag"
-            >
-              <template #icon><TagOutlined /></template>
-              重新打标
-            </YButton>
-          </a-space>
-        </div>
+size="small"
+@click="confirmRetag"
+>
+<template #icon><TagOutlined /></template>
+重新打标
+</YButton>
+</a-space>
+</div>
+        </a-form-item>
+        </a-form>
       </div>
     </YCard>
 

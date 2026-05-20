@@ -2,13 +2,11 @@ package com.yss.valset.transfer.application.impl.route;
 
 import com.yss.valset.transfer.application.port.RouteTransferUseCase;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
-import com.yss.valset.transfer.domain.gateway.TransferRunLogGateway;
 import com.yss.valset.transfer.domain.gateway.TransferSourceGateway;
 import com.yss.valset.transfer.domain.model.MatchResult;
 import com.yss.valset.transfer.domain.model.ProbeResult;
 import com.yss.valset.transfer.domain.model.RecognitionContext;
 import com.yss.valset.transfer.domain.model.SourceType;
-import com.yss.valset.transfer.domain.model.TransferRunLog;
 import com.yss.valset.transfer.domain.model.TransferRunStage;
 import com.yss.valset.transfer.domain.model.TransferRunStatus;
 import com.yss.valset.transfer.domain.model.TransferObject;
@@ -29,7 +27,6 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.Map;
 
@@ -43,7 +40,6 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
     private final TransferObjectGateway transferObjectGateway;
     private final FileProbePluginRegistry fileProbePluginRegistry;
     private final RouteMatchPluginRegistry routeMatchPluginRegistry;
-    private final TransferRunLogGateway transferRunLogGateway;
     private final ObjectProvider<TransferJobScheduler> transferJobSchedulerProvider;
     private final TransferSourceGateway transferSourceGateway;
     private final SourceConnectorRegistry sourceConnectorRegistry;
@@ -53,7 +49,6 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
             TransferObjectGateway transferObjectGateway,
             FileProbePluginRegistry fileProbePluginRegistry,
             RouteMatchPluginRegistry routeMatchPluginRegistry,
-            TransferRunLogGateway transferRunLogGateway,
             ObjectProvider<TransferJobScheduler> transferJobSchedulerProvider,
             TransferSourceGateway transferSourceGateway,
             SourceConnectorRegistry sourceConnectorRegistry,
@@ -62,7 +57,6 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
         this.transferObjectGateway = transferObjectGateway;
         this.fileProbePluginRegistry = fileProbePluginRegistry;
         this.routeMatchPluginRegistry = routeMatchPluginRegistry;
-        this.transferRunLogGateway = transferRunLogGateway;
         this.transferJobSchedulerProvider = transferJobSchedulerProvider;
         this.transferSourceGateway = transferSourceGateway;
         this.sourceConnectorRegistry = sourceConnectorRegistry;
@@ -365,21 +359,6 @@ public class DefaultRouteTransferService implements RouteTransferUseCase {
                     buildErrorMessage(error),
                     error);
         }
-        transferRunLogGateway.save(new TransferRunLog(
-                null,
-                transferObject.sourceId(),
-                transferObject.sourceType(),
-                transferObject.sourceCode(),
-                null,
-                transferObject.transferId(),
-                routeId,
-                triggerType,
-                runStage,
-                runStatus,
-                logMessage,
-                error == null ? null : buildErrorMessage(error),
-                LocalDateTime.now()
-        ));
     }
 
     private String buildErrorMessage(Throwable throwable) {

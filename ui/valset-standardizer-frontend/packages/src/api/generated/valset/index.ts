@@ -5,7 +5,6 @@
  * OpenAPI spec version: v1.0.0
  */
 import type {
-  AnalyzeLogsParams,
   AnalyzeMailInboxParams,
   AnalyzeObjectsParams,
   CountTaskStateParams,
@@ -19,7 +18,6 @@ import type {
   JsonNode,
   ListCheckpointsParams,
   ListInstancesParams,
-  ListLogsParams,
   ListRoutes1Params,
   ListRoutesParams,
   ListRulesParams,
@@ -34,7 +32,6 @@ import type {
   MultiResultTransferFormTemplateViewDTO,
   MultiResultTransferRouteViewDTO,
   MultiResultTransferRuleViewDTO,
-  MultiResultTransferRunLogViewDTO,
   MultiResultTransferSourceCheckpointViewDTO,
   MultiResultTransferSourceViewDTO,
   MultiResultTransferTargetViewDTO,
@@ -46,14 +43,12 @@ import type {
   MultiResultWorkflowScheduleDTO,
   OutsourcedDataTaskActionCommand,
   OutsourcedDataTaskBatchCommand,
-  PageLogsParams,
   PageMailInboxParams,
   PageObjectsParams,
   PageQueuesParams,
   PageResultOutsourcedDataTaskBatchDTO,
   PageResultParseQueueViewDTO,
   PageResultTransferObjectViewDTO,
-  PageResultTransferRunLogViewDTO,
   PageResultTransferTagViewDTO,
   PageResultWorkflowInstanceViewDTO,
   PageTagsParams,
@@ -88,9 +83,6 @@ import type {
   SingleResultTransferRouteViewDTO,
   SingleResultTransferRuleMutationResponse,
   SingleResultTransferRuleViewDTO,
-  SingleResultTransferRunLogAnalysisViewDTO,
-  SingleResultTransferRunLogCleanupResponse,
-  SingleResultTransferRunLogRedeliverResponse,
   SingleResultTransferSourceMutationResponse,
   SingleResultTransferSourceViewDTO,
   SingleResultTransferTagMutationResponse,
@@ -107,7 +99,6 @@ import type {
   SingleResultWorkflowTaskInstancePageDTO,
   SingleResultWorkflowTaskListDTO,
   SseEmitter,
-  StreamLogsParams,
   SubscribeParams,
   SummaryParams,
   TransferObjectRedeliverCommand,
@@ -115,8 +106,6 @@ import type {
   TransferRouteUpsertCommand,
   TransferRouteViewDTO,
   TransferRuleUpsertCommand,
-  TransferRunLogCleanupCommand,
-  TransferRunLogRedeliverCommand,
   TransferSourceUpsertCommand,
   TransferTagTestCommand,
   TransferTagUpsertCommand,
@@ -1282,88 +1271,6 @@ export const getJavaApi = () => {
   };
 
   /**
-   * @summary 查询文件收发运行日志列表。
-   */
-  const listLogs = (params?: ListLogsParams) => {
-    return customInstance<MultiResultTransferRunLogViewDTO>({
-      url: `/transfer-run-logs`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 分页查询文件收发运行日志。
-   */
-  const pageLogs = (params?: PageLogsParams) => {
-    return customInstance<PageResultTransferRunLogViewDTO>({
-      url: `/transfer-run-logs/page`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 统计分析文件收发运行日志。
-   */
-  const analyzeLogs = (params?: AnalyzeLogsParams) => {
-    return customInstance<SingleResultTransferRunLogAnalysisViewDTO>({
-      url: `/transfer-run-logs/analysis`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
-   * @summary 批量重新投递失败的文件收发运行日志。
-   */
-  const redeliver = (
-    transferRunLogRedeliverCommand: TransferRunLogRedeliverCommand,
-  ) => {
-    return customInstance<SingleResultTransferRunLogRedeliverResponse>({
-      url: `/transfer-run-logs/redeliver`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: transferRunLogRedeliverCommand,
-    });
-  };
-
-  /**
-   * @summary 按时间区间清理文件收发运行日志。
-   */
-  const cleanupLogs = (
-    transferRunLogCleanupCommand: TransferRunLogCleanupCommand,
-  ) => {
-    return customInstance<SingleResultTransferRunLogCleanupResponse>({
-      url: `/transfer-run-logs/cleanup`,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      data: transferRunLogCleanupCommand,
-    });
-  };
-
-  /**
-   * @summary 清理前一天产生的文件收发运行日志。
-   */
-  const cleanupYesterdayLogs = () => {
-    return customInstance<SingleResultTransferRunLogCleanupResponse>({
-      url: `/transfer-run-logs/cleanup-yesterday`,
-      method: "POST",
-    });
-  };
-
-  /**
-   * @summary 订阅文件收发运行日志流。
-   */
-  const streamLogs = (params?: StreamLogsParams) => {
-    return customInstance<SseEmitter>({
-      url: `/transfer-run-logs/stream`,
-      method: "GET",
-      params,
-    });
-  };
-
-  /**
    * @summary 查询文件主对象详情。
    */
   const getObject = (transferId: string) => {
@@ -1736,13 +1643,6 @@ export const getJavaApi = () => {
     completeQueue,
     failQueue,
     retryQueue,
-    listLogs,
-    pageLogs,
-    analyzeLogs,
-    redeliver,
-    cleanupLogs,
-    cleanupYesterdayLogs,
-    streamLogs,
     getObject,
     getMailInfo,
     downloadObject,
@@ -2052,27 +1952,6 @@ export type FailQueueResult = NonNullable<
 >;
 export type RetryQueueResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["retryQueue"]>>
->;
-export type ListLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listLogs"]>>
->;
-export type PageLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["pageLogs"]>>
->;
-export type AnalyzeLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["analyzeLogs"]>>
->;
-export type RedeliverResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["redeliver"]>>
->;
-export type CleanupLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["cleanupLogs"]>>
->;
-export type CleanupYesterdayLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["cleanupYesterdayLogs"]>>
->;
-export type StreamLogsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["streamLogs"]>>
 >;
 export type GetObjectResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["getObject"]>>

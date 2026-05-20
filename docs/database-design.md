@@ -183,16 +183,13 @@
 
 ### 4.7 `t_transfer_run_log`
 
-运行日志表。
+历史运行日志表，当前流程已停止写入。
 
-对应实体：
+保留原因：
 
-- `TransferRunLogPO`
-
-主要职责：
-
-- 记录一次扫描、分拣、投递运行的日志
-- 记录处理量、成功量、失败量和状态
+- 第一阶段兼容历史数据库和历史数据查询。
+- 运行信息已改为应用日志输出，页面通过系统输出日志查看。
+- 分拣状态和投递结果以 `t_transfer_object`、`t_transfer_delivery_record` 为准。
 
 ### 4.8 `t_transfer_source_checkpoint`
 

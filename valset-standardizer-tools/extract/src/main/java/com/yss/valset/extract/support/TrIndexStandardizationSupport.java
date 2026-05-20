@@ -5,11 +5,14 @@ import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.extract.repository.entity.TrIndexPO;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 将标准化后的估值解析结果转换为 tr_spv_index 行。
@@ -29,12 +32,84 @@ public final class TrIndexStandardizationSupport {
         LocalDateTime timeStamp = LocalDateTime.now();
         List<TrIndexPO> result = new ArrayList<>(standardizedValuationData.getMetrics().size());
         for (MetricRecord metric : standardizedValuationData.getMetrics()) {
-            TrIndexPO row = buildRow(metric, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign, productBusinessFields, timeStamp);
-            if (row != null) {
-                result.add(row);
-            }
+            result.addAll(buildRows(metric, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign, productBusinessFields, timeStamp));
         }
         return result;
+    }
+
+    private static List<TrIndexPO> buildRows(
+            MetricRecord metric,
+            Map<String, String> basicInfo,
+            String sourceTp,
+            String sourceSign,
+            ProductBusinessFields productBusinessFields,
+            LocalDateTime timeStamp
+    ) {
+        if (metric == null) {
+            return java.util.Arrays.asList();
+        }
+        if ("metric_row".equals(metric.getMetricType())) {
+            return buildMetricRowRows(metric, basicInfo, sourceTp, sourceSign, productBusinessFields, timeStamp);
+        }
+        TrIndexPO row = buildMetricDataRow(metric, basicInfo, sourceTp, sourceSign, productBusinessFields, timeStamp);
+        return row == null ? java.util.Arrays.asList() : java.util.Arrays.asList(row);
+    }
+
+    private static List<TrIndexPO> buildMetricRowRows(
+            MetricRecord metric,
+            Map<String, String> basicInfo,
+            String sourceTp,
+            String sourceSign,
+            ProductBusinessFields productBusinessFields,
+            LocalDateTime timeStamp
+    ) {
+        if (metric.getRawValues() == null || metric.getRawValues().isEmpty()) {
+            return java.util.Arrays.asList();
+        }
+        List<TrIndexPO> rows = new ArrayList<>();
+        Set<String> indexNames = new LinkedHashSet<>();
+        for (Map.Entry<String, Object> entry : metric.getRawValues().entrySet()) {
+            String headerPath = normalizeHeaderPath(entry.getKey());
+            BigDecimal number = ExcelParsingSupport.normalizeNumber(entry.getValue());
+            if (number == null || headerPath == null || headerPath.isEmpty()) {
+                continue;
+            }
+            String metricName = firstNonBlank(metric.getMetricName(), metric.getStandardName());
+            String indexName = firstNonBlank(metricName) == null ? headerPath : metricName + "|" + headerPath;
+            if (!indexNames.add(indexName)) {
+                continue;
+            }
+            rows.add(buildRow(metric,
+                    basicInfo,
+                    sourceTp,
+                    sourceSign,
+                    productBusinessFields,
+                    timeStamp,
+                    indexName,
+                    decimalText(number)));
+        }
+        return rows;
+    }
+
+    private static TrIndexPO buildMetricDataRow(
+            MetricRecord metric,
+            Map<String, String> basicInfo,
+            String sourceTp,
+            String sourceSign,
+            ProductBusinessFields productBusinessFields,
+            LocalDateTime timeStamp
+    ) {
+        BigDecimal number = firstNumber(
+                metric.getValue(),
+                metric.getRawValues() == null ? null : metric.getRawValues().get("value"),
+                metric.getStandardValueText(),
+                metric.getStandardValues() == null ? null : metric.getStandardValues().get("metric_value"),
+                metric.getStandardValues() == null ? null : metric.getStandardValues().get("indx_valu")
+        );
+        if (number == null) {
+            return null;
+        }
+        return buildRow(metric, basicInfo, sourceTp, sourceSign, productBusinessFields, timeStamp, null, decimalText(number));
     }
 
     private static TrIndexPO buildRow(
@@ -43,7 +118,9 @@ public final class TrIndexStandardizationSupport {
             String sourceTp,
             String sourceSign,
             ProductBusinessFields productBusinessFields,
-            LocalDateTime timeStamp
+            LocalDateTime timeStamp,
+            String indexName,
+            String indexValue
     ) {
         Map<String, Object> standardValues = metric == null || metric.getStandardValues() == null
                 ? java.util.Collections.emptyMap()
@@ -69,12 +146,14 @@ public final class TrIndexStandardizationSupport {
                 extractBizDate(sourceSign)
         )), 8));
         row.setIndxNm(truncate(firstNonBlank(
+                indexName,
                 metric == null ? null : metric.getMetricName(),
                 stringValue(standardValues, "indx_nm"),
                 stringValue(standardValues, "metric_name"),
                 metric == null ? null : metric.getStandardName()
         ), 300));
         row.setIndxValu(truncate(firstNonBlank(
+                indexValue,
                 stringValue(standardValues, "indx_valu"),
                 stringValue(standardValues, "metric_value"),
                 metric == null ? null : metric.getStandardValueText(),
@@ -106,6 +185,38 @@ public final class TrIndexStandardizationSupport {
     private static String stringValue(Map<String, Object> values, String key) {
         Object value = values.get(key);
         return value == null ? null : ExcelParsingSupport.normalizeText(value).trim();
+    }
+
+    private static String normalizeHeaderPath(String headerPath) {
+        if (headerPath == null || headerPath.trim().isEmpty()) {
+            return null;
+        }
+        String[] segments = headerPath.split("\\|");
+        Set<String> uniqueSegments = new LinkedHashSet<>();
+        for (String segment : segments) {
+            if (segment == null || segment.trim().isEmpty()) {
+                continue;
+            }
+            uniqueSegments.add(segment.trim());
+        }
+        return uniqueSegments.isEmpty() ? null : String.join("|", uniqueSegments);
+    }
+
+    private static String decimalText(BigDecimal value) {
+        return value == null ? null : value.stripTrailingZeros().toPlainString();
+    }
+
+    private static BigDecimal firstNumber(Object... candidates) {
+        if (candidates == null) {
+            return null;
+        }
+        for (Object candidate : candidates) {
+            BigDecimal number = ExcelParsingSupport.normalizeNumber(candidate);
+            if (number != null) {
+                return number;
+            }
+        }
+        return null;
     }
 
     private static String normalizeDateValue(String text) {

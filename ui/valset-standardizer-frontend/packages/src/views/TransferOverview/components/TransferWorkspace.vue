@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { h, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { Modal } from "ant-design-vue";
-import { ExclamationCircleOutlined } from "@ant-design/icons-vue";
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import * as echarts from "echarts";
 import { YButton, YCard } from "@yss-ui/components";
+import OverviewRunLogConsole from "./OverviewRunLogConsole.vue";
 
 defineOptions({ name: "TransferWorkspace" });
 
@@ -52,31 +51,6 @@ const renderOverviewCharts = async () => {
     renderStatusChart(),
     renderTagChart(),
   ]);
-};
-
-const openLogSnapshot = (row: any) => {
-  Modal.info({
-    title: "运行快照",
-    width: 920,
-    icon: h(ExclamationCircleOutlined),
-    content: h(
-      "pre",
-      { class: "snapshot-code" },
-      page.formatJson({
-        deliveryId: row.deliveryId,
-        transferId: row.transferId,
-        routeId: row.routeId,
-        targetCode: row.targetCode,
-        targetType: row.targetType,
-        executeStatus: row.executeStatus,
-        executeStatusLabel: row.executeStatusLabel,
-        requestSnapshotJson: row.requestSnapshotJson,
-        responseSnapshotJson: row.responseSnapshotJson,
-        errorMessage: row.errorMessage,
-        deliveredAt: row.deliveredAt,
-      }),
-    ),
-  });
 };
 
 const renderTrendChart = async () => {
@@ -683,13 +657,7 @@ onBeforeUnmount(() => {
           v-else-if="page.activeSection === 'run-log'"
           class="workspace-section"
         >
-          <div class="section-title"><h3>运行日志</h3></div>
-          <div class="workspace-preview-card">
-            <div v-for="row in page.logs" :key="row.id" class="summary-item">
-              <span>{{ row.fileName }}</span>
-              <strong @click="openLogSnapshot(row)">{{ row.status }}</strong>
-            </div>
-          </div>
+          <OverviewRunLogConsole />
         </section>
     </div>
   </div>

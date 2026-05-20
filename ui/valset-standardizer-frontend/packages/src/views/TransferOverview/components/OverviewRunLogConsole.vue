@@ -1,11 +1,5 @@
 <script setup lang="ts">
-import {
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
-} from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { YButton, YCard, YMonaco } from "@yss-ui/components";
 import {
   ArrowDownOutlined,
@@ -13,29 +7,19 @@ import {
   PauseCircleOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons-vue";
-import type { TransferRunLogViewDTO } from "@/api/generated/valset/schemas";
 
-type RunLogConsoleSeedItem = {
-  key: string;
-  title: string;
-  stageLabel: string;
-  statusLabel: string;
-  createdAt?: string;
-  description: string;
+type SystemOutputLogStreamItem = {
+  sequence?: number;
+  timestamp?: string;
+  level?: string;
+  threadName?: string;
+  loggerName?: string;
+  message?: string;
+  formattedLine?: string;
 };
-
-type RunLogConsoleStreamItem = TransferRunLogViewDTO & {
-  seedTitle?: string;
-  seedStageLabel?: string;
-  seedStatusLabel?: string;
-  seedDescription?: string;
-};
-
-type StageFilterValue = "ALL" | "RECEIVE" | "INGEST" | "ROUTE" | "DELIVER";
 
 const props = withDefaults(
   defineProps<{
-    items: RunLogConsoleSeedItem[];
     height?: number;
     autoStart?: boolean;
     baseUrl?: string;
@@ -46,7 +30,7 @@ const props = withDefaults(
     height: 486,
     autoStart: true,
     baseUrl: import.meta.env.VITE_API_BASE_URL || "/api",
-    streamUrl: "/transfer-run-logs/stream",
+    streamUrl: "/system-output-logs/stream",
     streamLimit: 2000,
   },
 );
@@ -56,64 +40,23 @@ const isStreaming = ref(false);
 const logCount = ref(0);
 const totalLines = ref(0);
 const eventSourceRef = ref<EventSource | null>(null);
-const seenLogIds = new Set<string>();
+const seenSequences = new Set<number>();
 const editorHeight = "100%";
-const stageFilter = ref<StageFilterValue>("ALL");
-const lastSeedSignature = ref("");
 
-const formatTimestamp = (value?: string) => {
-  if (!value) {
-    return new Date().toISOString().slice(0, 19).replace("T", " ");
+const buildLogLine = (item: SystemOutputLogStreamItem) => {
+  if (item.formattedLine) {
+    return item.formattedLine;
   }
-  return value.replace("T", " ").slice(0, 19);
+  const timestamp =
+    item.timestamp || new Date().toISOString().slice(0, 19).replace("T", " ");
+  const level = item.level || "INFO";
+  const threadName = item.threadName || "-";
+  const loggerName = item.loggerName || "-";
+  const text = item.message || "";
+  return `${timestamp} [${threadName}] ${level.padEnd(5, " ")} ${loggerName} - ${text}`;
 };
 
-const stageFilterOptions: Array<{ label: string; value: StageFilterValue }> = [
-  { label: "全部", value: "ALL" },
-  { label: "来源收取", value: "RECEIVE" },
-  { label: "规则识别", value: "INGEST" },
-  { label: "路由分发", value: "ROUTE" },
-  { label: "目标投递", value: "DELIVER" },
-];
-
-const resolveKey = (item: RunLogConsoleStreamItem) => {
-  return (
-    item.runLogId ||
-    `${item.createdAt || ""}-${item.sourceId || ""}-${item.transferId || ""}-${item.routeId || ""}-${item.runStage || ""}-${item.runStatus || ""}`
-  );
-};
-
-const normalizeStageFilter = (value?: string) => {
-  const normalized = String(value ?? "")
-    .trim()
-    .toUpperCase();
-  if (
-    normalized === "RECEIVE" ||
-    normalized === "INGEST" ||
-    normalized === "ROUTE" ||
-    normalized === "DELIVER"
-  ) {
-    return normalized as StageFilterValue;
-  }
-  return "ALL";
-};
-
-const matchesStageFilter = (item: RunLogConsoleStreamItem) => {
-  if (stageFilter.value === "ALL") {
-    return true;
-  }
-  return normalizeStageFilter(item.runStage) === stageFilter.value;
-};
-
-const buildLogLine = (item: RunLogConsoleStreamItem) => {
-  const timestamp = formatTimestamp(item.createdAt);
-  const description =
-    item.errorMessage || item.logMessage || item.seedDescription || "暂无说明";
-
-  return `[${timestamp}] ${description}`;
-};
-
-const appendLogs = async (items: RunLogConsoleStreamItem[]) => {
+const appendLogs = async (items: SystemOutputLogStreamItem[]) => {
   await nextTick();
   if (!monacoRef.value) {
     return;
@@ -126,14 +69,13 @@ const appendLogs = async (items: RunLogConsoleStreamItem[]) => {
 
   const lines: string[] = [];
   for (const item of items) {
-    if (!matchesStageFilter(item)) {
+    const sequence = Number(item.sequence ?? 0);
+    if (sequence > 0 && seenSequences.has(sequence)) {
       continue;
     }
-    const key = resolveKey(item);
-    if (seenLogIds.has(key)) {
-      continue;
+    if (sequence > 0) {
+      seenSequences.add(sequence);
     }
-    seenLogIds.add(key);
     lines.push(buildLogLine(item));
   }
 
@@ -147,50 +89,16 @@ const appendLogs = async (items: RunLogConsoleStreamItem[]) => {
   totalLines.value = monacoRef.value.getLineCount?.() ?? totalLines.value;
 };
 
-const seedInitialLogs = async () => {
-  if (!props.items.length || !monacoRef.value) {
-    return;
-  }
-  const signature = `${stageFilter.value}::${props.items
-    .map((item) =>
-      [
-        item.key,
-        item.createdAt ?? "",
-        item.stageLabel,
-        item.statusLabel,
-        item.description,
-      ].join("@"),
-    )
-    .join("|")}`;
-  if (lastSeedSignature.value === signature) {
-    return;
-  }
-  lastSeedSignature.value = signature;
-  await appendLogs(
-    props.items.map((item) => ({
-      runLogId: item.key,
-      createdAt: item.createdAt,
-      seedTitle: item.title,
-      seedStageLabel: item.stageLabel,
-      seedStatusLabel: item.statusLabel,
-      seedDescription: item.description,
-    })),
-  );
-};
-
 const buildStreamUrl = () => {
   const baseUrl = props.baseUrl.endsWith("/")
     ? props.baseUrl.slice(0, -1)
     : props.baseUrl;
   const url = new URL(`${baseUrl}${props.streamUrl}`, window.location.origin);
   url.searchParams.set("limit", String(props.streamLimit));
-  if (stageFilter.value !== "ALL") {
-    url.searchParams.set("runStage", stageFilter.value);
-  }
   return `${url.pathname}${url.search}${url.hash}`;
 };
 
-const parsePayload = (event: MessageEvent): RunLogConsoleStreamItem[] => {
+const parsePayload = (event: MessageEvent): SystemOutputLogStreamItem[] => {
   try {
     const parsed = JSON.parse(String(event.data || ""));
     const data = parsed?.data || parsed?.item || parsed;
@@ -217,22 +125,10 @@ const resetContent = async () => {
     return;
   }
 
-  seenLogIds.clear();
+  seenSequences.clear();
   monacoRef.value.clearContent?.();
   logCount.value = 0;
   totalLines.value = 0;
-};
-
-const restartStream = () => {
-  stopLogStream();
-  void resetContent().then(() => {
-    lastSeedSignature.value = "";
-    void seedInitialLogs().then(() => {
-      if (props.autoStart) {
-        startLogStream();
-      }
-    });
-  });
 };
 
 const startLogStream = () => {
@@ -278,35 +174,13 @@ const scrollToBottom = () => {
 };
 
 const handleLineExceed = (lines: number) => {
-  console.log(`运行日志行数超出限制：${lines} 行，已自动清理`);
+  console.log(`系统输出日志行数超出限制：${lines} 行，已自动清理`);
 };
-
-const updateStageFilter = (value: StageFilterValue) => {
-  if (stageFilter.value === value) {
-    return;
-  }
-  stageFilter.value = value;
-  lastSeedSignature.value = "";
-  restartStream();
-};
-
-watch(
-  () => props.items,
-  () => {
-    void seedInitialLogs();
-  },
-  {
-    deep: true,
-    immediate: true,
-  },
-);
 
 onMounted(() => {
-  void seedInitialLogs().then(() => {
-    if (props.autoStart) {
-      startLogStream();
-    }
-  });
+  if (props.autoStart) {
+    startLogStream();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -323,7 +197,7 @@ onBeforeUnmount(() => {
     <div class="overview-run-log-console-head">
       <div class="overview-run-log-console-title">
         <h3>运行日志</h3>
-        <p>来源、路由、目标的实时运行信息。</p>
+        <p>系统输出日志，保留最近运行信息。</p>
       </div>
       <div class="overview-run-log-console-actions">
         <a-tag color="blue">日志 {{ logCount }}</a-tag>
@@ -337,15 +211,6 @@ onBeforeUnmount(() => {
 
     <div class="overview-run-log-console-toolbar">
       <a-space wrap>
-        <a-tag
-          v-for="item in stageFilterOptions"
-          :key="item.value"
-          :color="stageFilter === item.value ? 'blue' : 'default'"
-          class="stage-filter-tag"
-          @click="updateStageFilter(item.value)"
-        >
-          {{ item.label }}
-        </a-tag>
         <YButton
           v-if="!isStreaming"
           type="primary"

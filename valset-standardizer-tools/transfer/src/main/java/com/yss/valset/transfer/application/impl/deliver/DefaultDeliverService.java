@@ -7,7 +7,6 @@ import com.yss.valset.transfer.application.port.TransferJobScheduler;
 import com.yss.valset.transfer.domain.gateway.TransferDeliveryGateway;
 import com.yss.valset.transfer.domain.gateway.TransferObjectGateway;
 import com.yss.valset.transfer.domain.gateway.TransferRouteGateway;
-import com.yss.valset.transfer.domain.gateway.TransferRunLogGateway;
 import com.yss.valset.transfer.domain.gateway.TransferTargetGateway;
 import com.yss.valset.transfer.domain.model.TransferContext;
 import com.yss.valset.transfer.domain.model.TransferDeliveryRecord;
@@ -15,7 +14,6 @@ import com.yss.valset.transfer.domain.model.TransferObject;
 import com.yss.valset.transfer.domain.model.TransferResult;
 import com.yss.valset.transfer.domain.model.TransferRoute;
 import com.yss.valset.transfer.domain.model.TransferTarget;
-import com.yss.valset.transfer.domain.model.TransferRunLog;
 import com.yss.valset.transfer.domain.model.TransferRunStage;
 import com.yss.valset.transfer.domain.model.TransferRunStatus;
 import com.yss.valset.transfer.domain.model.config.TransferConfigKeys;
@@ -49,7 +47,6 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
     private final TransferTargetGateway transferTargetGateway;
     private final TransferDeliveryGateway transferDeliveryGateway;
     private final TransferActionPluginRegistry transferActionPluginRegistry;
-    private final TransferRunLogGateway transferRunLogGateway;
     private final TransferParseQueueProvisionUseCase transferParseQueueProvisionUseCase;
     private final ValsetFileInfoGateway valsetFileInfoGateway;
     private final ObjectMapper objectMapper;
@@ -128,7 +125,6 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
                 failureLogged = true;
                 throw new IllegalStateException("文件投递失败，routeId=" + routeId + ", messages=" + result.messages());
             }
-            clearFailedDeliverRunLogs(transferObject.transferId());
             transferObject = persistStoragePath(transferObject, result);
             updateFileInfoPaths(transferObject);
             try {
@@ -417,15 +413,6 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
         return null;
     }
 
-    private void clearFailedDeliverRunLogs(String transferId) {
-        try {
-            long deletedCount = transferRunLogGateway.deleteFailedDeliverLogsByTransferId(transferId);
-            log.info("已清理投递失败运行日志，transferId={}，deletedCount={}", transferId, deletedCount);
-        } catch (RuntimeException exception) {
-            log.warn("清理投递失败运行日志失败，transferId={}，error={}", transferId, exception.getMessage(), exception);
-        }
-    }
-
     private void scheduleRetryIfNeeded(String routeId, String transferId, TransferRoute route, int nextAttempt) {
         TransferRouteConfig routeConfig = TransferRouteConfig.from(route);
         int maxRetryCount = routeConfig.maxRetryCount();
@@ -502,21 +489,6 @@ public class DefaultDeliverService implements DeliverTransferUseCase {
                     buildErrorMessage(error),
                     error);
         }
-        transferRunLogGateway.save(new TransferRunLog(
-                null,
-                transferObject.sourceId(),
-                transferObject.sourceType(),
-                transferObject.sourceCode(),
-                null,
-                transferObject.transferId(),
-                route == null ? null : route.routeId(),
-                triggerType,
-                runStage,
-                runStatus,
-                logMessage,
-                error == null ? null : buildErrorMessage(error),
-                LocalDateTime.now()
-        ));
     }
 
     private String buildErrorMessage(Throwable throwable) {
