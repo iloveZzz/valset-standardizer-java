@@ -27,7 +27,7 @@ public interface ValuationWorkflowAppService {
     UploadValuationFileResponse uploadAndExtract(MultipartFile file, String dataSourceType, String createdBy, Boolean forceRebuild);
 
     /**
-     * 执行 DWD 解析落地。
+     * 执行 STG 解析落地。
      *
      * @param command 解析任务参数，包含文件、工作簿、执行上下文等信息。
      */

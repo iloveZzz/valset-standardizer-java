@@ -11,7 +11,7 @@
 - MySQL 基线：`docs/ddl/mysql.sql`
 - ODS 原始表：`valset-standardizer-tools/extract/src/main/resources/db/migration/t_ods_valuation_filedata.sql`
 - ODS 样式表：`valset-standardizer-tools/extract/src/main/resources/db/migration/t_ods_valuation_sheet_style.sql`
-- DWD / STG / 知识样本 / 规则字典：`valset-standardizer/src/main/resources/db/migration/*.sql`
+- STG / STG / 知识样本 / 规则字典：`valset-standardizer/src/main/resources/db/migration/*.sql`
 
 若你的环境已经通过历史脚本或人工变更完成初始化，请先比对目标库差异，再决定是否补执行其中部分 SQL。
 
@@ -64,7 +64,7 @@ SQL 文件：
 
 SQL 文件：
 
-- `yss-valset-standardizer/src/main/resources/db/migration/t_dwd_external_valuation.sql`
+- `yss-valset-standardizer/src/main/resources/db/migration/t_stg_external_valuation.sql`
 
 用途：
 
@@ -73,9 +73,9 @@ SQL 文件：
 - 作为标准化引擎的输入层
 - 不承担最终标准化业务含义
 
-### DWD 外部估值标准表
+### STG 外部估值标准表
 
-`t_dwd_external_valuation_subject` 和 `t_dwd_external_valuation_metric` 已移除。标准化结果不再单独持久化，统一从最新 `t_stg_external_valuation*` 运行时标准化后直接进入 `tr_spv_jjhzgzb` / `tr_spv_index`。
+旧外部估值中间表已移除。解析快照统一进入 `t_stg_external_valuation*`，标准化结果运行时生成后直接进入 `tr_spv_jjhzgzb` / `tr_spv_index`。
 
 ### 匹配结果表
 
@@ -117,10 +117,10 @@ SQL 文件：
 ## 与接口的关系
 
 - `/upload` 先写文件主表，再触发 ODS 提取并写 ODS 表
-- `/analyze` 写 DWD 标准表
+- `/analyze` 写 STG 解析表
 - `/match` 写匹配结果表
 - `/files/*` 负责文件信息管理和文件接入日志查询
 - `/raw-data` 读 ODS 表
 - `/stg-data` 读 STG 解析快照表
-- `/dwd-data` 读 DWD 标准表，STG 仅用于回溯和排障
+- `/stg-data` 读 STG 解析表，STG 仅用于回溯和排障
 - `/match-results` 读匹配结果表

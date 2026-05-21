@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -35,6 +36,24 @@ public class ProductMatchRulePO {
 
     @TableField("pd_type")
     private String pdType;
+
+    @TableField(exist = false)
+    private String subjectSystem;
+
+    @TableField(exist = false)
+    private String holdingStatus;
+
+    @TableField(exist = false)
+    private LocalDate establishedDate;
+
+    @TableField(exist = false)
+    private String effectiveFrequency;
+
+    @TableField(exist = false)
+    private Integer delayDays;
+
+    @TableField(exist = false)
+    private Boolean approvalRequired;
 
     @TableField("file_type")
     private String fileType;

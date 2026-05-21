@@ -54,7 +54,7 @@ flowchart LR
     O --> M["科目匹配<br/>MatchExecutionAppServiceImpl"]
     P --> SB["批量任务 作业"]
     X --> ODS["ODS 原始表"]
-    P --> STG["STG / DWD 结构化结果"]
+    P --> STG["STG / STG 结构化结果"]
     M --> MR["匹配结果表"]
     W --> T["任务与重用服务"]
     T --> D["DefaultTaskDispatcher / db-scheduler"]
@@ -213,7 +213,7 @@ flowchart LR
 - 多层表头
 - 科目行
 - 指标行
-- DWD 标准化结果
+- STG 解析快照
 
 这部分结果供匹配阶段和查询接口复用。
 
@@ -223,7 +223,7 @@ flowchart LR
 
 1. 读取任务入参。
 2. 优先加载标准化落地结果。
-3. 如果没有标准化结果，则回退到 DWD 或解析器。
+3. 如果没有标准化结果，则回退到 STG 或解析器。
 4. 加载标准科目和历史映射提示。
 5. 构建匹配上下文。
 6. 执行匹配算法。
@@ -270,7 +270,7 @@ flowchart TD
     M --> N["Step 1: FILE_PARSE"]
     N --> N1["选择解析器<br/>EXCEL / CSV / API / DB"]
     N1 --> N2["解析原始文件为 ParsedValuationData"]
-    N2 --> N3["写入 DWD 外部估值解析表<br/>DwdExternalValuationGateway"]
+    N2 --> N3["写入 STG 外部估值解析表<br/>StgExternalValuationGateway"]
     N3 --> O["ExecutionContext 写入<br/>fileParseMs"]
 
     O --> P["Step 2: STRUCTURE_STANDARDIZE"]
@@ -296,15 +296,15 @@ flowchart TD
 2. `DefaultOutsourcedDataTaskService` 负责页面侧的单任务执行、重试、停止和批量操作，但底层仍然复用同一条解析执行链。
 3. `ParseExecutionAppServiceImpl` 只负责启动 批量任务 作业，不直接承载业务解析。
 4. `ParseBatchStepSupport` 承载三段式真实业务处理：
-   - `FILE_PARSE`：读取原始文件，选择解析器，生成 `ParsedValuationData`，写入 DWD 解析结果。
+   - `FILE_PARSE`：读取原始文件，选择解析器，生成 `ParsedValuationData`，写入 STG 解析快照。
    - `STRUCTURE_STANDARDIZE`：加载 `t_file_parse_rule` 和 `t_file_parse_source`，完成表头、科目、指标标准化。
    - `STANDARD_LANDING`：把标准化结果投影到 `tr_spv_jjhzgzb` 和 `tr_spv_index`，并回写任务结果。
 5. `OutsourcedDataTaskController` 和任务页只消费 批量任务 元数据与任务读模型，用于展示、查询和人工控制。
 
 从数据层看，这条链路会形成四层产物：
 
-- `DWD` 保存原始解析事实
-- 标准化 DWD 保存标准化事实
+- `STG` 保存原始解析事实
+- 标准化 STG 保存标准化事实
 - `tr_spv_jjhzgzb` 保存科目/持仓类业务结果
 - `tr_spv_index` 保存指标类业务结果
 
@@ -351,7 +351,7 @@ flowchart TD
 - 一次性全流程执行
 - 原始数据查询
 - STG 查询
-- DWD 查询
+- STG 查询
 - 匹配结果查询
 - 单任务查询
 

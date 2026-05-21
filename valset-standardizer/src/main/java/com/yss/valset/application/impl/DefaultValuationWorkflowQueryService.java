@@ -2,13 +2,12 @@ package com.yss.valset.application.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.valset.application.dto.DwdExternalValuationViewDTO;
 import com.yss.valset.application.dto.MatchResultViewDTO;
 import com.yss.valset.application.dto.RawValuationDataViewDTO;
 import com.yss.valset.application.dto.RawValuationSheetDTO;
 import com.yss.valset.application.dto.RawValuationRowDTO;
 import com.yss.valset.application.dto.StgExternalValuationViewDTO;
-import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
+import com.yss.valset.domain.gateway.StgExternalValuationGateway;
 import com.yss.valset.application.service.ValuationWorkflowQueryService;
 import com.yss.valset.domain.gateway.MatchResultGateway;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
@@ -39,7 +38,7 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
     private final ValuationFileDataMapper valuationFileDataMapper;
     private final ValuationSheetStyleMapper valuationSheetStyleMapper;
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
-    private final DwdExternalValuationGateway dwdExternalValuationGateway;
+    private final StgExternalValuationGateway stgExternalValuationGateway;
     private final ExternalValuationStandardizationService standardizationService;
     private final MatchResultGateway matchResultGateway;
     private final ObjectMapper objectMapper;
@@ -47,14 +46,14 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
     public DefaultValuationWorkflowQueryService(ValuationFileDataMapper valuationFileDataMapper,
                                                 ValuationSheetStyleMapper valuationSheetStyleMapper,
                                                 ValsetFileInfoGateway subjectMatchFileInfoGateway,
-                                                DwdExternalValuationGateway dwdExternalValuationGateway,
+                                                StgExternalValuationGateway stgExternalValuationGateway,
                                                 ExternalValuationStandardizationService standardizationService,
                                                 MatchResultGateway matchResultGateway,
                                                 ObjectMapper objectMapper) {
         this.valuationFileDataMapper = valuationFileDataMapper;
         this.valuationSheetStyleMapper = valuationSheetStyleMapper;
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
-        this.dwdExternalValuationGateway = dwdExternalValuationGateway;
+        this.stgExternalValuationGateway = stgExternalValuationGateway;
         this.standardizationService = standardizationService;
         this.matchResultGateway = matchResultGateway;
         this.objectMapper = objectMapper;
@@ -85,35 +84,12 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
 
     @Override
     public StgExternalValuationViewDTO queryStgData(Long fileId) {
-        ParsedValuationData stgValuationData = dwdExternalValuationGateway.findLatestByFileId(fileId);
+        ParsedValuationData stgValuationData = stgExternalValuationGateway.findLatestByFileId(fileId);
         if (stgValuationData == null) {
             throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的 STG 外部估值数据");
         }
-        return StgExternalValuationViewDTO.builder()
-                .fileId(fileId == null ? null : String.valueOf(fileId))
-                .workbookPath(stgValuationData.getWorkbookPath())
-                .sheetName(stgValuationData.getSheetName())
-                .headerRowNumber(stgValuationData.getHeaderRowNumber())
-                .dataStartRowNumber(stgValuationData.getDataStartRowNumber())
-                .fileNameOriginal(stgValuationData.getFileNameOriginal())
-                .title(stgValuationData.getTitle())
-                .basicInfo(stgValuationData.getBasicInfo())
-                .headers(stgValuationData.getHeaders())
-                .headerDetails(stgValuationData.getHeaderDetails())
-                .headerColumns(stgValuationData.getHeaderColumns())
-                .subjects(stgValuationData.getSubjects())
-                .metrics(stgValuationData.getMetrics())
-                .build();
-    }
-
-    @Override
-    public DwdExternalValuationViewDTO queryDwdData(Long fileId) {
-        ParsedValuationData stgValuationData = dwdExternalValuationGateway.findLatestByFileId(fileId);
-        if (stgValuationData == null) {
-            throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的 DWD 外部估值数据");
-        }
         ParsedValuationData viewData = standardizationService.standardize(stgValuationData);
-        return DwdExternalValuationViewDTO.builder()
+        return StgExternalValuationViewDTO.builder()
                 .fileId(fileId == null ? null : String.valueOf(fileId))
                 .workbookPath(stgValuationData.getWorkbookPath())
                 .sheetName(stgValuationData.getSheetName())

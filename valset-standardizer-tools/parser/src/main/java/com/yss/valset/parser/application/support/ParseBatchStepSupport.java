@@ -7,8 +7,8 @@ import com.yss.valset.application.event.lifecycle.ParseLifecycleEventPublisher;
 import com.yss.valset.application.event.lifecycle.ParseLifecycleStage;
 import com.yss.valset.common.support.TaskFailureClassifier;
 import com.yss.valset.common.support.Java8Maps;
-import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
-import com.yss.valset.domain.gateway.DwdJjhzgzbGateway;
+import com.yss.valset.domain.gateway.StgExternalValuationGateway;
+import com.yss.valset.domain.gateway.TrSpvJjhzgzbGateway;
 import com.yss.valset.domain.gateway.TrIndexGateway;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
@@ -54,8 +54,8 @@ public class ParseBatchStepSupport {
 
     private final WorkflowTaskGateway taskGateway;
     private final ValuationDataParserProvider parserProvider;
-    private final DwdExternalValuationGateway dwdExternalValuationGateway;
-    private final DwdJjhzgzbGateway dwdJjhzgzbGateway;
+    private final StgExternalValuationGateway stgExternalValuationGateway;
+    private final TrSpvJjhzgzbGateway trSpvJjhzgzbGateway;
     private final TrIndexGateway trIndexGateway;
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final ExternalValuationStandardizationService standardizationService;
@@ -66,7 +66,7 @@ public class ParseBatchStepSupport {
      * 文件解析步骤。
      *
      * <p>
-     * 负责把原始估值文件解析成统一的中间模型，并写入 DWD 级结果和作业上下文。
+     * 负责把原始估值文件解析成统一的中间模型，并写入 STG 级结果和作业上下文。
      * 这个步骤是整条流水线的入口，后续步骤都依赖它产出的解析结果。
      * </p>
      */
@@ -88,7 +88,7 @@ public class ParseBatchStepSupport {
             ParsedValuationData normalizedParsedData = parsedValuationData.toBuilder()
                     .fileNameOriginal(fileNameOriginal)
                     .build();
-            dwdExternalValuationGateway.saveDwdExternalValuation(taskId, workflowTask.getFileId(), normalizedParsedData);
+            stgExternalValuationGateway.saveStgExternalValuation(taskId, workflowTask.getFileId(), normalizedParsedData);
             publishLifecycleEvent(ParseLifecycleStage.FILE_PARSE, taskId, command, "文件解析完成");
             jobExecutionContext.putLong(JOB_CONTEXT_FILE_PARSE_MS, System.currentTimeMillis() - startedAt);
         } catch (Exception exception) {
@@ -112,7 +112,7 @@ public class ParseBatchStepSupport {
         ParseLifecycleStage currentStage = ParseLifecycleStage.STRUCTURE_STANDARDIZE;
         long startedAt = System.currentTimeMillis();
         try {
-            ParsedValuationData parsedValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
+            ParsedValuationData parsedValuationData = stgExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
             if (parsedValuationData == null) {
                 throw new IllegalStateException("批量任务 结构标准化阶段缺少文件解析结果，taskId=" + taskId);
             }
@@ -144,7 +144,7 @@ public class ParseBatchStepSupport {
         try {
             DataSourceType type = resolveDataSourceType(command);
             String fileNameOriginal = resolveFileNameOriginal(workflowTask);
-            ParsedValuationData sourceValuationData = dwdExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
+            ParsedValuationData sourceValuationData = stgExternalValuationGateway.findLatestByFileId(workflowTask.getFileId());
             if (sourceValuationData == null) {
                 throw new IllegalStateException("批量任务 估值贴源数据落地阶段缺少最新 STG 贴源结果，taskId=" + taskId);
             }
@@ -155,7 +155,7 @@ public class ParseBatchStepSupport {
             ParsedValuationData finalStandardizedValuationData = mergeSourceMetadata(standardizedValuationData, sourceValuationData, fileNameOriginal);
             String sourceTypeName = type.name();
             String sourceSign = fileNameOriginal;
-            dwdJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
+            trSpvJjhzgzbGateway.saveStandardizedJjhzgzb(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
             trIndexGateway.saveStandardizedIndex(taskId, workflowTask.getFileId(), sourceTypeName, sourceSign, finalStandardizedValuationData);
             String resultPayload = buildResultPayload(finalStandardizedValuationData);
             taskGateway.updateTaskTimings(taskId,

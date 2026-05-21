@@ -32,8 +32,11 @@ import {
   UniverSheetsFilterUIPlugin,
 } from "@univerjs/preset-sheets-filter";
 import sheetsFilterZhCN from "@univerjs/preset-sheets-filter/locales/zh-CN";
+import { UniverSheetsDataValidationPreset } from "@univerjs/preset-sheets-data-validation";
+import sheetsDataValidationZhCN from "@univerjs/preset-sheets-data-validation/locales/zh-CN";
 import "@univerjs/presets/lib/styles/preset-sheets-core.css";
 import "@univerjs/preset-sheets-filter/lib/index.css";
+import "@univerjs/preset-sheets-data-validation/lib/index.css";
 
 type NativeWorkbookApi = {
   getId: () => string;
@@ -330,6 +333,10 @@ const registerNativePlugins = (univer: Univer) => {
     ...resolveCorePluginEntries(),
     [UniverSheetsFilterPlugin, {}],
     UniverSheetsFilterUIPlugin,
+    ...UniverSheetsDataValidationPreset({
+      showEditOnDropdown: false,
+      showSearchOnDropdown: true,
+    }).plugins,
     ...props.extraPresets.flatMap((preset) => preset.plugins ?? []),
   ].forEach((entry) => registerPluginEntry(univer, entry));
 };
@@ -344,7 +351,11 @@ const initUniver = () => {
       logLevel: LogLevel.WARN,
       locale: LocaleType.ZH_CN,
       locales: {
-        [LocaleType.ZH_CN]: mergeLocales(sheetsCoreZhCN, sheetsFilterZhCN),
+        [LocaleType.ZH_CN]: mergeLocales(
+          sheetsCoreZhCN,
+          sheetsFilterZhCN,
+          sheetsDataValidationZhCN,
+        ),
       },
     });
     registerNativePlugins(univer);

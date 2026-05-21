@@ -6,9 +6,9 @@
 
 1. 上传外部估值表
 2. 抽取 ODS 原始行数据
-3. 基于 ODS 原始行生成 STG 解析数据，并进一步生成 DWD 标准化数据
+3. 基于 ODS 原始行生成 STG 解析数据，并进一步生成 STG 标准化数据
 4. 将外部估值明细与内部标准科目做匹配打标
-5. 查询 ODS、STG、DWD 和匹配结果
+5. 查询 ODS、STG、STG 和匹配结果
 
 接口前缀：`/api/valuation-workflows`
 
@@ -54,7 +54,7 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 - 现在也可以直接调用 `POST /api/files/upload` 完成同样的文件接入和 ODS 提取流程。
 - filesys 上传依赖 `subject.match.filesys.parent-id` 与 `subject.match.filesys.storage-setting-id`，如果未配置会退回为仅生成本地临时抽取副本。
 
-## 2. 生成 DWD 外部估值标准数据
+## 2. 生成 STG 外部估值解析快照
 
 `POST /api/valuation-workflows/analyze`
 
@@ -74,7 +74,7 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 - `fileId` 仍然作为任务关联键保留，文件主数据来自 `t_transfer_object`
 - `workbookPath` 是解析实际读取的文件路径，优先来自文件主数据里的 `localTempPath` / `realStoragePath`
 - `forceRebuild` 可选，默认 `false`。开启后会强制重新生成解析任务
-- 该接口会先写入 STG 解析表，再写入 DWD 标准表
+- 该接口会先写入 STG 解析表，再写入 STG 解析表
 - 返回的任务结果会包含：
   - `taskStage=PARSE`
   - `taskStartTime`
@@ -101,8 +101,8 @@ curl -X POST "http://localhost:8080/api/valuation-workflows/upload" \
 说明：
 
 - `fileId` 仍然作为任务关联键保留
-- 匹配时优先读取 DWD 标准表
-- 如果 DWD 未生成，系统会回退到当前解析器逻辑
+- 匹配时优先读取 STG 解析表
+- 如果 STG 未生成，系统会回退到当前解析器逻辑
 - `forceRebuild` 可选，默认 `false`。开启后会强制重新生成匹配任务
 - 返回的任务结果会包含：
   - `taskStage=MATCH`
@@ -177,14 +177,14 @@ curl "http://localhost:8080/api/valuation-workflows/10001/stg-data"
 - 原始解析明细
 - 原始解析指标行
 
-## 7. 查询 DWD 标准数据
+## 7. 查询 STG 解析快照
 
-`GET /api/valuation-workflows/{fileId}/dwd-data`
+`GET /api/valuation-workflows/{fileId}/stg-data`
 
 示例：
 
 ```bash
-curl "http://localhost:8080/api/valuation-workflows/10001/dwd-data"
+curl "http://localhost:8080/api/valuation-workflows/10001/stg-data"
 ```
 
 返回结构包括：
@@ -210,9 +210,9 @@ curl "http://localhost:8080/api/valuation-workflows/10001/match-results"
 ## 推荐调用顺序
 
 1. 调 `/upload` 拿到 `fileId`
-2. 调 `/analyze` 生成 DWD 标准数据
+2. 调 `/analyze` 生成 STG 解析快照
 3. 调 `/match` 生成匹配结果
-4. 调 `/raw-data`、`/stg-data`、`/dwd-data`、`/match-results` 查询结果
+4. 调 `/raw-data`、`/stg-data`、`/stg-data`、`/match-results` 查询结果
 
 如果不需要分步控制，直接调用 `/full-process`。
 

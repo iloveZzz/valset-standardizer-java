@@ -1,17 +1,20 @@
 package com.yss.valset.extract.standardization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
 import com.yss.valset.domain.model.HeaderColumnMeta;
 import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
+import com.yss.valset.extract.repository.entity.FileParseSourcePO;
+import com.yss.valset.extract.repository.mapper.FileParseSourceRepository;
 import com.yss.valset.domain.rule.ParseRuleType;
 import com.yss.valset.extract.rule.ParseRuleStepDescriptor;
 import com.yss.valset.extract.rule.ParseRuleTemplateResolver;
 import com.yss.valset.extract.rule.QlexpressParseRuleEngine;
 import com.yss.valset.extract.standardization.mapping.QlexpressHeaderMappingEngine;
 import com.yss.valset.qlexpress.domain.runtime.QlexpressFunctionScript;
-import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.util.Collections;
@@ -20,6 +23,12 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ExternalValuationStandardizationServiceDynamicRuleTest {
 
@@ -71,6 +80,49 @@ class ExternalValuationStandardizationServiceDynamicRuleTest {
         assertThat(metric.getStandardName()).isEqualTo("资产净值");
         assertThat(metric.getStandardValueText()).isEqualTo("20");
         assertThat(metric.getMappingStatus()).isEqualTo("MAPPED");
+    }
+
+    @Test
+    void shouldAutoRegisterUnmappedColumnAndMetricSourceRows() throws Exception {
+        FileParseSourceRepository sourceRepository = mock(FileParseSourceRepository.class);
+        when(sourceRepository.selectList(any())).thenReturn(Collections.emptyList());
+
+        ExternalValuationStandardizationService service = new ExternalValuationStandardizationService(
+                objectMapper,
+                null,
+                sourceRepository,
+                new QlexpressParseRuleEngine(objectMapper, ExternalValuationStandardizationServiceDynamicRuleTest::qlexpressScripts),
+                new QlexpressHeaderMappingEngine(),
+                new TestRuleResolver());
+
+        ParsedValuationData data = ParsedValuationData.builder()
+                .workbookPath("/tmp/valuation.xlsx")
+                .fileNameOriginal("valuation.xlsx")
+                .sheetName("ODS_RAW_DATA")
+                .headers(java.util.Arrays.asList("科目代码", "未映射列"))
+                .headerColumns(java.util.Arrays.asList(
+                        HeaderColumnMeta.builder().columnIndex(0).headerName("科目代码").headerPath("科目代码").pathSegments(java.util.Collections.singletonList("科目代码")).build(),
+                        HeaderColumnMeta.builder().columnIndex(1).headerName("未映射列").headerPath("未映射列").pathSegments(java.util.Collections.singletonList("未映射列")).build()))
+                .metrics(java.util.Collections.singletonList(MetricRecord.builder()
+                        .sheetName("ODS_RAW_DATA")
+                        .rowDataNumber(4)
+                        .metricName("未映射指标")
+                        .metricType("metric_data")
+                        .value("20")
+                        .rawValues(com.yss.valset.common.support.Java8Maps.of("value", "20"))
+                        .build()))
+                .build();
+
+        service.standardize(data);
+
+        ArgumentCaptor<FileParseSourcePO> captor = ArgumentCaptor.forClass(FileParseSourcePO.class);
+        verify(sourceRepository, times(2)).insert(captor.capture());
+        assertThat(captor.getAllValues()).extracting(FileParseSourcePO::getColumnName)
+                .containsExactlyInAnyOrder("未映射列", "未映射指标");
+        assertThat(captor.getAllValues()).extracting(FileParseSourcePO::getFileExtInfo)
+                .containsExactlyInAnyOrder("{\"regionName\":\"column\"}", "{\"regionName\":\"metric\"}");
+        assertThat(captor.getAllValues()).extracting(FileParseSourcePO::getStatus)
+                .containsOnly(Boolean.FALSE);
     }
 
     private ExternalValuationStandardizationService service(ParseRuleTemplateResolver resolver) {
@@ -164,4 +216,5 @@ class ExternalValuationStandardizationServiceDynamicRuleTest {
             return rules.get(ruleType);
         }
     }
+
 }

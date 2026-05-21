@@ -82,7 +82,7 @@ flowchart LR
     E1 --> ODS["ODS 原始行表<br/>t_ods_valuation_filedata"]
     A --> PQ["待解析事件队列<br/>t_parse_queue"]
     PQ --> E2
-    E2 --> STG["STG / DWD 结构化结果<br/>t_dwd_external_valuation_* / t_stg_external_valuation_*"]
+    E2 --> STG["STG 结构化结果<br/>t_stg_external_valuation_*"]
     E2 --> TR["标准落地表<br/>tr_spv_jjhzgzb / tr_spv_index"]
     E3 --> RES["匹配结果表<br/>t_subject_match_result"]
     A --> QRY["查询服务<br/>DefaultValuationWorkflowQueryService"]
@@ -122,7 +122,7 @@ flowchart LR
 2. 通过 `ValuationDataParserProvider` 路由到对应解析器。
 3. 当前主线是 `OdsValuationDataParser` 和 `CsvValuationDataParser`。
 4. 解析得到标题、基础信息、多层表头、科目行、指标行。
-5. 解析结果落入 STG / DWD / 标准落地表。
+5. 解析结果落入 STG / STG / 标准落地表。
 
 ### 4.5 标准化
 
@@ -143,7 +143,7 @@ flowchart LR
 
 - ODS 原始数据
 - STG 解析快照
-- DWD 标准数据
+- STG 解析快照
 - 匹配结果
 
 ## 5. 任务模型

@@ -7,6 +7,7 @@ import {
   ForkOutlined,
   FundProjectionScreenOutlined,
   InboxOutlined,
+  IssuesCloseOutlined,
   FunctionOutlined,
   ProjectOutlined,
   SettingOutlined,
@@ -66,6 +67,11 @@ export const workspaceNav: Array<{
         title: "解析链路监控",
         path: "/task-management/valuation-monitor",
         icon: ForkOutlined,
+      },
+      {
+        title: "解析问题处理",
+        path: "/task-management/parse-issue-handling",
+        icon: IssuesCloseOutlined,
       },
       {
         title: "函数库维护",
@@ -157,6 +163,22 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/BatchValuationTaskMonitor/index.vue"),
     meta: {
       title: "解析链路监控",
+      keepAlive: false,
+    },
+  },
+  {
+    path: "/task-management/product-info-extraction",
+    redirect: {
+      path: "/task-management/parse-issue-handling",
+      query: { tab: "productInfoExtraction" },
+    },
+  },
+  {
+    path: "/task-management/parse-issue-handling",
+    name: "task-management-parse-issue-handling",
+    component: () => import("@/views/ParseIssueHandling/index.vue"),
+    meta: {
+      title: "解析问题处理",
       keepAlive: false,
     },
   },

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yss.valset.task.infrastructure.mapper.product.ProductInfoExtractionQueryMapper">
+
+    <sql id="candidateFilters">
+        WHERE o.status = 'IDENTIFIED'
+        <if test="originalName != null and originalName != ''">
+            AND o.original_name LIKE
+            <choose>
+                <when test="_databaseId == 'Oracle'">
+                    '%' || #{originalName} || '%'
+                </when>
+                <otherwise>
+                    CONCAT(CONCAT('%', #{originalName}), '%')
+                </otherwise>
+            </choose>
+        </if>
+        AND EXISTS (
+            SELECT 1
+            FROM t_transfer_delivery_record dr
+            WHERE dr.transfer_id = o.transfer_id
+              AND dr.execute_status = 'SUCCESS'
+        )
+        AND EXISTS (
+            SELECT 1
+            FROM t_transfer_object_tag valuation_tag
+            WHERE valuation_tag.transfer_id = o.transfer_id
+              AND valuation_tag.tag_code = 'VALUATION_TABLE'
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM t_transfer_object_tag product_tag
+            WHERE product_tag.transfer_id = o.transfer_id
+              AND product_tag.tag_code = 'PRODUCT_MATCH_RULE'
+        )
+    </sql>
+
+    <sql id="candidateBaseQuery">
+        SELECT
+            o.transfer_id AS transferId,
+            o.original_name AS originalName,
+            o.source_type AS sourceType,
+            o.source_code AS sourceCode,
+            o.status AS status,
+            o.received_at AS received_at,
+            (
+                SELECT MAX(valuation_tag.tag_name)
+                FROM t_transfer_object_tag valuation_tag
+                WHERE valuation_tag.transfer_id = o.transfer_id
+                  AND valuation_tag.tag_code = 'VALUATION_TABLE'
+            ) AS valuationTagName
+        FROM t_transfer_object o
+        <include refid="candidateFilters"/>
+    </sql>
+
+    <select id="countCandidates" resultType="long">
+        SELECT COUNT(1)
+        FROM t_transfer_object o
+        <include refid="candidateFilters"/>
+    </select>
+
+    <select id="countProductOptions" resultType="long">
+        SELECT COUNT(1)
+        FROM (
+            <include refid="productOptionsBaseQuery"/>
+        ) t
+    </select>
+
+    <select id="pageCandidates" resultType="com.yss.valset.task.infrastructure.dto.product.ProductInfoExtractionCandidateRow">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                SELECT *
+                FROM (
+                    SELECT base_query.*, ROW_NUMBER() OVER (ORDER BY base_query.received_at DESC, base_query.transferId DESC) AS rn
+                    FROM (
+                        <include refid="candidateBaseQuery"/>
+                    ) base_query
+                )
+                WHERE rn &gt; #{offset}
+                  AND rn &lt;= #{offset} + #{limit}
+                ORDER BY rn
+            </when>
+            <otherwise>
+                <include refid="candidateBaseQuery"/>
+                ORDER BY received_at DESC, transferId DESC
+                LIMIT #{limit} OFFSET #{offset}
+            </otherwise>
+        </choose>
+    </select>
+
+    <sql id="productOptionsFilters">
+        WHERE 1 = 1
+        <if test="keyword != null and keyword != ''">
+            AND (
+                UPPER(COALESCE(p.pd_nm, '')) LIKE
+                <choose>
+                    <when test="_databaseId == 'Oracle'">
+                        '%' || UPPER(#{keyword}) || '%'
+                    </when>
+                    <otherwise>
+                        CONCAT(CONCAT('%', UPPER(#{keyword})), '%')
+                    </otherwise>
+                </choose>
+                OR UPPER(COALESCE(p.pd_cd, '')) LIKE
+                <choose>
+                    <when test="_databaseId == 'Oracle'">
+                        '%' || UPPER(#{keyword}) || '%'
+                    </when>
+                    <otherwise>
+                        CONCAT(CONCAT('%', UPPER(#{keyword})), '%')
+                    </otherwise>
+                </choose>
+                OR UPPER(COALESCE(p.manage_org_cd, '')) LIKE
+                <choose>
+                    <when test="_databaseId == 'Oracle'">
+                        '%' || UPPER(#{keyword}) || '%'
+                    </when>
+                    <otherwise>
+                        CONCAT(CONCAT('%', UPPER(#{keyword})), '%')
+                    </otherwise>
+                </choose>
+            )
+        </if>
+    </sql>
+
+    <sql id="productOptionsBaseQuery">
+        SELECT DISTINCT
+            p.pd_cd AS productCode,
+            p.pd_nm AS productName,
+            p.manage_org_cd AS managerCode,
+            COALESCE(s.source_name, p.manage_org_cd) AS managerName
+        FROM TM_SPV_PF_BSC_INFO p
+        LEFT JOIN t_transfer_source s
+            ON s.source_code = p.manage_org_cd
+        <include refid="productOptionsFilters"/>
+    </sql>
+
+    <select id="pageProductOptions" resultType="com.yss.valset.task.application.dto.product.ProductInfoOptionDTO">
+        <choose>
+            <when test="_databaseId == 'Oracle'">
+                SELECT *
+                FROM (
+                    SELECT base_query.*, ROW_NUMBER() OVER (ORDER BY base_query.productName ASC, base_query.productCode ASC) AS rn
+                    FROM (
+                        <include refid="productOptionsBaseQuery"/>
+                    ) base_query
+                )
+                WHERE rn &gt; #{offset}
+                  AND rn &lt;= #{offset} + #{limit}
+                ORDER BY rn
+            </when>
+            <otherwise>
+                <include refid="productOptionsBaseQuery"/>
+                ORDER BY productName ASC, productCode ASC
+                LIMIT #{limit} OFFSET #{offset}
+            </otherwise>
+        </choose>
+    </select>
+</mapper>

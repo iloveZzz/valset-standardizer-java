@@ -284,7 +284,7 @@ sheet 样式快照表。
 
 对应实体：
 
-- `DwdExternalValuationPO`
+- `StgExternalValuationPO`
 
 主要职责：
 
@@ -326,7 +326,7 @@ sheet 样式快照表。
 
 对应实体：
 
-- `DwdExternalValuationSubjectPO`
+- `StgExternalValuationSubjectPO`
 
 主要职责：
 
@@ -339,16 +339,16 @@ sheet 样式快照表。
 
 对应实体：
 
-- `DwdExternalValuationMetricPO`
+- `StgExternalValuationMetricPO`
 
 主要职责：
 
 - 保存解析出的指标行
 - 记录指标名称、类型和值
 
-### 6.6 DWD 外部估值中间表移除说明
+### 6.6 STG 外部估值中间表移除说明
 
-`t_dwd_external_valuation_subject` 和 `t_dwd_external_valuation_metric` 已移除。标准化结果不再保存中间快照，改为基于最新 `t_stg_external_valuation*` 运行时标准化，并直接落到 `tr_spv_jjhzgzb` / `tr_spv_index`。
+旧外部估值中间表已移除。标准化结果不再保存中间快照，改为基于最新 `t_stg_external_valuation*` 运行时标准化，并直接落到 `tr_spv_jjhzgzb` / `tr_spv_index`。
 - 保留标准指标码、标准值和映射依据
 
 ## 7. 匹配结果层
@@ -527,11 +527,11 @@ sheet 样式快照表。
 
 - `t_ods_valuation_filedata` 是原始输入
 - `t_stg_external_valuation*` 是结构化解析结果
-- `t_dwd_external_valuation*` 是标准化结果
+- `t_stg_external_valuation*` 是解析快照结果
 
 ### 11.4 解析结果与匹配结果
 
-- 匹配优先消费 DWD / 标准化结果
+- 匹配优先消费 STG / 标准化结果
 - 如果没有标准化结果，再回退到解析器
 
 ### 11.5 文件主数据与接入日志
@@ -603,11 +603,11 @@ sheet 样式快照表。
 
 - `/files/*` 主要读写文件主数据、接入日志和样式快照
 - `/api/valuation-workflows/upload` 主要写文件主数据、接入日志和 ODS
-- `/api/valuation-workflows/analyze` 主要写 STG / DWD 解析结果
+- `/api/valuation-workflows/analyze` 主要写 STG / STG 解析快照
 - `/api/valuation-workflows/match` 主要写匹配结果
 - `/api/valuation-workflows/{fileId}/raw-data` 读 ODS
 - `/api/valuation-workflows/{fileId}/stg-data` 读 STG
-- `/api/valuation-workflows/{fileId}/dwd-data` 读 DWD
+- `/api/valuation-workflows/{fileId}/stg-data` 读 STG
 - `/api/valuation-workflows/{fileId}/match-results` 读匹配结果
 - `/outsourced-data-tasks/*` 读 批量任务 元数据和任务读模型
 - `/api/etl/workflows/*` 读写通用 ETL 定义、实例和阶段
@@ -623,4 +623,4 @@ sheet 样式快照表。
 
 当前数据库设计的核心可以概括为：
 
-**文件主数据负责“是谁”，ODS 负责“原始是什么”，STG/DWD 负责“解析成什么”，匹配结果负责“最终对应什么”，批量任务 和 db-scheduler 负责“怎么跑”。**
+**文件主数据负责“是谁”，ODS 负责“原始是什么”，STG/STG 负责“解析成什么”，匹配结果负责“最终对应什么”，批量任务 和 db-scheduler 负责“怎么跑”。**

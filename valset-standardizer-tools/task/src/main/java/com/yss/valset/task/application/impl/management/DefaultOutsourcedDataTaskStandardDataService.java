@@ -8,16 +8,16 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.extract.support.ExcelUniverSnapshotSupport;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationBasicInfoPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationHeaderPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationMetricPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationSubjectPO;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationBasicInfoRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationHeaderRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationMetricRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationSubjectRepository;
+import com.yss.valset.extract.repository.entity.StgExternalValuationBasicInfoPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationHeaderPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationMetricPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationSubjectPO;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationBasicInfoRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationHeaderRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationMetricRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationSubjectRepository;
 import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExportCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
@@ -75,11 +75,11 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
     }
 
     private final OutsourcedDataTaskGateway outsourcedDataTaskGateway;
-    private final DwdExternalValuationRepository valuationRepository;
-    private final DwdExternalValuationBasicInfoRepository basicInfoRepository;
-    private final DwdExternalValuationHeaderRepository headerRepository;
-    private final DwdExternalValuationSubjectRepository subjectRepository;
-    private final DwdExternalValuationMetricRepository metricRepository;
+    private final StgExternalValuationRepository valuationRepository;
+    private final StgExternalValuationBasicInfoRepository basicInfoRepository;
+    private final StgExternalValuationHeaderRepository headerRepository;
+    private final StgExternalValuationSubjectRepository subjectRepository;
+    private final StgExternalValuationMetricRepository metricRepository;
     private final DatabaseDialectSupport databaseDialectSupport;
     private final ObjectMapper objectMapper;
     private final UniverWorkbookExportSupport univerWorkbookExportSupport;
@@ -91,16 +91,16 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
     @Override
     public OutsourcedDataTaskStandardBasicDTO queryBasic(String batchId) {
         OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
-        DwdExternalValuationPO valuation = findValuation(batch);
+        StgExternalValuationPO valuation = findValuation(batch);
         if (valuation == null) {
             return emptyBasic(batch);
         }
         Long valuationId = valuation.getId();
-        List<DwdExternalValuationBasicInfoPO> basicInfos = basicInfoRepository.selectList(
-                Wrappers.lambdaQuery(DwdExternalValuationBasicInfoPO.class)
-                        .eq(DwdExternalValuationBasicInfoPO::getValuationId, valuationId)
-                        .orderByAsc(DwdExternalValuationBasicInfoPO::getSortOrder)
-                        .orderByAsc(DwdExternalValuationBasicInfoPO::getId)
+        List<StgExternalValuationBasicInfoPO> basicInfos = basicInfoRepository.selectList(
+                Wrappers.lambdaQuery(StgExternalValuationBasicInfoPO.class)
+                        .eq(StgExternalValuationBasicInfoPO::getValuationId, valuationId)
+                        .orderByAsc(StgExternalValuationBasicInfoPO::getSortOrder)
+                        .orderByAsc(StgExternalValuationBasicInfoPO::getId)
         );
         OutsourcedDataTaskStandardBasicDTO dto = new OutsourcedDataTaskStandardBasicDTO();
         dto.setBatchId(batchId);
@@ -114,12 +114,12 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         dto.setDataStartRowNumber(valuation.getDataStartRowNumber());
         dto.setBasicInfoCount((long) basicInfos.size());
         dto.setSubjectCount(subjectRepository.selectCount(
-                Wrappers.lambdaQuery(DwdExternalValuationSubjectPO.class)
-                        .eq(DwdExternalValuationSubjectPO::getValuationId, valuationId)
+                Wrappers.lambdaQuery(StgExternalValuationSubjectPO.class)
+                        .eq(StgExternalValuationSubjectPO::getValuationId, valuationId)
         ));
         dto.setMetricCount(metricRepository.selectCount(
-                Wrappers.lambdaQuery(DwdExternalValuationMetricPO.class)
-                        .eq(DwdExternalValuationMetricPO::getValuationId, valuationId)
+                Wrappers.lambdaQuery(StgExternalValuationMetricPO.class)
+                        .eq(StgExternalValuationMetricPO::getValuationId, valuationId)
         ));
         dto.setBasicRows(buildBasicRows(valuation, basicInfos));
         dto.setRawColumns(loadRawColumns(valuationId));
@@ -128,20 +128,20 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
 
     @Override
     public List<OutsourcedDataTaskStandardSubjectDTO> listSubjects(String batchId, String keyword) {
-        DwdExternalValuationPO valuation = findValuation(requireBatch(batchId));
+        StgExternalValuationPO valuation = findValuation(requireBatch(batchId));
         if (valuation == null) {
             return Collections.emptyList();
         }
         String normalizedKeyword = normalizeKeyword(keyword);
-        LambdaQueryWrapper<DwdExternalValuationSubjectPO> query = Wrappers.lambdaQuery(DwdExternalValuationSubjectPO.class)
-                .eq(DwdExternalValuationSubjectPO::getValuationId, valuation.getId())
+        LambdaQueryWrapper<StgExternalValuationSubjectPO> query = Wrappers.lambdaQuery(StgExternalValuationSubjectPO.class)
+                .eq(StgExternalValuationSubjectPO::getValuationId, valuation.getId())
                 .and(StringUtils.hasText(normalizedKeyword), wrapper -> wrapper
-                        .like(DwdExternalValuationSubjectPO::getSubjectCode, normalizedKeyword)
+                        .like(StgExternalValuationSubjectPO::getSubjectCode, normalizedKeyword)
                         .or()
-                        .like(DwdExternalValuationSubjectPO::getSubjectName, normalizedKeyword))
-                .orderByAsc(DwdExternalValuationSubjectPO::getRowDataNumber)
-                .orderByAsc(DwdExternalValuationSubjectPO::getId);
-        List<DwdExternalValuationSubjectPO> records = subjectRepository.selectList(query);
+                        .like(StgExternalValuationSubjectPO::getSubjectName, normalizedKeyword))
+                .orderByAsc(StgExternalValuationSubjectPO::getRowDataNumber)
+                .orderByAsc(StgExternalValuationSubjectPO::getId);
+        List<StgExternalValuationSubjectPO> records = subjectRepository.selectList(query);
         List<OutsourcedDataTaskStandardRawColumnDTO> rawColumns = loadRawColumns(valuation.getId());
         return records == null
                 ? Collections.emptyList()
@@ -152,22 +152,22 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
 
     @Override
     public List<OutsourcedDataTaskStandardMetricDTO> listMetrics(String batchId, String keyword) {
-        DwdExternalValuationPO valuation = findValuation(requireBatch(batchId));
+        StgExternalValuationPO valuation = findValuation(requireBatch(batchId));
         if (valuation == null) {
             return Collections.emptyList();
         }
         String normalizedKeyword = normalizeKeyword(keyword);
-        LambdaQueryWrapper<DwdExternalValuationMetricPO> query = Wrappers.lambdaQuery(DwdExternalValuationMetricPO.class)
-                .eq(DwdExternalValuationMetricPO::getValuationId, valuation.getId())
+        LambdaQueryWrapper<StgExternalValuationMetricPO> query = Wrappers.lambdaQuery(StgExternalValuationMetricPO.class)
+                .eq(StgExternalValuationMetricPO::getValuationId, valuation.getId())
                 .and(StringUtils.hasText(normalizedKeyword), wrapper -> wrapper
-                        .like(DwdExternalValuationMetricPO::getMetricName, normalizedKeyword)
+                        .like(StgExternalValuationMetricPO::getMetricName, normalizedKeyword)
                         .or()
-                        .like(DwdExternalValuationMetricPO::getMetricType, normalizedKeyword)
+                        .like(StgExternalValuationMetricPO::getMetricType, normalizedKeyword)
                         .or()
-                        .like(DwdExternalValuationMetricPO::getMetricValue, normalizedKeyword))
-                .orderByAsc(DwdExternalValuationMetricPO::getRowDataNumber)
-                .orderByAsc(DwdExternalValuationMetricPO::getId);
-        List<DwdExternalValuationMetricPO> records = metricRepository.selectList(query);
+                        .like(StgExternalValuationMetricPO::getMetricValue, normalizedKeyword))
+                .orderByAsc(StgExternalValuationMetricPO::getRowDataNumber)
+                .orderByAsc(StgExternalValuationMetricPO::getId);
+        List<StgExternalValuationMetricPO> records = metricRepository.selectList(query);
         List<OutsourcedDataTaskStandardRawColumnDTO> rawColumns = loadRawColumns(valuation.getId());
         return records == null
                 ? Collections.emptyList()
@@ -241,7 +241,7 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
 
     private RawWorkbookSource resolveRawWorkbookSource(OutsourcedDataTaskBatchDTO batch) {
         Long fileId = parseLong(batch.getFileId());
-        DwdExternalValuationPO valuation = findValuation(batch);
+        StgExternalValuationPO valuation = findValuation(batch);
         ValsetFileInfo fileInfo = fileId == null ? null : valsetFileInfoGateway.findById(fileId);
         TransferObject transferObject = fileId == null ? null : transferObjectGateway.findById(String.valueOf(fileId)).orElse(null);
         String fileName = firstText(
@@ -422,7 +422,7 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         return fileName.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 
-    private DwdExternalValuationPO findValuation(OutsourcedDataTaskBatchDTO batch) {
+    private StgExternalValuationPO findValuation(OutsourcedDataTaskBatchDTO batch) {
         return findLatestValuation(parseLong(batch.getFileId()), batch.getTaskId());
     }
 
@@ -439,29 +439,29 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         return dto;
     }
 
-    private DwdExternalValuationPO findLatestValuation(Long fileId, Long taskId) {
-        DwdExternalValuationPO valuation = null;
+    private StgExternalValuationPO findLatestValuation(Long fileId, Long taskId) {
+        StgExternalValuationPO valuation = null;
         if (fileId != null) {
             valuation = valuationRepository.selectOne(
-                    Wrappers.lambdaQuery(DwdExternalValuationPO.class)
-                            .eq(DwdExternalValuationPO::getFileId, fileId)
-                            .orderByDesc(DwdExternalValuationPO::getId)
+                    Wrappers.lambdaQuery(StgExternalValuationPO.class)
+                            .eq(StgExternalValuationPO::getFileId, fileId)
+                            .orderByDesc(StgExternalValuationPO::getId)
                             .last(databaseDialectSupport.limitClause(1))
             );
         }
         if (valuation == null && taskId != null) {
             valuation = valuationRepository.selectOne(
-                    Wrappers.lambdaQuery(DwdExternalValuationPO.class)
-                            .eq(DwdExternalValuationPO::getTaskId, taskId)
-                            .orderByDesc(DwdExternalValuationPO::getId)
+                    Wrappers.lambdaQuery(StgExternalValuationPO.class)
+                            .eq(StgExternalValuationPO::getTaskId, taskId)
+                            .orderByDesc(StgExternalValuationPO::getId)
                             .last(databaseDialectSupport.limitClause(1))
             );
         }
         return valuation;
     }
 
-    private List<OutsourcedDataTaskStandardBasicRowDTO> buildBasicRows(DwdExternalValuationPO valuation,
-            List<DwdExternalValuationBasicInfoPO> basicInfos) {
+    private List<OutsourcedDataTaskStandardBasicRowDTO> buildBasicRows(StgExternalValuationPO valuation,
+            List<StgExternalValuationBasicInfoPO> basicInfos) {
         List<OutsourcedDataTaskStandardBasicRowDTO> rows = new ArrayList<>();
         appendBasicRow(rows, "主表信息", "估值ID", stringValue(valuation.getId()));
         appendBasicRow(rows, "主表信息", "文件ID", stringValue(valuation.getFileId()));
@@ -471,7 +471,7 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         appendBasicRow(rows, "主表信息", "标题", valuation.getTitle());
         appendBasicRow(rows, "主表信息", "表头行号", stringValue(valuation.getHeaderRowNumber()));
         appendBasicRow(rows, "主表信息", "数据起始行号", stringValue(valuation.getDataStartRowNumber()));
-        for (DwdExternalValuationBasicInfoPO basicInfo : basicInfos) {
+        for (StgExternalValuationBasicInfoPO basicInfo : basicInfos) {
             appendBasicRow(rows, "基础信息", basicInfo.getInfoKey(), basicInfo.getInfoValue());
         }
         return rows;
@@ -487,17 +487,17 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
     }
 
     private List<OutsourcedDataTaskStandardRawColumnDTO> loadRawColumns(Long valuationId) {
-        List<DwdExternalValuationHeaderPO> headers = headerRepository.selectList(
-                Wrappers.lambdaQuery(DwdExternalValuationHeaderPO.class)
-                        .eq(DwdExternalValuationHeaderPO::getValuationId, valuationId)
-                        .orderByAsc(DwdExternalValuationHeaderPO::getColumnIndex)
-                        .orderByAsc(DwdExternalValuationHeaderPO::getId)
+        List<StgExternalValuationHeaderPO> headers = headerRepository.selectList(
+                Wrappers.lambdaQuery(StgExternalValuationHeaderPO.class)
+                        .eq(StgExternalValuationHeaderPO::getValuationId, valuationId)
+                        .orderByAsc(StgExternalValuationHeaderPO::getColumnIndex)
+                        .orderByAsc(StgExternalValuationHeaderPO::getId)
         );
         if (headers == null || headers.isEmpty()) {
             return Collections.emptyList();
         }
         List<OutsourcedDataTaskStandardRawColumnDTO> columns = new ArrayList<>();
-        for (DwdExternalValuationHeaderPO header : headers) {
+        for (StgExternalValuationHeaderPO header : headers) {
             Integer columnIndex = header.getColumnIndex();
             if (columnIndex == null || columnIndex < 2) {
                 continue;
@@ -515,7 +515,7 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         return columns;
     }
 
-    private OutsourcedDataTaskStandardSubjectDTO toSubjectDTO(DwdExternalValuationSubjectPO po,
+    private OutsourcedDataTaskStandardSubjectDTO toSubjectDTO(StgExternalValuationSubjectPO po,
             List<OutsourcedDataTaskStandardRawColumnDTO> rawColumns) {
         OutsourcedDataTaskStandardSubjectDTO dto = new OutsourcedDataTaskStandardSubjectDTO();
         dto.setId(po.getId());
@@ -533,7 +533,7 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         return dto;
     }
 
-    private OutsourcedDataTaskStandardMetricDTO toMetricDTO(DwdExternalValuationMetricPO po,
+    private OutsourcedDataTaskStandardMetricDTO toMetricDTO(StgExternalValuationMetricPO po,
             List<OutsourcedDataTaskStandardRawColumnDTO> rawColumns) {
         OutsourcedDataTaskStandardMetricDTO dto = new OutsourcedDataTaskStandardMetricDTO();
         dto.setId(po.getId());

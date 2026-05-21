@@ -1,6 +1,8 @@
 package com.yss.valset.extract.standardization;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.domain.model.HeaderColumnMeta;
 import com.yss.valset.domain.model.MappingDecision;
@@ -8,6 +10,7 @@ import com.yss.valset.domain.model.MappingQualityReport;
 import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
+import com.yss.valset.common.support.Java8Maps;
 import com.yss.valset.domain.rule.ParseRuleType;
 import com.yss.valset.extract.rule.ParseRuleStepDescriptor;
 import com.yss.valset.extract.repository.entity.FileParseRulePO;
@@ -46,6 +49,11 @@ import java.util.stream.Collectors;
 public class ExternalValuationStandardizationService {
 
     private static final String ERROR_POLICY_FAIL_FAST = "FAIL_FAST";
+    private static final String SOURCE_FILE_TYPE = "ALL";
+    private static final String SOURCE_REGION_COLUMN = "column";
+    private static final String SOURCE_REGION_METRIC = "metric";
+    private static final String SOURCE_REGION_KEY = "regionName";
+    private static final String AUTO_REGISTER_USER = "system";
 
     private final ObjectMapper objectMapper;
     private final FileParseRuleRepository parseRuleRepository;
@@ -148,6 +156,7 @@ public class ExternalValuationStandardizationService {
                         normalizeRule))
                 .collect(java.util.stream.Collectors.toList());
         logSubjectMetricMappingSummary(standardizedSubjects, standardizedMetrics);
+        autoRegisterUnmappedSourceEntries(headerQualitySummary, parsedValuationData.getHeaders(), parsedValuationData.getMetrics(), dictionary);
 
         // Step 3: 汇总质量报告，便于后续监控与回放补规则
         MappingQualityReport mappingQualityReport = buildMappingQualityReport(
@@ -239,8 +248,8 @@ public class ExternalValuationStandardizationService {
             }
         }
 
-        ParseSourceEntry subjectCodeEntry = resolveSource(subject.getSubjectCode(), dictionary);
-        ParseSourceEntry subjectNameEntry = resolveSource(subject.getSubjectName(), dictionary);
+        ParseSourceEntry subjectCodeEntry = resolveSource(subject.getSubjectCode(), dictionary, SOURCE_REGION_COLUMN);
+        ParseSourceEntry subjectNameEntry = resolveSource(subject.getSubjectName(), dictionary, SOURCE_REGION_COLUMN);
         Long mappingRuleId = firstNonNull(subjectCodeEntry, subjectNameEntry, entry -> entry.getRule().getId());
         Long mappingSourceId = firstNonNull(subjectCodeEntry, subjectNameEntry, ParseSourceEntry::getId);
 
@@ -260,7 +269,7 @@ public class ExternalValuationStandardizationService {
     }
 
     private MetricRecord standardizeMetric(MetricRecord metric, Dictionary dictionary) {
-        ParseSourceEntry sourceEntry = resolveSource(metric.getMetricName(), dictionary);
+        ParseSourceEntry sourceEntry = resolveSource(metric.getMetricName(), dictionary, SOURCE_REGION_METRIC);
         ParseRuleEntry ruleEntry = sourceEntry == null ? null : sourceEntry.getRule();
         BuiltinMetricAliasCatalog.BuiltinMetricMapping builtinMetric = sourceEntry == null
                 ? BuiltinMetricAliasCatalog.match(metric.getMetricName())
@@ -494,7 +503,7 @@ public class ExternalValuationStandardizationService {
         HeaderMappingLookup lookup = new HeaderMappingLookup() {
             @Override
             public HeaderMappingCandidate findExact(String text) {
-                ParseSourceEntry source = resolveSourceExact(text, dictionary);
+                ParseSourceEntry source = resolveSourceExact(text, dictionary, SOURCE_REGION_COLUMN);
                 if (source == null || source.getRule() == null || source.getRule().getColumnMap() == null) {
                     return null;
                 }
@@ -503,7 +512,7 @@ public class ExternalValuationStandardizationService {
 
             @Override
             public HeaderMappingCandidate findAliasContains(String text) {
-                ParseSourceEntry source = resolveAliasContains(text, dictionary);
+                ParseSourceEntry source = resolveAliasContains(text, dictionary, SOURCE_REGION_COLUMN);
                 if (source != null && source.getRule() != null && source.getRule().getColumnMap() != null) {
                     return new HeaderMappingCandidate(source.getRule().getId(), source.getId(), source.getRule().getColumnMap());
                 }
@@ -514,25 +523,43 @@ public class ExternalValuationStandardizationService {
     }
 
     private ParseSourceEntry resolveSource(String text, Dictionary dictionary) {
+        return resolveSource(text, dictionary, SOURCE_REGION_COLUMN);
+    }
+
+    private ParseSourceEntry resolveSource(String text, Dictionary dictionary, String regionName) {
         if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String trimmedText = text.trim();
-        ParseSourceEntry entry = resolveSourceExact(trimmedText, dictionary);
-        ParseSourceEntry segmentEntry = resolveSourceBySegments(trimmedText, dictionary);
+        ParseSourceEntry entry = resolveSourceExact(trimmedText, dictionary, regionName);
+        ParseSourceEntry segmentEntry = resolveSourceBySegments(trimmedText, dictionary, regionName);
         if (entry != null) {
-            return chooseSourceByRule(trimmedText, entry, segmentEntry, resolveAliasContains(trimmedText, dictionary));
+            return chooseSourceByRule(trimmedText, entry, segmentEntry, resolveAliasContains(trimmedText, dictionary, regionName));
         }
-        ParseSourceEntry aliasEntry = resolveAliasContains(trimmedText, dictionary);
+        ParseSourceEntry aliasEntry = resolveAliasContains(trimmedText, dictionary, regionName);
         return chooseSourceByRule(trimmedText, entry, segmentEntry, aliasEntry);
     }
 
-    private ParseSourceEntry resolveSourceExact(String text, Dictionary dictionary) {
+    private ParseSourceEntry resolveSourceExact(String text, Dictionary dictionary, String regionName) {
         if (text == null || text.trim().isEmpty()) {
             return null;
         }
-        Map<String, ParseSourceEntry> sourceByCode = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByCode();
-        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByAlias();
+        Map<String, ParseSourceEntry> sourceByCode = lookupRegionMap(dictionary == null ? null : dictionary.sourceByCodeByRegion(), regionName);
+        Map<String, ParseSourceEntry> sourceByAlias = lookupRegionMap(dictionary == null ? null : dictionary.sourceByAliasByRegion(), regionName);
+        if (sourceByCode != null) {
+            ParseSourceEntry entry = sourceByCode.get(text);
+            if (entry != null) {
+                return entry;
+            }
+        }
+        if (sourceByAlias != null) {
+            ParseSourceEntry entry = sourceByAlias.get(text);
+            if (entry != null) {
+                return entry;
+            }
+        }
+        sourceByCode = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByCode();
+        sourceByAlias = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByAlias();
         ParseSourceEntry entry = sourceByCode.get(text);
         if (entry != null) {
             return entry;
@@ -540,7 +567,7 @@ public class ExternalValuationStandardizationService {
         return sourceByAlias.get(text);
     }
 
-    private ParseSourceEntry resolveSourceBySegments(String text, Dictionary dictionary) {
+    private ParseSourceEntry resolveSourceBySegments(String text, Dictionary dictionary, String regionName) {
         if (text == null || text.trim().isEmpty()) {
             return null;
         }
@@ -549,7 +576,7 @@ public class ExternalValuationStandardizationService {
             if (segmentText.trim().isEmpty()) {
                 continue;
             }
-            ParseSourceEntry entry = resolveSourceExact(segmentText, dictionary);
+            ParseSourceEntry entry = resolveSourceExact(segmentText, dictionary, regionName);
             if (entry != null) {
                 return entry;
             }
@@ -557,12 +584,15 @@ public class ExternalValuationStandardizationService {
         return null;
     }
 
-    private ParseSourceEntry resolveAliasContains(String text, Dictionary dictionary) {
+    private ParseSourceEntry resolveAliasContains(String text, Dictionary dictionary, String regionName) {
         if (text == null || text.trim().isEmpty()) {
             return null;
         }
         String trimmedText = text.trim();
-        Map<String, ParseSourceEntry> sourceByAlias = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByAlias();
+        Map<String, ParseSourceEntry> sourceByAlias = lookupRegionMap(dictionary == null ? null : dictionary.sourceByAliasByRegion(), regionName);
+        if (sourceByAlias == null || sourceByAlias.isEmpty()) {
+            sourceByAlias = dictionary == null ? java.util.Collections.emptyMap() : dictionary.sourceByAlias();
+        }
         String bestAlias = null;
         ParseSourceEntry bestEntry = null;
         for (Map.Entry<String, ParseSourceEntry> entry : sourceByAlias.entrySet()) {
@@ -578,6 +608,28 @@ public class ExternalValuationStandardizationService {
             }
         }
         return bestEntry;
+    }
+
+    private Map<String, ParseSourceEntry> lookupRegionMap(Map<String, Map<String, ParseSourceEntry>> sourceMapByRegion, String regionName) {
+        if (sourceMapByRegion == null || sourceMapByRegion.isEmpty()) {
+            return null;
+        }
+        String normalizedRegion = trimToNull(regionName);
+        if (normalizedRegion != null) {
+            Map<String, ParseSourceEntry> regionMap = sourceMapByRegion.get(normalizedRegion);
+            if (regionMap != null && !regionMap.isEmpty()) {
+                return regionMap;
+            }
+        }
+        Map<String, ParseSourceEntry> columnMap = sourceMapByRegion.get(SOURCE_REGION_COLUMN);
+        if (columnMap != null && !columnMap.isEmpty()) {
+            return columnMap;
+        }
+        Map<String, ParseSourceEntry> metricMap = sourceMapByRegion.get(SOURCE_REGION_METRIC);
+        if (metricMap != null && !metricMap.isEmpty()) {
+            return metricMap;
+        }
+        return null;
     }
 
     private ParseSourceEntry chooseSourceByRule(
@@ -740,6 +792,98 @@ public class ExternalValuationStandardizationService {
                 .build();
     }
 
+    private void autoRegisterUnmappedSourceEntries(
+            HeaderQualitySummary headerSummary,
+            List<String> headers,
+            List<MetricRecord> metrics,
+            Dictionary dictionary
+    ) {
+        if (parseSourceRepository == null) {
+            return;
+        }
+        try {
+            boolean changed = false;
+            if (headerSummary != null && headers != null) {
+                for (String unmappedHeader : headerSummary.unmappedHeaders()) {
+                    changed |= registerUnmappedSourceEntry(SOURCE_REGION_COLUMN, unmappedHeader);
+                }
+            }
+            if (metrics != null) {
+                for (MetricRecord metric : metrics) {
+                    if (!shouldAutoRegisterMetric(metric, dictionary)) {
+                        continue;
+                    }
+                    changed |= registerUnmappedSourceEntry(SOURCE_REGION_METRIC, metric.getMetricName());
+                }
+            }
+            if (changed) {
+                refreshDictionaryCache();
+            }
+        } catch (Exception exception) {
+            log.warn("自动补录未映射来源项失败，将继续后续标准化流程", exception);
+        }
+    }
+
+    private boolean shouldAutoRegisterMetric(MetricRecord metric, Dictionary dictionary) {
+        if (metric == null || metric.getMetricName() == null || metric.getMetricName().trim().isEmpty()) {
+            return false;
+        }
+        String metricName = metric.getMetricName().trim();
+        ParseSourceEntry sourceEntry = resolveSource(metricName, dictionary, SOURCE_REGION_METRIC);
+        if (sourceEntry != null) {
+            return false;
+        }
+        return BuiltinMetricAliasCatalog.match(metricName) == null;
+    }
+
+    private boolean registerUnmappedSourceEntry(String regionName, String columnName) throws Exception {
+        String normalizedColumnName = trimToNull(columnName);
+        if (normalizedColumnName == null) {
+            return false;
+        }
+        String normalizedRegionName = trimToNull(regionName);
+        if (normalizedRegionName == null) {
+            normalizedRegionName = SOURCE_REGION_COLUMN;
+        }
+        String fileExtInfo = objectMapper.writeValueAsString(Java8Maps.of(SOURCE_REGION_KEY, normalizedRegionName));
+        List<FileParseSourcePO> existingRows = parseSourceRepository.selectList(
+                Wrappers.lambdaQuery(FileParseSourcePO.class)
+                        .eq(FileParseSourcePO::getFileType, SOURCE_FILE_TYPE)
+                        .eq(FileParseSourcePO::getColumnName, normalizedColumnName)
+                        .eq(FileParseSourcePO::getFileExtInfo, fileExtInfo)
+        );
+        if (existingRows != null && !existingRows.isEmpty()) {
+            return false;
+        }
+
+        FileParseSourcePO po = new FileParseSourcePO();
+        po.setId(IdWorker.getId());
+        po.setFileType(SOURCE_FILE_TYPE);
+        po.setColumnMap(buildPlaceholderColumnMap(normalizedRegionName, normalizedColumnName));
+        po.setColumnName(normalizedColumnName);
+        po.setFileExtInfo(fileExtInfo);
+        po.setStatus(Boolean.FALSE);
+        po.setCreater(AUTO_REGISTER_USER);
+        po.setCreateTime(java.time.LocalDateTime.now());
+        po.setModifier(AUTO_REGISTER_USER);
+        po.setModifyTime(java.time.LocalDateTime.now());
+        parseSourceRepository.insert(po);
+        return true;
+    }
+
+    private String buildPlaceholderColumnMap(String regionName, String columnName) {
+        String normalizedRegionName = trimToNull(regionName);
+        if (normalizedRegionName == null) {
+            normalizedRegionName = SOURCE_REGION_COLUMN;
+        }
+        String normalizedColumnName = trimToNull(columnName);
+        if (normalizedColumnName == null) {
+            normalizedColumnName = "unknown";
+        }
+        String placeholder = "unmapped_" + normalizedRegionName + "_" + normalizedColumnName.replaceAll("\\s+", "");
+        return placeholder.length() <= 128 ? placeholder : placeholder.substring(0, 128);
+    }
+
     private String extractUnit(String text) {
         if (text == null || text.trim().isEmpty()) {
             return null;
@@ -856,7 +1000,7 @@ public class ExternalValuationStandardizationService {
             FileParseSourceRepository parseSourceRepository
     ) {
         if (parseRuleRepository == null || parseSourceRepository == null) {
-            return new Dictionary(java.util.Collections.emptyMap(), java.util.Collections.emptyMap());
+            return new Dictionary(java.util.Collections.emptyMap(), java.util.Collections.emptyMap(), java.util.Collections.emptyMap(), java.util.Collections.emptyMap());
         }
         try {
             List<ParseRuleEntry> rules = loadRules(parseRuleRepository);
@@ -871,17 +1015,22 @@ public class ExternalValuationStandardizationService {
             List<ParseSourceEntry> sources = loadSources(parseSourceRepository, ruleByCode);
             Map<String, ParseSourceEntry> sourceByCode = new LinkedHashMap<>();
             Map<String, ParseSourceEntry> sourceByAlias = new LinkedHashMap<>();
+            Map<String, Map<String, ParseSourceEntry>> sourceByCodeByRegion = new LinkedHashMap<>();
+            Map<String, Map<String, ParseSourceEntry>> sourceByAliasByRegion = new LinkedHashMap<>();
             for (ParseSourceEntry source : sources) {
                 registerSourceAlias(sourceByCode, sourceByAlias, source.getColumnName(), source);
                 registerSourceAlias(sourceByCode, sourceByAlias, source.getColumnMap(), source);
                 registerSourceAlias(sourceByCode, sourceByAlias, source.getRule().getColumnMapName(), source);
+                registerSourceAlias(sourceByCodeByRegion, sourceByAliasByRegion, source.getRegionName(), source.getColumnName(), source);
+                registerSourceAlias(sourceByCodeByRegion, sourceByAliasByRegion, source.getRegionName(), source.getColumnMap(), source);
+                registerSourceAlias(sourceByCodeByRegion, sourceByAliasByRegion, source.getRegionName(), source.getRule().getColumnMapName(), source);
             }
             log.info("外部估值标准字典加载完成，ruleCount={}, sourceCount={}, aliasCount={}",
                     rules.size(), sources.size(), sourceByAlias.size());
-            return new Dictionary(sourceByCode, sourceByAlias);
+            return new Dictionary(sourceByCode, sourceByAlias, sourceByCodeByRegion, sourceByAliasByRegion);
         } catch (Exception exception) {
             log.warn("加载外部估值标准字典失败，将使用空字典", exception);
-            return new Dictionary(java.util.Collections.emptyMap(), java.util.Collections.emptyMap());
+            return new Dictionary(java.util.Collections.emptyMap(), java.util.Collections.emptyMap(), java.util.Collections.emptyMap(), java.util.Collections.emptyMap());
         }
     }
 
@@ -920,7 +1069,7 @@ public class ExternalValuationStandardizationService {
                                 .orderByAsc(FileParseSourcePO::getId)
                 ).stream()
                 .filter(this::isEnabled)
-                .map(source -> ParseSourceEntry.from(source, ruleByCode))
+                .map(source -> ParseSourceEntry.from(source, ruleByCode, extractRegionName(source.getFileExtInfo())))
                 .filter(Objects::nonNull)
                 .collect(java.util.stream.Collectors.toList());
     }
@@ -939,13 +1088,35 @@ public class ExternalValuationStandardizationService {
         sourceByAlias.putIfAbsent(trimmedAlias, source);
     }
 
+    private void registerSourceAlias(
+            Map<String, Map<String, ParseSourceEntry>> sourceByCodeByRegion,
+            Map<String, Map<String, ParseSourceEntry>> sourceByAliasByRegion,
+            String regionName,
+            String alias,
+            ParseSourceEntry source
+    ) {
+        String trimmedRegion = trimToNull(regionName);
+        if (trimmedRegion == null || alias == null || alias.trim().isEmpty() || source == null) {
+            return;
+        }
+        String trimmedAlias = alias.trim();
+        Map<String, ParseSourceEntry> codeMap = sourceByCodeByRegion.computeIfAbsent(trimmedRegion, key -> new LinkedHashMap<>());
+        Map<String, ParseSourceEntry> aliasMap = sourceByAliasByRegion.computeIfAbsent(trimmedRegion, key -> new LinkedHashMap<>());
+        codeMap.putIfAbsent(trimmedAlias, source);
+        aliasMap.putIfAbsent(trimmedAlias, source);
+    }
+
     @Value
     private static class Dictionary {
         Map<String, ParseSourceEntry> sourceByCode;
         Map<String, ParseSourceEntry> sourceByAlias;
+        Map<String, Map<String, ParseSourceEntry>> sourceByCodeByRegion;
+        Map<String, Map<String, ParseSourceEntry>> sourceByAliasByRegion;
 
         public Map<String, ParseSourceEntry> sourceByCode() { return sourceByCode; }
         public Map<String, ParseSourceEntry> sourceByAlias() { return sourceByAlias; }
+        public Map<String, Map<String, ParseSourceEntry>> sourceByCodeByRegion() { return sourceByCodeByRegion; }
+        public Map<String, Map<String, ParseSourceEntry>> sourceByAliasByRegion() { return sourceByAliasByRegion; }
     }
 
     @Value
@@ -999,15 +1170,17 @@ public class ExternalValuationStandardizationService {
     private static class ParseSourceEntry {
         private final Long id;
         private final String fileType;
+        private final String regionName;
         private final String columnMap;
         private final String columnName;
         private final String fileExtInfo;
         private final Boolean status;
         private final ParseRuleEntry rule;
 
-        private ParseSourceEntry(Long id, String fileType, String columnMap, String columnName, String fileExtInfo, Boolean status, ParseRuleEntry rule) {
+        private ParseSourceEntry(Long id, String fileType, String regionName, String columnMap, String columnName, String fileExtInfo, Boolean status, ParseRuleEntry rule) {
             this.id = id;
             this.fileType = fileType;
+            this.regionName = regionName;
             this.columnMap = columnMap;
             this.columnName = columnName;
             this.fileExtInfo = fileExtInfo;
@@ -1017,7 +1190,8 @@ public class ExternalValuationStandardizationService {
 
         static ParseSourceEntry from(
                 FileParseSourcePO po,
-                Map<String, ParseRuleEntry> ruleByCode
+                Map<String, ParseRuleEntry> ruleByCode,
+                String regionName
         ) {
             if (po == null) {
                 return null;
@@ -1032,6 +1206,7 @@ public class ExternalValuationStandardizationService {
             return new ParseSourceEntry(
                     po.getId(),
                     po.getFileType(),
+                    regionName,
                     po.getColumnMap(),
                     po.getColumnName(),
                     po.getFileExtInfo(),
@@ -1047,6 +1222,28 @@ public class ExternalValuationStandardizationService {
 
     private boolean isEnabled(FileParseSourcePO po) {
         return po != null && !Boolean.FALSE.equals(po.getStatus());
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String extractRegionName(String fileExtInfo) {
+        if (fileExtInfo == null || fileExtInfo.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            Map<String, Object> extInfo = objectMapper.readValue(fileExtInfo, new TypeReference<Map<String, Object>>() {
+            });
+            Object regionName = extInfo == null ? null : extInfo.get(SOURCE_REGION_KEY);
+            return regionName == null ? null : trimToNull(String.valueOf(regionName));
+        } catch (Exception exception) {
+            return null;
+        }
     }
 
     /**

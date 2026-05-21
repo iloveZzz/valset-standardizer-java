@@ -7,16 +7,16 @@ import com.yss.valset.domain.model.ValsetFileInfo;
 import com.yss.valset.domain.model.ValsetFileSourceChannel;
 import com.yss.valset.domain.model.ValsetFileStatus;
 import com.yss.valset.domain.model.ValsetFileStorageType;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationBasicInfoPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationHeaderPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationMetricPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationPO;
-import com.yss.valset.extract.repository.entity.DwdExternalValuationSubjectPO;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationBasicInfoRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationHeaderRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationMetricRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationRepository;
-import com.yss.valset.extract.repository.mapper.DwdExternalValuationSubjectRepository;
+import com.yss.valset.extract.repository.entity.StgExternalValuationBasicInfoPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationHeaderPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationMetricPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationPO;
+import com.yss.valset.extract.repository.entity.StgExternalValuationSubjectPO;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationBasicInfoRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationHeaderRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationMetricRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationRepository;
+import com.yss.valset.extract.repository.mapper.StgExternalValuationSubjectRepository;
 import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExportCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDownloadDTO;
@@ -69,11 +69,11 @@ import static org.mockito.Mockito.when;
 class DefaultOutsourcedDataTaskStandardDataServiceTest {
 
     private OutsourcedDataTaskGateway taskGateway;
-    private DwdExternalValuationRepository valuationRepository;
-    private DwdExternalValuationBasicInfoRepository basicInfoRepository;
-    private DwdExternalValuationHeaderRepository headerRepository;
-    private DwdExternalValuationSubjectRepository subjectRepository;
-    private DwdExternalValuationMetricRepository metricRepository;
+    private StgExternalValuationRepository valuationRepository;
+    private StgExternalValuationBasicInfoRepository basicInfoRepository;
+    private StgExternalValuationHeaderRepository headerRepository;
+    private StgExternalValuationSubjectRepository subjectRepository;
+    private StgExternalValuationMetricRepository metricRepository;
     private ObjectMapper objectMapper;
     private UniverWorkbookExportSupport exportSupport;
     private ValsetFileInfoGateway valsetFileInfoGateway;
@@ -85,11 +85,11 @@ class DefaultOutsourcedDataTaskStandardDataServiceTest {
     @BeforeEach
     void setUp() {
         taskGateway = mock(OutsourcedDataTaskGateway.class);
-        valuationRepository = mock(DwdExternalValuationRepository.class);
-        basicInfoRepository = mock(DwdExternalValuationBasicInfoRepository.class);
-        headerRepository = mock(DwdExternalValuationHeaderRepository.class);
-        subjectRepository = mock(DwdExternalValuationSubjectRepository.class);
-        metricRepository = mock(DwdExternalValuationMetricRepository.class);
+        valuationRepository = mock(StgExternalValuationRepository.class);
+        basicInfoRepository = mock(StgExternalValuationBasicInfoRepository.class);
+        headerRepository = mock(StgExternalValuationHeaderRepository.class);
+        subjectRepository = mock(StgExternalValuationSubjectRepository.class);
+        metricRepository = mock(StgExternalValuationMetricRepository.class);
         objectMapper = new ObjectMapper();
         exportSupport = mock(UniverWorkbookExportSupport.class);
         valsetFileInfoGateway = mock(ValsetFileInfoGateway.class);
@@ -120,7 +120,7 @@ class DefaultOutsourcedDataTaskStandardDataServiceTest {
     void queryBasicUsesFileIdBeforeTaskId() {
         when(taskGateway.findTask("FILE-100")).thenReturn(Optional.of(batch("FILE-100", "100", 900L)));
         when(valuationRepository.selectOne(any())).thenReturn(valuation(10L, 100L, 900L));
-        DwdExternalValuationBasicInfoPO productName = new DwdExternalValuationBasicInfoPO();
+        StgExternalValuationBasicInfoPO productName = new StgExternalValuationBasicInfoPO();
         productName.setInfoKey("产品名称");
         productName.setInfoValue("测试产品");
         when(basicInfoRepository.selectList(any())).thenReturn(Collections.singletonList(productName));
@@ -225,7 +225,7 @@ class DefaultOutsourcedDataTaskStandardDataServiceTest {
     void listSubjectsReturnsAllRows() {
         when(taskGateway.findTask("FILE-100")).thenReturn(Optional.of(batch("FILE-100", "100", 900L)));
         when(valuationRepository.selectOne(any())).thenReturn(valuation(10L, 100L, 900L));
-        DwdExternalValuationSubjectPO po = new DwdExternalValuationSubjectPO();
+        StgExternalValuationSubjectPO po = new StgExternalValuationSubjectPO();
         po.setId(1L);
         po.setValuationId(10L);
         po.setSubjectCode("1101");
@@ -254,7 +254,7 @@ class DefaultOutsourcedDataTaskStandardDataServiceTest {
     void listMetricsReturnsAllRows() {
         when(taskGateway.findTask("FILE-100")).thenReturn(Optional.of(batch("FILE-100", "100", 900L)));
         when(valuationRepository.selectOne(any())).thenReturn(valuation(10L, 100L, 900L));
-        DwdExternalValuationMetricPO po = new DwdExternalValuationMetricPO();
+        StgExternalValuationMetricPO po = new StgExternalValuationMetricPO();
         po.setId(2L);
         po.setValuationId(10L);
         po.setMetricName("单位净值");
@@ -278,7 +278,7 @@ class DefaultOutsourcedDataTaskStandardDataServiceTest {
     void listMetricsIgnoresInvalidRawValuesJson() {
         when(taskGateway.findTask("FILE-100")).thenReturn(Optional.of(batch("FILE-100", "100", 900L)));
         when(valuationRepository.selectOne(any())).thenReturn(valuation(10L, 100L, 900L));
-        DwdExternalValuationMetricPO po = new DwdExternalValuationMetricPO();
+        StgExternalValuationMetricPO po = new StgExternalValuationMetricPO();
         po.setId(3L);
         po.setValuationId(10L);
         po.setMetricName("错误JSON");
@@ -486,8 +486,8 @@ class DefaultOutsourcedDataTaskStandardDataServiceTest {
         return batch;
     }
 
-    private DwdExternalValuationPO valuation(Long valuationId, Long fileId, Long taskId) {
-        DwdExternalValuationPO valuation = new DwdExternalValuationPO();
+    private StgExternalValuationPO valuation(Long valuationId, Long fileId, Long taskId) {
+        StgExternalValuationPO valuation = new StgExternalValuationPO();
         valuation.setId(valuationId);
         valuation.setFileId(fileId);
         valuation.setTaskId(taskId);
@@ -499,8 +499,8 @@ class DefaultOutsourcedDataTaskStandardDataServiceTest {
         return valuation;
     }
 
-    private DwdExternalValuationHeaderPO header(Integer columnIndex, String headerName) {
-        DwdExternalValuationHeaderPO header = new DwdExternalValuationHeaderPO();
+    private StgExternalValuationHeaderPO header(Integer columnIndex, String headerName) {
+        StgExternalValuationHeaderPO header = new StgExternalValuationHeaderPO();
         header.setId(columnIndex == null ? null : columnIndex.longValue());
         header.setValuationId(10L);
         header.setColumnIndex(columnIndex);

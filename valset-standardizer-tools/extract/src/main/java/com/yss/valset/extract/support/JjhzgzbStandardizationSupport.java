@@ -3,7 +3,7 @@ package com.yss.valset.extract.support;
 import com.yss.valset.common.support.ExcelParsingSupport;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
-import com.yss.valset.extract.repository.entity.TrDwdJjhzgzbPO;
+import com.yss.valset.extract.repository.entity.TrSpvJjhzgzbPO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,17 +30,17 @@ public final class JjhzgzbStandardizationSupport {
     private JjhzgzbStandardizationSupport() {
     }
 
-    public static List<TrDwdJjhzgzbPO> buildRows(ParsedValuationData standardizedValuationData,
+    public static List<TrSpvJjhzgzbPO> buildRows(ParsedValuationData standardizedValuationData,
                                                  String sourceTp,
                                                  String sourceSign,
                                                  ProductBusinessFields productBusinessFields) {
         if (standardizedValuationData == null || standardizedValuationData.getSubjects() == null || standardizedValuationData.getSubjects().isEmpty()) {
             return java.util.Arrays.asList();
         }
-        List<TrDwdJjhzgzbPO> result = new ArrayList<>();
+        List<TrSpvJjhzgzbPO> result = new ArrayList<>();
         int droppedSubjectEmpty = 0;
         for (SubjectRecord subject : standardizedValuationData.getSubjects()) {
-            TrDwdJjhzgzbPO row = buildRow(subject, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign, productBusinessFields);
+            TrSpvJjhzgzbPO row = buildRow(subject, standardizedValuationData.getBasicInfo(), sourceTp, sourceSign, productBusinessFields);
             if (row != null) {
                 result.add(row);
             } else {
@@ -53,7 +53,7 @@ public final class JjhzgzbStandardizationSupport {
         return result;
     }
 
-    private static TrDwdJjhzgzbPO buildRow(SubjectRecord subject,
+    private static TrSpvJjhzgzbPO buildRow(SubjectRecord subject,
                                            Map<String, String> basicInfo,
                                            String sourceTp,
                                            String sourceSign,
@@ -62,7 +62,7 @@ public final class JjhzgzbStandardizationSupport {
                 ? java.util.Collections.emptyMap()
                 : new LinkedHashMap<>(subject.getStandardValues());
 
-        TrDwdJjhzgzbPO row = new TrDwdJjhzgzbPO();
+        TrSpvJjhzgzbPO row = new TrSpvJjhzgzbPO();
         row.setOrgCd(firstNonBlank(
                 productBusinessFields == null ? null : productBusinessFields.getOrgCode(),
                 stringValue(standardValues, "org_cd"),

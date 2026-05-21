@@ -3,7 +3,7 @@ package com.yss.valset.application.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.port.MatchExecutionUseCase;
-import com.yss.valset.domain.gateway.DwdExternalValuationGateway;
+import com.yss.valset.domain.gateway.StgExternalValuationGateway;
 import com.yss.valset.domain.gateway.MappingHintGateway;
 import com.yss.valset.domain.exporter.ResultExporter;
 import com.yss.valset.domain.gateway.MatchResultGateway;
@@ -41,7 +41,7 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
     private final StandardSubjectGateway standardSubjectGateway;
     private final MappingHintGateway mappingHintGateway;
     private final ValsetMatcher subjectMatcher;
-    private final DwdExternalValuationGateway dwdExternalValuationGateway;
+    private final StgExternalValuationGateway stgExternalValuationGateway;
     private final MatchResultGateway matchResultGateway;
     private final ExternalValuationStandardizationService standardizationService;
     private final ObjectMapper objectMapper;
@@ -100,7 +100,7 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
         }
 
         if ((type == DataSourceType.EXCEL || type == DataSourceType.CSV) && command.getFileId() != null) {
-            ParsedValuationData stgSnapshot = dwdExternalValuationGateway.findLatestByFileId(command.getFileId());
+            ParsedValuationData stgSnapshot = stgExternalValuationGateway.findLatestByFileId(command.getFileId());
             if (stgSnapshot != null) {
                 log.info("匹配任务使用最新 STG 贴源快照运行时标准化，fileId={}", command.getFileId());
                 return standardizationService.standardize(stgSnapshot);
