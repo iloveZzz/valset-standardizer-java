@@ -9,6 +9,8 @@ import {
   getValuationParseTaskRawWorkbook,
   getValuationParseTaskSummary,
   getValuationParseTaskStandardBasic,
+  listValuationParseTaskExternalMetrics,
+  listValuationParseTaskExternalSubjects,
   listValuationParseTaskStandardMetrics,
   listValuationParseTaskStandardSubjects,
   listValuationParseTaskSteps,
@@ -21,6 +23,8 @@ import {
   type OutsourcedDataTaskBatchCommand,
   type OutsourcedDataTaskBatchDetailDTO,
   type OutsourcedDataTaskBatchDTO,
+  type OutsourcedDataTaskExternalMetricDTO,
+  type OutsourcedDataTaskExternalSubjectDTO,
   type OutsourcedDataTaskQueryParams,
   type OutsourcedDataTaskRawWorkbookDTO,
   type OutsourcedDataTaskStandardDataExportCommand,
@@ -48,6 +52,8 @@ export type BatchValuationTaskStandardBasicRowDTO = OutsourcedDataTaskStandardBa
 export type BatchValuationTaskStandardRawColumnDTO = OutsourcedDataTaskStandardRawColumnDTO;
 export type BatchValuationTaskStandardSubjectDTO = OutsourcedDataTaskStandardSubjectDTO;
 export type BatchValuationTaskStandardMetricDTO = OutsourcedDataTaskStandardMetricDTO;
+export type BatchValuationTaskExternalSubjectDTO = OutsourcedDataTaskExternalSubjectDTO;
+export type BatchValuationTaskExternalMetricDTO = OutsourcedDataTaskExternalMetricDTO;
 
 export const getBatchValuationTaskSummary = getValuationParseTaskSummary;
 export const pageBatchValuationTasks = pageValuationParseTasks;
@@ -55,6 +61,8 @@ export const getBatchValuationTask = getValuationParseTask;
 export const getBatchValuationTaskStandardBasic = getValuationParseTaskStandardBasic;
 export const listBatchValuationTaskStandardSubjects = listValuationParseTaskStandardSubjects;
 export const listBatchValuationTaskStandardMetrics = listValuationParseTaskStandardMetrics;
+export const listBatchValuationTaskExternalSubjects = listValuationParseTaskExternalSubjects;
+export const listBatchValuationTaskExternalMetrics = listValuationParseTaskExternalMetrics;
 export const getBatchValuationTaskRawWorkbook = getValuationParseTaskRawWorkbook;
 export const downloadBatchValuationTaskRawWorkbook = downloadValuationParseTaskRawWorkbook;
 export const exportBatchValuationTaskStandardDataSheet = exportValuationParseTaskStandardDataSheet;

@@ -18,12 +18,16 @@ import {
   getBatchValuationTaskRawWorkbook,
   getBatchValuationTaskSummary,
   getBatchValuationTaskStandardBasic,
+  listBatchValuationTaskExternalMetrics,
+  listBatchValuationTaskExternalSubjects,
   listBatchValuationTaskStandardMetrics,
   listBatchValuationTaskStandardSubjects,
   listBatchValuationTaskSteps,
   pageBatchValuationTasks,
   type BatchValuationTaskBatchDetailDTO,
   type BatchValuationTaskBatchDTO,
+  type BatchValuationTaskExternalMetricDTO,
+  type BatchValuationTaskExternalSubjectDTO,
   type BatchValuationTaskQueryParams,
   type BatchValuationTaskRawWorkbookDTO,
   type BatchValuationTaskStandardBasicDTO,
@@ -259,9 +263,13 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
   const standardDataRawWorkbook = ref<BatchValuationTaskRawWorkbookDTO | null>(null);
   const standardDataSubjects = ref<BatchValuationTaskStandardSubjectDTO[]>([]);
   const standardDataMetrics = ref<BatchValuationTaskStandardMetricDTO[]>([]);
+  const standardDataExternalSubjects = ref<BatchValuationTaskExternalSubjectDTO[]>([]);
+  const standardDataExternalMetrics = ref<BatchValuationTaskExternalMetricDTO[]>([]);
   const standardDataBasicLoading = ref(false);
   const standardDataSubjectsLoading = ref(false);
   const standardDataMetricsLoading = ref(false);
+  const standardDataExternalSubjectsLoading = ref(false);
+  const standardDataExternalMetricsLoading = ref(false);
   const standardDataRawLoading = ref(false);
   const standardDataRawLoaded = ref(false);
   const standardDataRawError = ref("");
@@ -269,8 +277,12 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
   const standardDataRawDownloadLoading = ref(false);
   const standardDataSubjectsLoaded = ref(false);
   const standardDataMetricsLoaded = ref(false);
+  const standardDataExternalSubjectsLoaded = ref(false);
+  const standardDataExternalMetricsLoaded = ref(false);
   const standardDataSubjectsKeyword = ref("");
   const standardDataMetricsKeyword = ref("");
+  const standardDataExternalSubjectsKeyword = ref("");
+  const standardDataExternalMetricsKeyword = ref("");
 
   const setTableRef = (instance: any) => {
     tableRef.value = instance;
@@ -414,7 +426,7 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
       standardDataSubjectsLoaded.value = true;
     } catch (error) {
       standardDataSubjects.value = [];
-      message.error("加载估值明细失败");
+      message.error("加载原始估值明细失败");
       console.error(error);
     } finally {
       standardDataSubjectsLoading.value = false;
@@ -437,10 +449,56 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
       standardDataMetricsLoaded.value = true;
     } catch (error) {
       standardDataMetrics.value = [];
-      message.error("加载指标数据失败");
+      message.error("加载原始指标明细失败");
       console.error(error);
     } finally {
       standardDataMetricsLoading.value = false;
+    }
+  };
+
+  const loadStandardDataExternalSubjects = async () => {
+    const batchId = currentStandardDataBatchId();
+    if (!batchId) {
+      standardDataExternalSubjects.value = [];
+      return;
+    }
+    standardDataExternalSubjectsLoading.value = true;
+    try {
+      const resp = await listBatchValuationTaskExternalSubjects(batchId, {
+        keyword: normalizeStandardDataKeyword(standardDataExternalSubjectsKeyword.value) || undefined,
+      });
+      const data = resp.data ?? [];
+      standardDataExternalSubjects.value = data;
+      standardDataExternalSubjectsLoaded.value = true;
+    } catch (error) {
+      standardDataExternalSubjects.value = [];
+      message.error("加载委外估值明细失败");
+      console.error(error);
+    } finally {
+      standardDataExternalSubjectsLoading.value = false;
+    }
+  };
+
+  const loadStandardDataExternalMetrics = async () => {
+    const batchId = currentStandardDataBatchId();
+    if (!batchId) {
+      standardDataExternalMetrics.value = [];
+      return;
+    }
+    standardDataExternalMetricsLoading.value = true;
+    try {
+      const resp = await listBatchValuationTaskExternalMetrics(batchId, {
+        keyword: normalizeStandardDataKeyword(standardDataExternalMetricsKeyword.value) || undefined,
+      });
+      const data = resp.data ?? [];
+      standardDataExternalMetrics.value = data;
+      standardDataExternalMetricsLoaded.value = true;
+    } catch (error) {
+      standardDataExternalMetrics.value = [];
+      message.error("加载委外指标明细失败");
+      console.error(error);
+    } finally {
+      standardDataExternalMetricsLoading.value = false;
     }
   };
 
@@ -679,12 +737,18 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     standardDataRawWorkbook.value = null;
     standardDataSubjects.value = [];
     standardDataMetrics.value = [];
+    standardDataExternalSubjects.value = [];
+    standardDataExternalMetrics.value = [];
     standardDataSubjectsLoaded.value = false;
     standardDataMetricsLoaded.value = false;
+    standardDataExternalSubjectsLoaded.value = false;
+    standardDataExternalMetricsLoaded.value = false;
     standardDataRawLoaded.value = false;
     standardDataRawError.value = "";
     standardDataSubjectsKeyword.value = "";
     standardDataMetricsKeyword.value = "";
+    standardDataExternalSubjectsKeyword.value = "";
+    standardDataExternalMetricsKeyword.value = "";
   };
 
   const openStandardDataModal = (row: BatchValuationTaskBatchRow) => {
@@ -700,13 +764,25 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
 
   const handleStandardDataTabChange = (tab: BatchValuationTaskStandardTab | string) => {
     const normalizedTab =
-      tab === "subjects" || tab === "metrics" || tab === "raw" ? tab : "basic";
+      tab === "subjects" ||
+      tab === "metrics" ||
+      tab === "externalSubjects" ||
+      tab === "externalMetrics" ||
+      tab === "raw"
+        ? tab
+        : "basic";
     standardDataActiveTab.value = normalizedTab;
     if (normalizedTab === "subjects" && !standardDataSubjectsLoaded.value) {
       void loadStandardDataSubjects();
     }
     if (normalizedTab === "metrics" && !standardDataMetricsLoaded.value) {
       void loadStandardDataMetrics();
+    }
+    if (normalizedTab === "externalSubjects" && !standardDataExternalSubjectsLoaded.value) {
+      void loadStandardDataExternalSubjects();
+    }
+    if (normalizedTab === "externalMetrics" && !standardDataExternalMetricsLoaded.value) {
+      void loadStandardDataExternalMetrics();
     }
     if (normalizedTab === "raw") {
       void loadStandardDataRawWorkbook();
@@ -726,15 +802,29 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
       void loadStandardDataMetrics();
       return;
     }
+    if (standardDataActiveTab.value === "externalSubjects") {
+      void loadStandardDataExternalSubjects();
+      return;
+    }
+    if (standardDataActiveTab.value === "externalMetrics") {
+      void loadStandardDataExternalMetrics();
+      return;
+    }
     void loadStandardDataBasic();
   };
 
   const standardDataTabName = () => {
     if (standardDataActiveTab.value === "subjects") {
-      return "估值明细";
+      return "原始估值明细";
     }
     if (standardDataActiveTab.value === "metrics") {
-      return "指标数据";
+      return "原始指标明细";
+    }
+    if (standardDataActiveTab.value === "externalSubjects") {
+      return "委外估值明细";
+    }
+    if (standardDataActiveTab.value === "externalMetrics") {
+      return "委外指标明细";
     }
     if (standardDataActiveTab.value === "raw") {
       return "原始估值表";
@@ -845,6 +935,16 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     void loadStandardDataMetrics();
   };
 
+  const searchStandardDataExternalSubjects = () => {
+    standardDataExternalSubjectsKeyword.value = normalizeStandardDataKeyword(standardDataExternalSubjectsKeyword.value);
+    void loadStandardDataExternalSubjects();
+  };
+
+  const searchStandardDataExternalMetrics = () => {
+    standardDataExternalMetricsKeyword.value = normalizeStandardDataKeyword(standardDataExternalMetricsKeyword.value);
+    void loadStandardDataExternalMetrics();
+  };
+
   void load();
   startAutoRefresh();
   onBeforeUnmount(stopAutoRefresh);
@@ -880,9 +980,13 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     standardDataBasicRows: computed(() => standardDataBasic.value?.basicRows ?? []),
     standardDataSubjects: computed(() => standardDataSubjects.value),
     standardDataMetrics: computed(() => standardDataMetrics.value),
+    standardDataExternalSubjects: computed(() => standardDataExternalSubjects.value),
+    standardDataExternalMetrics: computed(() => standardDataExternalMetrics.value),
     standardDataBasicLoading: computed(() => standardDataBasicLoading.value),
     standardDataSubjectsLoading: computed(() => standardDataSubjectsLoading.value),
     standardDataMetricsLoading: computed(() => standardDataMetricsLoading.value),
+    standardDataExternalSubjectsLoading: computed(() => standardDataExternalSubjectsLoading.value),
+    standardDataExternalMetricsLoading: computed(() => standardDataExternalMetricsLoading.value),
     standardDataRawLoading: computed(() => standardDataRawLoading.value),
     standardDataRawError: computed(() => standardDataRawError.value),
     standardDataExportLoading: computed(() => standardDataExportLoading.value),
@@ -897,6 +1001,18 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
       get: () => standardDataMetricsKeyword.value,
       set: (value) => {
         standardDataMetricsKeyword.value = value;
+      },
+    }),
+    standardDataExternalSubjectsKeyword: computed({
+      get: () => standardDataExternalSubjectsKeyword.value,
+      set: (value) => {
+        standardDataExternalSubjectsKeyword.value = value;
+      },
+    }),
+    standardDataExternalMetricsKeyword: computed({
+      get: () => standardDataExternalMetricsKeyword.value,
+      set: (value) => {
+        standardDataExternalMetricsKeyword.value = value;
       },
     }),
     runQuery,
@@ -923,6 +1039,8 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
     downloadRawWorkbook,
     searchStandardDataSubjects,
     searchStandardDataMetrics,
+    searchStandardDataExternalSubjects,
+    searchStandardDataExternalMetrics,
     setAutoRefreshInterval,
     formatStatusColor,
   }) as unknown as BatchValuationTaskPageState;

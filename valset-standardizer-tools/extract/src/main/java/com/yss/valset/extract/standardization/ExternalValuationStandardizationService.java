@@ -10,7 +10,6 @@ import com.yss.valset.domain.model.MappingQualityReport;
 import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.SubjectRecord;
-import com.yss.valset.common.support.Java8Maps;
 import com.yss.valset.domain.rule.ParseRuleType;
 import com.yss.valset.extract.rule.ParseRuleStepDescriptor;
 import com.yss.valset.extract.repository.entity.FileParseRulePO;
@@ -857,7 +856,6 @@ public class ExternalValuationStandardizationService {
                 Wrappers.lambdaQuery(FileParseSourcePO.class)
                         .eq(FileParseSourcePO::getFileType, SOURCE_FILE_TYPE)
                         .eq(FileParseSourcePO::getColumnName, normalizedColumnName)
-                        .eq(FileParseSourcePO::getFileExtInfo, fileExtInfo)
         );
         if (existingRows != null && !existingRows.isEmpty()) {
             return false;

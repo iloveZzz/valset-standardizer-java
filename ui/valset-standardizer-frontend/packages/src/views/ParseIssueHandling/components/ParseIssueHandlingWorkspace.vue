@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watch } from "vue";
+import { computed, h, ref, watch } from "vue";
 import { LocaleType, type IWorkbookData } from "@univerjs/presets";
 import {
   DeleteOutlined,
@@ -45,6 +45,7 @@ const { page } = defineProps<{
 type NativeUniverSheetInstance = InstanceType<typeof NativeUniverSheet> & {
   getWorkbook: () => unknown;
   save: () => IWorkbookData | null;
+  getUniverAPI: () => any;
 };
 
 type NativeSelectionRangeLike = {
@@ -66,12 +67,6 @@ type NativeSelectionRangeLike = {
 const sheetRef = ref<NativeUniverSheetInstance | null>(null);
 const sheetRefreshing = ref(true);
 const productInfoExtractionPage = useProductInfoExtractionPage();
-const rowContextMenu = reactive({
-  visible: false,
-  x: 0,
-  y: 0,
-  rowIndex: null as number | null,
-});
 
 const sheetHeaderStyleId = "parse_issue_header";
 const sheetReadonlyHeaderStyleId = "parse_issue_header_readonly";
@@ -80,12 +75,27 @@ const sheetReadonlyDataStyleId = "parse_issue_data_readonly";
 const sheetDisabledRowStyleId = "parse_issue_disabled_row";
 const sheetFilterResourceName = "SHEET_FILTER_PLUGIN";
 const sheetDataValidationResourceName = "SHEET_DATA_VALIDATION_PLUGIN";
+const sourceAuditProtectedFields = ["columnMapName", "creater", "createTime", "modifier", "modifyTime"];
 const sheetDataCellBorder = {
   s: 1,
   cl: { rgb: "#000000" },
 };
 const fileTypeOptions = ["ALL", "EXCEL"];
 const enabledOptions = ["是", "否"];
+const sheetMenuConfig = {
+  "sheet.command.insert-col-before": { hidden: true, disabled: true },
+  "sheet.command.remove-col-confirm": { hidden: true, disabled: true },
+  "sheet.command.insert-range-move-right-confirm": { hidden: true, disabled: true },
+  "sheet.command.insert-range-move-down-confirm": { hidden: true, disabled: true },
+  "sheet.command.delete-range-move-left-confirm": { hidden: true, disabled: true },
+  "sheet.command.delete-range-move-up-confirm": { hidden: true, disabled: true },
+  "sheet.command.insert-multi-cols-before": { hidden: true, disabled: true },
+  "sheet.command.insert-multi-cols-right": { hidden: true, disabled: true },
+  "sheet.command.hide-col-confirm": { hidden: true, disabled: true },
+  "sheet.command.set-selected-cols-visible": { hidden: true, disabled: true },
+  "sheet.command.set-worksheet-col-width": { hidden: true, disabled: true },
+  "sheet.command.set-col-auto-width": { hidden: true, disabled: true },
+};
 
 const tabs: Array<{
   key: ParseIssueHandlingTab;
@@ -516,6 +526,10 @@ const workbookData = computed(() =>
 
 type ActiveSheetLike = {
   deleteRow?: (rowPosition: number) => unknown;
+  deleteRows?: (rowPosition: number, howMany: number) => unknown;
+  deleteRowsByPoints?: (rowPoints: Array<number | [number, number]>) => unknown;
+  getLastRow?: () => number;
+  getMaxRows?: () => number;
   getSelection?: () => {
     getCurrentCell?: () => { actualRow?: number; actualColumn?: number } | null;
     getActiveRange?: () => {
@@ -536,6 +550,7 @@ type ActiveSheetLike = {
     } | null;
     getRanges?: () => NativeSelectionRangeLike[] | null;
   } | null;
+  insertRowAfter?: (afterPosition: number) => unknown;
   insertRowsAfter?: (afterPosition: number, howMany: number) => unknown;
 };
 
@@ -546,8 +561,38 @@ const getActiveSheet = () => {
   return workbookLike?.getActiveSheet?.() ?? null;
 };
 
-const handleWorkbookCreated = () => {
-  // 列级只读通过表格样式和键盘拦截控制，不再施加范围保护。
+const handleWorkbookCreated = async () => {
+  if (page.activeTab === "fileParseSource") {
+    const univerAPI = sheetRef.value?.getUniverAPI?.() as any;
+    const fWorkbook = univerAPI?.getActiveWorkbook?.();
+    const fWorksheet = fWorkbook?.getActiveSheet?.();
+    const rowCount =
+      workbookData.value.sheets?.[workbookData.value.sheetOrder?.[0] ?? ""]?.rowCount ?? 0;
+    const endRow = Math.max(1, rowCount);
+    const protectedColumns = fileParseSourceColumns
+      .map((column, columnIndex) => ({ column, columnIndex }))
+      .filter(({ column }) => sourceAuditProtectedFields.includes(column.field));
+
+    for (const { columnIndex } of protectedColumns) {
+      const range = fWorksheet?.getRange?.(0, columnIndex, endRow, 1);
+      const rangePermission = range?.getRangePermission?.();
+      if (!rangePermission) {
+        continue;
+      }
+      const existingRules = rangePermission.isProtected?.()
+        ? await rangePermission.listRules?.({ ignoreCollaborators: true })
+        : [];
+      const protectedRule = existingRules?.[0] ?? (await rangePermission.protect?.({
+        name: `解析问题处理 - ${fileParseSourceColumns[columnIndex]?.title ?? String(columnIndex)}`,
+        allowViewByOthers: true,
+      }));
+      if (!protectedRule?.setPoint) {
+        continue;
+      }
+      await protectedRule.setPoint(univerAPI?.Enum?.RangePermissionPoint?.Edit ?? "Edit", false);
+      await protectedRule.setPoint(univerAPI?.Enum?.RangePermissionPoint?.View ?? "View", true);
+    }
+  }
   sheetRefreshing.value = false;
 };
 
@@ -633,34 +678,91 @@ const resolveRangeSpan = (range: NativeSelectionRangeLike | null | undefined) =>
       };
 };
 
-const resolveSelectedRowIndexes = () => {
-  const selection = getActiveSheet()?.getSelection?.() as {
-    getActiveRange?: () => NativeSelectionRangeLike | null;
-    getRanges?: () => NativeSelectionRangeLike[] | null;
-  } | null;
-  const rowIndexes = new Set<number>();
-  const appendRange = (range: NativeSelectionRangeLike | null | undefined) => {
-    const span = resolveRangeSpan(range);
-    if (!span) {
-      return;
-    }
-    for (let rowIndex = span.startRow; rowIndex <= span.endRow; rowIndex += 1) {
-      if (rowIndex >= 1) {
-        rowIndexes.add(rowIndex);
+const getSelectedRowSpans = () => {
+  const selection = getActiveSheet()?.getSelection?.();
+  const activeRange = selection?.getActiveRange?.();
+  const rawRanges = [
+    ...(selection?.getRanges?.() ?? []),
+    ...(activeRange?.getRanges?.() ?? []),
+    activeRange?.getRange?.() ?? activeRange,
+  ];
+  const spans = rawRanges
+    .map(resolveRangeSpan)
+    .filter((span): span is { startRow: number; endRow: number } => Boolean(span))
+    .map((span) => ({
+      startRow: Math.max(1, span.startRow),
+      endRow: Math.max(1, span.endRow),
+    }))
+    .filter((span) => span.endRow >= 1);
+  if (spans.length) {
+    return spans;
+  }
+  const selectedCell = getSelectedCellPosition();
+  return selectedCell && selectedCell.rowIndex > 0
+    ? [{ startRow: selectedCell.rowIndex, endRow: selectedCell.rowIndex }]
+    : [];
+};
+
+const handleAddRow = () => {
+  const sheet = getActiveSheet();
+  if (!sheet || page.activeTab === "productInfoExtraction") {
+    return;
+  }
+  const selectedSpans = getSelectedRowSpans();
+  const selectedEndRow = selectedSpans.length
+    ? Math.max(...selectedSpans.map((span) => span.endRow))
+    : null;
+  const lastDataRow = Math.max(1, totalRows.value);
+  const maxRow = sheet.getMaxRows?.();
+  const insertAfter = Math.min(
+    Math.max(selectedEndRow ?? lastDataRow, 0),
+    typeof maxRow === "number" ? Math.max(0, maxRow - 1) : Number.MAX_SAFE_INTEGER,
+  );
+  sheet.insertRowsAfter?.(insertAfter, 1) ?? sheet.insertRowAfter?.(insertAfter);
+};
+
+const handleDeleteSelectedRows = () => {
+  const sheet = getActiveSheet();
+  if (!sheet || page.activeTab === "productInfoExtraction") {
+    return;
+  }
+  const selectedSpans = getSelectedRowSpans();
+  if (!selectedSpans.length) {
+    Modal.info({
+      title: "未选中数据行",
+      content: "请先在表格中选中要删除的数据行。",
+      okText: "知道了",
+    });
+    return;
+  }
+  const normalizedSpans = selectedSpans
+    .map((span) => ({
+      startRow: Math.max(1, span.startRow),
+      endRow: Math.max(1, span.endRow),
+    }))
+    .filter((span) => span.endRow >= span.startRow)
+    .sort((left, right) => right.startRow - left.startRow);
+  const deleteCount = normalizedSpans.reduce(
+    (count, span) => count + span.endRow - span.startRow + 1,
+    0,
+  );
+  Modal.confirm({
+    title: "确认删除选中行",
+    icon: h(ExclamationCircleOutlined),
+    content: `将删除当前选中的 ${deleteCount} 行数据，保存当前页签后生效。`,
+    okText: "确认删除",
+    cancelText: "取消",
+    onOk: () => {
+      if (sheet.deleteRowsByPoints) {
+        sheet.deleteRowsByPoints(normalizedSpans.map((span) => [span.startRow, span.endRow]));
+      } else {
+        normalizedSpans.forEach((span) => {
+          const howMany = span.endRow - span.startRow + 1;
+          sheet.deleteRows?.(span.startRow, howMany) ?? sheet.deleteRow?.(span.startRow);
+        });
       }
-    }
-  };
-  selection?.getRanges?.()?.forEach(appendRange);
-  if (!rowIndexes.size) {
-    appendRange(selection?.getActiveRange?.());
-  }
-  if (!rowIndexes.size) {
-    const cellPosition = getSelectedCellPosition();
-    if (cellPosition?.rowIndex !== undefined && cellPosition.rowIndex >= 1) {
-      rowIndexes.add(cellPosition.rowIndex);
-    }
-  }
-  return Array.from(rowIndexes).sort((left, right) => right - left);
+    },
+  });
 };
 
 const isReadonlyColumnIndex = (columnIndex: number) =>
@@ -713,60 +815,6 @@ watch(
     }
   },
 );
-
-
-const insertRowAfterSelected = () => {
-  const rowIndex = rowContextMenu.rowIndex;
-  hideRowContextMenu();
-  if (rowIndex === null || rowIndex < 0) {
-    return;
-  }
-  getActiveSheet()?.insertRowsAfter?.(rowIndex, 1);
-};
-
-const deleteRowsByIndexes = (rowIndexes: number[]) => {
-  const sheet = getActiveSheet();
-  rowIndexes.forEach((rowIndex) => {
-    sheet?.deleteRow?.(rowIndex);
-  });
-};
-
-const deleteCurrentRow = () => {
-  const rowIndex = rowContextMenu.rowIndex;
-  hideRowContextMenu();
-  if (rowIndex === null || rowIndex < 1) {
-    Modal.info({
-      title: "表头不可删除",
-      content: "当前表格的表头行不能删除。",
-      okText: "知道了",
-    });
-    return;
-  }
-  deleteRowsByIndexes([rowIndex]);
-};
-
-const deleteSelectedRows = () => {
-  const rowIndexes = resolveSelectedRowIndexes();
-  hideRowContextMenu();
-  if (!rowIndexes.length) {
-    Modal.info({
-      title: "表头不可删除",
-      content: "当前表格的表头行不能删除。",
-      okText: "知道了",
-    });
-    return;
-  }
-  Modal.confirm({
-    title: "批量删除行",
-    content: `确认删除选中的 ${rowIndexes.length} 行吗？`,
-    okText: "删除",
-    cancelText: "取消",
-    okButtonProps: {
-      danger: true,
-    },
-    onOk: () => deleteRowsByIndexes(rowIndexes),
-  });
-};
 
 const handleSave = () => {
   if (page.activeTab === "productInfoExtraction") {
@@ -1011,6 +1059,14 @@ const handleSave = () => {
             <template #icon><DownloadOutlined /></template>
             导出当前页签
           </YButton>
+          <YButton size="small" :disabled="page.loading || page.saving || sheetRefreshing" @click="handleAddRow">
+            <template #icon><PlusOutlined /></template>
+            新增行
+          </YButton>
+          <YButton size="small" :disabled="page.loading || page.saving || sheetRefreshing" danger @click="handleDeleteSelectedRows">
+            <template #icon><DeleteOutlined /></template>
+            删除选中行
+          </YButton>
           <YButton size="small" type="primary" :loading="page.saving" :disabled="page.loading" @click="handleSave">
             <template #icon><SaveOutlined /></template>
             保存当前页签
@@ -1063,17 +1119,16 @@ const handleSave = () => {
             toolbar: false,
             formulaBar: false,
             footer: { addSheetButtonConfig: { show: false } },
-            contextMenu: true
+            contextMenu: true,
+            menu: sheetMenuConfig
           }"
           @keydown.capture="handleSheetKeydown"
           @beforeinput.capture="preventReadonlyCellEdit"
           @paste.capture="preventReadonlyCellEdit"
           @drop.capture="preventReadonlyCellEdit"
           @dblclick.capture="preventReadonlyCellEdit"
-          @contextmenu.capture.prevent="handleSheetContextMenu"
           @workbook-created="handleWorkbookCreated"
           @error="handleSheetError"
-          @click.capture="hideRowContextMenu"
         />
       </div>
     </YCard>

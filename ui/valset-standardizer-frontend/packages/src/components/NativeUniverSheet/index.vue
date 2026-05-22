@@ -43,13 +43,6 @@ type NativeWorkbookApi = {
   save: () => IWorkbookData;
 };
 
-type NativeFilterRange = {
-  startRow: number;
-  endRow: number;
-  startColumn: number;
-  endColumn: number;
-};
-
 type NativeUniverApi = {
   createWorkbook: (data: Partial<IWorkbookData>) => NativeWorkbookApi;
   getActiveWorkbook: () => NativeWorkbookApi | null;
@@ -105,35 +98,6 @@ const reportError = (error: unknown) => {
   return normalized;
 };
 
-const applyWorkbookFilters = (data: Partial<IWorkbookData>, createdWorkbook: NativeWorkbookApi) => {
-  const filterResource = data.resources?.find((resource) => resource.name === "SHEET_FILTER_PLUGIN");
-  if (!filterResource?.data || !univerAPI.value) {
-    return;
-  }
-
-  try {
-    const filters = JSON.parse(filterResource.data) as Record<string, { ref?: NativeFilterRange }>;
-    Object.entries(filters).forEach(([sheetId, filter]) => {
-      if (!filter.ref || filter.ref.endRow <= filter.ref.startRow) {
-        return;
-      }
-      univerAPI.value?.executeCommand("sheet.command.set-filter-range", {
-        unitId: createdWorkbook.getId(),
-        subUnitId: sheetId,
-        range: filter.ref,
-      }).catch((error) => {
-        const text = String((error as Error)?.message ?? error ?? "");
-        if (text.includes("is not registered")) {
-          return;
-        }
-        reportError(error);
-      });
-    });
-  } catch (error) {
-    reportError(error);
-  }
-};
-
 const disposeWorkbook = () => {
   const activeWorkbook = workbook.value ?? univerAPI.value?.getActiveWorkbook();
   const unitId = activeWorkbook?.getId();
@@ -165,7 +129,6 @@ const loadWorkbook = (data?: Partial<IWorkbookData>) => {
   try {
     const createdWorkbook = univerAPI.value.createWorkbook(data);
     workbook.value = createdWorkbook;
-    applyWorkbookFilters(data, createdWorkbook);
     emit("workbook-created", createdWorkbook);
     return createdWorkbook;
   } catch (error) {

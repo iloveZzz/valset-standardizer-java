@@ -2,6 +2,8 @@ import type { YTablePagination } from "@yss-ui/components";
 import type {
   BatchValuationTaskBatchDetailDTO,
   BatchValuationTaskBatchDTO,
+  BatchValuationTaskExternalMetricDTO,
+  BatchValuationTaskExternalSubjectDTO,
   BatchValuationTaskQueryParams,
   BatchValuationTaskRawWorkbookDTO,
   BatchValuationTaskStandardBasicDTO,
@@ -45,7 +47,13 @@ export type BatchValuationTaskStepRow = BatchValuationTaskStepDTO & {
   currentFlag?: boolean;
 };
 
-export type BatchValuationTaskStandardTab = "basic" | "subjects" | "metrics" | "raw";
+export type BatchValuationTaskStandardTab =
+  | "basic"
+  | "subjects"
+  | "metrics"
+  | "externalSubjects"
+  | "externalMetrics"
+  | "raw";
 
 export type BatchValuationTaskStandardRawColumn = BatchValuationTaskStandardRawColumnDTO;
 
@@ -81,15 +89,21 @@ export type BatchValuationTaskPageState = {
   standardDataBasicRows: NonNullable<BatchValuationTaskStandardBasicDTO["basicRows"]>;
   standardDataSubjects: BatchValuationTaskStandardSubjectDTO[];
   standardDataMetrics: BatchValuationTaskStandardMetricDTO[];
+  standardDataExternalSubjects: BatchValuationTaskExternalSubjectDTO[];
+  standardDataExternalMetrics: BatchValuationTaskExternalMetricDTO[];
   standardDataBasicLoading: boolean;
   standardDataSubjectsLoading: boolean;
   standardDataMetricsLoading: boolean;
+  standardDataExternalSubjectsLoading: boolean;
+  standardDataExternalMetricsLoading: boolean;
   standardDataRawLoading: boolean;
   standardDataRawError: string;
   standardDataExportLoading: boolean;
   standardDataRawDownloadLoading: boolean;
   standardDataSubjectsKeyword: string;
   standardDataMetricsKeyword: string;
+  standardDataExternalSubjectsKeyword: string;
+  standardDataExternalMetricsKeyword: string;
   runQuery: () => void;
   resetQuery: () => void;
   handlePageChange: (params: { current: number; pageSize: number }) => void;
@@ -115,6 +129,8 @@ export type BatchValuationTaskPageState = {
   downloadRawWorkbook: () => Promise<void>;
   searchStandardDataSubjects: () => void;
   searchStandardDataMetrics: () => void;
+  searchStandardDataExternalSubjects: () => void;
+  searchStandardDataExternalMetrics: () => void;
   setAutoRefreshInterval: (value: number) => void;
   formatStatusColor: (status?: string) => string;
 };

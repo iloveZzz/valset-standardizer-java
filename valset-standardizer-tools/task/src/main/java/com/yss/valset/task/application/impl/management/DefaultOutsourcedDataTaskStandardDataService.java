@@ -13,14 +13,20 @@ import com.yss.valset.extract.repository.entity.StgExternalValuationHeaderPO;
 import com.yss.valset.extract.repository.entity.StgExternalValuationMetricPO;
 import com.yss.valset.extract.repository.entity.StgExternalValuationPO;
 import com.yss.valset.extract.repository.entity.StgExternalValuationSubjectPO;
+import com.yss.valset.extract.repository.entity.TcAsIndexPO;
+import com.yss.valset.extract.repository.entity.TrSpvJjhzgzbPO;
 import com.yss.valset.extract.repository.mapper.StgExternalValuationBasicInfoRepository;
 import com.yss.valset.extract.repository.mapper.StgExternalValuationHeaderRepository;
 import com.yss.valset.extract.repository.mapper.StgExternalValuationMetricRepository;
 import com.yss.valset.extract.repository.mapper.StgExternalValuationRepository;
 import com.yss.valset.extract.repository.mapper.StgExternalValuationSubjectRepository;
+import com.yss.valset.extract.repository.mapper.TcAsIndexRepository;
+import com.yss.valset.extract.repository.mapper.TrSpvJjhzgzbRepository;
 import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExportCommand;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskExternalMetricDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskExternalSubjectDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDownloadDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardBasicDTO;
@@ -80,6 +86,8 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
     private final StgExternalValuationHeaderRepository headerRepository;
     private final StgExternalValuationSubjectRepository subjectRepository;
     private final StgExternalValuationMetricRepository metricRepository;
+    private final TrSpvJjhzgzbRepository trSpvJjhzgzbRepository;
+    private final TcAsIndexRepository tcAsIndexRepository;
     private final DatabaseDialectSupport databaseDialectSupport;
     private final ObjectMapper objectMapper;
     private final UniverWorkbookExportSupport univerWorkbookExportSupport;
@@ -174,6 +182,57 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
                 : records.stream()
                         .map(po -> toMetricDTO(po, rawColumns))
                         .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public List<OutsourcedDataTaskExternalSubjectDTO> listExternalSubjects(String batchId, String keyword) {
+        OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
+        String pdCd = normalizeKeyword(batch.getProductCode());
+        String bizDate = normalizeBizDate(batch.getBusinessDate());
+        if (!StringUtils.hasText(pdCd) || !StringUtils.hasText(bizDate)) {
+            return Collections.emptyList();
+        }
+        String normalizedKeyword = normalizeKeyword(keyword);
+        LambdaQueryWrapper<TrSpvJjhzgzbPO> query = Wrappers.lambdaQuery(TrSpvJjhzgzbPO.class)
+                .eq(TrSpvJjhzgzbPO::getPdCd, pdCd)
+                .eq(TrSpvJjhzgzbPO::getBizDate, bizDate)
+                .and(StringUtils.hasText(normalizedKeyword), wrapper -> wrapper
+                        .like(TrSpvJjhzgzbPO::getSubjectCd, normalizedKeyword)
+                        .or()
+                        .like(TrSpvJjhzgzbPO::getSubjectNm, normalizedKeyword)
+                        .or()
+                        .like(TrSpvJjhzgzbPO::getPaSubjectCd, normalizedKeyword)
+                        .or()
+                        .like(TrSpvJjhzgzbPO::getPaSubjectNm, normalizedKeyword))
+                .orderByAsc(TrSpvJjhzgzbPO::getSn)
+                .orderByAsc(TrSpvJjhzgzbPO::getId);
+        List<TrSpvJjhzgzbPO> records = trSpvJjhzgzbRepository.selectList(query);
+        return records == null
+                ? Collections.emptyList()
+                : records.stream().map(this::toExternalSubjectDTO).collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    public List<OutsourcedDataTaskExternalMetricDTO> listExternalMetrics(String batchId, String keyword) {
+        OutsourcedDataTaskBatchDTO batch = requireBatch(batchId);
+        String pdCd = normalizeKeyword(batch.getProductCode());
+        String bizDate = normalizeBizDate(batch.getBusinessDate());
+        if (!StringUtils.hasText(pdCd) || !StringUtils.hasText(bizDate)) {
+            return Collections.emptyList();
+        }
+        String normalizedKeyword = normalizeKeyword(keyword);
+        LambdaQueryWrapper<TcAsIndexPO> query = Wrappers.lambdaQuery(TcAsIndexPO.class)
+                .eq(TcAsIndexPO::getPdCd, pdCd)
+                .eq(TcAsIndexPO::getBizDate, bizDate)
+                .and(StringUtils.hasText(normalizedKeyword), wrapper -> wrapper
+                        .like(TcAsIndexPO::getIndexType, normalizedKeyword)
+                        .or()
+                        .like(TcAsIndexPO::getOrgCd, normalizedKeyword))
+                .orderByAsc(TcAsIndexPO::getId);
+        List<TcAsIndexPO> records = tcAsIndexRepository.selectList(query);
+        return records == null
+                ? Collections.emptyList()
+                : records.stream().map(this::toExternalMetricDTO).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
@@ -380,10 +439,10 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
             return "基础信息";
         }
         if ("subjects".equals(normalized)) {
-            return "估值明细";
+            return "原始估值明细";
         }
         if ("metrics".equals(normalized)) {
-            return "指标数据";
+            return "原始指标明细";
         }
         if ("raw".equals(normalized)) {
             return "原始估值表";
@@ -548,6 +607,77 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
         return dto;
     }
 
+    private OutsourcedDataTaskExternalSubjectDTO toExternalSubjectDTO(TrSpvJjhzgzbPO po) {
+        OutsourcedDataTaskExternalSubjectDTO dto = new OutsourcedDataTaskExternalSubjectDTO();
+        dto.setId(po.getId());
+        dto.setOrgCd(po.getOrgCd());
+        dto.setPdCd(po.getPdCd());
+        dto.setBizDate(po.getBizDate());
+        dto.setSubjectCd(po.getSubjectCd());
+        dto.setSubjectNm(po.getSubjectNm());
+        dto.setPaSubjectCd(po.getPaSubjectCd());
+        dto.setPaSubjectNm(po.getPaSubjectNm());
+        dto.setNHldamt(po.getNHldamt());
+        dto.setNHldcst(po.getNHldcst());
+        dto.setNHldcstLocl(po.getNHldcstLocl());
+        dto.setNHldmkv(po.getNHldmkv());
+        dto.setNHldmkvLocl(po.getNHldmkvLocl());
+        dto.setNHldvva(po.getNHldvva());
+        dto.setNHldvvaL(po.getNHldvvaL());
+        dto.setCcyCd(po.getCcyCd());
+        dto.setNValrate(po.getNValrate());
+        dto.setNPriceCost(po.getNPriceCost());
+        dto.setNValprice(po.getNValprice());
+        dto.setNCbJzBl(po.getNCbJzBl());
+        dto.setNSzJzBl(po.getNSzJzBl());
+        dto.setNZcBl(po.getNZcBl());
+        dto.setSuspInfo(po.getSuspInfo());
+        dto.setValuatEquity(po.getValuatEquity());
+        dto.setFinAttrIdD(po.getFinAttrIdD());
+        dto.setFinMktCd(po.getFinMktCd());
+        dto.setTimeStamp(po.getTimeStamp() == null ? null : String.valueOf(po.getTimeStamp()));
+        dto.setConsFloatTpCd(po.getConsFloatTpCd());
+        dto.setSourceTp(po.getSourceTp());
+        dto.setSourceSign(po.getSourceSign());
+        dto.setSn(po.getSn());
+        dto.setDataDt(po.getDataDt());
+        dto.setIsinCd(po.getIsinCd());
+        return dto;
+    }
+
+    private OutsourcedDataTaskExternalMetricDTO toExternalMetricDTO(TcAsIndexPO po) {
+        OutsourcedDataTaskExternalMetricDTO dto = new OutsourcedDataTaskExternalMetricDTO();
+        dto.setId(po.getId());
+        dto.setOrgCd(po.getOrgCd());
+        dto.setPdCd(po.getPdCd());
+        dto.setBizDate(po.getBizDate());
+        dto.setPaidCapital(po.getPaidCapital());
+        dto.setTotalAssets(po.getTotalAssets());
+        dto.setTotalLiabi(po.getTotalLiabi());
+        dto.setAssetValue(po.getAssetValue());
+        dto.setAvgNav(po.getAvgNav());
+        dto.setAccNet(po.getAccNet());
+        dto.setTenSouYield(po.getTenSouYield());
+        dto.setSevenAnnuYield(po.getSevenAnnuYield());
+        dto.setTodayAnnuYield(po.getTodayAnnuYield());
+        dto.setYield(po.getYield());
+        dto.setDeviation(po.getDeviation());
+        dto.setDeviationAmt(po.getDeviationAmt());
+        dto.setTotalAssetsCb(po.getTotalAssetsCb());
+        dto.setTotalLiabiCb(po.getTotalLiabiCb());
+        dto.setAssetValueCb(po.getAssetValueCb());
+        dto.setTotalAssetsCbY(po.getTotalAssetsCbY());
+        dto.setTotalLiabiCbY(po.getTotalLiabiCbY());
+        dto.setAssetValueCbY(po.getAssetValueCbY());
+        dto.setTotalAssetsY(po.getTotalAssetsY());
+        dto.setTotalLiabiY(po.getTotalLiabiY());
+        dto.setAssetValueY(po.getAssetValueY());
+        dto.setPaidCapitalCb(po.getPaidCapitalCb());
+        dto.setIndexType(po.getIndexType());
+        dto.setTimeStamp(po.getTimeStamp() == null ? null : String.valueOf(po.getTimeStamp()));
+        return dto;
+    }
+
     private Map<String, String> buildRawValues(String rawValuesJson,
             List<OutsourcedDataTaskStandardRawColumnDTO> rawColumns) {
         Object source = readRawValues(rawValuesJson);
@@ -635,6 +765,15 @@ public class DefaultOutsourcedDataTaskStandardDataService implements OutsourcedD
 
     private String normalizeKeyword(String keyword) {
         return StringUtils.hasText(keyword) ? keyword.trim() : null;
+    }
+
+    private String normalizeBizDate(String bizDate) {
+        String normalized = normalizeKeyword(bizDate);
+        if (!StringUtils.hasText(normalized)) {
+            return null;
+        }
+        String digits = normalized.replaceAll("[^0-9]", "");
+        return digits.length() == 8 ? digits : normalized;
     }
 
     private String normalizeHeaderTitle(String headerName) {

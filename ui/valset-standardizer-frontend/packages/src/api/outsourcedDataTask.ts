@@ -247,6 +247,75 @@ export type OutsourcedDataTaskStandardMetricDTO = {
   rawValues?: Record<string, string>;
 };
 
+export type OutsourcedDataTaskExternalSubjectDTO = {
+  id?: number;
+  orgCd?: string;
+  pdCd?: string;
+  bizDate?: string;
+  subjectCd?: string;
+  subjectNm?: string;
+  paSubjectCd?: string;
+  paSubjectNm?: string;
+  nHldamt?: number | string;
+  nHldcst?: number | string;
+  nHldcstLocl?: number | string;
+  nHldmkv?: number | string;
+  nHldmkvLocl?: number | string;
+  nHldvva?: number | string;
+  nHldvvaL?: number | string;
+  ccyCd?: string;
+  nValrate?: number | string;
+  nPriceCost?: number | string;
+  nValprice?: number | string;
+  nCbJzBl?: number | string;
+  nSzJzBl?: number | string;
+  nZcBl?: number | string;
+  suspInfo?: string;
+  valuatEquity?: string;
+  finAttrIdD?: string;
+  finMktCd?: string;
+  timeStamp?: string;
+  consFloatTpCd?: string;
+  sourceTp?: string;
+  sourceSign?: string;
+  sn?: number;
+  dataDt?: string;
+  isinCd?: string;
+  rawValues?: Record<string, string>;
+};
+
+export type OutsourcedDataTaskExternalMetricDTO = {
+  id?: number;
+  orgCd?: string;
+  pdCd?: string;
+  bizDate?: string;
+  paidCapital?: number | string;
+  totalAssets?: number | string;
+  totalLiabi?: number | string;
+  assetValue?: number | string;
+  avgNav?: number | string;
+  accNet?: number | string;
+  tenSouYield?: number | string;
+  sevenAnnuYield?: number | string;
+  todayAnnuYield?: number | string;
+  yield?: number | string;
+  deviation?: number | string;
+  deviationAmt?: number | string;
+  totalAssetsCb?: number | string;
+  totalLiabiCb?: number | string;
+  assetValueCb?: number | string;
+  totalAssetsCbY?: number | string;
+  totalLiabiCbY?: number | string;
+  assetValueCbY?: number | string;
+  totalAssetsY?: number | string;
+  totalLiabiY?: number | string;
+  assetValueY?: number | string;
+  paidCapitalCb?: number | string;
+  indexType?: string;
+  timeStamp?: string;
+  rawValues?: Record<string, string>;
+};
+
 export type PageResultOutsourcedDataTaskBatchDTO = {
   data?: OutsourcedDataTaskBatchDTO[];
   totalCount?: number;
@@ -288,6 +357,14 @@ export type MultiResultOutsourcedDataTaskStandardSubjectDTO = {
 
 export type MultiResultOutsourcedDataTaskStandardMetricDTO = {
   data?: OutsourcedDataTaskStandardMetricDTO[];
+};
+
+export type MultiResultOutsourcedDataTaskExternalSubjectDTO = {
+  data?: OutsourcedDataTaskExternalSubjectDTO[];
+};
+
+export type MultiResultOutsourcedDataTaskExternalMetricDTO = {
+  data?: OutsourcedDataTaskExternalMetricDTO[];
 };
 
 export type SingleResultOutsourcedDataTaskActionResultDTO = {
@@ -337,6 +414,26 @@ export const listValuationParseTaskStandardMetrics = (
 ) =>
   customInstance<MultiResultOutsourcedDataTaskStandardMetricDTO>({
     url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/metrics`,
+    method: "GET",
+    params,
+  });
+
+export const listValuationParseTaskExternalSubjects = (
+  batchId: string,
+  params?: { keyword?: string },
+) =>
+  customInstance<MultiResultOutsourcedDataTaskExternalSubjectDTO>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/external-subjects`,
+    method: "GET",
+    params,
+  });
+
+export const listValuationParseTaskExternalMetrics = (
+  batchId: string,
+  params?: { keyword?: string },
+) =>
+  customInstance<MultiResultOutsourcedDataTaskExternalMetricDTO>({
+    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/external-metrics`,
     method: "GET",
     params,
   });
@@ -419,6 +516,8 @@ export const getOutsourcedDataTaskTrace = getValuationParseTaskTrace;
 export const getOutsourcedDataTaskStandardBasic = getValuationParseTaskStandardBasic;
 export const listOutsourcedDataTaskStandardSubjects = listValuationParseTaskStandardSubjects;
 export const listOutsourcedDataTaskStandardMetrics = listValuationParseTaskStandardMetrics;
+export const listOutsourcedDataTaskExternalSubjects = listValuationParseTaskExternalSubjects;
+export const listOutsourcedDataTaskExternalMetrics = listValuationParseTaskExternalMetrics;
 export const getOutsourcedDataTaskRawWorkbook = getValuationParseTaskRawWorkbook;
 export const exportOutsourcedDataTaskStandardDataSheet = exportValuationParseTaskStandardDataSheet;
 export const listOutsourcedDataTaskSteps = listValuationParseTaskSteps;

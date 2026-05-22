@@ -10,6 +10,8 @@ import com.yss.valset.task.application.command.OutsourcedDataTaskStandardDataExp
 import com.yss.valset.task.application.dto.OutsourcedDataTaskActionResultDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskBatchDetailDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskExternalMetricDTO;
+import com.yss.valset.task.application.dto.OutsourcedDataTaskExternalSubjectDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDownloadDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskRawWorkbookDTO;
 import com.yss.valset.task.application.dto.OutsourcedDataTaskStandardDataExportDTO;
@@ -130,6 +132,22 @@ public class OutsourcedDataTaskController {
             @PathVariable String batchId,
             @RequestParam(value = "keyword", required = false) String keyword) {
         return MultiResult.of(standardDataService.listMetrics(batchId, keyword));
+    }
+
+    @GetMapping("/{batchId}/standard-data/external-subjects")
+    @Operation(summary = "查询估值解析任务委外估值明细")
+    public MultiResult<OutsourcedDataTaskExternalSubjectDTO> listExternalSubjects(
+            @PathVariable String batchId,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return MultiResult.of(standardDataService.listExternalSubjects(batchId, keyword));
+    }
+
+    @GetMapping("/{batchId}/standard-data/external-metrics")
+    @Operation(summary = "查询估值解析任务委外指标明细")
+    public MultiResult<OutsourcedDataTaskExternalMetricDTO> listExternalMetrics(
+            @PathVariable String batchId,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        return MultiResult.of(standardDataService.listExternalMetrics(batchId, keyword));
     }
 
     @GetMapping("/{batchId}/standard-data/raw-workbook")

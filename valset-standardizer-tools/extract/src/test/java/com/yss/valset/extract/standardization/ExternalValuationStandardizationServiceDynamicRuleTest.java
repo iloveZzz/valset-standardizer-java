@@ -97,7 +97,7 @@ class ExternalValuationStandardizationServiceDynamicRuleTest {
 
         ParsedValuationData data = ParsedValuationData.builder()
                 .workbookPath("/tmp/valuation.xlsx")
-                .fileNameOriginal("valuation.xlsx")
+                .fileNameOriginal("testwr委外3普通估值表_DL-SDLYHHX_20250513.xlsx")
                 .sheetName("ODS_RAW_DATA")
                 .headers(java.util.Arrays.asList("科目代码", "未映射列"))
                 .headerColumns(java.util.Arrays.asList(
@@ -120,7 +120,9 @@ class ExternalValuationStandardizationServiceDynamicRuleTest {
         assertThat(captor.getAllValues()).extracting(FileParseSourcePO::getColumnName)
                 .containsExactlyInAnyOrder("未映射列", "未映射指标");
         assertThat(captor.getAllValues()).extracting(FileParseSourcePO::getFileExtInfo)
-                .containsExactlyInAnyOrder("{\"regionName\":\"column\"}", "{\"regionName\":\"metric\"}");
+                .containsExactlyInAnyOrder(
+                        "{\"regionName\":\"column\",\"sourceSign\":\"testwr委外3普通估值表_DL-SDLYHHX_20250513\"}",
+                        "{\"regionName\":\"metric\",\"sourceSign\":\"testwr委外3普通估值表_DL-SDLYHHX_20250513\"}");
         assertThat(captor.getAllValues()).extracting(FileParseSourcePO::getStatus)
                 .containsOnly(Boolean.FALSE);
     }
@@ -146,7 +148,7 @@ class ExternalValuationStandardizationServiceDynamicRuleTest {
     private ParsedValuationData parsedData() {
         return ParsedValuationData.builder()
                 .workbookPath("/tmp/valuation.xlsx")
-                .fileNameOriginal("valuation.xlsx")
+                .fileNameOriginal("testwr委外3普通估值表_DL-SDLYHHX_20250513.xlsx")
                 .sheetName("ODS_RAW_DATA")
                 .headers(java.util.Arrays.asList("科目代码", "科目名称", "市值"))
                 .headerColumns(java.util.Arrays.asList(

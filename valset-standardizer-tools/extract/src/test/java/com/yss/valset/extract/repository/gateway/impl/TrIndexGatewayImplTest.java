@@ -4,7 +4,11 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.domain.model.MetricRecord;
 import com.yss.valset.domain.model.ParsedValuationData;
+import com.yss.valset.extract.repository.entity.FileParseSourcePO;
+import com.yss.valset.extract.repository.entity.TcAsIndexPO;
 import com.yss.valset.extract.repository.entity.TrIndexPO;
+import com.yss.valset.extract.repository.mapper.FileParseSourceRepository;
+import com.yss.valset.extract.repository.mapper.TcAsIndexRepository;
 import com.yss.valset.extract.repository.mapper.TrIndexRepository;
 import com.yss.valset.extract.support.ProductBusinessFields;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +35,12 @@ class TrIndexGatewayImplTest {
 
     @Mock
     private TrIndexRepository repository;
+
+    @Mock
+    private FileParseSourceRepository fileParseSourceRepository;
+
+    @Mock
+    private TcAsIndexRepository tcAsIndexRepository;
 
     @Mock
     private ProductBusinessFieldResolver productBusinessFieldResolver;
@@ -41,8 +52,9 @@ class TrIndexGatewayImplTest {
 
     @BeforeEach
     void setUp() {
-        gateway = new TrIndexGatewayImpl(repository, productBusinessFieldResolver, databaseDialectSupport);
+        gateway = new TrIndexGatewayImpl(repository, fileParseSourceRepository, tcAsIndexRepository, productBusinessFieldResolver, databaseDialectSupport);
         when(productBusinessFieldResolver.resolve(100L)).thenReturn(new ProductBusinessFields("PD001", "ORG001"));
+        lenient().when(fileParseSourceRepository.selectList(any())).thenReturn(Collections.emptyList());
     }
 
     @Test
@@ -62,6 +74,7 @@ class TrIndexGatewayImplTest {
                 .containsExactly("资产净值", "单位净值");
         assertThat(TrIndexPO.class.getAnnotation(TableName.class).value())
                 .isEqualTo("tr_spv_index");
+        verify(tcAsIndexRepository).delete(any());
     }
 
     @Test
@@ -219,6 +232,82 @@ class TrIndexGatewayImplTest {
                 .containsExactly("100", "0.125");
     }
 
+    @Test
+    void shouldBuildTcAsIndexWideRowsFromMappedIndexNames() {
+        when(databaseDialectSupport.isOracle()).thenReturn(false);
+        when(fileParseSourceRepository.selectList(any())).thenReturn(Arrays.asList(
+                parseSource("资产净值", "asset_value"),
+                parseSource("今日单位净值", "avg_nav")));
+
+        gateway.saveStandardizedIndex(1L, 100L, "EXCEL", "fingerprint", ParsedValuationData.builder()
+                .basicInfo(Collections.singletonMap("biz_date", "20240520"))
+                .metrics(Arrays.asList(metricData("资产净值", "12.34"), metricData("今日单位净值", "1.2345")))
+                .build());
+
+        ArgumentCaptor<java.util.List<TcAsIndexPO>> wideRowsCaptor = ArgumentCaptor.forClass(java.util.List.class);
+        verify(tcAsIndexRepository).delete(any());
+        verify(tcAsIndexRepository).insertBatchSomeColumn(wideRowsCaptor.capture());
+        assertThat(wideRowsCaptor.getValue()).hasSize(1);
+        TcAsIndexPO wideRow = wideRowsCaptor.getValue().get(0);
+        assertThat(wideRow.getPdCd()).isEqualTo("PD001");
+        assertThat(wideRow.getOrgCd()).isEqualTo("ORG001");
+        assertThat(wideRow.getBizDate()).isEqualTo("20240520");
+        assertThat(wideRow.getAssetValue()).isEqualByComparingTo("12.34");
+        assertThat(wideRow.getAvgNav()).isEqualByComparingTo("1.2345");
+        assertThat(wideRow.getIndexType()).isNull();
+        assertThat(wideRow.getId()).isNotNull();
+    }
+
+    @Test
+    void shouldSkipUnmappedAndNonNumericIndexValuesWhenBuildingTcAsIndex() {
+        when(databaseDialectSupport.isOracle()).thenReturn(false);
+        when(fileParseSourceRepository.selectList(any())).thenReturn(Collections.singletonList(parseSource("资产净值", "asset_value")));
+
+        gateway.saveStandardizedIndex(1L, 100L, "EXCEL", "fingerprint", ParsedValuationData.builder()
+                .basicInfo(Collections.singletonMap("biz_date", "20240520"))
+                .metrics(Arrays.asList(
+                        metricData("资产净值", "说明文本", 10),
+                        metricData("未映射指标", "9", 11)))
+                .build());
+
+        verify(tcAsIndexRepository).delete(any());
+        verify(tcAsIndexRepository, never()).insertBatchSomeColumn(any());
+    }
+
+    @Test
+    void shouldUseLastMappedValueWhenMultipleIndexNamesMapToSameTcAsIndexField() {
+        when(databaseDialectSupport.isOracle()).thenReturn(false);
+        when(fileParseSourceRepository.selectList(any())).thenReturn(Arrays.asList(
+                parseSource("资产净值", "asset_value"),
+                parseSource("净值(市值)", "asset_value")));
+
+        gateway.saveStandardizedIndex(1L, 100L, "EXCEL", "fingerprint", ParsedValuationData.builder()
+                .basicInfo(Collections.singletonMap("biz_date", "20240520"))
+                .metrics(Arrays.asList(
+                        metricData("资产净值", "1", 10),
+                        metricData("净值(市值)", "2", 11)))
+                .build());
+
+        ArgumentCaptor<java.util.List<TcAsIndexPO>> wideRowsCaptor = ArgumentCaptor.forClass(java.util.List.class);
+        verify(tcAsIndexRepository).insertBatchSomeColumn(wideRowsCaptor.capture());
+        assertThat(wideRowsCaptor.getValue()).hasSize(1);
+        assertThat(wideRowsCaptor.getValue().get(0).getAssetValue()).isEqualByComparingTo("2");
+    }
+
+    @Test
+    void shouldInsertTcAsIndexRowsOneByOneWhenOracle() {
+        when(databaseDialectSupport.isOracle()).thenReturn(true);
+        when(fileParseSourceRepository.selectList(any())).thenReturn(Collections.singletonList(parseSource("资产净值", "asset_value")));
+
+        gateway.saveStandardizedIndex(1L, 100L, "EXCEL", "fingerprint", ParsedValuationData.builder()
+                .basicInfo(Collections.singletonMap("biz_date", "20240520"))
+                .metrics(Collections.singletonList(metricData("资产净值", "1")))
+                .build());
+
+        verify(tcAsIndexRepository).insert(any(TcAsIndexPO.class));
+        verify(tcAsIndexRepository, never()).insertBatchSomeColumn(any());
+    }
+
     private MetricRecord metricData(String metricName, String value) {
         return metricData(metricName, value, 1);
     }
@@ -230,5 +319,13 @@ class TrIndexGatewayImplTest {
                 .metricType("metric_data")
                 .value(value)
                 .build();
+    }
+
+    private FileParseSourcePO parseSource(String columnName, String columnMap) {
+        FileParseSourcePO po = new FileParseSourcePO();
+        po.setColumnName(columnName);
+        po.setColumnMap(columnMap);
+        po.setStatus(Boolean.TRUE);
+        return po;
     }
 }

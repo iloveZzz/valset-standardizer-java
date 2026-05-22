@@ -1,12 +1,18 @@
 package com.yss.valset.extract.repository.gateway.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.yss.valset.common.support.DatabaseDialectSupport;
 import com.yss.valset.domain.gateway.TrIndexGateway;
 import com.yss.valset.domain.model.ParsedValuationData;
+import com.yss.valset.extract.repository.entity.FileParseSourcePO;
+import com.yss.valset.extract.repository.entity.TcAsIndexPO;
 import com.yss.valset.extract.repository.entity.TrIndexPO;
+import com.yss.valset.extract.repository.mapper.FileParseSourceRepository;
+import com.yss.valset.extract.repository.mapper.TcAsIndexRepository;
 import com.yss.valset.extract.repository.mapper.TrIndexRepository;
 import com.yss.valset.extract.support.ProductBusinessFields;
+import com.yss.valset.extract.support.TcAsIndexWideRowSupport;
 import com.yss.valset.extract.support.TrIndexStandardizationSupport;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +33,10 @@ public class TrIndexGatewayImpl implements TrIndexGateway {
 
     private final TrIndexRepository repository;
 
+    private final FileParseSourceRepository fileParseSourceRepository;
+
+    private final TcAsIndexRepository tcAsIndexRepository;
+
     private final ProductBusinessFieldResolver productBusinessFieldResolver;
 
     private final DatabaseDialectSupport databaseDialectSupport;
@@ -42,6 +52,7 @@ public class TrIndexGatewayImpl implements TrIndexGateway {
         Set<SnapshotKey> snapshotKeys = validateRows(taskId, fileId, rows);
         deleteExistingRows(snapshotKeys);
         insertRows(rows);
+        refreshTcAsIndex(taskId, fileId, rows, snapshotKeys);
         TrIndexPO firstRow = rows.get(0);
         log.info("tr_spv_index 标准化落地完成，taskId={}, fileId={}, sourceTp={}, rowCount={}, firstIndxNm={}, firstBizDate={}",
                 taskId,
@@ -118,6 +129,47 @@ public class TrIndexGatewayImpl implements TrIndexGateway {
             return;
         }
         repository.insertBatchSomeColumn(rows);
+    }
+
+    private void refreshTcAsIndex(Long taskId, Long fileId, List<TrIndexPO> rows, Set<SnapshotKey> snapshotKeys) {
+        List<FileParseSourcePO> parseSources = fileParseSourceRepository.selectList(
+                Wrappers.lambdaQuery(FileParseSourcePO.class)
+                        .eq(FileParseSourcePO::getStatus, Boolean.TRUE));
+        List<TcAsIndexPO> wideRows = TcAsIndexWideRowSupport.buildRows(rows, parseSources);
+        deleteExistingTcAsIndexRows(snapshotKeys);
+        if (wideRows.isEmpty()) {
+            log.info("tc_as_index 转换结果为空，taskId={}, fileId={}, sourceRowCount={}",
+                    taskId, fileId, rows.size());
+            return;
+        }
+        insertTcAsIndexRows(wideRows);
+        TcAsIndexPO firstRow = wideRows.get(0);
+        log.info("tc_as_index 标准资产指标宽表落地完成，taskId={}, fileId={}, rowCount={}, firstPdCd={}, firstBizDate={}",
+                taskId,
+                fileId,
+                wideRows.size(),
+                firstRow.getPdCd(),
+                firstRow.getBizDate());
+    }
+
+    private void deleteExistingTcAsIndexRows(Set<SnapshotKey> snapshotKeys) {
+        for (SnapshotKey snapshotKey : snapshotKeys) {
+            tcAsIndexRepository.delete(Wrappers.lambdaQuery(TcAsIndexPO.class)
+                    .eq(TcAsIndexPO::getPdCd, snapshotKey.pdCd)
+                    .eq(TcAsIndexPO::getOrgCd, snapshotKey.orgCd)
+                    .eq(TcAsIndexPO::getBizDate, snapshotKey.bizDate));
+        }
+    }
+
+    private void insertTcAsIndexRows(List<TcAsIndexPO> wideRows) {
+        for (TcAsIndexPO wideRow : wideRows) {
+            wideRow.setId(IdWorker.getId());
+        }
+        if (databaseDialectSupport != null && databaseDialectSupport.isOracle()) {
+            wideRows.forEach(tcAsIndexRepository::insert);
+            return;
+        }
+        tcAsIndexRepository.insertBatchSomeColumn(wideRows);
     }
 
     private static final class SnapshotKey {

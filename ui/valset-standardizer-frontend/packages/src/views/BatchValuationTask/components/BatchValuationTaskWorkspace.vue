@@ -48,6 +48,8 @@ type NativeUniverSheetInstance = InstanceType<typeof NativeUniverSheet> & {
 const standardBasicSheetRef = ref<NativeUniverSheetInstance | null>(null);
 const standardSubjectSheetRef = ref<NativeUniverSheetInstance | null>(null);
 const standardMetricSheetRef = ref<NativeUniverSheetInstance | null>(null);
+const standardExternalSubjectSheetRef = ref<NativeUniverSheetInstance | null>(null);
+const standardExternalMetricSheetRef = ref<NativeUniverSheetInstance | null>(null);
 const standardRawSheetRef = ref<NativeUniverSheetInstance | null>(null);
 
 watch(
@@ -406,7 +408,9 @@ const splitHeaderTitle = (title: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-const isLeftAlignedHeader = (title: string) => /编码|名称|层级/.test(title);
+const isLeftAlignedHeader = (title: string) => /代码|编码|名称|层级/.test(title);
+
+const shouldFormatNumericCell = (title: string) => !/(代码|编码)/.test(title);
 
 const resolveHeaderStyleId = (title: string) =>
   isLeftAlignedHeader(title) ? sheetLeftHeaderStyleId : sheetHeaderStyleId;
@@ -416,13 +420,14 @@ const toSheetCellData = (
   value: unknown,
   formatNumericCell = true,
 ) => {
+  const allowNumericFormat = formatNumericCell && shouldFormatNumericCell(column.title);
   if (isLeftAlignedHeader(column.title)) {
     return {
       v: normalizeSheetCellValue(value),
       s: sheetLeftTextDataStyleId,
     };
   }
-  const numericValue = formatNumericCell ? normalizeNumericCellValue(value) : null;
+  const numericValue = allowNumericFormat ? normalizeNumericCellValue(value) : null;
   if (numericValue !== null) {
     return {
       v: numericValue,
@@ -826,6 +831,56 @@ const standardMetricSheetColumns = computed<StandardSheetColumn[]>(() => [
   ...standardRawSheetColumns.value,
 ]);
 
+const externalSubjectSheetColumns = computed<StandardSheetColumn[]>(() => [
+  { field: "subjectCd", title: "科目代码", width: 130 },
+  { field: "subjectNm", title: "科目名称", width: 200 },
+  { field: "paSubjectCd", title: "父科目代码", width: 130 },
+  { field: "paSubjectNm", title: "父科目名称", width: 180 },
+  { field: "nHldamt", title: "持仓数量", width: 120 },
+  { field: "nHldcst", title: "原币持仓成本", width: 140 },
+  { field: "nHldcstLocl", title: "本币持仓成本", width: 140 },
+  { field: "nHldmkv", title: "原币持仓市值", width: 140 },
+  { field: "nHldmkvLocl", title: "本币持仓市值", width: 140 },
+  { field: "nHldvva", title: "原币证券估增", width: 140 },
+  { field: "nHldvvaL", title: "本币证券估值", width: 140 },
+  { field: "ccyCd", title: "币种", width: 90 },
+  { field: "nValrate", title: "估值汇率", width: 120 },
+  { field: "nPriceCost", title: "单位成本", width: 120 },
+  { field: "nValprice", title: "估值行情", width: 120 },
+  { field: "nCbJzBl", title: "成本占比", width: 120 },
+  { field: "nSzJzBl", title: "市值占比", width: 120 },
+  { field: "nZcBl", title: "资产占比", width: 120 },
+  { field: "pdCd", title: "产品代码", width: 120 },
+  { field: "bizDate", title: "业务日期", width: 110 },
+  { field: "orgCd", title: "机构代码", width: 110 },
+  { field: "sourceTp", title: "来源类型", width: 110 },
+  { field: "sourceSign", title: "来源标记", width: 160 },
+  { field: "sn", title: "序号", width: 80 },
+]);
+
+const externalMetricSheetColumns = computed<StandardSheetColumn[]>(() => [
+  { field: "paidCapital", title: "实收资本", width: 120 },
+  { field: "totalAssets", title: "资产合计", width: 120 },
+  { field: "totalLiabi", title: "负债合计", width: 120 },
+  { field: "assetValue", title: "资产净值", width: 120 },
+  { field: "avgNav", title: "单位净值", width: 120 },
+  { field: "accNet", title: "累计单位净值", width: 140 },
+  { field: "tenSouYield", title: "每万份收益", width: 130 },
+  { field: "sevenAnnuYield", title: "七日年化收益率", width: 150 },
+  { field: "todayAnnuYield", title: "本日年化收益率", width: 150 },
+  { field: "yield", title: "本日收益", width: 120 },
+  { field: "deviation", title: "偏离度", width: 120 },
+  { field: "deviationAmt", title: "偏离金额", width: 120 },
+  { field: "totalAssetsCb", title: "资产合计(成本)", width: 150 },
+  { field: "totalLiabiCb", title: "负债合计(成本)", width: 150 },
+  { field: "assetValueCb", title: "资产净值(成本)", width: 150 },
+  { field: "paidCapitalCb", title: "实收资本(成本)", width: 150 },
+  { field: "indexType", title: "指标类型", width: 120 },
+  { field: "pdCd", title: "产品代码", width: 120 },
+  { field: "bizDate", title: "业务日期", width: 110 },
+  { field: "orgCd", title: "机构代码", width: 110 },
+]);
+
 const standardBasicWorkbook = computed<IWorkbookData>(() =>
   toStandardWorkbook(
     "valuation_standard_basic",
@@ -840,7 +895,7 @@ const standardBasicWorkbook = computed<IWorkbookData>(() =>
 const standardSubjectWorkbook = computed<IWorkbookData>(() =>
   toStandardWorkbook(
     "valuation_standard_subjects",
-    "估值明细",
+    "原始估值明细",
     standardSubjectSheetColumns.value,
     standardSubjectRows.value,
     2,
@@ -850,10 +905,30 @@ const standardSubjectWorkbook = computed<IWorkbookData>(() =>
 const standardMetricWorkbook = computed<IWorkbookData>(() =>
   toStandardWorkbook(
     "valuation_standard_metrics",
-    "指标数据",
+    "原始指标明细",
     standardMetricSheetColumns.value,
     standardMetricRows.value,
     2,
+  ),
+);
+
+const standardExternalSubjectWorkbook = computed<IWorkbookData>(() =>
+  toStandardWorkbook(
+    "valuation_external_subjects",
+    "委外估值明细",
+    externalSubjectSheetColumns.value,
+    page.standardDataExternalSubjects,
+    2,
+  ),
+);
+
+const standardExternalMetricWorkbook = computed<IWorkbookData>(() =>
+  toStandardWorkbook(
+    "valuation_external_metrics",
+    "委外指标明细",
+    externalMetricSheetColumns.value,
+    page.standardDataExternalMetrics,
+    1,
   ),
 );
 
@@ -885,6 +960,12 @@ const standardDataTotalRows = computed(() => {
   if (page.standardDataActiveTab === "metrics") {
     return standardMetricRows.value.length;
   }
+  if (page.standardDataActiveTab === "externalSubjects") {
+    return page.standardDataExternalSubjects.length;
+  }
+  if (page.standardDataActiveTab === "externalMetrics") {
+    return page.standardDataExternalMetrics.length;
+  }
   return page.standardDataBasicRows.length;
 });
 
@@ -898,6 +979,12 @@ const standardDataTableLoading = computed(() => {
   if (page.standardDataActiveTab === "metrics") {
     return page.standardDataMetricsLoading;
   }
+  if (page.standardDataActiveTab === "externalSubjects") {
+    return page.standardDataExternalSubjectsLoading;
+  }
+  if (page.standardDataActiveTab === "externalMetrics") {
+    return page.standardDataExternalMetricsLoading;
+  }
   return page.standardDataBasicLoading;
 });
 
@@ -910,6 +997,12 @@ const standardDataExportDisabled = computed(() => {
   }
   if (page.standardDataActiveTab === "metrics") {
     return !standardMetricRows.value.length;
+  }
+  if (page.standardDataActiveTab === "externalSubjects") {
+    return !page.standardDataExternalSubjects.length;
+  }
+  if (page.standardDataActiveTab === "externalMetrics") {
+    return !page.standardDataExternalMetrics.length;
   }
   return !page.standardDataBasicRows.length;
 });
@@ -928,6 +1021,12 @@ const currentStandardDataSheet = () => {
   if (page.standardDataActiveTab === "metrics") {
     return standardMetricSheetRef.value;
   }
+  if (page.standardDataActiveTab === "externalSubjects") {
+    return standardExternalSubjectSheetRef.value;
+  }
+  if (page.standardDataActiveTab === "externalMetrics") {
+    return standardExternalMetricSheetRef.value;
+  }
   return standardBasicSheetRef.value;
 };
 
@@ -936,10 +1035,16 @@ const currentStandardDataSheetName = () => {
     return "原始估值表";
   }
   if (page.standardDataActiveTab === "subjects") {
-    return "估值明细";
+    return "原始估值明细";
   }
   if (page.standardDataActiveTab === "metrics") {
-    return "指标数据";
+    return "原始指标明细";
+  }
+  if (page.standardDataActiveTab === "externalSubjects") {
+    return "委外估值明细";
+  }
+  if (page.standardDataActiveTab === "externalMetrics") {
+    return "委外指标明细";
   }
   return "基础信息";
 };
@@ -1418,7 +1523,7 @@ const rawWorkbookData = computed(
             :class="page.standardDataActiveTab === 'subjects' ? 'batch-standard-tab--active' : ''"
             @click="page.handleStandardDataTabChange('subjects')"
           >
-            估值明细
+            原始估值明细
           </button>
           <button
             type="button"
@@ -1426,7 +1531,23 @@ const rawWorkbookData = computed(
             :class="page.standardDataActiveTab === 'metrics' ? 'batch-standard-tab--active' : ''"
             @click="page.handleStandardDataTabChange('metrics')"
           >
-            指标数据
+            原始指标明细
+          </button>
+          <button
+            type="button"
+            class="batch-standard-tab"
+            :class="page.standardDataActiveTab === 'externalSubjects' ? 'batch-standard-tab--active' : ''"
+            @click="page.handleStandardDataTabChange('externalSubjects')"
+          >
+            委外估值明细
+          </button>
+          <button
+            type="button"
+            class="batch-standard-tab"
+            :class="page.standardDataActiveTab === 'externalMetrics' ? 'batch-standard-tab--active' : ''"
+            @click="page.handleStandardDataTabChange('externalMetrics')"
+          >
+            委外指标明细
           </button>
           <button
             type="button"
@@ -1459,6 +1580,26 @@ const rawWorkbookData = computed(
               style="width: 320px"
               @change="!page.standardDataMetricsKeyword && page.searchStandardDataMetrics()"
               @search="page.searchStandardDataMetrics"
+            />
+            <a-input-search
+              v-else-if="page.standardDataActiveTab === 'externalSubjects'"
+              v-model:value="page.standardDataExternalSubjectsKeyword"
+              placeholder="搜索科目编码、名称或父级科目..."
+              size="small"
+              allow-clear
+              style="width: 320px"
+              @change="!page.standardDataExternalSubjectsKeyword && page.searchStandardDataExternalSubjects()"
+              @search="page.searchStandardDataExternalSubjects"
+            />
+            <a-input-search
+              v-else-if="page.standardDataActiveTab === 'externalMetrics'"
+              v-model:value="page.standardDataExternalMetricsKeyword"
+              placeholder="搜索指标类型或机构代码..."
+              size="small"
+              allow-clear
+              style="width: 320px"
+              @change="!page.standardDataExternalMetricsKeyword && page.searchStandardDataExternalMetrics()"
+              @search="page.searchStandardDataExternalMetrics"
             />
             <div v-else-if="page.standardDataActiveTab === 'raw'" class="batch-standard-toolbar__placeholder">
               文件：{{ page.standardDataRawWorkbook?.fileName || "-" }} · Sheet：{{ page.standardDataRawWorkbook?.sheetCount ?? 0 }} · 行数：{{ page.standardDataRawWorkbook?.rowCount ?? 0 }}
@@ -1572,7 +1713,7 @@ const rawWorkbookData = computed(
               </template>
               <template v-else>
                 <div class="batch-standard-empty">
-                  <strong>还没有估值明细</strong>
+                  <strong>还没有原始估值明细</strong>
                   <span>估值贴源数据落地完成后，这里会展示科目明细数据。</span>
                 </div>
               </template>
@@ -1595,8 +1736,54 @@ const rawWorkbookData = computed(
               </template>
               <template v-else>
                 <div class="batch-standard-empty">
-                  <strong>还没有指标数据</strong>
+                  <strong>还没有原始指标明细</strong>
                   <span>估值贴源数据落地完成后，这里会展示指标明细数据。</span>
+                </div>
+              </template>
+            </template>
+
+            <template v-else-if="page.standardDataActiveTab === 'externalSubjects'">
+              <template v-if="page.standardDataExternalSubjects.length">
+                <NativeUniverSheet
+                  ref="standardExternalSubjectSheetRef"
+                  :model-value="standardExternalSubjectWorkbook"
+                  :readonly="true"
+                  :config="{
+                    header: false,
+                    toolbar: false,
+                    formulaBar: false,
+                    footer: { addSheetButtonConfig: { show: false } },
+                    contextMenu: false
+                  }"
+                />
+              </template>
+              <template v-else>
+                <div class="batch-standard-empty">
+                  <strong>还没有委外估值明细</strong>
+                  <span>会按该批次产品代码和业务日期查询 TR_SPV_JJHZGZB 表。</span>
+                </div>
+              </template>
+            </template>
+
+            <template v-else-if="page.standardDataActiveTab === 'externalMetrics'">
+              <template v-if="page.standardDataExternalMetrics.length">
+                <NativeUniverSheet
+                  ref="standardExternalMetricSheetRef"
+                  :model-value="standardExternalMetricWorkbook"
+                  :readonly="true"
+                  :config="{
+                    header: false,
+                    toolbar: false,
+                    formulaBar: false,
+                    footer: { addSheetButtonConfig: { show: false } },
+                    contextMenu: false
+                  }"
+                />
+              </template>
+              <template v-else>
+                <div class="batch-standard-empty">
+                  <strong>还没有委外指标明细</strong>
+                  <span>会按该批次产品代码和业务日期查询 TC_AS_INDEX 表。</span>
                 </div>
               </template>
             </template>
