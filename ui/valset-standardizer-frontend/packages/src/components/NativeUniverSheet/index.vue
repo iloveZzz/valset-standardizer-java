@@ -121,6 +121,12 @@ const applyWorkbookFilters = (data: Partial<IWorkbookData>, createdWorkbook: Nat
         unitId: createdWorkbook.getId(),
         subUnitId: sheetId,
         range: filter.ref,
+      }).catch((error) => {
+        const text = String((error as Error)?.message ?? error ?? "");
+        if (text.includes("is not registered")) {
+          return;
+        }
+        reportError(error);
       });
     });
   } catch (error) {

@@ -53,6 +53,7 @@ public class ExternalValuationStandardizationService {
     private static final String SOURCE_REGION_COLUMN = "column";
     private static final String SOURCE_REGION_METRIC = "metric";
     private static final String SOURCE_REGION_KEY = "regionName";
+    private static final String SOURCE_SIGN_KEY = "sourceSign";
     private static final String AUTO_REGISTER_USER = "system";
 
     private final ObjectMapper objectMapper;
@@ -156,7 +157,7 @@ public class ExternalValuationStandardizationService {
                         normalizeRule))
                 .collect(java.util.stream.Collectors.toList());
         logSubjectMetricMappingSummary(standardizedSubjects, standardizedMetrics);
-        autoRegisterUnmappedSourceEntries(headerQualitySummary, parsedValuationData.getHeaders(), parsedValuationData.getMetrics(), dictionary);
+        autoRegisterUnmappedSourceEntries(headerQualitySummary, parsedValuationData.getMetrics(), dictionary, resolveSourceSign(parsedValuationData));
 
         // Step 3: 汇总质量报告，便于后续监控与回放补规则
         MappingQualityReport mappingQualityReport = buildMappingQualityReport(
@@ -794,18 +795,18 @@ public class ExternalValuationStandardizationService {
 
     private void autoRegisterUnmappedSourceEntries(
             HeaderQualitySummary headerSummary,
-            List<String> headers,
             List<MetricRecord> metrics,
-            Dictionary dictionary
+            Dictionary dictionary,
+            String sourceSign
     ) {
         if (parseSourceRepository == null) {
             return;
         }
         try {
             boolean changed = false;
-            if (headerSummary != null && headers != null) {
+            if (headerSummary != null) {
                 for (String unmappedHeader : headerSummary.unmappedHeaders()) {
-                    changed |= registerUnmappedSourceEntry(SOURCE_REGION_COLUMN, unmappedHeader);
+                    changed |= registerUnmappedSourceEntry(SOURCE_REGION_COLUMN, unmappedHeader, sourceSign);
                 }
             }
             if (metrics != null) {
@@ -813,7 +814,7 @@ public class ExternalValuationStandardizationService {
                     if (!shouldAutoRegisterMetric(metric, dictionary)) {
                         continue;
                     }
-                    changed |= registerUnmappedSourceEntry(SOURCE_REGION_METRIC, metric.getMetricName());
+                    changed |= registerUnmappedSourceEntry(SOURCE_REGION_METRIC, metric.getMetricName(), sourceSign);
                 }
             }
             if (changed) {
@@ -836,7 +837,7 @@ public class ExternalValuationStandardizationService {
         return BuiltinMetricAliasCatalog.match(metricName) == null;
     }
 
-    private boolean registerUnmappedSourceEntry(String regionName, String columnName) throws Exception {
+    private boolean registerUnmappedSourceEntry(String regionName, String columnName, String sourceSign) throws Exception {
         String normalizedColumnName = trimToNull(columnName);
         if (normalizedColumnName == null) {
             return false;
@@ -845,7 +846,13 @@ public class ExternalValuationStandardizationService {
         if (normalizedRegionName == null) {
             normalizedRegionName = SOURCE_REGION_COLUMN;
         }
-        String fileExtInfo = objectMapper.writeValueAsString(Java8Maps.of(SOURCE_REGION_KEY, normalizedRegionName));
+        Map<String, String> extInfo = new LinkedHashMap<>();
+        extInfo.put(SOURCE_REGION_KEY, normalizedRegionName);
+        String normalizedSourceSign = trimToNull(sourceSign);
+        if (normalizedSourceSign != null) {
+            extInfo.put(SOURCE_SIGN_KEY, normalizedSourceSign);
+        }
+        String fileExtInfo = objectMapper.writeValueAsString(extInfo);
         List<FileParseSourcePO> existingRows = parseSourceRepository.selectList(
                 Wrappers.lambdaQuery(FileParseSourcePO.class)
                         .eq(FileParseSourcePO::getFileType, SOURCE_FILE_TYPE)
@@ -859,7 +866,7 @@ public class ExternalValuationStandardizationService {
         FileParseSourcePO po = new FileParseSourcePO();
         po.setId(IdWorker.getId());
         po.setFileType(SOURCE_FILE_TYPE);
-        po.setColumnMap(buildPlaceholderColumnMap(normalizedRegionName, normalizedColumnName));
+        po.setColumnMap("");
         po.setColumnName(normalizedColumnName);
         po.setFileExtInfo(fileExtInfo);
         po.setStatus(Boolean.FALSE);
@@ -871,17 +878,30 @@ public class ExternalValuationStandardizationService {
         return true;
     }
 
-    private String buildPlaceholderColumnMap(String regionName, String columnName) {
-        String normalizedRegionName = trimToNull(regionName);
-        if (normalizedRegionName == null) {
-            normalizedRegionName = SOURCE_REGION_COLUMN;
+    private String resolveSourceSign(ParsedValuationData parsedValuationData) {
+        if (parsedValuationData == null) {
+            return null;
         }
-        String normalizedColumnName = trimToNull(columnName);
-        if (normalizedColumnName == null) {
-            normalizedColumnName = "unknown";
+        String sourceSign = trimToNull(parsedValuationData.getFileNameOriginal());
+        if (sourceSign == null) {
+            sourceSign = trimToNull(parsedValuationData.getWorkbookPath());
         }
-        String placeholder = "unmapped_" + normalizedRegionName + "_" + normalizedColumnName.replaceAll("\\s+", "");
-        return placeholder.length() <= 128 ? placeholder : placeholder.substring(0, 128);
+        if (sourceSign == null) {
+            sourceSign = trimToNull(parsedValuationData.getTitle());
+        }
+        if (sourceSign == null) {
+            return null;
+        }
+        sourceSign = sourceSign.replace('\\', '/');
+        int lastSlash = sourceSign.lastIndexOf('/');
+        if (lastSlash >= 0 && lastSlash + 1 < sourceSign.length()) {
+            sourceSign = sourceSign.substring(lastSlash + 1);
+        }
+        int lastDot = sourceSign.lastIndexOf('.');
+        if (lastDot > 0) {
+            sourceSign = sourceSign.substring(0, lastDot);
+        }
+        return trimToNull(sourceSign);
     }
 
     private String extractUnit(String text) {

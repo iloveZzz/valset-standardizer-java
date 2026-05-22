@@ -47,6 +47,22 @@ type NativeUniverSheetInstance = InstanceType<typeof NativeUniverSheet> & {
   save: () => IWorkbookData | null;
 };
 
+type NativeSelectionRangeLike = {
+  actualEndRow?: number;
+  actualRow?: number;
+  actualStartRow?: number;
+  count?: number;
+  endRow?: number;
+  getEndRow?: () => number;
+  getRange?: () => NativeSelectionRangeLike | null;
+  getRanges?: () => NativeSelectionRangeLike[] | null;
+  getRow?: () => number;
+  getRowCount?: () => number;
+  getStartRow?: () => number;
+  row?: number;
+  startRow?: number;
+};
+
 const sheetRef = ref<NativeUniverSheetInstance | null>(null);
 const sheetRefreshing = ref(true);
 const productInfoExtractionPage = useProductInfoExtractionPage();
@@ -505,7 +521,20 @@ type ActiveSheetLike = {
     getActiveRange?: () => {
       getColumn?: () => number;
       getRow?: () => number;
+      getEndRow?: () => number;
+      getRange?: () => NativeSelectionRangeLike | null;
+      getRanges?: () => NativeSelectionRangeLike[] | null;
+      getRowCount?: () => number;
+      getStartRow?: () => number;
+      actualEndRow?: number;
+      actualRow?: number;
+      actualStartRow?: number;
+      count?: number;
+      endRow?: number;
+      row?: number;
+      startRow?: number;
     } | null;
+    getRanges?: () => NativeSelectionRangeLike[] | null;
   } | null;
   insertRowsAfter?: (afterPosition: number, howMany: number) => unknown;
 };
@@ -550,6 +579,90 @@ const getSelectedCellPosition = () => {
   return null;
 };
 
+const pickNumber = (...values: Array<unknown>) => {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return null;
+};
+
+const resolveRangeSpan = (range: NativeSelectionRangeLike | null | undefined) => {
+  if (!range) {
+    return null;
+  }
+  const startRow = pickNumber(
+    range.getStartRow?.(),
+    range.actualStartRow,
+    range.startRow,
+    range.getRow?.(),
+    range.actualRow,
+    range.row,
+  );
+  const endRow = pickNumber(
+    range.getEndRow?.(),
+    range.actualEndRow,
+    range.endRow,
+  );
+  if (startRow !== null && endRow !== null) {
+    return {
+      startRow: Math.min(startRow, endRow),
+      endRow: Math.max(startRow, endRow),
+    };
+  }
+  const rowCount = pickNumber(range.getRowCount?.(), range.count);
+  if (startRow !== null && rowCount !== null) {
+    return {
+      startRow,
+      endRow: startRow + Math.max(1, rowCount) - 1,
+    };
+  }
+  if (endRow !== null && rowCount !== null) {
+    return {
+      startRow: Math.max(0, endRow - Math.max(1, rowCount) + 1),
+      endRow,
+    };
+  }
+  const singleRow = startRow ?? endRow;
+  return singleRow === null
+    ? null
+    : {
+        startRow: singleRow,
+        endRow: singleRow,
+      };
+};
+
+const resolveSelectedRowIndexes = () => {
+  const selection = getActiveSheet()?.getSelection?.() as {
+    getActiveRange?: () => NativeSelectionRangeLike | null;
+    getRanges?: () => NativeSelectionRangeLike[] | null;
+  } | null;
+  const rowIndexes = new Set<number>();
+  const appendRange = (range: NativeSelectionRangeLike | null | undefined) => {
+    const span = resolveRangeSpan(range);
+    if (!span) {
+      return;
+    }
+    for (let rowIndex = span.startRow; rowIndex <= span.endRow; rowIndex += 1) {
+      if (rowIndex >= 1) {
+        rowIndexes.add(rowIndex);
+      }
+    }
+  };
+  selection?.getRanges?.()?.forEach(appendRange);
+  if (!rowIndexes.size) {
+    appendRange(selection?.getActiveRange?.());
+  }
+  if (!rowIndexes.size) {
+    const cellPosition = getSelectedCellPosition();
+    if (cellPosition?.rowIndex !== undefined && cellPosition.rowIndex >= 1) {
+      rowIndexes.add(cellPosition.rowIndex);
+    }
+  }
+  return Array.from(rowIndexes).sort((left, right) => right - left);
+};
+
 const isReadonlyColumnIndex = (columnIndex: number) =>
   activeColumns.value[columnIndex]?.readonly === true;
 
@@ -588,7 +701,6 @@ watch(
   () => page.activeTab,
   () => {
     sheetRef.value = null;
-    rowContextMenu.visible = false;
     sheetRefreshing.value = page.activeTab !== "productInfoExtraction";
   },
 );
@@ -602,17 +714,6 @@ watch(
   },
 );
 
-const hideRowContextMenu = () => {
-  rowContextMenu.visible = false;
-};
-
-const handleSheetContextMenu = (event: MouseEvent) => {
-  const selectedCell = getSelectedCellPosition();
-  rowContextMenu.rowIndex = selectedCell?.rowIndex ?? null;
-  rowContextMenu.x = event.clientX;
-  rowContextMenu.y = event.clientY;
-  rowContextMenu.visible = selectedCell !== null;
-};
 
 const insertRowAfterSelected = () => {
   const rowIndex = rowContextMenu.rowIndex;
@@ -623,7 +724,14 @@ const insertRowAfterSelected = () => {
   getActiveSheet()?.insertRowsAfter?.(rowIndex, 1);
 };
 
-const deleteSelectedRow = () => {
+const deleteRowsByIndexes = (rowIndexes: number[]) => {
+  const sheet = getActiveSheet();
+  rowIndexes.forEach((rowIndex) => {
+    sheet?.deleteRow?.(rowIndex);
+  });
+};
+
+const deleteCurrentRow = () => {
   const rowIndex = rowContextMenu.rowIndex;
   hideRowContextMenu();
   if (rowIndex === null || rowIndex < 1) {
@@ -634,7 +742,30 @@ const deleteSelectedRow = () => {
     });
     return;
   }
-  getActiveSheet()?.deleteRow?.(rowIndex);
+  deleteRowsByIndexes([rowIndex]);
+};
+
+const deleteSelectedRows = () => {
+  const rowIndexes = resolveSelectedRowIndexes();
+  hideRowContextMenu();
+  if (!rowIndexes.length) {
+    Modal.info({
+      title: "表头不可删除",
+      content: "当前表格的表头行不能删除。",
+      okText: "知道了",
+    });
+    return;
+  }
+  Modal.confirm({
+    title: "批量删除行",
+    content: `确认删除选中的 ${rowIndexes.length} 行吗？`,
+    okText: "删除",
+    cancelText: "取消",
+    okButtonProps: {
+      danger: true,
+    },
+    onOk: () => deleteRowsByIndexes(rowIndexes),
+  });
 };
 
 const handleSave = () => {
@@ -932,7 +1063,7 @@ const handleSave = () => {
             toolbar: false,
             formulaBar: false,
             footer: { addSheetButtonConfig: { show: false } },
-            contextMenu: false
+            contextMenu: true
           }"
           @keydown.capture="handleSheetKeydown"
           @beforeinput.capture="preventReadonlyCellEdit"
@@ -944,25 +1075,6 @@ const handleSave = () => {
           @error="handleSheetError"
           @click.capture="hideRowContextMenu"
         />
-        <div
-          v-if="rowContextMenu.visible"
-          class="parse-issue-row-menu"
-          :style="{ left: `${rowContextMenu.x}px`, top: `${rowContextMenu.y}px` }"
-          @click.stop
-        >
-          <button type="button" @click="insertRowAfterSelected">
-            <PlusOutlined />
-            <span>新增行</span>
-          </button>
-          <button
-            type="button"
-            :disabled="rowContextMenu.rowIndex === null || rowContextMenu.rowIndex < 1"
-            @click="deleteSelectedRow"
-          >
-            <DeleteOutlined />
-            <span>删除行</span>
-          </button>
-        </div>
       </div>
     </YCard>
   </div>
