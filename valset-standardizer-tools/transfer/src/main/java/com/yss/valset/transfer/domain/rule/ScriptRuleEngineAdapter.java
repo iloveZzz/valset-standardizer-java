@@ -93,7 +93,7 @@ public class ScriptRuleEngineAdapter implements RuleEngine {
     }
 
     private Object executeExpression(String script, Map<String, Object> variables) {
-        return managedRunner.getRunner().execute(script, contextEnhancer.enhance(RUNNER_SCOPE, variables), QLOptions.DEFAULT_OPTIONS).getResult();
+        return managedRunner.executeResult(script, contextEnhancer.enhance(RUNNER_SCOPE, variables), QLOptions.DEFAULT_OPTIONS);
     }
 
     private Map<String, Object> copyResultMap(Map<?, ?> map) {

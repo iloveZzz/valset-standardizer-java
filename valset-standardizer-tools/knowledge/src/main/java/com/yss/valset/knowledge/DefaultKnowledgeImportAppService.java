@@ -1,14 +1,9 @@
 package com.yss.valset.knowledge;
 
-import com.yss.valset.domain.gateway.MappingHintGateway;
-import com.yss.valset.domain.gateway.MappingSampleGateway;
 import com.yss.valset.domain.gateway.StandardSubjectGateway;
 import com.yss.valset.domain.model.DataSourceConfig;
 import com.yss.valset.domain.model.DataSourceType;
-import com.yss.valset.domain.model.MappingHintIndex;
-import com.yss.valset.domain.model.MappingSample;
 import com.yss.valset.domain.model.StandardSubject;
-import com.yss.valset.extract.support.MappingEvaluationSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,20 +24,11 @@ public class DefaultKnowledgeImportAppService implements KnowledgeImportAppServi
 
     private final StandardSubjectLoaderRegistry standardSubjectLoaderRegistry;
     private final StandardSubjectGateway standardSubjectGateway;
-    private final MappingHintGateway mappingHintGateway;
-    private final MappingSampleGateway mappingSampleGateway;
-    private final PoiMappingSampleLoader poiMappingSampleLoader;
 
     public DefaultKnowledgeImportAppService(StandardSubjectLoaderRegistry standardSubjectLoaderRegistry,
-                                            StandardSubjectGateway standardSubjectGateway,
-                                            MappingHintGateway mappingHintGateway,
-                                            MappingSampleGateway mappingSampleGateway,
-                                            PoiMappingSampleLoader poiMappingSampleLoader) {
+                                            StandardSubjectGateway standardSubjectGateway) {
         this.standardSubjectLoaderRegistry = standardSubjectLoaderRegistry;
         this.standardSubjectGateway = standardSubjectGateway;
-        this.mappingHintGateway = mappingHintGateway;
-        this.mappingSampleGateway = mappingSampleGateway;
-        this.poiMappingSampleLoader = poiMappingSampleLoader;
     }
 
     @Override
@@ -67,51 +53,6 @@ public class DefaultKnowledgeImportAppService implements KnowledgeImportAppServi
         } catch (Exception exception) {
             log.error("标准科目导入失败", exception);
             throw new IllegalStateException("导入标准科目失败", exception);
-        } finally {
-            deleteTempFile(tempFile);
-        }
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public KnowledgeImportResponse importMappingHints(MultipartFile file) {
-        Path tempFile = null;
-        try {
-            tempFile = writeTempFile(file);
-            List<MappingSample> samples = poiMappingSampleLoader.parse(tempFile);
-            MappingHintIndex mappingHintIndex = MappingEvaluationSupport.buildMappingHintIndex(samples);
-            mappingHintGateway.replaceAll(mappingHintIndex.getHints());
-            log.info("历史映射经验导入完成，count={}", mappingHintIndex.getHints() == null ? 0 : mappingHintIndex.getHints().size());
-            return KnowledgeImportResponse.builder()
-                    .targetTable("t_ods_mapping_hint")
-                    .sourceType("EXCEL")
-                    .importedCount(mappingHintIndex.getHints() == null ? 0L : (long) mappingHintIndex.getHints().size())
-                    .build();
-        } catch (Exception exception) {
-            log.error("历史映射经验导入失败", exception);
-            throw new IllegalStateException("导入历史映射经验失败", exception);
-        } finally {
-            deleteTempFile(tempFile);
-        }
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public KnowledgeImportResponse importMappingSamples(MultipartFile file) {
-        Path tempFile = null;
-        try {
-            tempFile = writeTempFile(file);
-            List<MappingSample> samples = poiMappingSampleLoader.parse(tempFile);
-            mappingSampleGateway.replaceAll(samples);
-            log.info("映射样例导入完成，count={}", samples == null ? 0 : samples.size());
-            return KnowledgeImportResponse.builder()
-                    .targetTable("t_ods_mapping_sample")
-                    .sourceType("EXCEL")
-                    .importedCount(samples == null ? 0L : (long) samples.size())
-                    .build();
-        } catch (Exception exception) {
-            log.error("映射样例导入失败", exception);
-            throw new IllegalStateException("导入映射样例失败", exception);
         } finally {
             deleteTempFile(tempFile);
         }

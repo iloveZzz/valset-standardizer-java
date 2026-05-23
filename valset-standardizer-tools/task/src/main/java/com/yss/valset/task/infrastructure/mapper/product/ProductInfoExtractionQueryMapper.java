@@ -2,6 +2,7 @@ package com.yss.valset.task.infrastructure.mapper.product;
 
 import com.yss.valset.task.infrastructure.dto.product.ProductInfoExtractionCandidateRow;
 import com.yss.valset.task.application.dto.product.ProductInfoOptionDTO;
+import com.yss.valset.task.infrastructure.dto.product.ProductInfoExtractionValuationTitleRow;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -24,4 +25,6 @@ public interface ProductInfoExtractionQueryMapper {
     List<ProductInfoOptionDTO> pageProductOptions(@Param("keyword") String keyword,
                                                   @Param("offset") int offset,
                                                   @Param("limit") int limit);
+
+    List<ProductInfoExtractionValuationTitleRow> listValuationTitlesByFileIds(@Param("fileIds") List<Long> fileIds);
 }

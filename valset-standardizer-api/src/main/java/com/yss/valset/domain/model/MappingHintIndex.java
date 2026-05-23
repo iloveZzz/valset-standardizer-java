@@ -63,4 +63,8 @@ public class MappingHintIndex {
                 .hintsByCode(hintsByCode)
                 .build();
     }
+
+    public static MappingHintIndex empty() {
+        return fromHints(java.util.Arrays.asList());
+    }
 }

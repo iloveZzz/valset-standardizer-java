@@ -156,4 +156,16 @@
             </otherwise>
         </choose>
     </select>
+
+    <select id="listValuationTitlesByFileIds" resultType="com.yss.valset.task.infrastructure.dto.product.ProductInfoExtractionValuationTitleRow">
+        SELECT file_id AS fileId,
+               MAX(title) AS title
+        FROM t_stg_external_valuation
+        WHERE title IS NOT NULL
+          AND file_id IN
+          <foreach collection="fileIds" item="fileId" open="(" separator="," close=")">
+              #{fileId}
+          </foreach>
+        GROUP BY file_id
+    </select>
 </mapper>

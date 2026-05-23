@@ -13,7 +13,7 @@ enum SpringBatchBusinessStage {
     FILE_PARSE("FILE_PARSE", "EXTRACT", "原始文件抽取与解析已完成", "RAW", java.util.Arrays.asList("t_ods_valuation_filedata")),
     STRUCTURE_STANDARDIZE("STRUCTURE_STANDARDIZE", "STANDARDIZE", "字段映射与结构标准化已完成", "STAGING",
             java.util.Arrays.asList("t_stg_external_valuation", "t_stg_external_valuation_detail")),
-    SUBJECT_RECOGNIZE("SUBJECT_RECOGNIZE", "RECOGNIZE", "科目识别与标签补全已完成", "MATCH", java.util.Arrays.asList("t_subject_match_result")),
+    SUBJECT_RECOGNIZE("SUBJECT_RECOGNIZE", "RECOGNIZE", "科目识别与标签补全已完成", "MATCH", java.util.Arrays.asList()),
     STANDARD_LANDING("STANDARD_LANDING", "LANDING", "估值贴源数据落地已完成", "STG",
             java.util.Arrays.asList("tr_spv_jjhzgzb", "tr_spv_index")),
     DATA_PROCESSING("DATA_PROCESSING", "PROCESS", "后续加工任务已完成", "PROCESS",

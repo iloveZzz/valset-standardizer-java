@@ -53,9 +53,12 @@ final class ValuationParserSupport {
             }
             boolean matched = false;
             for (Object value : rowValues) {
-                String text = ExcelParsingSupport.normalizeText(value);
+                String text = ExcelParsingSupport.normalizeText(value).trim();
+                if (text.isEmpty()) {
+                    continue;
+                }
                 String normalizedKeyword = keyword.trim();
-                if (text.equals(normalizedKeyword) || text.contains(normalizedKeyword) || normalizedKeyword.contains(text)) {
+                if (text.equals(normalizedKeyword) || text.contains(normalizedKeyword)) {
                     matched = true;
                     break;
                 }

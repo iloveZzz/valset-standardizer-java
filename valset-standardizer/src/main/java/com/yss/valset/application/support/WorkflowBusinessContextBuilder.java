@@ -1,6 +1,5 @@
 package com.yss.valset.application.support;
 
-import com.yss.valset.application.command.EvaluateMappingTaskCommand;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.dto.StoredFileDTO;
@@ -93,24 +92,6 @@ public class WorkflowBusinessContextBuilder {
         put(context, WorkflowContextKeys.FILESYS_FILE_ID, text(command.getFilesysFileId()));
         put(context, WorkflowContextKeys.FILESYS_OBJECT_KEY, text(command.getFilesysObjectKey()));
         put(context, WorkflowContextKeys.FILESYS_INSTANT_UPLOAD, command.getFilesysInstantUpload());
-        return context;
-    }
-
-    /**
-     * 从评估任务参数中构造业务上下文。
-     */
-    public Map<String, Object> build(EvaluateMappingTaskCommand command) {
-        Map<String, Object> context = new LinkedHashMap<>();
-        if (command == null) {
-            return context;
-        }
-        put(context, WorkflowContextKeys.MAPPING_WORKBOOK_PATH, command.getMappingWorkbookPath());
-        put(context, WorkflowContextKeys.STANDARD_WORKBOOK_PATH, command.getStandardWorkbookPath());
-        put(context, WorkflowContextKeys.STANDARD_SOURCE_TYPE, text(command.getStandardSourceType()));
-        put(context, WorkflowContextKeys.SPLIT_MODE, text(command.getSplitMode()));
-        put(context, WorkflowContextKeys.TOP_K, command.getTopK());
-        put(context, WorkflowContextKeys.MAX_TUNING_SAMPLES, command.getMaxTuningSamples());
-        put(context, WorkflowContextKeys.MAX_TEST_SAMPLES, command.getMaxTestSamples());
         return context;
     }
 

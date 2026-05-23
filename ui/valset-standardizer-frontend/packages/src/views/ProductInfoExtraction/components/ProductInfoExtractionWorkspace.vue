@@ -260,7 +260,7 @@ const updatePreviewValue = (
   field: keyof ProductInfoExtractionPreviewRow,
   value: unknown,
 ) => {
-  (row as Record<string, unknown>)[field as string] = value;
+  page.syncPreviewRowValue(row, field, value);
 };
 
 const handleProductOptionSearch = (keyword: string) => {
@@ -407,7 +407,7 @@ const confirmDeletePreviewRow = (row: ProductInfoExtractionPreviewRow) => {
                 @change="(value: unknown) => commitProductField(row, 'productName', value)"
                 @select="(value: unknown) => commitProductField(row, 'productName', value)"
               >
-                <a-input />
+                <a-input size="small" />
               </a-auto-complete>
             </template>
             <template #productCode="{ row }">
@@ -419,7 +419,7 @@ const confirmDeletePreviewRow = (row: ProductInfoExtractionPreviewRow) => {
                 @change="(value: unknown) => commitProductField(row, 'productCode', value)"
                 @select="(value: unknown) => commitProductField(row, 'productCode', value)"
               >
-                <a-input />
+                <a-input size="small" />
               </a-auto-complete>
             </template>
             <template #managerName="{ row }">
@@ -431,7 +431,7 @@ const confirmDeletePreviewRow = (row: ProductInfoExtractionPreviewRow) => {
                 @change="(value: unknown) => commitProductField(row, 'managerName', value)"
                 @select="(value: unknown) => commitProductField(row, 'managerName', value)"
               >
-                <a-input />
+                <a-input size="small" />
               </a-auto-complete>
             </template>
             <template #matchRule="{ row }">

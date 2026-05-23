@@ -172,8 +172,7 @@ curl -X POST http://localhost:30066/api/tasks/evaluate \
 
 预期：
 
-- 返回 `taskType=EVALUATE_MAPPING`
-- 查询任务后最终状态为 `SUCCESS`
+- 离线映射评估任务已下线，不再返回 `taskType=EVALUATE_MAPPING`
 
 验收点：
 

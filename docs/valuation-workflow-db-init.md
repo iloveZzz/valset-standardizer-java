@@ -77,14 +77,9 @@ SQL 文件：
 
 旧外部估值中间表已移除。解析快照统一进入 `t_stg_external_valuation*`，标准化结果运行时生成后直接进入 `tr_spv_jjhzgzb` / `tr_spv_index`。
 
-### 匹配结果表
+### 匹配结果
 
-- `t_subject_match_result`
-
-用途：
-
-- 保存外部估值明细与内部标准科目的匹配打标结果
-- 支撑 `/api/valuation-workflows/{fileId}/match-results` 查询
+匹配明细结果不再落独立结果表，匹配任务只更新任务摘要和阶段耗时。
 
 ### 任务表
 

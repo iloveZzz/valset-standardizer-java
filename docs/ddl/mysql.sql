@@ -1,35 +1,6 @@
 -- Generated from PO classes in valset-standardizer.
 -- 批量任务 metadata tables are provided by the Batch schema; this file only keeps the valuation business tables.
 
-CREATE TABLE t_subject_match_result (
-    id BIGINT PRIMARY KEY,
-    task_id BIGINT NOT NULL,
-    file_id BIGINT NOT NULL,
-    external_subject_code VARCHAR(128),
-    external_subject_name VARCHAR(512),
-    external_level INT,
-    external_is_leaf TINYINT(1),
-    anchor_subject_code VARCHAR(128),
-    anchor_subject_name VARCHAR(512),
-    anchor_level INT,
-    anchor_path_text VARCHAR(1024),
-    anchor_reason VARCHAR(1024),
-    matched_standard_code VARCHAR(128),
-    matched_standard_name VARCHAR(512),
-    score DECIMAL(18, 8),
-    score_name DECIMAL(18, 8),
-    score_path DECIMAL(18, 8),
-    score_keyword DECIMAL(18, 8),
-    score_code DECIMAL(18, 8),
-    score_history DECIMAL(18, 8),
-    score_embedding DECIMAL(18, 8),
-    confidence_level VARCHAR(32),
-    needs_review TINYINT(1),
-    match_reason VARCHAR(1024),
-    candidate_count INT,
-    top_candidates_json TEXT
-);
-
 CREATE TABLE t_valset_file_ingest_log (
     ingest_id BIGINT PRIMARY KEY,
     file_id BIGINT NOT NULL,
@@ -147,28 +118,6 @@ CREATE TABLE t_ods_standard_subject (
     placeholder TINYINT(1)
 );
 
-CREATE TABLE t_ods_mapping_hint (
-    id BIGINT PRIMARY KEY,
-    source VARCHAR(128),
-    normalized_key VARCHAR(256),
-    standard_code VARCHAR(128),
-    standard_name VARCHAR(512),
-    support_count INT,
-    confidence DECIMAL(18, 8)
-);
-
-CREATE TABLE t_ods_mapping_sample (
-    id BIGINT PRIMARY KEY,
-    org_name VARCHAR(256),
-    org_id VARCHAR(128),
-    external_code VARCHAR(500),
-    external_name VARCHAR(512),
-    standard_code VARCHAR(128),
-    standard_name VARCHAR(512),
-    standard_system VARCHAR(128),
-    system_name VARCHAR(256)
-);
-
 CREATE INDEX idx_ods_filedata_task_id ON t_ods_valuation_filedata(task_id);
 CREATE INDEX idx_ods_filedata_file_id ON t_ods_valuation_filedata(file_id);
 CREATE INDEX idx_ods_filedata_task_row ON t_ods_valuation_filedata(task_id, row_data_number);
@@ -177,8 +126,6 @@ CREATE UNIQUE INDEX uk_ods_sheet_style_file_sheet_scope
 CREATE INDEX idx_ods_sheet_style_task_id ON t_ods_valuation_sheet_style(task_id);
 CREATE UNIQUE INDEX uk_qlexpress_function_name
     ON t_qlexpress_function(function_name);
-
-CREATE INDEX idx_match_result_file_id ON t_subject_match_result(file_id);
 
 CREATE UNIQUE INDEX uk_stg_external_valuation_file ON t_stg_external_valuation(file_id);
 CREATE INDEX idx_stg_basic_info_vid_order ON t_stg_external_valuation_basic_info(valuation_id, sort_order);
@@ -190,10 +137,6 @@ CREATE INDEX idx_valset_ingest_file_id
     ON t_valset_file_ingest_log(file_id);
 CREATE INDEX idx_valset_ingest_channel_msg
     ON t_valset_file_ingest_log(source_channel, channel_message_id);
-
-CREATE INDEX idx_ods_mapping_sample_org ON t_ods_mapping_sample(org_name);
-CREATE INDEX idx_ods_mapping_sample_ext_code ON t_ods_mapping_sample(external_code);
-CREATE INDEX idx_ods_mapping_sample_std_code ON t_ods_mapping_sample(standard_code);
 
 CREATE TABLE tr_spv_jjhzgzb (
     id BIGINT NOT NULL,

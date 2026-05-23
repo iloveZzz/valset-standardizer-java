@@ -1,6 +1,5 @@
 package com.yss.valset.application.service;
 
-import com.yss.valset.application.dto.MatchResultViewDTO;
 import com.yss.valset.application.dto.RawValuationDataViewDTO;
 import com.yss.valset.application.dto.StgExternalValuationViewDTO;
 
@@ -18,8 +17,4 @@ public interface ValuationWorkflowQueryService {
      */
     StgExternalValuationViewDTO queryStgData(Long fileId);
 
-    /**
-     * 查询匹配结果。
-     */
-    MatchResultViewDTO queryMatchResults(Long fileId);
 }

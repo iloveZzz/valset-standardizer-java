@@ -4,9 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.port.MatchExecutionUseCase;
 import com.yss.valset.domain.gateway.StgExternalValuationGateway;
-import com.yss.valset.domain.gateway.MappingHintGateway;
-import com.yss.valset.domain.exporter.ResultExporter;
-import com.yss.valset.domain.gateway.MatchResultGateway;
 import com.yss.valset.domain.gateway.WorkflowTaskGateway;
 import com.yss.valset.domain.gateway.StandardSubjectGateway;
 import com.yss.valset.domain.matcher.ValsetMatcher;
@@ -14,16 +11,13 @@ import com.yss.valset.domain.matcher.ValsetMatcher;
 import com.yss.valset.domain.model.DataSourceType;
 
 import com.yss.valset.domain.model.*;
-import com.yss.valset.domain.parser.ValuationDataParser;
 import com.yss.valset.domain.parser.ValuationDataParserProvider;
 import com.yss.valset.extract.standardization.ExternalValuationStandardizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +33,8 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
     private final WorkflowTaskGateway taskGateway;
     private final ValuationDataParserProvider parserProvider;
     private final StandardSubjectGateway standardSubjectGateway;
-    private final MappingHintGateway mappingHintGateway;
     private final ValsetMatcher subjectMatcher;
     private final StgExternalValuationGateway stgExternalValuationGateway;
-    private final MatchResultGateway matchResultGateway;
     private final ExternalValuationStandardizationService standardizationService;
     private final ObjectMapper objectMapper;
 
@@ -64,7 +56,7 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
             // 核心步骤 3：直接从落地表加载标准参考科目目录
             List<StandardSubject> standardSubjects = loadStandardSubjects();
 
-            // 核心步骤 4：直接从落地表加载历史映射经验库以提升准确率
+            // 核心步骤 4：历史映射经验已下线，匹配阶段使用空索引。
             MappingHintIndex mappingHintIndex = loadMappingHints();
 
             // 核心步骤 5：构建匹配上下文，组装运行时所需的映射对象、权重与策略
@@ -73,8 +65,7 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
             // 核心步骤 6：通过匹配引擎执行打分和候选人选取，产生匹配结果
             List<ValsetMatchResult> results = doMatch(parsedValuationData, matchContext, command);
 
-            // 核心步骤 7：持久化匹配结果以及产出相关数据报表，并更新任务执行状态
-            persistResults(taskId, workflowTask.getFileId(), results);
+            // 核心步骤 7：更新任务执行状态，匹配明细不再写入结果表。
             long matchStandardSubjectTimeMs = System.currentTimeMillis() - matchStartMs;
             taskGateway.updateTaskTimings(taskId, null, null, matchStandardSubjectTimeMs);
             String resultPayload = buildResultPayload( parsedValuationData, standardSubjects, results);
@@ -122,14 +113,8 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
         return standardSubjects;
     }
 
-    /**
-     * 从落地表加载历史映射提示并构建索引。
-     */
     private MappingHintIndex loadMappingHints() {
-        List<MappingHint> mappingHints = mappingHintGateway.findAll();
-        MappingHintIndex mappingHintIndex = MappingHintIndex.fromHints(mappingHints);
-        log.info("从历史映射落地表加载完成，count={}", mappingHints == null ? 0 : mappingHints.size());
-        return mappingHintIndex;
+        return MappingHintIndex.empty();
     }
 
     /**
@@ -160,13 +145,6 @@ public class MatchExecutionAppServiceImpl implements MatchExecutionUseCase {
     ) {
         int topK = command.getTopK() == null ? 5 : command.getTopK();
         return subjectMatcher.matchSubjects(parsedValuationData.getSubjects(), matchContext, topK);
-    }
-
-    /**
-     * 持久化匹配结果。
-     */
-    private void persistResults(Long taskId, Long fileId, List<ValsetMatchResult> results) {
-        matchResultGateway.saveResults(taskId, fileId, results);
     }
 
     /**

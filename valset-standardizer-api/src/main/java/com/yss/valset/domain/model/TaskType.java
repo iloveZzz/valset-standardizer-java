@@ -6,7 +6,6 @@ package com.yss.valset.domain.model;
 public enum TaskType {
     PARSE_WORKBOOK,
     MATCH_SUBJECT,
-    EVALUATE_MAPPING,
     EXPORT_RESULT,
     REFRESH_STANDARD_SUBJECT,
     REFRESH_MAPPING_HINT,

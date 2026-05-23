@@ -1,8 +1,10 @@
 package com.yss.valset.task.application.impl.product;
 
 import com.yss.valset.task.application.command.product.ProductInfoExtractionSaveCommand;
+import com.yss.valset.task.application.command.product.ProductInfoExtractionPreviewCommand;
 import com.yss.valset.task.application.dto.product.ProductInfoExtractionPreviewDTO;
 import com.yss.valset.task.application.dto.product.ProductInfoExtractionSaveResultDTO;
+import com.yss.valset.task.infrastructure.dto.product.ProductInfoExtractionValuationTitleRow;
 import com.yss.valset.task.infrastructure.mapper.product.ProductInfoExtractionQueryMapper;
 import com.yss.valset.transfer.infrastructure.entity.ProductMatchRulePO;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectPO;
@@ -18,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -34,6 +37,7 @@ class DefaultProductInfoExtractionAppServiceTest {
     private ProductMatchRuleRepository productMatchRuleRepository;
     private TransferObjectTagRepository transferObjectTagRepository;
     private TransferTagRepository transferTagRepository;
+    private ProductInfoExtractionQueryMapper queryMapper;
     private DefaultProductInfoExtractionAppService service;
 
     @BeforeEach
@@ -42,8 +46,9 @@ class DefaultProductInfoExtractionAppServiceTest {
         productMatchRuleRepository = mock(ProductMatchRuleRepository.class);
         transferObjectTagRepository = mock(TransferObjectTagRepository.class);
         transferTagRepository = mock(TransferTagRepository.class);
+        queryMapper = mock(ProductInfoExtractionQueryMapper.class);
         service = new DefaultProductInfoExtractionAppService(
-                mock(ProductInfoExtractionQueryMapper.class),
+                queryMapper,
                 transferObjectRepository,
                 productMatchRuleRepository,
                 transferObjectTagRepository,
@@ -109,7 +114,56 @@ class DefaultProductInfoExtractionAppServiceTest {
 
         assertThat(preview.getProductCode()).isNull();
         assertThat(preview.getProductName()).isEqualTo("普通估值表");
-        assertThat(preview.getMatchRule()).isEmpty();
+        assertThat(preview.getMatchRule()).isEqualTo("普通估值表(.*)");
+    }
+
+    @Test
+    void buildPreviewFallsBackToValuationTitleWhenFileNameHasNoProductFields() {
+        TransferObjectPO object = transferObject(
+                "104",
+                "普通估值表_20231031.xls"
+        );
+
+        ProductInfoExtractionPreviewDTO preview = service.buildPreview(
+                object,
+                "委外产品",
+                LocalDate.of(2024, 5, 21),
+                "产品代码：ABC123 产品名称：农银理财稳享产品 资产估值表 20231031"
+        );
+
+        assertThat(preview.getProductCode()).isEqualTo("ABC123");
+        assertThat(preview.getProductName()).isEqualTo("农银理财稳享产品");
+        assertThat(preview.getMatchRule()).isEqualTo("普通估值表(.*)");
+    }
+
+    @Test
+    void previewLoadsValuationTitleByTransferIdAsFileId() {
+        TransferObjectPO object = transferObject(
+                "105",
+                "普通估值表_20231031.xls"
+        );
+        ProductInfoExtractionValuationTitleRow titleRow = new ProductInfoExtractionValuationTitleRow();
+        titleRow.setFileId(105L);
+        titleRow.setTitle("NYLLA001_农银理财安享产品估值表20231031");
+        when(transferObjectRepository.selectList(any())).thenReturn(Collections.singletonList(object));
+        when(queryMapper.listValuationTitlesByFileIds(any())).thenReturn(Collections.singletonList(titleRow));
+        ProductInfoExtractionPreviewCommand command = new ProductInfoExtractionPreviewCommand();
+        command.setTransferIds(Collections.singletonList("105"));
+
+        List<ProductInfoExtractionPreviewDTO> previews = service.preview(command);
+
+        assertThat(previews).hasSize(1);
+        assertThat(previews.get(0).getProductCode()).isEqualTo("NYLLA001");
+        assertThat(previews.get(0).getProductName()).isEqualTo("农银理财安享产品");
+        assertThat(previews.get(0).getMatchRule()).isEqualTo("普通估值表(.*)");
+    }
+
+    @Test
+    void buildMatchRuleUsesFileNameDateWildcardWhenProductCodeMissing() {
+        assertThat(service.buildMatchRule("富国基金蓝筹价值1号集合资产管理计划估值表_2024-06-28.xls"))
+                .isEqualTo("富国基金蓝筹价值1号集合资产管理计划估值表(.*)");
+        assertThat(service.buildMatchRule("东方红稳犇888号20240630估值表.xls"))
+                .isEqualTo("东方红稳犇888号(.*)估值表(.*)");
     }
 
     @Test

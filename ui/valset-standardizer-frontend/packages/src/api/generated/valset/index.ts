@@ -13,8 +13,6 @@ import type {
   GetTaskLog1Params,
   GetTemplateName2Params,
   GetTemplateNameParams,
-  ImportMappingHintsRequest,
-  ImportMappingSamplesRequest,
   JsonNode,
   ListCheckpointsParams,
   ListInstancesParams,
@@ -496,40 +494,6 @@ export const getJavaApi = () => {
 
     return customInstance<SingleResultKnowledgeImportResponse>({
       url: `/knowledge/standard-subjects/import`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 导入历史映射经验落地表。
-   */
-  const importMappingHints = (
-    importMappingHintsRequest: ImportMappingHintsRequest,
-  ) => {
-    const formData = new FormData();
-    formData.append("file", importMappingHintsRequest.file);
-
-    return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/knowledge/mapping-hints/import`,
-      method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
-    });
-  };
-
-  /**
-   * @summary 导入映射样例落地表。
-   */
-  const importMappingSamples = (
-    importMappingSamplesRequest: ImportMappingSamplesRequest,
-  ) => {
-    const formData = new FormData();
-    formData.append("file", importMappingSamplesRequest.file);
-
-    return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/knowledge/mapping-samples/import`,
       method: "POST",
       headers: { "Content-Type": "multipart/form-data" },
       data: formData,
@@ -1580,8 +1544,6 @@ export const getJavaApi = () => {
     listCheckpoints,
     subscribeProgress,
     importStandardSubjects,
-    importMappingHints,
-    importMappingSamples,
     saveDefinition,
     listDefinitions,
     syncDefinition,
@@ -1763,12 +1725,6 @@ export type SubscribeProgressResult = NonNullable<
 >;
 export type ImportStandardSubjectsResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["importStandardSubjects"]>>
->;
-export type ImportMappingHintsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["importMappingHints"]>>
->;
-export type ImportMappingSamplesResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["importMappingSamples"]>>
 >;
 export type SaveDefinitionResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["saveDefinition"]>>

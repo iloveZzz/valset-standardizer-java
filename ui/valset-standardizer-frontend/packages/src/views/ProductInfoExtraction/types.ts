@@ -51,6 +51,11 @@ export type ProductInfoExtractionPageState = {
   handlePreviewSelectionChange: (rows: unknown) => void;
   deletePreviewRow: (transferId: string) => void;
   loadProductOptions: (keyword?: string) => Promise<ProductInfoExtractionOptionRow[]>;
+  syncPreviewRowValue: (
+    row: ProductInfoExtractionPreviewRow,
+    field: keyof ProductInfoExtractionPreviewRow,
+    value: unknown,
+  ) => void;
   syncPreviewRowByField: (
     row: ProductInfoExtractionPreviewRow,
     field: "productName" | "productCode" | "managerName",

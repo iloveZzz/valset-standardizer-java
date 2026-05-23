@@ -180,6 +180,73 @@ class OdsValuationDataParserDynamicRuleTest {
     }
 
     @Test
+    void shouldKeepWorkbookPhysicalRowNumbersWhenBlankRowsExistBeforeHeader() throws Exception {
+        Path workbook = createWorkbook(
+                row("AD193603_农银理财“农银安心·每年开放”第6期人民币理财产品（尊享款）_估值报表_20250305"),
+                row(),
+                row("日期：", "2025-03-05", "", "", "", "", "", "", "", "", "", "", "", "", "", "单位净值:1.237532"),
+                row(),
+                row("科目代码", "科目名称", "币种", "汇率", "数量", "单位成本", "成本", "", "成本占比", "行情", "市值", "", "市值占比", "估值增值", "wind代码"),
+                row("", "", "", "", "", "", "原币", "本币", "", "", "原币", "本币", "", "本币", ""),
+                row("", "", "", "", "", "", "十亿千百十万千百十元角分", "十亿千百十万千百十元角分", "", "", "十亿千百十万千百十元角分", "十亿千百十万千百十元角分", "", "十亿千百十万千百十元角分", ""),
+                row("1002", "银行存款", "CNY", "1", "", "", "325,369,242.55", "325,369,242.55", "37.0322%", "", "325,369,242.55", "325,369,242.55", "37.0322%", "", "")
+        );
+        OdsValuationDataParser parser = parser(null);
+
+        ParsedValuationData result = parser.parse(config(workbook));
+
+        assertThat(result.getHeaderRowNumber()).isEqualTo(5);
+        assertThat(result.getDataStartRowNumber()).isEqualTo(8);
+        assertThat(result.getSubjects()).hasSize(1);
+        assertThat(result.getSubjects().get(0).getRowDataNumber()).isEqualTo(8);
+        assertThat(result.getMetrics()).isEmpty();
+        assertThat(result.getBasicInfo()).containsEntry("日期", "2025-03-05");
+        assertThat(result.getBasicInfo()).containsEntry("单位净值", "1.237532");
+    }
+
+    @Test
+    void shouldKeepPhysicalRowNumbersWhenTitleAndBasicInfoAppearBeforeSingleHeaderRow() throws Exception {
+        Path workbook = createWorkbook(
+                row(),
+                row("", "", "", "", "", "人民币理财产品估值表"),
+                row(),
+                row("", "估值日期：", "2025年05月14日", "", "", "基金代码：", "23H001", "", "", "", "币种：人民币", "", "单位：元"),
+                row(),
+                row(),
+                row("科目代码", "科目名称", "数量", "单位成本", "成本", "占资产净值", "当日均价", "市值", "占资产净值", "估值增值", "停牌标志"),
+                row("1002", "银行存款", "", "", "6,017.13", "0.00%", "", "6,017.13", "0.00%", "", "")
+        );
+        OdsValuationDataParser parser = parser(null);
+
+        ParsedValuationData result = parser.parse(config(workbook));
+
+        assertThat(result.getHeaderRowNumber()).isEqualTo(7);
+        assertThat(result.getDataStartRowNumber()).isEqualTo(8);
+        assertThat(result.getSubjects()).hasSize(1);
+        assertThat(result.getSubjects().get(0).getRowDataNumber()).isEqualTo(8);
+        assertThat(result.getBasicInfo()).containsEntry("估值日期", "2025年05月14日");
+        assertThat(result.getBasicInfo()).containsEntry("基金代码", "23H001");
+    }
+
+    @Test
+    void shouldNotTreatBlankRowsAsHeaderCandidates() throws Exception {
+        Path workbook = createWorkbook(
+                row(),
+                row(""),
+                row("估值说明", "", ""),
+                row("科目代码", "科目名称", "市值"),
+                row("1002", "银行存款", "6017.13")
+        );
+        OdsValuationDataParser parser = parser(null);
+
+        ParsedValuationData result = parser.parse(config(workbook));
+
+        assertThat(result.getHeaderRowNumber()).isEqualTo(4);
+        assertThat(result.getDataStartRowNumber()).isEqualTo(5);
+        assertThat(result.getSubjects()).hasSize(1);
+    }
+
+    @Test
     void shouldSkipRowWhenExtractRuleFailsWithSkipPolicy() throws Exception {
         Path workbook = createWorkbook(
                 row("估值表"),

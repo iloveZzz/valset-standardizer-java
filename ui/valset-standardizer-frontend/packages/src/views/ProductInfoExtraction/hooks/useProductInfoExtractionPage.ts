@@ -114,8 +114,23 @@ export const useProductInfoExtractionPage = (): ProductInfoExtractionPageState =
     }
   };
 
+  const findPreviewRowByTransferId = (transferId: string) =>
+    previewRows.value.find((item) => item.transferId === transferId) ?? null;
+
+  const findSelectedPreviewRowByTransferId = (transferId: string) =>
+    selectedPreviewRows.value.find((item) => item.transferId === transferId) ?? null;
+
+  const buildSelectedPreviewRows = () => {
+    const selectedIds = new Set(
+      selectedPreviewRows.value
+        .map((row) => String(row.transferId ?? ""))
+        .filter(Boolean),
+    );
+    return previewRows.value.filter((row) => selectedIds.has(row.transferId));
+  };
+
   const validatePreviewRows = () => {
-    const invalid = selectedPreviewRows.value.find(
+    const invalid = buildSelectedPreviewRows().find(
       (row) =>
         !String(row.productCode ?? "").trim() ||
         !String(row.productName ?? "").trim() ||
@@ -161,11 +176,27 @@ export const useProductInfoExtractionPage = (): ProductInfoExtractionPageState =
     return direct ?? null;
   };
 
+  const syncPreviewRowValue = (
+    row: ProductInfoExtractionPreviewRow,
+    field: keyof ProductInfoExtractionPreviewRow,
+    value: unknown,
+  ) => {
+    const transferId = String(row.transferId ?? "");
+    const targets = [
+      row,
+      transferId ? findPreviewRowByTransferId(transferId) : null,
+      transferId ? findSelectedPreviewRowByTransferId(transferId) : null,
+    ].filter(Boolean) as ProductInfoExtractionPreviewRow[];
+    targets.forEach((target) => {
+      (target as Record<string, unknown>)[field as string] = value;
+    });
+  };
+
   const applyProductOption = (row: ProductInfoExtractionPreviewRow, option: ProductInfoOptionDTO) => {
-    row.productName = String(option.productName ?? row.productName ?? "");
-    row.productCode = String(option.productCode ?? row.productCode ?? "");
-    row.managerCode = String(option.managerCode ?? row.managerCode ?? "");
-    row.managerName = String(option.managerName ?? row.managerName ?? "");
+    syncPreviewRowValue(row, "productName", String(option.productName ?? row.productName ?? ""));
+    syncPreviewRowValue(row, "productCode", String(option.productCode ?? row.productCode ?? ""));
+    syncPreviewRowValue(row, "managerCode", String(option.managerCode ?? row.managerCode ?? ""));
+    syncPreviewRowValue(row, "managerName", String(option.managerName ?? row.managerName ?? ""));
   };
 
   const pageState = reactive<ProductInfoExtractionPageState>({
@@ -238,9 +269,12 @@ export const useProductInfoExtractionPage = (): ProductInfoExtractionPageState =
     async loadProductOptions(keyword) {
       return loadProductOptions(keyword);
     },
+    syncPreviewRowValue(row, field, value) {
+      syncPreviewRowValue(row, field, value);
+    },
     syncPreviewRowByField(row, field, value) {
       const nextValue = String(value ?? "");
-      row[field] = nextValue;
+      syncPreviewRowValue(row, field, nextValue);
       const option = findMatchingProductOption({ ...row, [field]: nextValue }, field);
       if (option) {
         applyProductOption(row, option);
@@ -283,8 +317,9 @@ export const useProductInfoExtractionPage = (): ProductInfoExtractionPageState =
       }
       saving.value = true;
       try {
+        const items = buildSelectedPreviewRows();
         const response = await saveProductInfoExtractionRules({
-          items: selectedPreviewRows.value,
+          items,
         });
         result.value = unwrapSingleResult(response) ?? null;
         currentStep.value = 2;

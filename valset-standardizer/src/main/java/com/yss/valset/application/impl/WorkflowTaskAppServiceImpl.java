@@ -2,7 +2,6 @@ package com.yss.valset.application.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.valset.application.command.EvaluateMappingTaskCommand;
 import com.yss.valset.extract.application.command.ExtractDataTaskCommand;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.command.ParseTaskCommand;
@@ -85,14 +84,6 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     @Override
     public TaskCreateResponse createMatchTask(MatchTaskCommand command) {
         return createAndTrigger(TaskType.MATCH_SUBJECT, command, buildMatchBusinessKey(command), command.getFileId());
-    }
-
-    /**
-     * 创建并分派评估任务。
-     */
-    @Override
-    public TaskCreateResponse createEvaluateTask(EvaluateMappingTaskCommand command) {
-        return createAndTrigger(TaskType.EVALUATE_MAPPING, command, buildEvaluateBusinessKey(command), null);
     }
 
     /**
@@ -179,18 +170,6 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     }
 
     /**
-     * 为评估任务构建可追溯的业务密钥。
-     */
-    private String buildEvaluateBusinessKey(EvaluateMappingTaskCommand command) {
-        return String.join(":",
-                "EVALUATE",
-                command.getMappingWorkbookPath(),
-                command.getStandardWorkbookPath(),
-                command.getSplitMode() == null ? "org_holdout" : command.getSplitMode(),
-                String.valueOf(command.getTopK() == null ? 5 : command.getTopK()));
-    }
-
-    /**
      * 为文件解析任务构建可追踪的业务密钥。
      */
     private String buildExtractBusinessKey(ExtractDataTaskCommand command) {
@@ -253,10 +232,6 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
             applyWorkflowContext((MatchTaskCommand) command, executionContext);
             return;
         }
-        if (command instanceof EvaluateMappingTaskCommand) {
-            applyWorkflowContext((EvaluateMappingTaskCommand) command, executionContext);
-            return;
-        }
         if (command instanceof ExtractDataTaskCommand) {
             applyWorkflowContext((ExtractDataTaskCommand) command, executionContext);
         }
@@ -298,9 +273,6 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
         if (command instanceof MatchTaskCommand) {
             return workflowCommonContextBuilder.build((MatchTaskCommand) command);
         }
-        if (command instanceof EvaluateMappingTaskCommand) {
-            return workflowCommonContextBuilder.build((EvaluateMappingTaskCommand) command);
-        }
         if (command instanceof ExtractDataTaskCommand) {
             return workflowCommonContextBuilder.build((ExtractDataTaskCommand) command);
         }
@@ -313,9 +285,6 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
         }
         if (command instanceof MatchTaskCommand) {
             return workflowBusinessContextBuilder.build((MatchTaskCommand) command);
-        }
-        if (command instanceof EvaluateMappingTaskCommand) {
-            return workflowBusinessContextBuilder.build((EvaluateMappingTaskCommand) command);
         }
         if (command instanceof ExtractDataTaskCommand) {
             return workflowBusinessContextBuilder.build((ExtractDataTaskCommand) command);
@@ -350,17 +319,6 @@ public class WorkflowTaskAppServiceImpl implements WorkflowTaskAppService {
     }
 
     private void applyWorkflowContext(MatchTaskCommand command, WorkflowExecutionContextDTO executionContext) {
-        command.setWorkflowCode(executionContext.getWorkflowCode());
-        command.setWorkflowId(executionContext.getWorkflowId());
-        command.setWorkflowVersionNo(executionContext.getWorkflowVersionNo());
-        command.setWorkflowStageCode(executionContext.getWorkflowStageCode());
-        command.setWorkflowStageName(executionContext.getWorkflowStageName());
-        command.setWorkflowEngineType(executionContext.getEngineType());
-        command.setWorkflowEngineExternalRef(executionContext.getExternalRef());
-        command.setWorkflowEngineConfigJson(executionContext.getConfigJson());
-    }
-
-    private void applyWorkflowContext(EvaluateMappingTaskCommand command, WorkflowExecutionContextDTO executionContext) {
         command.setWorkflowCode(executionContext.getWorkflowCode());
         command.setWorkflowId(executionContext.getWorkflowId());
         command.setWorkflowVersionNo(executionContext.getWorkflowVersionNo());

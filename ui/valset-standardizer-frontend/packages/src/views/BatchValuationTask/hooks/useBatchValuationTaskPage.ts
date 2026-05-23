@@ -24,6 +24,7 @@ import {
   listBatchValuationTaskStandardSubjects,
   listBatchValuationTaskSteps,
   pageBatchValuationTasks,
+  retryBatchValuationTask,
   type BatchValuationTaskBatchDetailDTO,
   type BatchValuationTaskBatchDTO,
   type BatchValuationTaskExternalMetricDTO,
@@ -701,10 +702,13 @@ export const useBatchValuationTaskPage = (): BatchValuationTaskPageState => {
       message.warning("当前批次不支持重新解析");
       return;
     }
+    if (!row.batchId) {
+      message.warning("批次ID为空，无法重新解析");
+      return;
+    }
     batchRetryLoading.value = true;
     try {
-      await batchRetryBatchValuationTasks({
-        batchIds: [row.batchId].filter((batchId): batchId is string => Boolean(batchId)),
+      await retryBatchValuationTask(row.batchId, {
         reason: "单批次重新解析",
       });
       message.success("已提交批次重新解析");

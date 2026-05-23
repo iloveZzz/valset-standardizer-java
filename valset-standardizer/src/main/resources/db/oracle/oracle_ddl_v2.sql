@@ -339,36 +339,6 @@ COMMENT ON COLUMN "T_FILE_PARSE_SOURCE"."MODIFY_TIME" IS '修改时间';
 COMMENT ON TABLE "T_FILE_PARSE_SOURCE" IS '文件解析来源映射表';
 
 -- ----------------------------
--- Table structure for t_ods_mapping_hint
--- ----------------------------
-CREATE TABLE "T_ODS_MAPPING_HINT" (
-  "ID" NUMBER(20) NOT NULL,
-  "SOURCE" VARCHAR2(128),
-  "NORMALIZED_KEY" VARCHAR2(256),
-  "STANDARD_CODE" VARCHAR2(128),
-  "STANDARD_NAME" VARCHAR2(512),
-  "SUPPORT_COUNT" NUMBER(11),
-  "CONFIDENCE" NUMBER
-)
-;
-
--- ----------------------------
--- Table structure for t_ods_mapping_sample
--- ----------------------------
-CREATE TABLE "T_ODS_MAPPING_SAMPLE" (
-  "ID" NUMBER(20) NOT NULL,
-  "ORG_NAME" VARCHAR2(256),
-  "ORG_ID" VARCHAR2(128),
-  "EXTERNAL_CODE" VARCHAR2(500),
-  "EXTERNAL_NAME" VARCHAR2(512),
-  "STANDARD_CODE" VARCHAR2(128),
-  "STANDARD_NAME" VARCHAR2(512),
-  "STANDARD_SYSTEM" VARCHAR2(128),
-  "SYSTEM_NAME" VARCHAR2(256)
-)
-;
-
--- ----------------------------
 -- Table structure for t_ods_standard_subject
 -- ----------------------------
 CREATE TABLE "T_ODS_STANDARD_SUBJECT" (
@@ -522,39 +492,6 @@ CREATE TABLE "T_STG_EXTERNAL_VALUATION_SUBJECT" (
   "PATH_CODES_JSON" CLOB,
   "IS_LEAF" NUMBER(4),
   "RAW_VALUES_JSON" CLOB
-)
-;
-
--- ----------------------------
--- Table structure for t_subject_match_result
--- ----------------------------
-CREATE TABLE "T_SUBJECT_MATCH_RESULT" (
-  "ID" NUMBER(20) NOT NULL,
-  "TASK_ID" NUMBER(20) NOT NULL,
-  "FILE_ID" NUMBER(20) NOT NULL,
-  "EXTERNAL_SUBJECT_CODE" VARCHAR2(128),
-  "EXTERNAL_SUBJECT_NAME" VARCHAR2(512),
-  "EXTERNAL_LEVEL" NUMBER(11),
-  "EXTERNAL_IS_LEAF" NUMBER(4),
-  "ANCHOR_SUBJECT_CODE" VARCHAR2(128),
-  "ANCHOR_SUBJECT_NAME" VARCHAR2(512),
-  "ANCHOR_LEVEL" NUMBER(11),
-  "ANCHOR_PATH_TEXT" CLOB,
-  "ANCHOR_REASON" CLOB,
-  "MATCHED_STANDARD_CODE" VARCHAR2(128),
-  "MATCHED_STANDARD_NAME" VARCHAR2(512),
-  "SCORE" NUMBER,
-  "SCORE_NAME" NUMBER,
-  "SCORE_PATH" NUMBER,
-  "SCORE_KEYWORD" NUMBER,
-  "SCORE_CODE" NUMBER,
-  "SCORE_HISTORY" NUMBER,
-  "SCORE_EMBEDDING" NUMBER,
-  "CONFIDENCE_LEVEL" VARCHAR2(32),
-  "NEEDS_REVIEW" NUMBER(4),
-  "MATCH_REASON" CLOB,
-  "CANDIDATE_COUNT" NUMBER(11),
-  "TOP_CANDIDATES_JSON" CLOB
 )
 ;
 
@@ -1175,32 +1112,6 @@ CREATE INDEX "IDX_FILE_PARSE_SOURCE_COLUMN_NAME"
   ON "T_FILE_PARSE_SOURCE" ("COLUMN_NAME" ASC);
 
 -- ----------------------------
--- Primary Key structure for table t_ods_mapping_hint
--- ----------------------------
-ALTER TABLE "T_ODS_MAPPING_HINT" ADD PRIMARY KEY ("ID");
-
--- ----------------------------
--- Indexes structure for table t_ods_mapping_hint
--- ----------------------------
-CREATE INDEX "IDX_ODS_MAPPING_HINT_KEY_CODE"
-  ON "T_ODS_MAPPING_HINT" ("NORMALIZED_KEY" ASC, "STANDARD_CODE" ASC);
-
--- ----------------------------
--- Primary Key structure for table t_ods_mapping_sample
--- ----------------------------
-ALTER TABLE "T_ODS_MAPPING_SAMPLE" ADD PRIMARY KEY ("ID");
-
--- ----------------------------
--- Indexes structure for table t_ods_mapping_sample
--- ----------------------------
-CREATE INDEX "IDX_ODS_MAPPING_SAMPLE_ORG"
-  ON "T_ODS_MAPPING_SAMPLE" ("ORG_NAME" ASC);
-CREATE INDEX "IDX_ODS_MAPPING_SAMPLE_EXT_CODE"
-  ON "T_ODS_MAPPING_SAMPLE" ("EXTERNAL_CODE" ASC);
-CREATE INDEX "IDX_ODS_MAPPING_SAMPLE_STD_CODE"
-  ON "T_ODS_MAPPING_SAMPLE" ("STANDARD_CODE" ASC);
-
--- ----------------------------
 -- Primary Key structure for table t_ods_standard_subject
 -- ----------------------------
 ALTER TABLE "T_ODS_STANDARD_SUBJECT" ADD PRIMARY KEY ("ID");
@@ -1327,17 +1238,6 @@ ALTER TABLE "T_STG_EXTERNAL_VALUATION_SUBJECT" ADD PRIMARY KEY ("ID");
 -- ----------------------------
 CREATE INDEX "IDX_STG_SUBJECT_VID_ROW"
   ON "T_STG_EXTERNAL_VALUATION_SUBJECT" ("VALUATION_ID" ASC, "ROW_DATA_NUMBER" ASC);
-
--- ----------------------------
--- Primary Key structure for table t_subject_match_result
--- ----------------------------
-ALTER TABLE "T_SUBJECT_MATCH_RESULT" ADD PRIMARY KEY ("ID");
-
--- ----------------------------
--- Indexes structure for table t_subject_match_result
--- ----------------------------
-CREATE INDEX "IDX_MATCH_RESULT_FILE_ID"
-  ON "T_SUBJECT_MATCH_RESULT" ("FILE_ID" ASC);
 
 CREATE UNIQUE INDEX "UK_TR_SPV_INDEX_PD_ORG_DATE_NAME_SN"
   ON tr_spv_index (pd_cd ASC, org_cd ASC, biz_date ASC, indx_nm ASC, sn ASC);

@@ -39,27 +39,4 @@ public class KnowledgeImportController {
         return SingleResult.of(knowledgeImportAppService.importStandardSubjects(file, dataSourceType));
     }
 
-    /**
-     * 导入历史映射经验落地表。
-     *
-     * @param file 上传的历史映射样本文件
-     * @return 导入结果
-     */
-    @PostMapping(value = "/mapping-hints/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "导入历史映射经验落地表", description = "上传历史映射样本文件并覆盖落地表，核心匹配流程后续只读取该表。")
-    public SingleResult<KnowledgeImportResponse> importMappingHints(@RequestPart("file") MultipartFile file) {
-        return SingleResult.of(knowledgeImportAppService.importMappingHints(file));
-    }
-
-    /**
-     * 导入映射样例落地表。
-     *
-     * @param file 上传的映射样例文件
-     * @return 导入结果
-     */
-    @PostMapping(value = "/mapping-samples/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "导入映射样例落地表", description = "上传映射样例文件并覆盖落地表，评估流程后续从该表读取样例数据。")
-    public SingleResult<KnowledgeImportResponse> importMappingSamples(@RequestPart("file") MultipartFile file) {
-        return SingleResult.of(knowledgeImportAppService.importMappingSamples(file));
-    }
 }

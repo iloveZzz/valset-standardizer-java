@@ -2,18 +2,15 @@ package com.yss.valset.application.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yss.valset.application.dto.MatchResultViewDTO;
 import com.yss.valset.application.dto.RawValuationDataViewDTO;
 import com.yss.valset.application.dto.RawValuationSheetDTO;
 import com.yss.valset.application.dto.RawValuationRowDTO;
 import com.yss.valset.application.dto.StgExternalValuationViewDTO;
 import com.yss.valset.domain.gateway.StgExternalValuationGateway;
 import com.yss.valset.application.service.ValuationWorkflowQueryService;
-import com.yss.valset.domain.gateway.MatchResultGateway;
 import com.yss.valset.domain.gateway.ValsetFileInfoGateway;
 import com.yss.valset.domain.model.ParsedValuationData;
 import com.yss.valset.domain.model.ValsetFileInfo;
-import com.yss.valset.domain.model.ValsetMatchResult;
 import com.yss.valset.extract.repository.entity.ValuationFileDataPO;
 import com.yss.valset.extract.repository.entity.ValuationSheetStylePO;
 import com.yss.valset.extract.repository.mapper.ValuationFileDataMapper;
@@ -40,7 +37,6 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
     private final ValsetFileInfoGateway subjectMatchFileInfoGateway;
     private final StgExternalValuationGateway stgExternalValuationGateway;
     private final ExternalValuationStandardizationService standardizationService;
-    private final MatchResultGateway matchResultGateway;
     private final ObjectMapper objectMapper;
 
     public DefaultValuationWorkflowQueryService(ValuationFileDataMapper valuationFileDataMapper,
@@ -48,14 +44,12 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
                                                 ValsetFileInfoGateway subjectMatchFileInfoGateway,
                                                 StgExternalValuationGateway stgExternalValuationGateway,
                                                 ExternalValuationStandardizationService standardizationService,
-                                                MatchResultGateway matchResultGateway,
                                                 ObjectMapper objectMapper) {
         this.valuationFileDataMapper = valuationFileDataMapper;
         this.valuationSheetStyleMapper = valuationSheetStyleMapper;
         this.subjectMatchFileInfoGateway = subjectMatchFileInfoGateway;
         this.stgExternalValuationGateway = stgExternalValuationGateway;
         this.standardizationService = standardizationService;
-        this.matchResultGateway = matchResultGateway;
         this.objectMapper = objectMapper;
     }
 
@@ -103,19 +97,6 @@ public class DefaultValuationWorkflowQueryService implements ValuationWorkflowQu
                 .headerColumns(stgValuationData.getHeaderColumns())
                 .subjects(viewData.getSubjects())
                 .metrics(viewData.getMetrics())
-                .build();
-    }
-
-    @Override
-    public MatchResultViewDTO queryMatchResults(Long fileId) {
-        List<ValsetMatchResult> results = matchResultGateway.findByFileId(fileId);
-        if (results == null || results.isEmpty()) {
-            throw new ResponseStatusException(NOT_FOUND, "未找到 fileId 对应的匹配结果");
-        }
-        return MatchResultViewDTO.builder()
-                .fileId(fileId == null ? null : String.valueOf(fileId))
-                .matchedCount(results.size())
-                .results(results)
                 .build();
     }
 

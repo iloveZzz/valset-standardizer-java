@@ -195,11 +195,12 @@ public class OdsValuationDataParser implements ValuationDataParser {
                 if (sheet == null) {
                     continue;
                 }
-                for (Row row : sheet) {
-                    List<Object> rowValues = ExcelParsingSupport.readRowValues(row, evaluator, formatter);
-                    if (ValuationParserSupport.isBlankRow(rowValues)) {
-                        continue;
-                    }
+                int lastRowNumber = sheet.getLastRowNum();
+                for (int rowIndex = 0; rowIndex <= lastRowNumber; rowIndex++) {
+                    Row row = sheet.getRow(rowIndex);
+                    List<Object> rowValues = row == null
+                            ? java.util.Arrays.asList()
+                            : ExcelParsingSupport.readRowValues(row, evaluator, formatter);
                     rows.add(rowValues);
                 }
             }
@@ -225,9 +226,6 @@ public class OdsValuationDataParser implements ValuationDataParser {
                     List<Object> rowValues = new ArrayList<>();
                     if (row != null) {
                         rowValues.addAll(row);
-                    }
-                    if (ValuationParserSupport.isBlankRow(rowValues)) {
-                        continue;
                     }
                     rows.add(rowValues);
                 }

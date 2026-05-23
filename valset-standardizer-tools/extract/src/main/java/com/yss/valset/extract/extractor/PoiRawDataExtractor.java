@@ -191,7 +191,8 @@ public class PoiRawDataExtractor implements RawDataExtractor {
                 currentSheetName = sheetName;
             }
 
-            int rowDataNumber = ++rowSequence;
+            rowSequence++;
+            int rowDataNumber = sheetRowIndex + 1;
 
             try {
                 boolean includeStyle = !skipExcelStyleParsing && rowDataNumber <= HEADER_PREVIEW_ROWS;

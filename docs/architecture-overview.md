@@ -84,11 +84,9 @@ flowchart LR
     PQ --> E2
     E2 --> STG["STG 结构化结果<br/>t_stg_external_valuation_*"]
     E2 --> TR["标准落地表<br/>tr_spv_jjhzgzb / tr_spv_index"]
-    E3 --> RES["匹配结果表<br/>t_subject_match_result"]
     A --> QRY["查询服务<br/>DefaultValuationWorkflowQueryService"]
     QRY --> ODS
     QRY --> STG
-    QRY --> RES
 ```
 
 ## 4. 核心业务流程
@@ -133,9 +131,9 @@ flowchart LR
 ### 4.6 匹配
 
 1. `MatchExecutionAppServiceImpl` 优先使用已落地的标准化结果。
-2. 加载标准科目和历史映射提示。
+2. 加载标准科目，历史映射提示已下线并使用空索引。
 3. `SimpleValsetMatcher` 执行锚点选择、候选召回、规则打分和置信度分类。
-4. `MatchResultGatewayImpl` 持久化匹配结果。
+4. 匹配任务更新任务摘要和阶段耗时，不再持久化匹配明细。
 
 ### 4.7 查询
 
@@ -143,8 +141,6 @@ flowchart LR
 
 - ODS 原始数据
 - STG 解析快照
-- STG 解析快照
-- 匹配结果
 
 ## 5. 任务模型
 
@@ -155,7 +151,6 @@ flowchart LR
 - 文件解析任务的内部实现名
 - `PARSE_WORKBOOK`
 - `MATCH_SUBJECT`
-- `EVALUATE_MAPPING`
 - `EXPORT_RESULT`
 - `REFRESH_STANDARD_SUBJECT`
 - `REFRESH_MAPPING_HINT`
@@ -253,14 +248,11 @@ STG 保存最新贴源解析快照，标准化结果运行时生成后直接写�
 ### 6.7 知识层
 
 - `t_ods_standard_subject`
-- `t_ods_mapping_hint`
-- `t_ods_mapping_sample`
 
-用于提供标准科目、历史映射和评估样本。
+用于提供标准科目。
 
 ### 6.8 结果层
 
-- `t_subject_match_result`
 - `tr_spv_jjhzgzb`
 - `tr_spv_index`
 

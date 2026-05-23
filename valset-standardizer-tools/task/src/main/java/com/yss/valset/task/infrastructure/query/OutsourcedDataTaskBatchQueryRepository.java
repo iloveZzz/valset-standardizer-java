@@ -643,8 +643,6 @@ public class OutsourcedDataTaskBatchQueryRepository {
                 return "解析工作簿";
             case "MATCH_SUBJECT":
                 return "标准科目匹配";
-            case "EVALUATE_MAPPING":
-                return "映射评估";
             case "EXPORT_RESULT":
                 return "结果导出";
             case "REFRESH_STANDARD_SUBJECT":

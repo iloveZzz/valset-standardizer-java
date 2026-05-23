@@ -7,7 +7,6 @@ export const batchValuationTaskSourceTypeLabelMap: Record<string, string> = {
   EXTRACT_DATA: "原始数据提取",
   PARSE_WORKBOOK: "解析工作簿",
   MATCH_SUBJECT: "标准科目匹配",
-  EVALUATE_MAPPING: "映射评估",
   EXPORT_RESULT: "结果导出",
   REFRESH_STANDARD_SUBJECT: "刷新标准科目",
   REFRESH_MAPPING_HINT: "刷新映射提示",

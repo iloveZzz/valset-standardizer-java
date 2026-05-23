@@ -12,6 +12,7 @@ import com.yss.valset.task.application.dto.product.ProductInfoExtractionSaveResu
 import com.yss.valset.task.application.dto.product.ProductInfoOptionDTO;
 import com.yss.valset.task.application.service.product.ProductInfoExtractionAppService;
 import com.yss.valset.task.infrastructure.dto.product.ProductInfoExtractionCandidateRow;
+import com.yss.valset.task.infrastructure.dto.product.ProductInfoExtractionValuationTitleRow;
 import com.yss.valset.task.infrastructure.mapper.product.ProductInfoExtractionQueryMapper;
 import com.yss.valset.transfer.infrastructure.entity.ProductMatchRulePO;
 import com.yss.valset.transfer.infrastructure.entity.TransferObjectPO;
@@ -110,13 +111,14 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
         Map<String, TransferObjectPO> objectMap = loadTransferObjects(transferIds);
         String productType = firstText(command.getProductType(), DEFAULT_PRODUCT_TYPE);
         LocalDate establishedDate = LocalDate.now().minusYears(2);
+        Map<String, String> titleMap = loadValuationTitleMap(objectMap);
         List<ProductInfoExtractionPreviewDTO> previews = new ArrayList<>();
         for (String transferId : transferIds) {
             TransferObjectPO object = objectMap.get(transferId);
             if (object == null) {
                 continue;
             }
-            previews.add(buildPreview(object, productType, establishedDate));
+            previews.add(buildPreview(object, productType, establishedDate, titleMap.get(transferId)));
         }
         return previews;
     }
@@ -151,8 +153,17 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
     }
 
     ProductInfoExtractionPreviewDTO buildPreview(TransferObjectPO object, String productType, LocalDate establishedDate) {
+        return buildPreview(object, productType, establishedDate, null);
+    }
+
+    ProductInfoExtractionPreviewDTO buildPreview(TransferObjectPO object,
+                                                 String productType,
+                                                 LocalDate establishedDate,
+                                                 String valuationTitle) {
         String originalName = object == null ? "" : firstText(object.getOriginalName(), "");
         FileNameParts parts = parseFileName(originalName);
+        FileNameParts titleParts = parseValuationTitle(valuationTitle);
+        parts = applyTitleFallback(parts, titleParts);
         ProductInfoExtractionPreviewDTO preview = new ProductInfoExtractionPreviewDTO();
         preview.setTransferId(object == null ? null : object.getTransferId());
         preview.setOriginalName(originalName);
@@ -164,7 +175,7 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
         preview.setEstablishedDate(establishedDate);
         preview.setProductCode(parts.productCode);
         preview.setProductName(parts.productName);
-        preview.setMatchRule(StringUtils.hasText(parts.productCode) ? "(.*)" + Pattern.quote(parts.productCode) + "(.*)" : "");
+        preview.setMatchRule(buildMatchRule(originalName));
         preview.setEffectiveFrequency(DEFAULT_EFFECTIVE_FREQUENCY);
         preview.setDelayDays(DEFAULT_DELAY_DAYS);
         preview.setApprovalRequired(Boolean.TRUE);
@@ -181,6 +192,100 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
         }
         productName = cleanupProductName(productName);
         return new FileNameParts(productCode, productName);
+    }
+
+    FileNameParts parseValuationTitle(String title) {
+        String normalizedTitle = normalizeValuationTitle(title);
+        if (!StringUtils.hasText(normalizedTitle)) {
+            return new FileNameParts(null, null);
+        }
+        FileNameParts explicitParts = parseExplicitTitleFields(normalizedTitle);
+        if (StringUtils.hasText(explicitParts.productCode) || StringUtils.hasText(explicitParts.productName)) {
+            return explicitParts;
+        }
+        return parseFileName(normalizedTitle);
+    }
+
+    String buildMatchRule(String fileName) {
+        String baseName = removeExtension(firstText(fileName, ""));
+        if (!StringUtils.hasText(baseName)) {
+            return "";
+        }
+        FileNameParts fileNameParts = parseFileName(fileName);
+        if (StringUtils.hasText(fileNameParts.productCode)) {
+            return "(.*)" + Pattern.quote(fileNameParts.productCode) + "(.*)";
+        }
+        String normalizedRule = buildDateWildcardRule(baseName);
+        return StringUtils.hasText(normalizedRule) ? normalizedRule : escapeRegexLiteral(baseName) + "(.*)";
+    }
+
+    private FileNameParts applyTitleFallback(FileNameParts fileNameParts, FileNameParts titleParts) {
+        if (titleParts == null
+                || !StringUtils.hasText(titleParts.productName) && !StringUtils.hasText(titleParts.productCode)) {
+            return fileNameParts;
+        }
+        String productCode = fileNameParts == null ? null : fileNameParts.productCode;
+        String productName = fileNameParts == null ? null : fileNameParts.productName;
+        if (!StringUtils.hasText(productCode) && StringUtils.hasText(titleParts.productCode)) {
+            productCode = titleParts.productCode;
+        }
+        if (shouldFallbackProductName(productName) && StringUtils.hasText(titleParts.productName)) {
+            productName = titleParts.productName;
+        }
+        return new FileNameParts(productCode, productName);
+    }
+
+    private FileNameParts parseExplicitTitleFields(String title) {
+        String productCode = extractTitleCode(title);
+        String productName = extractTitleName(title);
+        return new FileNameParts(trimToNull(productCode), cleanupTitleProductName(productName));
+    }
+
+    private String extractTitleCode(String title) {
+        java.util.regex.Matcher matcher = Pattern.compile("(产品|基金|组合|资产单元|账套)(代码|编码)\\s*[:：]?\\s*([A-Za-z][A-Za-z0-9_-]*)")
+                .matcher(firstText(title, ""));
+        return matcher.find() ? matcher.group(3) : null;
+    }
+
+    private String extractTitleName(String title) {
+        String text = firstText(title, "");
+        java.util.regex.Matcher matcher = Pattern.compile("(产品|基金|组合|资产单元|账套)(名称|简称)\\s*[:：]?\\s*")
+                .matcher(text);
+        if (!matcher.find()) {
+            return null;
+        }
+        int start = matcher.end();
+        int end = findNextTitleFieldStart(text, start);
+        return text.substring(start, end);
+    }
+
+    private int findNextTitleFieldStart(String text, int start) {
+        java.util.regex.Matcher matcher = Pattern.compile("\\s+(产品|基金|组合|资产单元|账套)(代码|编码|名称|简称)\\s*[:：]?")
+                .matcher(text);
+        if (matcher.find(start)) {
+            return matcher.start();
+        }
+        return text.length();
+    }
+
+    private String normalizeValuationTitle(String title) {
+        String text = firstText(title, "");
+        text = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ');
+        text = text.replaceAll("\\s+", " ");
+        return trimToNull(text);
+    }
+
+    private String cleanupTitleProductName(String value) {
+        String text = cleanupProductName(value);
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        text = text.replaceFirst("^[\\s:：_\\-—]+", "");
+        text = text.replaceAll("(?i)[\\s_\\-—]*((资产)?估值(报表|表)?|净值表)[\\s_\\-—]*\\d{6,8}$", "");
+        text = text.replaceAll("(?i)[\\s_\\-—]*((资产)?估值(报表|表)?|净值表)[\\s_\\-—]*$", "");
+        text = removeTrailingBusinessDate(text);
+        text = text.replaceAll("[\\s:：_\\-—]+$", "");
+        return trimToNull(text);
     }
 
     private ProductInfoExtractionSaveItemDTO saveOne(ProductInfoExtractionPreviewDTO item,
@@ -330,6 +435,36 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
                 ));
     }
 
+    private Map<String, String> loadValuationTitleMap(Map<String, TransferObjectPO> objectMap) {
+        if (objectMap.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, String> fileIdTransferIdMap = new LinkedHashMap<>();
+        for (TransferObjectPO object : objectMap.values()) {
+            Long fileId = parseLong(object.getTransferId());
+            if (fileId != null) {
+                fileIdTransferIdMap.put(fileId, object.getTransferId());
+            }
+        }
+        if (fileIdTransferIdMap.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> result = new LinkedHashMap<>();
+        List<ProductInfoExtractionValuationTitleRow> rows = queryMapper.listValuationTitlesByFileIds(
+                new ArrayList<>(fileIdTransferIdMap.keySet())
+        );
+        for (ProductInfoExtractionValuationTitleRow row : rows) {
+            if (row == null || row.getFileId() == null || !StringUtils.hasText(row.getTitle())) {
+                continue;
+            }
+            String transferId = fileIdTransferIdMap.get(row.getFileId());
+            if (StringUtils.hasText(transferId)) {
+                result.put(transferId, row.getTitle());
+            }
+        }
+        return result;
+    }
+
     private Map<String, Boolean> loadExistingProductTagMap(List<String> transferIds) {
         if (CollectionUtils.isEmpty(transferIds)) {
             return Collections.emptyMap();
@@ -435,6 +570,8 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
         text = text.replaceFirst("^[\\s_\\-—]+", "");
         text = text.replaceAll("(?i)[_\\-—]+估值(报表|表)?[_\\-—]*\\d{6,8}$", "");
         text = text.replaceAll("(?i)[_\\-—]+估值(报表|表)?[_\\-—]*$", "");
+        text = text.replaceAll("(?i)[\\s_\\-—]*((资产)?估值(报表|表)?|净值表)[\\s_\\-—]*\\d{6,8}$", "");
+        text = text.replaceAll("(?i)[\\s_\\-—]*((资产)?估值(报表|表)?|净值表)[\\s_\\-—]*$", "");
         text = text.replaceAll("[\\s_\\-—]+$", "");
         return trimToNull(text);
     }
@@ -483,6 +620,70 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
         return text.matches("\\d{6,8}");
     }
 
+    private String buildDateWildcardRule(String baseName) {
+        List<String> pieces = new ArrayList<>();
+        java.util.regex.Matcher matcher = Pattern.compile("\\d{4}-\\d{1,2}-\\d{1,2}|\\d{8}|\\d{6}").matcher(firstText(baseName, ""));
+        int cursor = 0;
+        boolean foundDate = false;
+        while (matcher.find()) {
+            String literal = baseName.substring(cursor, matcher.start());
+            if (StringUtils.hasText(literal)) {
+                pieces.add(escapeRegexLiteral(removeTrailingRuleSeparator(literal)));
+            }
+            pieces.add("(.*)");
+            cursor = matcher.end();
+            foundDate = true;
+        }
+        if (!foundDate) {
+            return "";
+        }
+        String literal = baseName.substring(cursor);
+        if (StringUtils.hasText(literal)) {
+            pieces.add(escapeRegexLiteral(removeLeadingRuleSeparator(literal)));
+        }
+        if (pieces.isEmpty() || !"(.*)".equals(pieces.get(pieces.size() - 1))) {
+            pieces.add("(.*)");
+        }
+        return normalizeWildcardRule(String.join("", pieces));
+    }
+
+    private String normalizeWildcardRule(String rule) {
+        String text = firstText(rule, "");
+        text = text.replaceAll("(\\(\\.\\*\\))+", "(.*)");
+        return trimToNull(text);
+    }
+
+    private String escapeRegexLiteral(String literal) {
+        String text = firstText(literal, "");
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < text.length(); index++) {
+            char value = text.charAt(index);
+            if ("\\.[]{}()*+-?^$|".indexOf(value) >= 0) {
+                builder.append('\\');
+            }
+            builder.append(value);
+        }
+        return builder.toString();
+    }
+
+    private String removeTrailingRuleSeparator(String value) {
+        return firstText(value, "").replaceAll("[\\s_\\-—]+$", "");
+    }
+
+    private String removeLeadingRuleSeparator(String value) {
+        return firstText(value, "").replaceAll("^[\\s_\\-—]+", "");
+    }
+
+    private boolean shouldFallbackProductName(String productName) {
+        if (!StringUtils.hasText(productName)) {
+            return true;
+        }
+        String normalized = productName.replaceAll("[\\s_\\-—（）()]", "");
+        return normalized.isEmpty()
+                || normalized.matches("(普通)?(资产)?估值(报表|表)?")
+                || normalized.matches("(普通)?净值表");
+    }
+
     private String resolveReceiveMode(String sourceType) {
         String normalized = firstText(sourceType, "").toUpperCase(Locale.ROOT);
         if ("HTTP".equals(normalized)) {
@@ -518,6 +719,17 @@ public class DefaultProductInfoExtractionAppService implements ProductInfoExtrac
 
     private String jsonEscape(String value) {
         return firstText(value, "").replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private Long parseLong(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     static final class FileNameParts {

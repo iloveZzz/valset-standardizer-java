@@ -351,44 +351,9 @@ sheet 样式快照表。
 旧外部估值中间表已移除。标准化结果不再保存中间快照，改为基于最新 `t_stg_external_valuation*` 运行时标准化，并直接落到 `tr_spv_jjhzgzb` / `tr_spv_index`。
 - 保留标准指标码、标准值和映射依据
 
-## 7. 匹配结果层
+## 7. 知识层
 
-### 7.1 `t_subject_match_result`
-
-匹配结果表。
-
-对应实体：
-
-- `ValsetMatchResultPO`
-
-主要职责：
-
-- 保存外部估值科目和内部标准科目的匹配结果
-- 保存候选、得分、置信度、复核标记
-
-关键字段：
-
-- `task_id`
-- `file_id`
-- `external_subject_code`
-- `external_subject_name`
-- `anchor_subject_code`
-- `matched_standard_code`
-- `matched_standard_name`
-- `score`
-- `confidence_level`
-- `needs_review`
-- `match_reason`
-- `candidate_count`
-- `top_candidates_json`
-
-常用索引：
-
-- `file_id`
-
-## 8. 知识层
-
-### 8.1 `t_ods_standard_subject`
+### 7.1 `t_ods_standard_subject`
 
 标准科目表。
 
@@ -401,33 +366,9 @@ sheet 样式快照表。
 - 保存内部标准科目树
 - 供匹配阶段加载
 
-### 8.2 `t_ods_mapping_hint`
+历史映射提示表和映射样本表已移除，匹配阶段使用空历史索引。
 
-历史映射提示表。
-
-对应实体：
-
-- `MappingHintPO`
-
-主要职责：
-
-- 保存历史映射经验
-- 供匹配时提升召回和置信度
-
-### 8.3 `t_ods_mapping_sample`
-
-映射样本表。
-
-对应实体：
-
-- `MappingSamplePO`
-
-主要职责：
-
-- 保存样本数据
-- 供评估和分析使用
-
-## 9. 任务与运行态层
+## 8. 任务与运行态层
 
 ### 9.1 批量任务 元数据
 

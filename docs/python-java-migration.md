@@ -49,20 +49,11 @@
     - 已支持 `parsed.duckdb`
     - 已支持 `match_results.json / match_top1.csv / match_candidates.csv / match_summary.json`
     - 已支持 `review_queue.csv / match.duckdb`
-- `PoiMappingSampleLoader`
-    - 已支持历史映射样本原始记录加载
-    - 已与 `PoiMappingHintLoader` 复用同一份样本解析逻辑
-- `EvaluateMappingExecutionAppServiceImpl`
-    - 已支持 `org_holdout / hash_holdout` 切分
-    - 已支持去重、调权子集构建、默认权重基线评估
-    - 已支持权重搜索、失败样本聚类、评估结果导出
-    - 已支持 `evaluation.duckdb` 导出
 - embedding
     - 当前 Java 项目已明确暂停迁移 embedding 能力
     - 匹配与评估链路保持纯规则实现，embedding 权重不再开放
 - 任务框架
-    - 已支持 `EVALUATE_MAPPING` command / executor / controller 入口
-    - 已支持 `mapping_evaluation.json / failure_cluster.json / weight_search_report.json / evaluation.duckdb`
+    - 已移除离线评估任务和映射样本持久化链路
 
 ### 2.2 待完成
 
@@ -88,8 +79,8 @@
 ### 批次 C
 
 - 已完成
-- 已支持历史样本评估、权重建议、失败模式摘要
-- 已接入 `EVALUATE_MAPPING` 任务执行链
+- 已移除历史样本评估、权重建议、失败模式摘要链路
+- 已下线 `EVALUATE_MAPPING` 任务执行链
 
 ## 4. 本次迁移结论
 

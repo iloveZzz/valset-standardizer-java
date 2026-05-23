@@ -1,6 +1,5 @@
 package com.yss.valset.application.support;
 
-import com.yss.valset.application.command.EvaluateMappingTaskCommand;
 import com.yss.valset.application.command.MatchTaskCommand;
 import com.yss.valset.application.command.ParseTaskCommand;
 import com.yss.valset.application.dto.workflow.WorkflowContextKeys;
@@ -43,13 +42,6 @@ public class WorkflowCommonContextBuilder {
     public Map<String, Object> build(ExtractDataTaskCommand command) {
         return buildCommon(command == null ? null : command.getCreatedBy(),
                 command == null ? null : command.getForceRebuild());
-    }
-
-    /**
-     * 从评估任务参数中提取公共上下文。
-     */
-    public Map<String, Object> build(EvaluateMappingTaskCommand command) {
-        return buildCommon(command == null ? null : command.getCreatedBy(), Boolean.FALSE);
     }
 
     /**

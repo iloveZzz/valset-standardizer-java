@@ -19,8 +19,6 @@ export * from "./getTemplateName2Params";
 export * from "./getTemplateName2SourceType";
 export * from "./getTemplateNameParams";
 export * from "./getTemplateNameTargetType";
-export * from "./importMappingHintsRequest";
-export * from "./importMappingSamplesRequest";
 export * from "./jsonNode";
 export * from "./knowledgeImportResponse";
 export * from "./listCheckpointsParams";

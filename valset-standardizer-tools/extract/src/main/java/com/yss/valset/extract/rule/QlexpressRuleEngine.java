@@ -56,7 +56,7 @@ public class QlexpressRuleEngine {
         long startedAt = System.currentTimeMillis();
         Map<String, Object> safeContext = contextEnhancer.enhance(runnerScope, safeContext(context));
         try {
-            return runner.getRunner().execute(expression, safeContext, QLOptions.DEFAULT_OPTIONS).getResult();
+            return runner.executeResult(expression, safeContext, QLOptions.DEFAULT_OPTIONS);
         } catch (Exception exception) {
             String prefix = hasText(errorPrefix) ? errorPrefix : defaultErrorPrefix;
             log.warn("{}，expression={}, costMs={}", prefix, expression, System.currentTimeMillis() - startedAt, exception);
