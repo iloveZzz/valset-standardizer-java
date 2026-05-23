@@ -6,6 +6,6 @@
  */
 
 export interface DefaultPrimitive {
-  /** 上传的映射样例文件 */
-  file: Blob;
+  /** No comments found.(array of file) */
+  files: Blob;
 }

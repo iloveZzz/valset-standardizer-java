@@ -1,39 +1,15 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
-export type SystemOutputLogCleanupResponse = {
-  deletedCount?: number;
-  remainingCount?: number;
-};
+const generatedApi = getJavaApi();
 
-export type SystemOutputLogNode = {
-  nodeId?: string;
-  nodeName?: string;
-  serviceName?: string;
-  host?: string;
-  port?: string;
-  pid?: string;
-  current?: boolean;
-};
-
-export type SingleResultSystemOutputLogCleanupResponse = {
-  data?: SystemOutputLogCleanupResponse;
-};
-
-export type MultiResultSystemOutputLogNode = {
-  data?: SystemOutputLogNode[];
-};
-
-export const listSystemOutputLogNodes = () =>
-  customInstance<MultiResultSystemOutputLogNode>({
-    url: "/system-output-logs/nodes",
-    method: "GET",
-  });
+export const listSystemOutputLogNodes = generatedApi.listNodes;
 
 export const cleanupSystemOutputLogs = (nodeId?: string) =>
-  customInstance<SingleResultSystemOutputLogCleanupResponse>({
-    url: "/system-output-logs/cleanup",
-    method: "POST",
-    params: {
-      nodeId,
-    },
-  });
+  generatedApi.cleanupLogs({ nodeId });
+
+export type {
+  MultiResultSystemOutputLogNodeDTO as MultiResultSystemOutputLogNode,
+  SingleResultSystemOutputLogCleanupResponse,
+  SystemOutputLogCleanupResponse,
+  SystemOutputLogNodeDTO as SystemOutputLogNode,
+} from "./generated/valset/schemas";

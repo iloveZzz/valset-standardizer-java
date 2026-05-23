@@ -55,6 +55,18 @@ export type PageObjectsParams = {
    */
   tagValue?: string;
   /**
+   * 业务日期
+   */
+  businessDate?: string;
+  /**
+   * 收取日期
+   */
+  receiveDate?: string;
+  /**
+   * 任务日期
+   */
+  taskDate?: string;
+  /**
    * 页码
    */
   pageIndex?: number;

@@ -1,25 +1,11 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
-export type TransferObjectTrendQueryParams = {
-  days?: number;
-  taskDate?: string;
-};
+const generatedApi = getJavaApi();
 
-export type TransferObjectTrendViewDTO = {
-  trendDate?: string;
-  deliveredCount?: number;
-  undeliveredCount?: number;
-};
+export const listTransferObjectTrends = generatedApi.trendObjects;
 
-export type MultiResultTransferObjectTrendViewDTO = {
-  data?: TransferObjectTrendViewDTO[];
-};
-
-export const listTransferObjectTrends = (
-  params?: TransferObjectTrendQueryParams,
-) =>
-  customInstance<MultiResultTransferObjectTrendViewDTO>({
-    url: `/transfer-objects/trend`,
-    method: "GET",
-    params,
-  });
+export type {
+  MultiResultTransferObjectTrendViewDTO,
+  TransferObjectTrendViewDTO,
+  TrendObjectsParams as TransferObjectTrendQueryParams,
+} from "./generated/valset/schemas";

@@ -4,7 +4,9 @@ import com.alibaba.qlexpress4.Express4Runner;
 import com.alibaba.qlexpress4.QLOptions;
 
 import java.util.Map;
-
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 /**
@@ -12,29 +14,95 @@ import java.util.function.Supplier;
  */
 public class ManagedQlexpressRunner implements QlexpressRunnerHolder {
 
+    @FunctionalInterface
+    public interface RunnerHandle {
+        Object execute(String expression, Map<String, Object> context, QLOptions options) throws Exception;
+    }
+
     private final Supplier<Express4Runner> supplier;
+    private final int maxConcurrency;
+    private final Supplier<RunnerHandle> handleSupplier;
 
-    private volatile Express4Runner runner;
+    private volatile BlockingQueue<Express4Runner> runnerPool;
+    private volatile BlockingQueue<RunnerHandle> handlePool;
 
-    public ManagedQlexpressRunner(Supplier<Express4Runner> supplier) {
+    public ManagedQlexpressRunner(Supplier<Express4Runner> supplier, int maxConcurrency) {
+        this(supplier, maxConcurrency, null);
+    }
+
+    public ManagedQlexpressRunner(Supplier<Express4Runner> supplier, int maxConcurrency, Supplier<RunnerHandle> handleSupplier) {
         this.supplier = supplier;
-        this.runner = supplier.get();
+        this.maxConcurrency = Math.max(1, maxConcurrency);
+        this.handleSupplier = handleSupplier;
+        this.runnerPool = handleSupplier == null ? buildRunnerPool() : null;
+        this.handlePool = buildHandlePool();
     }
 
     @Override
     public Express4Runner getRunner() {
-        return runner;
+        BlockingQueue<Express4Runner> currentPool = runnerPool;
+        Express4Runner current = currentPool.peek();
+        return current == null ? supplier.get() : current;
     }
 
     /**
-     * Express4Runner 在解析执行过程中会维护内部状态，托管入口统一串行化单个 runner 的执行。
+     * 托管 runner 使用有限并发池，每次执行借用一个独立 runner 实例。
      */
-    public synchronized Object executeResult(String expression, Map<String, Object> context, QLOptions options) {
-        return runner.execute(expression, context, options).getResult();
+    public Object executeResult(String expression, Map<String, Object> context, QLOptions options) {
+        if (handleSupplier != null) {
+            BlockingQueue<RunnerHandle> currentHandlePool = handlePool;
+            RunnerHandle currentHandle = null;
+            try {
+                currentHandle = currentHandlePool.take();
+                return currentHandle.execute(expression, context, options);
+            } catch (InterruptedException interruptedException) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("QLExpress runner 被中断", interruptedException);
+            } catch (Exception exception) {
+                throw new IllegalStateException("QLExpress runner 执行失败", exception);
+            } finally {
+                if (currentHandle != null) {
+                    currentHandlePool.offer(currentHandle);
+                }
+            }
+        }
+        BlockingQueue<Express4Runner> currentPool = runnerPool;
+        Express4Runner current = null;
+        try {
+            current = currentPool.take();
+            return current.execute(expression, context, options).getResult();
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("QLExpress runner 被中断", interruptedException);
+        } finally {
+            if (current != null) {
+                currentPool.offer(current);
+            }
+        }
     }
 
     @Override
     public synchronized void refresh() {
-        this.runner = supplier.get();
+        this.runnerPool = handleSupplier == null ? buildRunnerPool() : null;
+        this.handlePool = buildHandlePool();
+    }
+
+    private BlockingQueue<Express4Runner> buildRunnerPool() {
+        BlockingQueue<Express4Runner> pool = new ArrayBlockingQueue<>(maxConcurrency, true);
+        for (int i = 0; i < maxConcurrency; i++) {
+            pool.offer(supplier.get());
+        }
+        return pool;
+    }
+
+    private BlockingQueue<RunnerHandle> buildHandlePool() {
+        if (handleSupplier == null) {
+            return null;
+        }
+        BlockingQueue<RunnerHandle> pool = new ArrayBlockingQueue<>(maxConcurrency, true);
+        for (int i = 0; i < maxConcurrency; i++) {
+            pool.offer(handleSupplier.get());
+        }
+        return pool;
     }
 }

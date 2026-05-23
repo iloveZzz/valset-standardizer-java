@@ -53,9 +53,9 @@ public class TransferTagController {
         return SingleResult.of(transferTagManagementAppService.getTag(tagId));
     }
 
-    @GetMapping("/template-name")
+    @GetMapping("/temp-name")
     @Operation(summary = "查询标签模板名", description = "返回前端应加载的标签表单模板名称。")
-    public SingleResult<String> getTemplateName() {
+    public SingleResult<String> getFormTempName() {
         return SingleResult.of(TransferFormTemplateNames.TRANSFER_TAG);
     }
 

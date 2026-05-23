@@ -92,9 +92,9 @@ public class TransferSourceController {
      * @param sourceType 来源类型
      * @return 表单模板名称
      */
-    @GetMapping("/template-name")
+    @GetMapping("/temp-name")
     @Operation(summary = "查询来源对应表单模板名", description = "根据来源类型返回前端应加载的表单模板名称。")
-    public SingleResult<String> getTemplateName(@RequestParam("sourceType") SourceType sourceType) {
+    public SingleResult<String> getFormTempName(@RequestParam("sourceType") SourceType sourceType) {
         return SingleResult.of(TransferFormTemplateNames.sourceTemplateName(sourceType));
     }
 

@@ -1,25 +1,11 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
-export type TransferDeliveryRecordSummaryDTO = {
-  todayDeliveryCount?: number;
-  todaySuccessCount?: number;
-  todayFailedCount?: number;
-  successRate?: number;
-};
+const generatedApi = getJavaApi();
 
-export type TransferDeliveryRecordSummaryQueryParams = {
-  taskDate?: string;
-};
+export const getTransferDeliveryRecordSummary = generatedApi.summarizeToday;
 
-export type SingleResultTransferDeliveryRecordSummaryDTO = {
-  data?: TransferDeliveryRecordSummaryDTO;
-};
-
-export const getTransferDeliveryRecordSummary = (
-  params?: TransferDeliveryRecordSummaryQueryParams,
-) =>
-  customInstance<SingleResultTransferDeliveryRecordSummaryDTO>({
-    url: `/transfer-delivery-records/summary`,
-    method: "GET",
-    params,
-  });
+export type {
+  SingleResultTransferDeliveryRecordSummaryViewDTO as SingleResultTransferDeliveryRecordSummaryDTO,
+  SummarizeTodayParams as TransferDeliveryRecordSummaryQueryParams,
+  TransferDeliveryRecordSummaryViewDTO as TransferDeliveryRecordSummaryDTO,
+} from "./generated/valset/schemas";

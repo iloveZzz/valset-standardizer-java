@@ -1,11 +1,17 @@
 package com.yss.valset.qlexpress.domain.runtime;
 
+import com.alibaba.qlexpress4.InitOptions;
 import com.alibaba.qlexpress4.QLOptions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,7 +34,7 @@ class QlexpressRunnerRegistryTest {
     void managedRunnerRefreshRebuildsEnabledFunctionSet() {
         MutableProvider provider = new MutableProvider();
         provider.scripts = Collections.singletonList(new QlexpressFunctionScript("foo", "function foo() { return 1; }"));
-        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(provider);
+        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(provider, QlexpressExecutionContextEnhancer.empty(), 2);
         ManagedQlexpressRunner runner = registry.createManagedRunner();
 
         assertThat(runner.getRunner().execute("foo()", Collections.emptyMap(), QLOptions.DEFAULT_OPTIONS).getResult()).isEqualTo(1);
@@ -49,7 +55,7 @@ class QlexpressRunnerRegistryTest {
                 new QlexpressFunctionScript("transferOnly", "function transferOnly() { return 'transfer'; }", Collections.singletonList("transfer.rule")),
                 new QlexpressFunctionScript("commonFn", "function commonFn() { return 'common'; }", Collections.singletonList("common"))
         );
-        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(provider);
+        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(provider, QlexpressExecutionContextEnhancer.empty(), 2);
         ManagedQlexpressRunner runner = registry.createManagedRunner("transfer.rule");
 
         assertThat(runner.getRunner().execute("transferOnly()", Collections.emptyMap(), QLOptions.DEFAULT_OPTIONS).getResult()).isEqualTo("transfer");
@@ -70,7 +76,7 @@ class QlexpressRunnerRegistryTest {
                         + "}",
                 Collections.singletonList(EXTRACT_PARSE_SCOPE)
         ));
-        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(provider);
+        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(provider, QlexpressExecutionContextEnhancer.empty(), 2);
         ManagedQlexpressRunner runner = registry.createManagedRunner(EXTRACT_PARSE_SCOPE);
 
         Map<String, Object> context = new java.util.HashMap<>();
@@ -84,7 +90,7 @@ class QlexpressRunnerRegistryTest {
 
     @Test
     void extractParseConfiguredFunctionsRunWithoutJavaFacade() {
-        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(QlexpressRunnerRegistryTest::extractParseScripts, commonEnhancer());
+        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(QlexpressRunnerRegistryTest::extractParseScripts, commonEnhancer(), 2);
         ManagedQlexpressRunner runner = registry.createManagedRunner(EXTRACT_PARSE_SCOPE);
         Map<String, Object> context = new java.util.HashMap<>();
         context.put("row", java.util.Arrays.asList("科目代码", "科目名称", "市值"));
@@ -140,7 +146,7 @@ class QlexpressRunnerRegistryTest {
 
     @Test
     void transferRuleConfiguredFunctionsRunWithoutJavaFacade() {
-        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(QlexpressRunnerRegistryTest::transferRuleScripts, commonEnhancer());
+        QlexpressRunnerRegistry registry = new QlexpressRunnerRegistry(QlexpressRunnerRegistryTest::transferRuleScripts, commonEnhancer(), 2);
         ManagedQlexpressRunner runner = registry.createManagedRunner(TRANSFER_RULE_SCOPE);
         Map<String, Object> context = new java.util.HashMap<>();
         Map<String, Object> rule = new java.util.HashMap<>();
@@ -184,6 +190,60 @@ class QlexpressRunnerRegistryTest {
                         .doesNotContain(forbiddenFragment);
             }
         }
+    }
+
+    @Test
+    void managedRunnerSupportsBoundedConcurrentExecution() throws Exception {
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicInteger active = new AtomicInteger(0);
+        AtomicInteger maxActive = new AtomicInteger(0);
+        ManagedQlexpressRunner runner = new ManagedQlexpressRunner(
+                () -> null,
+                2,
+                () -> (expression, context, options) -> {
+                    int current = active.incrementAndGet();
+                    maxActive.accumulateAndGet(current, Math::max);
+                    try {
+                        release.await(5, TimeUnit.SECONDS);
+                    } catch (InterruptedException exception) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(exception);
+                    } finally {
+                        active.decrementAndGet();
+                    }
+                    Object value = context == null ? null : context.get("value");
+                    return value instanceof Number ? ((Number) value).intValue() + 1 : 1;
+                }
+        );
+
+        int taskCount = 6;
+        CountDownLatch ready = new CountDownLatch(taskCount);
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(taskCount);
+        ExecutorService executor = Executors.newFixedThreadPool(taskCount);
+
+        for (int i = 0; i < taskCount; i++) {
+            final int value = i;
+            executor.submit(() -> {
+                ready.countDown();
+                try {
+                    start.await(5, TimeUnit.SECONDS);
+                    Object result = runner.executeResult("ignored", Collections.singletonMap("value", value), QLOptions.DEFAULT_OPTIONS);
+                    assertThat(result).isEqualTo(value + 1);
+                } catch (Exception exception) {
+                    throw new RuntimeException(exception);
+                } finally {
+                    done.countDown();
+                }
+            });
+        }
+
+        assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+        start.countDown();
+        release.countDown();
+        assertThat(done.await(5, TimeUnit.SECONDS)).isTrue();
+        executor.shutdownNow();
+        assertThat(maxActive.get()).isLessThanOrEqualTo(2);
     }
 
     private static List<QlexpressFunctionScript> extractParseScripts() {

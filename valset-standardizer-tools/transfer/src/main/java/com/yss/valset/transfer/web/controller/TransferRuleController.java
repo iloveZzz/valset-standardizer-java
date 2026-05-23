@@ -71,9 +71,9 @@ public class TransferRuleController {
      *
      * @return 表单模板名称
      */
-    @GetMapping("/template-name")
+    @GetMapping("/temp-name")
     @Operation(summary = "查询路由规则对应表单模板名", description = "返回前端应加载的路由规则表单模板名称。")
-    public SingleResult<String> getTemplateName() {
+    public SingleResult<String> getFormTempName() {
         return SingleResult.of(TransferFormTemplateNames.TRANSFER_RULE);
     }
 

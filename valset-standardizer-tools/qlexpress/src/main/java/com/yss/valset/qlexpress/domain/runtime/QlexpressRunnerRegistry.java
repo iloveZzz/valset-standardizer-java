@@ -8,6 +8,7 @@ import com.alibaba.qlexpress4.runtime.context.MapExpressContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -28,23 +29,33 @@ public class QlexpressRunnerRegistry {
     private final QlexpressFunctionScriptProvider directScriptProvider;
     private final QlexpressExecutionContextEnhancer contextEnhancer;
     private final List<QlexpressRunnerHolder> holders = new CopyOnWriteArrayList<>();
+    private final int maxConcurrency;
 
     @Autowired
     public QlexpressRunnerRegistry(ObjectProvider<QlexpressFunctionScriptProvider> scriptProvider,
-                                   QlexpressExecutionContextEnhancer contextEnhancer) {
+                                   QlexpressExecutionContextEnhancer contextEnhancer,
+                                   @Value("${subject.match.parse.concurrent.concurrency:5}") int maxConcurrency) {
         this.scriptProvider = scriptProvider;
         this.directScriptProvider = null;
         this.contextEnhancer = contextEnhancer == null ? QlexpressExecutionContextEnhancer.empty() : contextEnhancer;
+        this.maxConcurrency = Math.max(1, maxConcurrency);
     }
 
     public QlexpressRunnerRegistry(QlexpressFunctionScriptProvider scriptProvider) {
-        this(scriptProvider, QlexpressExecutionContextEnhancer.empty());
+        this(scriptProvider, QlexpressExecutionContextEnhancer.empty(), 5);
     }
 
     public QlexpressRunnerRegistry(QlexpressFunctionScriptProvider scriptProvider, QlexpressExecutionContextEnhancer contextEnhancer) {
+        this(scriptProvider, contextEnhancer, 5);
+    }
+
+    public QlexpressRunnerRegistry(QlexpressFunctionScriptProvider scriptProvider,
+                                   QlexpressExecutionContextEnhancer contextEnhancer,
+                                   int maxConcurrency) {
         this.scriptProvider = null;
         this.directScriptProvider = scriptProvider == null ? Collections::emptyList : scriptProvider;
         this.contextEnhancer = contextEnhancer == null ? QlexpressExecutionContextEnhancer.empty() : contextEnhancer;
+        this.maxConcurrency = Math.max(1, maxConcurrency);
     }
 
     public ManagedQlexpressRunner createManagedRunner() {
@@ -52,7 +63,7 @@ public class QlexpressRunnerRegistry {
     }
 
     public ManagedQlexpressRunner createManagedRunner(String runnerScope) {
-        ManagedQlexpressRunner holder = new ManagedQlexpressRunner(() -> createRunner(runnerScope, listEnabledScripts(runnerScope)));
+        ManagedQlexpressRunner holder = new ManagedQlexpressRunner(() -> createRunner(runnerScope, listEnabledScripts(runnerScope)), maxConcurrency);
         holders.add(holder);
         return holder;
     }

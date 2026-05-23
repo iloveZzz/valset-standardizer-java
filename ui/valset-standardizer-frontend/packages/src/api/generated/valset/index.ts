@@ -7,27 +7,58 @@
 import type {
   AnalyzeMailInboxParams,
   AnalyzeObjectsParams,
+  CleanupLogsParams,
   CountTaskStateParams,
   CountWorkflowStateParams,
+  ExportFileParseRulesParams,
+  ExportFileParseSourcesParams,
+  ExportProductMatchRulesParams,
+  FileParseRuleSheetSaveCommand,
+  FileParseSourceSheetSaveCommand,
   ForceTaskSuccessParams,
   GetTaskLog1Params,
   GetTemplateName2Params,
   GetTemplateNameParams,
+  IngestValuationFileByDateParams,
   JsonNode,
   ListCheckpointsParams,
+  ListDictParams,
+  ListExternalMetricsParams,
+  ListExternalSubjectsParams,
+  ListFileParseRulesParams,
+  ListFileParseSourcesParams,
   ListInstancesParams,
+  ListLogsParams,
+  ListProductMatchRulesParams,
   ListRoutes1Params,
   ListRoutesParams,
   ListRulesParams,
   ListSourcesParams,
+  ListStandardMetricsParams,
+  ListStandardSubjectsParams,
   ListTargetsParams,
   ListTaskInstancesParams,
+  MultiResultDataDictVO,
+  MultiResultFileParseRuleSheetRowDTO,
+  MultiResultFileParseSourceSheetRowDTO,
+  MultiResultFileStateGroupVO,
+  MultiResultOrgBasicInfoVO,
   MultiResultOutsourcedDataTaskActionResultDTO,
+  MultiResultOutsourcedDataTaskExternalMetricDTO,
+  MultiResultOutsourcedDataTaskExternalSubjectDTO,
+  MultiResultOutsourcedDataTaskStandardMetricDTO,
+  MultiResultOutsourcedDataTaskStandardSubjectDTO,
   MultiResultOutsourcedDataTaskStepDTO,
   MultiResultParseQueueViewDTO,
+  MultiResultProductInfoExtractionPreviewDTO,
+  MultiResultProductMatchRuleSheetRowDTO,
   MultiResultString,
+  MultiResultSystemOutputLogNodeDTO,
+  MultiResultSystemOutputLogViewDTO,
   MultiResultTransferFormTemplateGroupDTO,
   MultiResultTransferFormTemplateViewDTO,
+  MultiResultTransferObjectTagSummaryViewDTO,
+  MultiResultTransferObjectTrendViewDTO,
   MultiResultTransferRouteViewDTO,
   MultiResultTransferRuleViewDTO,
   MultiResultTransferSourceCheckpointViewDTO,
@@ -41,11 +72,19 @@ import type {
   MultiResultWorkflowScheduleDTO,
   OutsourcedDataTaskActionCommand,
   OutsourcedDataTaskBatchCommand,
+  OutsourcedDataTaskStandardDataExportCommand,
+  PageCandidatesParams,
+  PageFunctionsParams,
   PageMailInboxParams,
   PageObjectsParams,
+  PageProductOptionsParams,
   PageQueuesParams,
   PageResultOutsourcedDataTaskBatchDTO,
   PageResultParseQueueViewDTO,
+  PageResultProductInfoExtractionCandidateDTO,
+  PageResultProductInfoOptionDTO,
+  PageResultQlexpressFunctionViewDTO,
+  PageResultSourceFileManageVO,
   PageResultTransferObjectViewDTO,
   PageResultTransferTagViewDTO,
   PageResultWorkflowInstanceViewDTO,
@@ -57,19 +96,34 @@ import type {
   ParseQueueGenerateCommand,
   ParseQueueRetryCommand,
   ParseQueueSubscribeCommand,
+  ProductInfoExtractionPreviewCommand,
+  ProductInfoExtractionSaveCommand,
+  ProductMatchRuleSheetSaveCommand,
+  QlexpressFunctionDebugCommand,
+  QlexpressFunctionUpsertCommand,
   QueryFileInfoByPathParams,
   QueryIngestLogsByPathParams,
   QuerySchedulesParams,
   QuerySheetStylesByPathParams,
   SearchFileInfosParams,
   SingleResultBoolean,
-  SingleResultKnowledgeImportResponse,
+  SingleResultFileReceiveVO,
   SingleResultOutsourcedDataTaskActionResultDTO,
   SingleResultOutsourcedDataTaskBatchDetailDTO,
+  SingleResultOutsourcedDataTaskRawWorkbookDTO,
+  SingleResultOutsourcedDataTaskStandardBasicDTO,
   SingleResultOutsourcedDataTaskSummaryDTO,
+  SingleResultOutsourcedDataTaskTraceDTO,
+  SingleResultParseIssueHandlingSaveResultDTO,
   SingleResultParseQueueObserverRunSummary,
   SingleResultParseQueueViewDTO,
+  SingleResultProductInfoExtractionSaveResultDTO,
+  SingleResultQlexpressFunctionDebugResultDTO,
+  SingleResultQlexpressFunctionMutationResponse,
+  SingleResultQlexpressFunctionUsageDTO,
+  SingleResultQlexpressFunctionViewDTO,
   SingleResultString,
+  SingleResultSystemOutputLogCleanupResponse,
   SingleResultTransferDeliveryRecordSummaryViewDTO,
   SingleResultTransferFormTemplateViewDTO,
   SingleResultTransferMailInfoViewDTO,
@@ -96,8 +150,15 @@ import type {
   SingleResultWorkflowScheduleDTO,
   SingleResultWorkflowTaskInstancePageDTO,
   SingleResultWorkflowTaskListDTO,
+  SourceFileExportParams,
+  SourceFileManagePage,
+  SourceFileManageQuery,
+  SourceFileResetCmd,
   SseEmitter,
+  StreamLogsParams,
   SubscribeParams,
+  SummarizeTagsParams,
+  SummarizeTodayParams,
   SummaryParams,
   TransferObjectRedeliverCommand,
   TransferObjectRetagCommand,
@@ -108,6 +169,8 @@ import type {
   TransferTagTestCommand,
   TransferTagUpsertCommand,
   TransferTargetUpsertCommand,
+  TrendObjectsParams,
+  UploadSourceFiles1Request,
   UploadSourceFilesRequest,
   ValsetFileInfoRepairCommand,
   WorkflowCallbackRequest,
@@ -486,17 +549,52 @@ export const getJavaApi = () => {
   };
 
   /**
-   * @summary 导入标准科目落地表。
+   * @summary pageCandidates
    */
-  const importStandardSubjects = (importStandardSubjectsRequest: string) => {
-    const formData = new FormData();
-    formData.append("data", importStandardSubjectsRequest);
+  const pageCandidates = (params?: PageCandidatesParams) => {
+    return customInstance<PageResultProductInfoExtractionCandidateDTO>({
+      url: `/product-info-extractions/candidates`,
+      method: "GET",
+      params,
+    });
+  };
 
-    return customInstance<SingleResultKnowledgeImportResponse>({
-      url: `/knowledge/standard-subjects/import`,
+  /**
+   * @summary pageProductOptions
+   */
+  const pageProductOptions = (params?: PageProductOptionsParams) => {
+    return customInstance<PageResultProductInfoOptionDTO>({
+      url: `/product-info-extractions/options`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary preview
+   */
+  const preview = (
+    productInfoExtractionPreviewCommand: ProductInfoExtractionPreviewCommand,
+  ) => {
+    return customInstance<MultiResultProductInfoExtractionPreviewDTO>({
+      url: `/product-info-extractions/preview`,
       method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
-      data: formData,
+      headers: { "Content-Type": "application/json" },
+      data: productInfoExtractionPreviewCommand,
+    });
+  };
+
+  /**
+   * @summary saveRules
+   */
+  const saveRules = (
+    productInfoExtractionSaveCommand: ProductInfoExtractionSaveCommand,
+  ) => {
+    return customInstance<SingleResultProductInfoExtractionSaveResultDTO>({
+      url: `/product-info-extractions/rules`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: productInfoExtractionSaveCommand,
     });
   };
 
@@ -778,6 +876,49 @@ export const getJavaApi = () => {
   };
 
   /**
+   * @summary 查询最近的系统输出日志。
+   */
+  const listLogs = (params?: ListLogsParams) => {
+    return customInstance<MultiResultSystemOutputLogViewDTO>({
+      url: `/system-output-logs`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 查询可查看的系统输出日志节点。
+   */
+  const listNodes = () => {
+    return customInstance<MultiResultSystemOutputLogNodeDTO>({
+      url: `/system-output-logs/nodes`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary 清空当前内存中的系统输出日志。
+   */
+  const cleanupLogs = (params?: CleanupLogsParams) => {
+    return customInstance<SingleResultSystemOutputLogCleanupResponse>({
+      url: `/system-output-logs/cleanup`,
+      method: "POST",
+      params,
+    });
+  };
+
+  /**
+   * @summary 订阅系统输出日志流。
+   */
+  const streamLogs = (params?: StreamLogsParams) => {
+    return customInstance<SseEmitter>({
+      url: `/system-output-logs/stream`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
    * @summary createTag
    */
   const createTag = (transferTagUpsertCommand: TransferTagUpsertCommand) => {
@@ -964,6 +1105,114 @@ export const getJavaApi = () => {
   };
 
   /**
+   * @summary listFileParseSources
+   */
+  const listFileParseSources = (params?: ListFileParseSourcesParams) => {
+    return customInstance<MultiResultFileParseSourceSheetRowDTO>({
+      url: `/parse-issue-handling/file-parse-sources`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary saveFileParseSources
+   */
+  const saveFileParseSources = (
+    fileParseSourceSheetSaveCommand: FileParseSourceSheetSaveCommand,
+  ) => {
+    return customInstance<SingleResultParseIssueHandlingSaveResultDTO>({
+      url: `/parse-issue-handling/file-parse-sources`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: fileParseSourceSheetSaveCommand,
+    });
+  };
+
+  /**
+   * @summary exportFileParseSources
+   */
+  const exportFileParseSources = (params?: ExportFileParseSourcesParams) => {
+    return customInstance<unknown>({
+      url: `/parse-issue-handling/file-parse-sources/export`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary listFileParseRules
+   */
+  const listFileParseRules = (params?: ListFileParseRulesParams) => {
+    return customInstance<MultiResultFileParseRuleSheetRowDTO>({
+      url: `/parse-issue-handling/file-parse-rules`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary saveFileParseRules
+   */
+  const saveFileParseRules = (
+    fileParseRuleSheetSaveCommand: FileParseRuleSheetSaveCommand,
+  ) => {
+    return customInstance<SingleResultParseIssueHandlingSaveResultDTO>({
+      url: `/parse-issue-handling/file-parse-rules`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: fileParseRuleSheetSaveCommand,
+    });
+  };
+
+  /**
+   * @summary exportFileParseRules
+   */
+  const exportFileParseRules = (params?: ExportFileParseRulesParams) => {
+    return customInstance<unknown>({
+      url: `/parse-issue-handling/file-parse-rules/export`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary listProductMatchRules
+   */
+  const listProductMatchRules = (params?: ListProductMatchRulesParams) => {
+    return customInstance<MultiResultProductMatchRuleSheetRowDTO>({
+      url: `/parse-issue-handling/product-match-rules`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary saveProductMatchRules
+   */
+  const saveProductMatchRules = (
+    productMatchRuleSheetSaveCommand: ProductMatchRuleSheetSaveCommand,
+  ) => {
+    return customInstance<SingleResultParseIssueHandlingSaveResultDTO>({
+      url: `/parse-issue-handling/product-match-rules`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: productMatchRuleSheetSaveCommand,
+    });
+  };
+
+  /**
+   * @summary exportProductMatchRules
+   */
+  const exportProductMatchRules = (params?: ExportProductMatchRulesParams) => {
+    return customInstance<unknown>({
+      url: `/parse-issue-handling/product-match-rules/export`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
    * @summary saveSchedule
    */
   const saveSchedule = (workflowScheduleDTO: WorkflowScheduleDTO) => {
@@ -1046,6 +1295,110 @@ export const getJavaApi = () => {
   };
 
   /**
+   * @summary createFunction
+   */
+  const createFunction = (
+    qlexpressFunctionUpsertCommand: QlexpressFunctionUpsertCommand,
+  ) => {
+    return customInstance<SingleResultQlexpressFunctionMutationResponse>({
+      url: `/qlexpress-functions`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: qlexpressFunctionUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary pageFunctions
+   */
+  const pageFunctions = (params?: PageFunctionsParams) => {
+    return customInstance<PageResultQlexpressFunctionViewDTO>({
+      url: `/qlexpress-functions`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary getFunction
+   */
+  const getFunction = (functionId: string) => {
+    return customInstance<SingleResultQlexpressFunctionViewDTO>({
+      url: `/qlexpress-functions/${functionId}`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary deleteFunction
+   */
+  const deleteFunction = (functionId: string) => {
+    return customInstance<SingleResultQlexpressFunctionMutationResponse>({
+      url: `/qlexpress-functions/${functionId}`,
+      method: "DELETE",
+    });
+  };
+
+  /**
+   * @summary updateFunction
+   */
+  const updateFunction = (
+    functionId: string,
+    qlexpressFunctionUpsertCommand: QlexpressFunctionUpsertCommand,
+  ) => {
+    return customInstance<SingleResultQlexpressFunctionMutationResponse>({
+      url: `/qlexpress-functions/${functionId}`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: qlexpressFunctionUpsertCommand,
+    });
+  };
+
+  /**
+   * @summary getFunctionUsage
+   */
+  const getFunctionUsage = (functionId: string) => {
+    return customInstance<SingleResultQlexpressFunctionUsageDTO>({
+      url: `/qlexpress-functions/${functionId}/usage`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary enableFunction
+   */
+  const enableFunction = (functionId: string) => {
+    return customInstance<SingleResultQlexpressFunctionMutationResponse>({
+      url: `/qlexpress-functions/${functionId}/enable`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary disableFunction
+   */
+  const disableFunction = (functionId: string) => {
+    return customInstance<SingleResultQlexpressFunctionMutationResponse>({
+      url: `/qlexpress-functions/${functionId}/disable`,
+      method: "POST",
+    });
+  };
+
+  /**
+   * @summary debug
+   */
+  const debug = (
+    qlexpressFunctionDebugCommand: QlexpressFunctionDebugCommand,
+  ) => {
+    return customInstance<SingleResultQlexpressFunctionDebugResultDTO>({
+      url: `/qlexpress-functions/debug`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: qlexpressFunctionDebugCommand,
+    });
+  };
+
+  /**
    * @summary 创建路由配置。
    */
   const createRoute = (
@@ -1122,6 +1475,102 @@ export const getJavaApi = () => {
     return customInstance<SingleResultTransferRouteMutationResponse>({
       url: `/transfer-route-configs/${routeId}/disable`,
       method: "POST",
+    });
+  };
+
+  /**
+   * @summary pageFileManage
+   */
+  const pageFileManage = (sourceFileManagePage: SourceFileManagePage) => {
+    return customInstance<PageResultSourceFileManageVO>({
+      url: `/file/manage/page`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: sourceFileManagePage,
+    });
+  };
+
+  /**
+   * @summary fileManageStateGroup
+   */
+  const fileManageStateGroup = (
+    sourceFileManageQuery: SourceFileManageQuery,
+  ) => {
+    return customInstance<MultiResultFileStateGroupVO>({
+      url: `/file/manage/state/group`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: sourceFileManageQuery,
+    });
+  };
+
+  /**
+   * @summary ingestValuationFileByDate
+   */
+  const ingestValuationFileByDate = (
+    params: IngestValuationFileByDateParams,
+  ) => {
+    return customInstance<SingleResultFileReceiveVO>({
+      url: `/ingest/file/date`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary resetSourceFile
+   */
+  const resetSourceFile = (sourceFileResetCmd: SourceFileResetCmd) => {
+    return customInstance<SingleResultBoolean>({
+      url: `/exception/file/reset`,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      data: sourceFileResetCmd,
+    });
+  };
+
+  /**
+   * @summary sourceFileListExport
+   */
+  const sourceFileListExport = (
+    sourceFileManageQuery: SourceFileManageQuery,
+  ) => {
+    return customInstance<unknown>({
+      url: `/file/manage/export/list`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: sourceFileManageQuery,
+    });
+  };
+
+  /**
+   * @summary sourceFileExport
+   */
+  const sourceFileExport = (
+    fileState: string,
+    params: SourceFileExportParams,
+  ) => {
+    return customInstance<unknown>({
+      url: `/file/manage/export/${fileState}`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary uploadSourceFiles
+   */
+  const uploadSourceFiles1 = (
+    uploadSourceFiles1Request: UploadSourceFiles1Request,
+  ) => {
+    const formData = new FormData();
+    formData.append("files", uploadSourceFiles1Request.files);
+
+    return customInstance<SingleResultFileReceiveVO>({
+      url: `/file/manage/upload/batch`,
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      data: formData,
     });
   };
 
@@ -1235,6 +1684,27 @@ export const getJavaApi = () => {
   };
 
   /**
+   * @summary listDict
+   */
+  const listDict = (params: ListDictParams) => {
+    return customInstance<MultiResultDataDictVO>({
+      url: `/data/dict/list`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary listOrganizations
+   */
+  const listOrganizations = () => {
+    return customInstance<MultiResultOrgBasicInfoVO>({
+      url: `/org/bsc/info/list`,
+      method: "GET",
+    });
+  };
+
+  /**
    * @summary 查询文件主对象详情。
    */
   const getObject = (transferId: string) => {
@@ -1309,9 +1779,31 @@ export const getJavaApi = () => {
   };
 
   /**
+   * @summary 统计分拣对象趋势。
+   */
+  const trendObjects = (params?: TrendObjectsParams) => {
+    return customInstance<MultiResultTransferObjectTrendViewDTO>({
+      url: `/transfer-objects/trend`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary 统计标签识别结果汇总。
+   */
+  const summarizeTags = (params?: SummarizeTagsParams) => {
+    return customInstance<MultiResultTransferObjectTagSummaryViewDTO>({
+      url: `/transfer-objects/tag-summary`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
    * @summary 重新投递文件主对象。
    */
-  const redeliver1 = (
+  const redeliver = (
     transferObjectRedeliverCommand: TransferObjectRedeliverCommand,
   ) => {
     return customInstance<SingleResultTransferObjectRedeliverResponse>({
@@ -1389,12 +1881,123 @@ export const getJavaApi = () => {
   };
 
   /**
+   * @summary getTrace
+   */
+  const getTrace = (batchId: string) => {
+    return customInstance<SingleResultOutsourcedDataTaskTraceDTO>({
+      url: `/outsourced-data-tasks/${batchId}/trace`,
+      method: "GET",
+    });
+  };
+
+  /**
    * @summary listSteps
    */
   const listSteps = (batchId: string) => {
     return customInstance<MultiResultOutsourcedDataTaskStepDTO>({
       url: `/outsourced-data-tasks/${batchId}/steps`,
       method: "GET",
+    });
+  };
+
+  /**
+   * @summary queryStandardBasic
+   */
+  const queryStandardBasic = (batchId: string) => {
+    return customInstance<SingleResultOutsourcedDataTaskStandardBasicDTO>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/basic`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary listStandardSubjects
+   */
+  const listStandardSubjects = (
+    batchId: string,
+    params?: ListStandardSubjectsParams,
+  ) => {
+    return customInstance<MultiResultOutsourcedDataTaskStandardSubjectDTO>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/subjects`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary listStandardMetrics
+   */
+  const listStandardMetrics = (
+    batchId: string,
+    params?: ListStandardMetricsParams,
+  ) => {
+    return customInstance<MultiResultOutsourcedDataTaskStandardMetricDTO>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/metrics`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary listExternalSubjects
+   */
+  const listExternalSubjects = (
+    batchId: string,
+    params?: ListExternalSubjectsParams,
+  ) => {
+    return customInstance<MultiResultOutsourcedDataTaskExternalSubjectDTO>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/external-subjects`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary listExternalMetrics
+   */
+  const listExternalMetrics = (
+    batchId: string,
+    params?: ListExternalMetricsParams,
+  ) => {
+    return customInstance<MultiResultOutsourcedDataTaskExternalMetricDTO>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/external-metrics`,
+      method: "GET",
+      params,
+    });
+  };
+
+  /**
+   * @summary queryRawWorkbook
+   */
+  const queryRawWorkbook = (batchId: string) => {
+    return customInstance<SingleResultOutsourcedDataTaskRawWorkbookDTO>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/raw-workbook`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary downloadRawWorkbook
+   */
+  const downloadRawWorkbook = (batchId: string) => {
+    return customInstance<unknown>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/raw-workbook/download`,
+      method: "GET",
+    });
+  };
+
+  /**
+   * @summary exportStandardDataSheet
+   */
+  const exportStandardDataSheet = (
+    batchId: string,
+    outsourcedDataTaskStandardDataExportCommand: OutsourcedDataTaskStandardDataExportCommand,
+  ) => {
+    return customInstance<unknown>({
+      url: `/outsourced-data-tasks/${batchId}/standard-data/export`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      data: outsourcedDataTaskStandardDataExportCommand,
     });
   };
 
@@ -1504,10 +2107,11 @@ export const getJavaApi = () => {
   /**
    * @summary 统计当天文件投递结果。
    */
-  const summarizeToday = () => {
+  const summarizeToday = (params?: SummarizeTodayParams) => {
     return customInstance<SingleResultTransferDeliveryRecordSummaryViewDTO>({
       url: `/transfer-delivery-records/summary`,
       method: "GET",
+      params,
     });
   };
 
@@ -1543,7 +2147,10 @@ export const getJavaApi = () => {
     clearProcessedMailIds,
     listCheckpoints,
     subscribeProgress,
-    importStandardSubjects,
+    pageCandidates,
+    pageProductOptions,
+    preview,
+    saveRules,
     saveDefinition,
     listDefinitions,
     syncDefinition,
@@ -1567,6 +2174,10 @@ export const getJavaApi = () => {
     forceTaskSuccess,
     getTaskLog1,
     callback,
+    listLogs,
+    listNodes,
+    cleanupLogs,
+    streamLogs,
     createTag,
     pageTags,
     getTag,
@@ -1583,6 +2194,15 @@ export const getJavaApi = () => {
     querySheetStyles,
     querySheetStylesByPath,
     repairFromTransfer,
+    listFileParseSources,
+    saveFileParseSources,
+    exportFileParseSources,
+    listFileParseRules,
+    saveFileParseRules,
+    exportFileParseRules,
+    listProductMatchRules,
+    saveProductMatchRules,
+    exportProductMatchRules,
     saveSchedule,
     querySchedules,
     updateSchedule,
@@ -1590,6 +2210,15 @@ export const getJavaApi = () => {
     onlineSchedule,
     offlineSchedule,
     previewSchedule,
+    createFunction,
+    pageFunctions,
+    getFunction,
+    deleteFunction,
+    updateFunction,
+    getFunctionUsage,
+    enableFunction,
+    disableFunction,
+    debug,
     createRoute,
     listRoutes1,
     getRoute1,
@@ -1597,6 +2226,13 @@ export const getJavaApi = () => {
     updateRoute,
     enableRoute,
     disableRoute,
+    pageFileManage,
+    fileManageStateGroup,
+    ingestValuationFileByDate,
+    resetSourceFile,
+    sourceFileListExport,
+    sourceFileExport,
+    uploadSourceFiles1,
     pageQueues,
     getQueue,
     generateQueue,
@@ -1605,6 +2241,8 @@ export const getJavaApi = () => {
     completeQueue,
     failQueue,
     retryQueue,
+    listDict,
+    listOrganizations,
     getObject,
     getMailInfo,
     downloadObject,
@@ -1612,14 +2250,25 @@ export const getJavaApi = () => {
     pageMailInbox,
     analyzeObjects,
     analyzeMailInbox,
-    redeliver1,
+    trendObjects,
+    summarizeTags,
+    redeliver,
     retag,
     countTaskState,
     countWorkflowState,
     summary,
     pageTasks,
     getTask,
+    getTrace,
     listSteps,
+    queryStandardBasic,
+    listStandardSubjects,
+    listStandardMetrics,
+    listExternalSubjects,
+    listExternalMetrics,
+    queryRawWorkbook,
+    downloadRawWorkbook,
+    exportStandardDataSheet,
     execute,
     retry1,
     stop1,
@@ -1723,8 +2372,17 @@ export type ListCheckpointsResult = NonNullable<
 export type SubscribeProgressResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["subscribeProgress"]>>
 >;
-export type ImportStandardSubjectsResult = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["importStandardSubjects"]>>
+export type PageCandidatesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["pageCandidates"]>>
+>;
+export type PageProductOptionsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["pageProductOptions"]>>
+>;
+export type PreviewResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["preview"]>>
+>;
+export type SaveRulesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["saveRules"]>>
 >;
 export type SaveDefinitionResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["saveDefinition"]>>
@@ -1795,6 +2453,18 @@ export type GetTaskLog1Result = NonNullable<
 export type CallbackResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["callback"]>>
 >;
+export type ListLogsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listLogs"]>>
+>;
+export type ListNodesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listNodes"]>>
+>;
+export type CleanupLogsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["cleanupLogs"]>>
+>;
+export type StreamLogsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["streamLogs"]>>
+>;
 export type CreateTagResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["createTag"]>>
 >;
@@ -1843,6 +2513,33 @@ export type QuerySheetStylesByPathResult = NonNullable<
 export type RepairFromTransferResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["repairFromTransfer"]>>
 >;
+export type ListFileParseSourcesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listFileParseSources"]>>
+>;
+export type SaveFileParseSourcesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["saveFileParseSources"]>>
+>;
+export type ExportFileParseSourcesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["exportFileParseSources"]>>
+>;
+export type ListFileParseRulesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listFileParseRules"]>>
+>;
+export type SaveFileParseRulesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["saveFileParseRules"]>>
+>;
+export type ExportFileParseRulesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["exportFileParseRules"]>>
+>;
+export type ListProductMatchRulesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listProductMatchRules"]>>
+>;
+export type SaveProductMatchRulesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["saveProductMatchRules"]>>
+>;
+export type ExportProductMatchRulesResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["exportProductMatchRules"]>>
+>;
 export type SaveScheduleResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["saveSchedule"]>>
 >;
@@ -1864,6 +2561,33 @@ export type OfflineScheduleResult = NonNullable<
 export type PreviewScheduleResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["previewSchedule"]>>
 >;
+export type CreateFunctionResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["createFunction"]>>
+>;
+export type PageFunctionsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["pageFunctions"]>>
+>;
+export type GetFunctionResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["getFunction"]>>
+>;
+export type DeleteFunctionResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["deleteFunction"]>>
+>;
+export type UpdateFunctionResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["updateFunction"]>>
+>;
+export type GetFunctionUsageResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["getFunctionUsage"]>>
+>;
+export type EnableFunctionResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["enableFunction"]>>
+>;
+export type DisableFunctionResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["disableFunction"]>>
+>;
+export type DebugResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["debug"]>>
+>;
 export type CreateRouteResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["createRoute"]>>
 >;
@@ -1884,6 +2608,29 @@ export type EnableRouteResult = NonNullable<
 >;
 export type DisableRouteResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["disableRoute"]>>
+>;
+export type PageFileManageResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["pageFileManage"]>>
+>;
+export type FileManageStateGroupResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["fileManageStateGroup"]>>
+>;
+export type IngestValuationFileByDateResult = NonNullable<
+  Awaited<
+    ReturnType<ReturnType<typeof getJavaApi>["ingestValuationFileByDate"]>
+  >
+>;
+export type ResetSourceFileResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["resetSourceFile"]>>
+>;
+export type SourceFileListExportResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["sourceFileListExport"]>>
+>;
+export type SourceFileExportResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["sourceFileExport"]>>
+>;
+export type UploadSourceFiles1Result = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["uploadSourceFiles1"]>>
 >;
 export type PageQueuesResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["pageQueues"]>>
@@ -1909,6 +2656,12 @@ export type FailQueueResult = NonNullable<
 export type RetryQueueResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["retryQueue"]>>
 >;
+export type ListDictResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listDict"]>>
+>;
+export type ListOrganizationsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listOrganizations"]>>
+>;
 export type GetObjectResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["getObject"]>>
 >;
@@ -1930,8 +2683,14 @@ export type AnalyzeObjectsResult = NonNullable<
 export type AnalyzeMailInboxResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["analyzeMailInbox"]>>
 >;
-export type Redeliver1Result = NonNullable<
-  Awaited<ReturnType<ReturnType<typeof getJavaApi>["redeliver1"]>>
+export type TrendObjectsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["trendObjects"]>>
+>;
+export type SummarizeTagsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["summarizeTags"]>>
+>;
+export type RedeliverResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["redeliver"]>>
 >;
 export type RetagResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["retag"]>>
@@ -1951,8 +2710,35 @@ export type PageTasksResult = NonNullable<
 export type GetTaskResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["getTask"]>>
 >;
+export type GetTraceResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["getTrace"]>>
+>;
 export type ListStepsResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["listSteps"]>>
+>;
+export type QueryStandardBasicResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["queryStandardBasic"]>>
+>;
+export type ListStandardSubjectsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listStandardSubjects"]>>
+>;
+export type ListStandardMetricsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listStandardMetrics"]>>
+>;
+export type ListExternalSubjectsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listExternalSubjects"]>>
+>;
+export type ListExternalMetricsResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["listExternalMetrics"]>>
+>;
+export type QueryRawWorkbookResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["queryRawWorkbook"]>>
+>;
+export type DownloadRawWorkbookResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["downloadRawWorkbook"]>>
+>;
+export type ExportStandardDataSheetResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getJavaApi>["exportStandardDataSheet"]>>
 >;
 export type ExecuteResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof getJavaApi>["execute"]>>

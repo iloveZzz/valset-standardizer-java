@@ -10,9 +10,9 @@ import java.util.List;
  */
 public interface TransferFormTemplateQueryService {
 
-    List<TransferFormTemplateViewDTO> listTemplates();
+    List<TransferFormTemplateViewDTO> listFormTemps();
 
-    List<TransferFormTemplateGroupDTO> listGroupedTemplates();
+    List<TransferFormTemplateGroupDTO> listGroupedFormTemps();
 
-    TransferFormTemplateViewDTO getTemplate(String name);
+    TransferFormTemplateViewDTO getFormTemp(String name);
 }

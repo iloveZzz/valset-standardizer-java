@@ -1,212 +1,71 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
-export type FileParseSourceSheetRowDTO = {
-  id?: string;
-  fileType?: string;
-  columnMap?: string;
-  columnMapName?: string;
-  columnName?: string;
-  fileExtInfo?: string;
-  status?: string;
-  creater?: string;
-  createTime?: string;
-  modifier?: string;
-  modifyTime?: string;
-};
+import type {
+  FileParseRuleSheetRowDTO as GeneratedFileParseRuleSheetRowDTO,
+  FileParseRuleSheetSaveCommand as GeneratedFileParseRuleSheetSaveCommand,
+  FileParseSourceSheetRowDTO as GeneratedFileParseSourceSheetRowDTO,
+  FileParseSourceSheetSaveCommand as GeneratedFileParseSourceSheetSaveCommand,
+  ListFileParseRulesParams,
+  ListFileParseSourcesParams,
+  ListProductMatchRulesParams,
+  ProductMatchRuleSheetRowDTO as GeneratedProductMatchRuleSheetRowDTO,
+  ProductMatchRuleSheetSaveCommand as GeneratedProductMatchRuleSheetSaveCommand,
+} from "./generated/valset/schemas";
 
-export type FileParseRuleSheetRowDTO = {
-  id?: string;
-  fileScene?: string;
-  fileTypeName?: string;
-  regionName?: string;
-  columnMap?: string;
-  columnMapName?: string;
-  status?: string;
-  multiIndex?: string;
-  required?: string;
-  creater?: string;
-  createTime?: string;
-  modifier?: string;
-  modifyTime?: string;
-};
-
-export type ProductMatchRuleSheetRowDTO = {
-  id?: string;
-  fileTypeName?: string;
-  pdCd?: string;
-  pdNm?: string;
-  orgCd?: string;
-  orgNm?: string;
-  pdType?: string;
-  subjectSystem?: string;
-  holdingStatus?: string;
-  establishedDate?: string;
-  effectiveFrequency?: string;
-  delayDays?: string;
-  approvalRequired?: string;
-  fileType?: string;
-  matchRules?: string;
-  isValid?: string;
-  memo?: string;
-  debugName?: string;
-  jobName?: string;
-  jobScene?: string;
-  creater?: string;
-  createTime?: string;
-  modifier?: string;
-  modifyTime?: string;
-};
-
-export type ParseIssueHandlingSaveErrorDTO = {
-  rowNumber?: number;
-  id?: string;
-  message?: string;
-};
-
-export type ParseIssueHandlingSaveResultDTO = {
-  createdCount?: number;
-  updatedCount?: number;
-  deletedCount?: number;
-  skippedCount?: number;
-  failedCount?: number;
-  errors?: ParseIssueHandlingSaveErrorDTO[];
-};
-
-export type FileParseSourceQueryParams = {
-  fileType?: string;
-  columnMap?: string;
-  columnName?: string;
-  status?: string;
-};
-
-export type FileParseRuleQueryParams = {
-  fileScene?: string;
-  fileTypeName?: string;
-  regionName?: string;
-  columnMap?: string;
-  columnMapName?: string;
-  status?: string;
-};
-
-export type ProductMatchRuleQueryParams = {
-  pdCd?: string;
-  pdNm?: string;
-  orgNm?: string;
-  fileType?: string;
-  isValid?: string;
-};
-
-export type FileParseSourceSheetSaveCommand = {
-  rows: FileParseSourceSheetRowDTO[];
-  originalIds: string[];
-};
-
-export type FileParseRuleSheetSaveCommand = {
-  rows: FileParseRuleSheetRowDTO[];
-  originalIds: string[];
-};
-
-export type ProductMatchRuleSheetSaveCommand = {
-  rows: ProductMatchRuleSheetRowDTO[];
-  originalIds: string[];
-};
+const generatedApi = getJavaApi();
 
 export type MultiResultFileParseSourceSheetRowDTO = {
   data?: FileParseSourceSheetRowDTO[];
 };
-
 export type MultiResultFileParseRuleSheetRowDTO = {
   data?: FileParseRuleSheetRowDTO[];
 };
-
 export type MultiResultProductMatchRuleSheetRowDTO = {
   data?: ProductMatchRuleSheetRowDTO[];
 };
 
-export type SingleResultParseIssueHandlingSaveResultDTO = {
-  data?: ParseIssueHandlingSaveResultDTO;
-};
-
-export const listParseIssueFileParseSources = (
-  params: FileParseSourceQueryParams,
-) =>
-  customInstance<MultiResultFileParseSourceSheetRowDTO>({
-    url: "/parse-issue-handling/file-parse-sources",
-    method: "GET",
+export const listParseIssueFileParseSources = (params?: FileParseSourceQueryParams) =>
+  generatedApi.listFileParseSources(
     params,
-  });
-
-export const saveParseIssueFileParseSources = (
-  data: FileParseSourceSheetSaveCommand,
-) =>
-  customInstance<SingleResultParseIssueHandlingSaveResultDTO>({
-    url: "/parse-issue-handling/file-parse-sources",
-    method: "PUT",
-    data,
-  });
-
-export const exportParseIssueFileParseSources = (
-  params: FileParseSourceQueryParams,
-) =>
-  customInstance<Blob>({
-    url: "/parse-issue-handling/file-parse-sources/export",
-    method: "GET",
+  ) as Promise<MultiResultFileParseSourceSheetRowDTO>;
+export const saveParseIssueFileParseSources =
+  generatedApi.saveFileParseSources;
+export const exportParseIssueFileParseSources =
+  generatedApi.exportFileParseSources;
+export const listParseIssueFileParseRules = (params?: FileParseRuleQueryParams) =>
+  generatedApi.listFileParseRules(
     params,
-    responseType: "blob",
-  });
-
-export const listParseIssueFileParseRules = (
-  params: FileParseRuleQueryParams,
-) =>
-  customInstance<MultiResultFileParseRuleSheetRowDTO>({
-    url: "/parse-issue-handling/file-parse-rules",
-    method: "GET",
-    params,
-  });
-
-export const saveParseIssueFileParseRules = (
-  data: FileParseRuleSheetSaveCommand,
-) =>
-  customInstance<SingleResultParseIssueHandlingSaveResultDTO>({
-    url: "/parse-issue-handling/file-parse-rules",
-    method: "PUT",
-    data,
-  });
-
-export const exportParseIssueFileParseRules = (
-  params: FileParseRuleQueryParams,
-) =>
-  customInstance<Blob>({
-    url: "/parse-issue-handling/file-parse-rules/export",
-    method: "GET",
-    params,
-    responseType: "blob",
-  });
-
+  ) as Promise<MultiResultFileParseRuleSheetRowDTO>;
+export const saveParseIssueFileParseRules = generatedApi.saveFileParseRules;
+export const exportParseIssueFileParseRules = generatedApi.exportFileParseRules;
 export const listParseIssueProductMatchRules = (
-  params: ProductMatchRuleQueryParams,
+  params?: ProductMatchRuleQueryParams,
 ) =>
-  customInstance<MultiResultProductMatchRuleSheetRowDTO>({
-    url: "/parse-issue-handling/product-match-rules",
-    method: "GET",
+  generatedApi.listProductMatchRules(
     params,
-  });
+  ) as Promise<MultiResultProductMatchRuleSheetRowDTO>;
+export const saveParseIssueProductMatchRules =
+  generatedApi.saveProductMatchRules;
+export const exportParseIssueProductMatchRules =
+  generatedApi.exportProductMatchRules;
 
-export const saveParseIssueProductMatchRules = (
-  data: ProductMatchRuleSheetSaveCommand,
-) =>
-  customInstance<SingleResultParseIssueHandlingSaveResultDTO>({
-    url: "/parse-issue-handling/product-match-rules",
-    method: "PUT",
-    data,
-  });
+export type FileParseSourceSheetRowDTO =
+  GeneratedFileParseSourceSheetRowDTO & Record<string, unknown>;
+export type FileParseRuleSheetRowDTO =
+  GeneratedFileParseRuleSheetRowDTO & Record<string, unknown>;
+export type ProductMatchRuleSheetRowDTO =
+  GeneratedProductMatchRuleSheetRowDTO & Record<string, unknown>;
+export type FileParseSourceSheetSaveCommand =
+  GeneratedFileParseSourceSheetSaveCommand;
+export type FileParseRuleSheetSaveCommand =
+  GeneratedFileParseRuleSheetSaveCommand;
+export type ProductMatchRuleSheetSaveCommand =
+  GeneratedProductMatchRuleSheetSaveCommand;
+export type FileParseSourceQueryParams = ListFileParseSourcesParams;
+export type FileParseRuleQueryParams = ListFileParseRulesParams;
+export type ProductMatchRuleQueryParams = ListProductMatchRulesParams;
 
-export const exportParseIssueProductMatchRules = (
-  params: ProductMatchRuleQueryParams,
-) =>
-  customInstance<Blob>({
-    url: "/parse-issue-handling/product-match-rules/export",
-    method: "GET",
-    params,
-    responseType: "blob",
-  });
+export type {
+  ParseIssueHandlingSaveResultDTO,
+  SingleResultParseIssueHandlingSaveResultDTO,
+} from "./generated/valset/schemas";

@@ -8,7 +8,6 @@ import type {
   TransferFormTemplateViewDTO,
   TransferSourceUpsertCommand,
   TransferSourceViewDTO,
-  UploadSourceFilesRequest,
 } from "@/api/generated/valset/schemas";
 import { GetTemplateName2SourceType as SourceTypeEnum } from "@/api/generated/valset/schemas";
 import { getJavaSpringBootQuartzApi } from "@/api";
@@ -705,7 +704,7 @@ export const useTransferPage = (): { page: SourcePage } => {
 
     uploadSubmitting.value = true;
     try {
-      const payload: UploadSourceFilesRequest = {
+      const payload = {
         sourceId: uploadSourceRow.value.sourceId,
         files: uploadFiles.value,
       };

@@ -188,7 +188,7 @@ export const useProductInfoExtractionPage = (): ProductInfoExtractionPageState =
       transferId ? findSelectedPreviewRowByTransferId(transferId) : null,
     ].filter(Boolean) as ProductInfoExtractionPreviewRow[];
     targets.forEach((target) => {
-      (target as Record<string, unknown>)[field as string] = value;
+      (target as unknown as Record<string, unknown>)[field as string] = value;
     });
   };
 

@@ -1,6 +1,23 @@
 import { getJavaApi } from "./generated/valset";
 import { customInstance } from "./mutator";
-import type { EtlPlatformType } from "./etlWorkflowConfig";
+import type {
+  CountWorkflowStateParams,
+  ListInstancesParams,
+  PageResultWorkflowInstanceViewDTO,
+  WorkflowCallbackRequest as GeneratedWorkflowCallbackRequest,
+  WorkflowInstanceDTO as GeneratedWorkflowInstanceDTO,
+  WorkflowInstanceViewDTO,
+  WorkflowPauseRequest as GeneratedWorkflowPauseRequest,
+  WorkflowResumeRequest as GeneratedWorkflowResumeRequest,
+  WorkflowRetryRequest as GeneratedWorkflowRetryRequest,
+  WorkflowStageLogDTO as GeneratedWorkflowStageLogDTO,
+  WorkflowStopRequest as GeneratedWorkflowStopRequest,
+  WorkflowTaskInstanceDTO,
+  WorkflowTaskListDTO,
+  WorkflowTriggerRequest as GeneratedWorkflowTriggerRequest,
+} from "./generated/valset/schemas";
+
+const generatedApi = getJavaApi();
 
 export type WorkflowInstanceStatus =
   | "DRAFT"
@@ -12,173 +29,63 @@ export type WorkflowInstanceStatus =
   | "STOPPED"
   | "RETRYING"
   | "UNKNOWN";
-
 export type WorkflowStageLogStatus = WorkflowInstanceStatus | string;
-
-export type WorkflowInstanceViewDTO = {
-  instanceId?: string;
-  workflowCode?: string;
-  workflowName?: string;
-  workflowVersionNo?: number;
-  platformType?: EtlPlatformType;
-  businessKey?: string;
-  externalInstanceId?: string;
-  externalWorkflowId?: string;
-  status?: WorkflowInstanceStatus;
-  rawStatus?: string;
-  currentStageCode?: string;
-  currentStageName?: string;
-  triggerTime?: string;
-  startTime?: string;
-  duration?: string;
-  endTime?: string;
-  message?: string;
-  stageCount?: number;
-};
-
-export type WorkflowInstanceStateCountDTO = {
-  state?: string;
-  count?: number | string;
-};
-
-export type WorkflowInstanceStateCountPageDTO = {
-  totalCount?: number;
-  workflowInstanceStatusCounts?: WorkflowInstanceStateCountDTO[];
-};
-
-export type WorkflowStageLogDTO = {
-  instanceId?: string;
-  workflowCode?: string;
-  workflowVersionNo?: number;
-  stageCode?: string;
-  stageName?: string;
-  stageOrder?: number;
-  status?: WorkflowStageLogStatus;
-  rawStatus?: string;
-  message?: string;
-  startTime?: string;
-  endTime?: string;
+export type WorkflowStageLogDTO = Omit<GeneratedWorkflowStageLogDTO, "payload"> & {
   payload?: Record<string, unknown>;
 };
-
-export type WorkflowTaskInstanceDTO = {
-  id?: number;
-  name?: string;
-  taskType?: string;
-  workflowInstanceId?: string;
-  workflowInstanceName?: string;
-  projectCode?: number;
-  taskCode?: number;
-  taskDefinitionVersion?: number;
-  processDefinitionName?: string;
-  taskGroupPriority?: number;
-  state?: string;
-  firstSubmitTime?: string;
-  submitTime?: string;
-  startTime?: string;
-  endTime?: string;
-  host?: string;
-  executePath?: string;
-  retryTimes?: number;
-  alertFlag?: string;
-  workflowInstance?: Record<string, unknown>;
-  workflowDefinition?: Record<string, unknown>;
-  taskDefine?: Record<string, unknown>;
-  pid?: number;
-  appLink?: string;
-  flag?: string;
-  duration?: number;
-  maxRetryTimes?: number;
-  retryInterval?: number;
-  taskInstancePriority?: string;
-  workflowInstancePriority?: string;
-  workerGroup?: string;
-  environmentCode?: number;
-  environmentConfig?: Record<string, unknown>;
-  executorId?: number;
-  varPool?: Record<string, unknown>;
-  executorName?: string;
-  delayTime?: number;
-  taskParams?: string;
-  dryRun?: number;
-  taskGroupId?: number;
-  cpuQuota?: number;
-  memoryMax?: number;
-  taskExecuteType?: string;
-  taskInstanceDependentResults?: Record<string, unknown>;
-};
-
-export type WorkflowTaskListDTO = {
-  workflowInstanceState?: string;
-  taskList?: WorkflowTaskInstanceDTO[];
-};
-
-export type WorkflowInstanceDTO = WorkflowInstanceViewDTO & {
+export type WorkflowInstanceDTO = Omit<
+  GeneratedWorkflowInstanceDTO,
+  "context" | "stageLogs"
+> & {
   context?: Record<string, unknown>;
   stageLogs?: WorkflowStageLogDTO[];
-};
-
-export type WorkflowInstanceQueryParams = {
-  workflowCode?: string;
-  workflowVersionNo?: number;
-  platformType?: EtlPlatformType;
   workflowName?: string;
-  status?: string;
-  businessKey?: string;
-  instanceId?: string;
-  externalInstanceId?: string;
-  stageCode?: string;
-  triggerTimeFrom?: string;
-  triggerTimeTo?: string;
-  pageIndex?: number;
-  pageSize?: number;
+  currentStageName?: string;
+  stageCount?: number;
 };
-
-export type WorkflowInstanceStateCountQueryParams = {
+export type WorkflowInstanceQueryParams = ListInstancesParams;
+export type WorkflowInstanceStateCountQueryParams = CountWorkflowStateParams & {
   startDate: string;
   endDate: string;
   projectCode: number;
 };
-
-export type WorkflowTriggerRequest = {
-  workflowCode: string;
-  workflowVersionNo: number;
-  businessKey?: string;
-  stageCode?: string;
-  context?: Record<string, unknown>;
-  force?: boolean;
-  triggerMode?: WorkflowTriggerMode;
+export type WorkflowInstanceStateCountDTO = {
+  state?: string;
+  count?: number | string;
 };
-
+export type WorkflowInstanceStateCountPageDTO = {
+  totalCount?: number;
+  workflowInstanceStatusCounts?: WorkflowInstanceStateCountDTO[];
+};
 export type WorkflowTriggerMode =
   | "START_PROCESS"
   | "START_FAILURE_TASK_PROCESS"
   | "START_SUSPEND_TASK_PROCESS";
-
-export type WorkflowStopRequest = {
-  reason?: string;
+export type WorkflowTriggerRequest = Omit<
+  GeneratedWorkflowTriggerRequest,
+  "context"
+> & {
   context?: Record<string, unknown>;
 };
-
-export type WorkflowPauseRequest = {
-  reason?: string;
+export type WorkflowStopRequest = Omit<GeneratedWorkflowStopRequest, "context"> & {
   context?: Record<string, unknown>;
 };
-
-export type WorkflowResumeRequest = {
-  reason?: string;
+export type WorkflowPauseRequest = Omit<GeneratedWorkflowPauseRequest, "context"> & {
   context?: Record<string, unknown>;
 };
-
-export type WorkflowRetryRequest = {
-  stageCode?: string;
+export type WorkflowResumeRequest = Omit<
+  GeneratedWorkflowResumeRequest,
+  "context"
+> & {
   context?: Record<string, unknown>;
 };
-
-export type WorkflowCallbackRequest = {
-  stageCode?: string;
-  rawStatus?: string;
-  message?: string;
+export type WorkflowRetryRequest = Omit<GeneratedWorkflowRetryRequest, "context"> & {
+  context?: Record<string, unknown>;
+};
+export type WorkflowCallbackRequest = Omit<
+  GeneratedWorkflowCallbackRequest,
+  "payload"
+> & {
   payload?: Record<string, unknown>;
 };
 
@@ -201,10 +108,17 @@ type WorkflowPageResult<T> = {
   pageSize?: number;
 };
 
-const generatedApi = getJavaApi();
+export type {
+  PageResultWorkflowInstanceViewDTO,
+  WorkflowInstanceViewDTO,
+  WorkflowTaskInstanceDTO,
+  WorkflowTaskListDTO,
+};
 
 export const listEtlWorkflowInstances = (params?: WorkflowInstanceQueryParams) =>
-  generatedApi.listInstances(params) as Promise<WorkflowPageResult<WorkflowInstanceViewDTO>>;
+  generatedApi.listInstances(
+    params,
+  ) as Promise<WorkflowPageResult<WorkflowInstanceViewDTO>>;
 
 export const getEtlWorkflowInstanceStateCount = (
   params: WorkflowInstanceStateCountQueryParams,
@@ -218,7 +132,9 @@ export const getEtlWorkflowInstanceStateCount = (
   }>;
 
 export const getEtlWorkflowInstance = (instanceId: string) =>
-  generatedApi.getInstance(instanceId) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
+  generatedApi.getInstance(
+    instanceId,
+  ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const listEtlWorkflowInstanceLogs = (
   instanceId: string,
@@ -246,7 +162,7 @@ export const getEtlWorkflowInstanceTaskLog = (
 
 export const triggerEtlWorkflowInstance = (request: WorkflowTriggerRequest) =>
   generatedApi.trigger(
-    request,
+    request as GeneratedWorkflowTriggerRequest,
   ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const stopEtlWorkflowInstance = (
@@ -255,7 +171,7 @@ export const stopEtlWorkflowInstance = (
 ) =>
   generatedApi.stop(
     instanceId,
-    request ?? {},
+    (request ?? {}) as GeneratedWorkflowStopRequest,
   ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const pauseEtlWorkflowInstance = (
@@ -264,7 +180,7 @@ export const pauseEtlWorkflowInstance = (
 ) =>
   generatedApi.pause(
     instanceId,
-    request ?? {},
+    (request ?? {}) as GeneratedWorkflowPauseRequest,
   ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const resumeEtlWorkflowInstance = (
@@ -273,7 +189,7 @@ export const resumeEtlWorkflowInstance = (
 ) =>
   generatedApi.resume(
     instanceId,
-    request ?? {},
+    (request ?? {}) as GeneratedWorkflowResumeRequest,
   ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const retryEtlWorkflowInstance = (
@@ -282,7 +198,7 @@ export const retryEtlWorkflowInstance = (
 ) =>
   generatedApi.retry(
     instanceId,
-    request ?? {},
+    (request ?? {}) as GeneratedWorkflowRetryRequest,
   ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;
 
 export const callbackEtlWorkflowInstance = (
@@ -291,5 +207,5 @@ export const callbackEtlWorkflowInstance = (
 ) =>
   generatedApi.callback(
     instanceId,
-    request,
+    request as GeneratedWorkflowCallbackRequest,
   ) as Promise<WorkflowSingleResult<WorkflowInstanceDTO>>;

@@ -29,6 +29,10 @@ export type PageTasksParams = {
   /**
    * No comments found.
    */
+  taskStage?: string;
+  /**
+   * No comments found.
+   */
   stage?: string;
   /**
    * No comments found.

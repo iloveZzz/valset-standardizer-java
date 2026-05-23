@@ -6,10 +6,14 @@
  */
 
 export interface TransferObjectRetagCommand {
+  /** 业务日期。 */
+  businessDate?: string;
   /** 文件指纹。 */
   fingerprint?: string;
   /** 邮件唯一标识。 */
   mailId?: string;
+  /** 收取日期。 */
+  receiveDate?: string;
   /** 路由主键。 */
   routeId?: string;
   /** 来源编码。 */

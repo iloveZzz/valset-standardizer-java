@@ -47,9 +47,15 @@ export interface OutsourcedDataTaskBatchDTO {
   /** No comments found. */
   sourceType?: string;
   /** No comments found. */
+  sourceTypeName?: string;
+  /** No comments found. */
   startedAt?: string;
   /** No comments found. */
   status?: string;
   /** No comments found. */
   statusName?: string;
+  /** No comments found. */
+  taskStage?: string;
+  /** No comments found. */
+  taskStageName?: string;
 }

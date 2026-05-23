@@ -1,455 +1,159 @@
 import { getJavaApi } from "./generated/valset";
 import { customInstance } from "./mutator";
+import type {
+  ListExternalMetricsParams,
+  ListExternalSubjectsParams,
+  ListStandardMetricsParams,
+  ListStandardSubjectsParams,
+  OutsourcedDataTaskExternalMetricDTO as GeneratedOutsourcedDataTaskExternalMetricDTO,
+  OutsourcedDataTaskExternalSubjectDTO as GeneratedOutsourcedDataTaskExternalSubjectDTO,
+  OutsourcedDataTaskStandardBasicDTO as GeneratedOutsourcedDataTaskStandardBasicDTO,
+  OutsourcedDataTaskTraceDTO as GeneratedOutsourcedDataTaskTraceDTO,
+  OutsourcedDataTaskStandardBasicRowDTO as GeneratedOutsourcedDataTaskStandardBasicRowDTO,
+  OutsourcedDataTaskStandardMetricDTO as GeneratedOutsourcedDataTaskStandardMetricDTO,
+  OutsourcedDataTaskStandardSubjectDTO as GeneratedOutsourcedDataTaskStandardSubjectDTO,
+  OutsourcedDataTaskTraceRecordDTO as GeneratedOutsourcedDataTaskTraceRecordDTO,
+  OutsourcedDataTaskActionCommand,
+  OutsourcedDataTaskBatchCommand,
+  OutsourcedDataTaskStandardDataExportCommand,
+  PageTasksParams,
+} from "./generated/valset/schemas";
 
-export type OutsourcedDataTaskQueryParams = {
-  batchId?: string;
-  taskDate?: string;
-  businessDate?: string;
-  managerName?: string;
-  productKeyword?: string;
-  taskStage?: string;
-  stage?: string;
-  step?: string;
-  status?: string;
-  sourceType?: string;
-  errorType?: string;
-  pageIndex?: number;
-  pageSize?: number;
+const generatedApi = getJavaApi();
+
+export type OutsourcedDataTaskQueryParams = PageTasksParams;
+export type OutsourcedDataTaskStandardBasicRowDTO =
+  GeneratedOutsourcedDataTaskStandardBasicRowDTO & Record<string, unknown>;
+export type OutsourcedDataTaskStandardSubjectDTO = Omit<
+  GeneratedOutsourcedDataTaskStandardSubjectDTO,
+  "rawValues"
+> & {
+  rawValues?: Record<string, string>;
 };
-
-export type OutsourcedDataTaskBatchDTO = {
-  batchId?: string;
-  batchName?: string;
-  businessDate?: string;
-  productCode?: string;
-  productName?: string;
-  managerName?: string;
-  fileId?: string;
-  filesysFileId?: string;
-  originalFileName?: string;
-  sourceType?: string;
-  sourceTypeName?: string;
-  taskStage?: string;
-  taskStageName?: string;
-  currentStage?: string;
-  currentStep?: string;
-  currentStageName?: string;
-  currentStepName?: string;
-  status?: string;
-  statusName?: string;
-  progress?: number;
-  startedAt?: string;
-  endedAt?: string;
-  durationMs?: number;
-  durationText?: string;
-  lastErrorCode?: string;
-  lastErrorMessage?: string;
+export type OutsourcedDataTaskStandardMetricDTO = Omit<
+  GeneratedOutsourcedDataTaskStandardMetricDTO,
+  "rawValues"
+> & {
+  rawValues?: Record<string, string>;
 };
-
-export type OutsourcedDataTaskStepDTO = {
-  stepId?: string;
-  batchId?: string;
-  stage?: string;
-  step?: string;
-  stageName?: string;
-  stepName?: string;
-  taskId?: string;
-  taskType?: string;
-  runNo?: number;
-  triggerMode?: string;
-  triggerModeName?: string;
-  status?: string;
-  statusName?: string;
-  progress?: number;
-  startedAt?: string;
-  endedAt?: string;
-  durationMs?: number;
-  durationText?: string;
-  inputSummary?: string;
-  outputSummary?: string;
-  errorCode?: string;
-  errorMessage?: string;
-  errorStack?: string;
-  logRef?: string;
-};
-
-export type OutsourcedDataTaskStageSummaryDTO = {
-  stage?: string;
-  step?: string;
-  stageName?: string;
-  stepName?: string;
-  stageDescription?: string;
-  stepDescription?: string;
-  totalCount?: number;
-  runningCount?: number;
-  failedCount?: number;
-  pendingCount?: number;
-};
-
-export type OutsourcedDataTaskSummaryDTO = {
-  workflowCode?: string;
-  workflowId?: string;
-  versionNo?: number;
-  totalCount?: number;
-  runningCount?: number;
-  successCount?: number;
-  failedCount?: number;
-  stageCatalog?: OutsourcedDataTaskStageSummaryDTO[];
-  stepSummaries?: OutsourcedDataTaskStageSummaryDTO[];
-};
-
-export type OutsourcedDataTaskBatchDetailDTO = {
-  batch?: OutsourcedDataTaskBatchDTO;
-  steps?: OutsourcedDataTaskStepDTO[];
-};
-
-export type OutsourcedDataTaskTraceRecordDTO = {
-  id?: string;
-  type?: string;
-  name?: string;
-  status?: string;
-  statusName?: string;
-  upstreamId?: string;
-  downstreamId?: string;
-  startedAt?: string;
-  endedAt?: string;
-  durationMs?: number;
-  errorCode?: string;
-  errorMessage?: string;
-  inputSummary?: string;
-  outputSummary?: string;
-  logRef?: string;
+export type OutsourcedDataTaskExternalSubjectDTO =
+  GeneratedOutsourcedDataTaskExternalSubjectDTO & Record<string, unknown>;
+export type OutsourcedDataTaskExternalMetricDTO =
+  GeneratedOutsourcedDataTaskExternalMetricDTO & Record<string, unknown>;
+export type OutsourcedDataTaskTraceRecordDTO = Omit<
+  GeneratedOutsourcedDataTaskTraceRecordDTO,
+  "attributes"
+> & {
   attributes?: Record<string, unknown>;
 };
-
-export type OutsourcedDataTaskTraceLogDTO = {
-  logId?: string;
-  nodeType?: string;
-  nodeId?: string;
-  level?: string;
-  message?: string;
-  loggedAt?: string;
-  logRef?: string;
+export type OutsourcedDataTaskStandardBasicDTO = Omit<
+  GeneratedOutsourcedDataTaskStandardBasicDTO,
+  "basicRows"
+> & {
+  basicRows?: OutsourcedDataTaskStandardBasicRowDTO[];
 };
-
-export type OutsourcedDataTaskTraceResultSummaryDTO = {
-  status?: string;
-  statusName?: string;
-  startedAt?: string;
-  endedAt?: string;
-  durationMs?: number;
-  inputSummary?: string;
-  outputSummary?: string;
-  errorCode?: string;
-  errorMessage?: string;
-};
-
-export type OutsourcedDataTaskTraceDTO = {
-  batch?: OutsourcedDataTaskBatchDTO;
+export type OutsourcedDataTaskTraceDTO = Omit<
+  GeneratedOutsourcedDataTaskTraceDTO,
+  "parseQueue" | "transferObject" | "jobExecution" | "stepExecutions"
+> & {
   parseQueue?: OutsourcedDataTaskTraceRecordDTO;
   transferObject?: OutsourcedDataTaskTraceRecordDTO;
   jobExecution?: OutsourcedDataTaskTraceRecordDTO;
   stepExecutions?: OutsourcedDataTaskTraceRecordDTO[];
-  taskSteps?: OutsourcedDataTaskStepDTO[];
-  logs?: OutsourcedDataTaskTraceLogDTO[];
-  resultSummary?: OutsourcedDataTaskTraceResultSummaryDTO;
 };
-
-export type OutsourcedDataTaskActionCommand = {
-  reason?: string;
-  operator?: string;
+export type MultiResultOutsourcedDataTaskStandardSubjectDTO = {
+  data?: OutsourcedDataTaskStandardSubjectDTO[];
 };
-
-export type OutsourcedDataTaskBatchCommand = {
-  batchIds: string[];
-  reason?: string;
+export type MultiResultOutsourcedDataTaskStandardMetricDTO = {
+  data?: OutsourcedDataTaskStandardMetricDTO[];
 };
-
-export type OutsourcedDataTaskStandardDataExportCommand = {
-  tab?: string;
-  sheetName?: string;
-  workbookData?: Record<string, unknown>;
+export type MultiResultOutsourcedDataTaskExternalSubjectDTO = {
+  data?: OutsourcedDataTaskExternalSubjectDTO[];
 };
-
-export type OutsourcedDataTaskRawWorkbookDTO = {
-  batchId?: string;
-  fileId?: number;
-  fileName?: string;
-  sourceType?: string;
-  sheetCount?: number;
-  rowCount?: number;
-  workbookData?: Record<string, unknown>;
-  downloadedFromTarget?: boolean;
-  fallbackMessage?: string;
+export type MultiResultOutsourcedDataTaskExternalMetricDTO = {
+  data?: OutsourcedDataTaskExternalMetricDTO[];
 };
-
-export type OutsourcedDataTaskActionResultDTO = {
-  batchId?: string;
-  stepId?: string;
-  accepted?: boolean;
-  action?: string;
-  message?: string;
+export type SingleResultOutsourcedDataTaskTraceDTO = {
+  data?: OutsourcedDataTaskTraceDTO;
 };
-
-export type OutsourcedDataTaskStandardBasicRowDTO = {
-  category?: string;
-  fieldName?: string;
-  fieldValue?: string;
-};
-
-export type OutsourcedDataTaskStandardRawColumnDTO = {
-  fieldKey?: string;
-  title?: string;
-  columnIndex?: number;
-};
-
-export type OutsourcedDataTaskStandardBasicDTO = {
-  batchId?: string;
-  valuationId?: number;
-  fileId?: number;
-  taskId?: number;
-  workbookPath?: string;
-  sheetName?: string;
-  title?: string;
-  headerRowNumber?: number;
-  dataStartRowNumber?: number;
-  basicInfoCount?: number;
-  subjectCount?: number;
-  metricCount?: number;
-  basicRows?: OutsourcedDataTaskStandardBasicRowDTO[];
-  rawColumns?: OutsourcedDataTaskStandardRawColumnDTO[];
-};
-
-export type OutsourcedDataTaskStandardSubjectDTO = {
-  id?: number;
-  valuationId?: number;
-  sheetName?: string;
-  rowDataNumber?: number;
-  subjectCode?: string;
-  subjectName?: string;
-  levelNo?: number;
-  parentCode?: string;
-  rootCode?: string;
-  leaf?: boolean;
-  rawValuesJson?: string;
-  rawValues?: Record<string, string>;
-};
-
-export type OutsourcedDataTaskStandardMetricDTO = {
-  id?: number;
-  valuationId?: number;
-  sheetName?: string;
-  rowDataNumber?: number;
-  metricName?: string;
-  metricType?: string;
-  metricValue?: string;
-  rawValuesJson?: string;
-  rawValues?: Record<string, string>;
-};
-
-export type OutsourcedDataTaskExternalSubjectDTO = {
-  id?: number;
-  orgCd?: string;
-  pdCd?: string;
-  bizDate?: string;
-  subjectCd?: string;
-  subjectNm?: string;
-  paSubjectCd?: string;
-  paSubjectNm?: string;
-  nHldamt?: number | string;
-  nHldcst?: number | string;
-  nHldcstLocl?: number | string;
-  nHldmkv?: number | string;
-  nHldmkvLocl?: number | string;
-  nHldvva?: number | string;
-  nHldvvaL?: number | string;
-  ccyCd?: string;
-  nValrate?: number | string;
-  nPriceCost?: number | string;
-  nValprice?: number | string;
-  nCbJzBl?: number | string;
-  nSzJzBl?: number | string;
-  nZcBl?: number | string;
-  suspInfo?: string;
-  valuatEquity?: string;
-  finAttrIdD?: string;
-  finMktCd?: string;
-  timeStamp?: string;
-  consFloatTpCd?: string;
-  sourceTp?: string;
-  sourceSign?: string;
-  sn?: number;
-  dataDt?: string;
-  isinCd?: string;
-  rawValues?: Record<string, string>;
-};
-
-export type OutsourcedDataTaskExternalMetricDTO = {
-  id?: number;
-  orgCd?: string;
-  pdCd?: string;
-  bizDate?: string;
-  paidCapital?: number | string;
-  totalAssets?: number | string;
-  totalLiabi?: number | string;
-  assetValue?: number | string;
-  avgNav?: number | string;
-  accNet?: number | string;
-  tenSouYield?: number | string;
-  sevenAnnuYield?: number | string;
-  todayAnnuYield?: number | string;
-  yield?: number | string;
-  deviation?: number | string;
-  deviationAmt?: number | string;
-  totalAssetsCb?: number | string;
-  totalLiabiCb?: number | string;
-  assetValueCb?: number | string;
-  totalAssetsCbY?: number | string;
-  totalLiabiCbY?: number | string;
-  assetValueCbY?: number | string;
-  totalAssetsY?: number | string;
-  totalLiabiY?: number | string;
-  assetValueY?: number | string;
-  paidCapitalCb?: number | string;
-  indexType?: string;
-  timeStamp?: string;
-  rawValues?: Record<string, string>;
-};
-
-export type PageResultOutsourcedDataTaskBatchDTO = {
-  data?: OutsourcedDataTaskBatchDTO[];
-  totalCount?: number;
-  pageIndex?: number;
-  pageSize?: number;
-};
-
-export type SingleResultOutsourcedDataTaskSummaryDTO = {
-  data?: OutsourcedDataTaskSummaryDTO;
-};
-
 export type SingleResultOutsourcedDataTaskStandardBasicDTO = {
   data?: OutsourcedDataTaskStandardBasicDTO;
 };
 
-export type SingleResultOutsourcedDataTaskBatchDetailDTO = {
-  data?: OutsourcedDataTaskBatchDetailDTO;
-};
+export type {
+  MultiResultOutsourcedDataTaskActionResultDTO,
+  MultiResultOutsourcedDataTaskStepDTO,
+  OutsourcedDataTaskActionCommand,
+  OutsourcedDataTaskActionResultDTO,
+  OutsourcedDataTaskBatchCommand,
+  OutsourcedDataTaskBatchDTO,
+  OutsourcedDataTaskBatchDetailDTO,
+  OutsourcedDataTaskRawWorkbookDTO,
+  OutsourcedDataTaskStageSummaryDTO,
+  OutsourcedDataTaskStandardDataExportCommand,
+  OutsourcedDataTaskStandardRawColumnDTO,
+  OutsourcedDataTaskStepDTO,
+  OutsourcedDataTaskSummaryDTO,
+  OutsourcedDataTaskTraceLogDTO,
+  OutsourcedDataTaskTraceResultSummaryDTO,
+  PageResultOutsourcedDataTaskBatchDTO,
+  SingleResultOutsourcedDataTaskActionResultDTO,
+  SingleResultOutsourcedDataTaskBatchDetailDTO,
+  SingleResultOutsourcedDataTaskRawWorkbookDTO,
+  SingleResultOutsourcedDataTaskSummaryDTO,
+} from "./generated/valset/schemas";
 
-export type SingleResultOutsourcedDataTaskTraceDTO = {
-  data?: OutsourcedDataTaskTraceDTO;
-};
-
-export type SingleResultOutsourcedDataTaskRawWorkbookDTO = {
-  data?: OutsourcedDataTaskRawWorkbookDTO;
-};
-
-export type MultiResultOutsourcedDataTaskActionResultDTO = {
-  data?: OutsourcedDataTaskActionResultDTO[];
-};
-
-export type MultiResultOutsourcedDataTaskStepDTO = {
-  data?: OutsourcedDataTaskStepDTO[];
-};
-
-export type MultiResultOutsourcedDataTaskStandardSubjectDTO = {
-  data?: OutsourcedDataTaskStandardSubjectDTO[];
-};
-
-export type MultiResultOutsourcedDataTaskStandardMetricDTO = {
-  data?: OutsourcedDataTaskStandardMetricDTO[];
-};
-
-export type MultiResultOutsourcedDataTaskExternalSubjectDTO = {
-  data?: OutsourcedDataTaskExternalSubjectDTO[];
-};
-
-export type MultiResultOutsourcedDataTaskExternalMetricDTO = {
-  data?: OutsourcedDataTaskExternalMetricDTO[];
-};
-
-export type SingleResultOutsourcedDataTaskActionResultDTO = {
-  data?: OutsourcedDataTaskActionResultDTO;
-};
-
-const generatedApi = getJavaApi();
-
-export const getValuationParseTaskSummary = (
-  params?: OutsourcedDataTaskQueryParams,
-) =>
-  generatedApi.summary(params) as Promise<SingleResultOutsourcedDataTaskSummaryDTO>;
-
-export const pageValuationParseTasks = (
-  params?: OutsourcedDataTaskQueryParams,
-) =>
-  generatedApi.pageTasks(params) as Promise<PageResultOutsourcedDataTaskBatchDTO>;
-
-export const getValuationParseTask = (batchId: string) =>
-  generatedApi.getTask(batchId) as Promise<SingleResultOutsourcedDataTaskBatchDetailDTO>;
-
+export const getValuationParseTaskSummary = generatedApi.summary;
+export const pageValuationParseTasks = generatedApi.pageTasks;
+export const getValuationParseTask = generatedApi.getTask;
 export const getValuationParseTaskTrace = (batchId: string) =>
-  customInstance<SingleResultOutsourcedDataTaskTraceDTO>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/trace`,
-    method: "GET",
-  });
-
+  generatedApi.getTrace(
+    batchId,
+  ) as Promise<SingleResultOutsourcedDataTaskTraceDTO>;
 export const getValuationParseTaskStandardBasic = (batchId: string) =>
-  customInstance<SingleResultOutsourcedDataTaskStandardBasicDTO>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/basic`,
-    method: "GET",
-  });
+  generatedApi.queryStandardBasic(
+    batchId,
+  ) as Promise<SingleResultOutsourcedDataTaskStandardBasicDTO>;
 
 export const listValuationParseTaskStandardSubjects = (
   batchId: string,
-  params?: { keyword?: string },
+  params?: ListStandardSubjectsParams,
 ) =>
-  customInstance<MultiResultOutsourcedDataTaskStandardSubjectDTO>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/subjects`,
-    method: "GET",
+  generatedApi.listStandardSubjects(
+    batchId,
     params,
-  });
+  ) as Promise<MultiResultOutsourcedDataTaskStandardSubjectDTO>;
 
 export const listValuationParseTaskStandardMetrics = (
   batchId: string,
-  params?: { keyword?: string },
+  params?: ListStandardMetricsParams,
 ) =>
-  customInstance<MultiResultOutsourcedDataTaskStandardMetricDTO>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/metrics`,
-    method: "GET",
+  generatedApi.listStandardMetrics(
+    batchId,
     params,
-  });
+  ) as Promise<MultiResultOutsourcedDataTaskStandardMetricDTO>;
 
 export const listValuationParseTaskExternalSubjects = (
   batchId: string,
-  params?: { keyword?: string },
+  params?: ListExternalSubjectsParams,
 ) =>
-  customInstance<MultiResultOutsourcedDataTaskExternalSubjectDTO>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/external-subjects`,
-    method: "GET",
+  generatedApi.listExternalSubjects(
+    batchId,
     params,
-  });
+  ) as Promise<MultiResultOutsourcedDataTaskExternalSubjectDTO>;
 
 export const listValuationParseTaskExternalMetrics = (
   batchId: string,
-  params?: { keyword?: string },
+  params?: ListExternalMetricsParams,
 ) =>
-  customInstance<MultiResultOutsourcedDataTaskExternalMetricDTO>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/external-metrics`,
-    method: "GET",
+  generatedApi.listExternalMetrics(
+    batchId,
     params,
-  });
+  ) as Promise<MultiResultOutsourcedDataTaskExternalMetricDTO>;
 
-export const getValuationParseTaskRawWorkbook = (batchId: string) =>
-  customInstance<SingleResultOutsourcedDataTaskRawWorkbookDTO>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/raw-workbook`,
-    method: "GET",
-  });
-
+export const getValuationParseTaskRawWorkbook = generatedApi.queryRawWorkbook;
 export const downloadValuationParseTaskRawWorkbook = (batchId: string) =>
-  customInstance<Blob>({
-    url: `/outsourced-data-tasks/${encodeURIComponent(batchId)}/standard-data/raw-workbook/download`,
-    method: "GET",
-    responseType: "blob",
-  });
+  generatedApi.downloadRawWorkbook(batchId) as Promise<Blob>;
 
 export const exportValuationParseTaskStandardDataSheet = (
   batchId: string,
@@ -462,64 +166,51 @@ export const exportValuationParseTaskStandardDataSheet = (
     responseType: "blob",
   });
 
-export const listValuationParseTaskSteps = (batchId: string) =>
-  generatedApi.listSteps(batchId) as Promise<MultiResultOutsourcedDataTaskStepDTO>;
-
+export const listValuationParseTaskSteps = generatedApi.listSteps;
 export const executeValuationParseTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
-) =>
-  generatedApi.execute(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
-
+) => generatedApi.execute(batchId, command ?? {});
 export const retryValuationParseTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
-) =>
-  generatedApi.retry1(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
-
+) => generatedApi.retry1(batchId, command ?? {});
 export const stopValuationParseTask = (
   batchId: string,
   command?: OutsourcedDataTaskActionCommand,
-) =>
-  generatedApi.stop1(batchId, command ?? {}) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
-
+) => generatedApi.stop1(batchId, command ?? {});
 export const retryValuationParseTaskStep = (
   batchId: string,
   stepId: string,
   command?: OutsourcedDataTaskActionCommand,
-) =>
-  generatedApi.retryStep(
-    batchId,
-    stepId,
-    command ?? {},
-  ) as Promise<SingleResultOutsourcedDataTaskActionResultDTO>;
-
+) => generatedApi.retryStep(batchId, stepId, command ?? {});
 export const batchExecuteValuationParseTasks = (
   command: OutsourcedDataTaskBatchCommand,
-) =>
-  generatedApi.batchExecute(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
-
+) => generatedApi.batchExecute(command);
 export const batchRetryValuationParseTasks = (
   command: OutsourcedDataTaskBatchCommand,
-) =>
-  generatedApi.batchRetry(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
-
+) => generatedApi.batchRetry(command);
 export const batchStopValuationParseTasks = (
   command: OutsourcedDataTaskBatchCommand,
-) =>
-  generatedApi.batchStop(command) as Promise<MultiResultOutsourcedDataTaskActionResultDTO>;
+) => generatedApi.batchStop(command);
 
 export const getOutsourcedDataTaskSummary = getValuationParseTaskSummary;
 export const pageOutsourcedDataTasks = pageValuationParseTasks;
 export const getOutsourcedDataTask = getValuationParseTask;
 export const getOutsourcedDataTaskTrace = getValuationParseTaskTrace;
-export const getOutsourcedDataTaskStandardBasic = getValuationParseTaskStandardBasic;
-export const listOutsourcedDataTaskStandardSubjects = listValuationParseTaskStandardSubjects;
-export const listOutsourcedDataTaskStandardMetrics = listValuationParseTaskStandardMetrics;
-export const listOutsourcedDataTaskExternalSubjects = listValuationParseTaskExternalSubjects;
-export const listOutsourcedDataTaskExternalMetrics = listValuationParseTaskExternalMetrics;
+export const getOutsourcedDataTaskStandardBasic =
+  getValuationParseTaskStandardBasic;
+export const listOutsourcedDataTaskStandardSubjects =
+  listValuationParseTaskStandardSubjects;
+export const listOutsourcedDataTaskStandardMetrics =
+  listValuationParseTaskStandardMetrics;
+export const listOutsourcedDataTaskExternalSubjects =
+  listValuationParseTaskExternalSubjects;
+export const listOutsourcedDataTaskExternalMetrics =
+  listValuationParseTaskExternalMetrics;
 export const getOutsourcedDataTaskRawWorkbook = getValuationParseTaskRawWorkbook;
-export const exportOutsourcedDataTaskStandardDataSheet = exportValuationParseTaskStandardDataSheet;
+export const exportOutsourcedDataTaskStandardDataSheet =
+  exportValuationParseTaskStandardDataSheet;
 export const listOutsourcedDataTaskSteps = listValuationParseTaskSteps;
 export const executeOutsourcedDataTask = executeValuationParseTask;
 export const retryOutsourcedDataTask = retryValuationParseTask;

@@ -11,7 +11,5 @@ export interface OutsourcedDataTaskBatchDetailDTO {
   /** No comments found.(object) */
   batch?: OutsourcedDataTaskBatchDTO;
   /** No comments found. */
-  currentBlockPoint?: string;
-  /** No comments found. */
   steps?: OutsourcedDataTaskStepDTO[];
 }

@@ -25,7 +25,7 @@ public class DefaultTransferFormTemplateQueryService implements TransferFormTemp
     }
 
     @Override
-    public List<TransferFormTemplateViewDTO> listTemplates() {
+    public List<TransferFormTemplateViewDTO> listFormTemps() {
         return applicationContext.getBeansOfType(FormTemplate.class)
                 .values()
                 .stream()
@@ -35,9 +35,9 @@ public class DefaultTransferFormTemplateQueryService implements TransferFormTemp
     }
 
     @Override
-    public List<TransferFormTemplateGroupDTO> listGroupedTemplates() {
+    public List<TransferFormTemplateGroupDTO> listGroupedFormTemps() {
         Map<String, List<TransferFormTemplateViewDTO>> grouped = new LinkedHashMap<>();
-        for (TransferFormTemplateViewDTO template : listTemplates()) {
+        for (TransferFormTemplateViewDTO template : listFormTemps()) {
             grouped.computeIfAbsent(template.getCategory(), key -> new java.util.ArrayList<>()).add(template);
         }
         return grouped.entrySet().stream()
@@ -50,7 +50,7 @@ public class DefaultTransferFormTemplateQueryService implements TransferFormTemp
     }
 
     @Override
-    public TransferFormTemplateViewDTO getTemplate(String name) {
+    public TransferFormTemplateViewDTO getFormTemp(String name) {
         return applicationContext.getBeansOfType(FormTemplate.class)
                 .values()
                 .stream()

@@ -1,24 +1,11 @@
-import { customInstance } from "./mutator";
+import { getJavaApi } from "./generated/valset";
 
-export type TransferObjectTagSummaryQueryParams = {
-  taskDate?: string;
-};
+const generatedApi = getJavaApi();
 
-export type TransferObjectTagSummaryViewDTO = {
-  tagCode?: string;
-  tagName?: string;
-  tagCount?: number;
-};
+export const listTransferObjectTagSummaries = generatedApi.summarizeTags;
 
-export type MultiResultTransferObjectTagSummaryViewDTO = {
-  data?: TransferObjectTagSummaryViewDTO[];
-};
-
-export const listTransferObjectTagSummaries = (
-  params?: TransferObjectTagSummaryQueryParams,
-) =>
-  customInstance<MultiResultTransferObjectTagSummaryViewDTO>({
-    url: `/transfer-objects/tag-summary`,
-    method: "GET",
-    params,
-  });
+export type {
+  MultiResultTransferObjectTagSummaryViewDTO,
+  SummarizeTagsParams as TransferObjectTagSummaryQueryParams,
+  TransferObjectTagSummaryViewDTO,
+} from "./generated/valset/schemas";

@@ -18,7 +18,6 @@ import type {
   TransferRuleViewDTO,
   TransferSourceViewDTO,
   TransferTargetViewDTO,
-  UploadSourceFilesRequest,
 } from "@/api/generated/valset/schemas";
 import {
   GetTemplateName2SourceType as SourceTypeEnum,
@@ -1528,7 +1527,7 @@ export const useTransferPage = (): { page: RouteConfigPage } => {
 
     uploadSubmitting.value = true;
     try {
-      const payloadData: UploadSourceFilesRequest = {
+      const payloadData = {
         sourceId,
         files,
       };

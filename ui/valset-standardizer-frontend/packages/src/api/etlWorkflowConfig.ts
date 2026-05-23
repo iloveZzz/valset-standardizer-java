@@ -1,55 +1,34 @@
 import { getJavaApi } from "./generated/valset";
+import type {
+  WorkflowDefinitionDTO as GeneratedWorkflowDefinitionDTO,
+  WorkflowEngineBindingDTO as GeneratedWorkflowEngineBindingDTO,
+  WorkflowPlatformMetadataDTO,
+  WorkflowStageDTO as GeneratedWorkflowStageDTO,
+} from "./generated/valset/schemas";
 import type { WorkflowInstanceDTO } from "./etlWorkflowInstance";
-import type { WorkflowDefinitionDTO as GeneratedWorkflowDefinitionDTO } from "./generated/valset/schemas";
+
+const generatedApi = getJavaApi();
 
 export type EtlPlatformType = "SPRING_BATCH" | "DOLPHIN_SCHEDULER" | "XXL_JOB";
 export type WorkflowSyncStatus = "UNSYNCED" | "SYNCING" | "SYNCED" | "FAILED";
-
-export type WorkflowStageDTO = {
-  stageCode?: string;
-  stageName?: string;
-  stageOrder?: number;
-  description?: string;
-  retryable?: boolean;
+export type WorkflowStageDTO = Omit<GeneratedWorkflowStageDTO, "timeoutSeconds"> & {
   timeoutSeconds?: number | null;
 };
-
-export type WorkflowEngineBindingDTO = {
-  platformType?: EtlPlatformType;
-  externalWorkflowId?: string;
-  externalProjectCode?: string;
-  externalNamespace?: string;
-  externalJobGroup?: string;
-  externalJobHandler?: string;
-  configJson?: string;
-  externalOnline?: boolean | null;
-  externalReleaseState?: string | null;
-  syncStatus?: WorkflowSyncStatus | null;
-  firstSyncedAt?: string | null;
-  lastSyncedAt?: string | null;
-  syncFailureReason?: string | null;
-  remoteWorkflowVersionNo?: number | null;
+export type WorkflowEngineBindingDTO = Omit<
+  GeneratedWorkflowEngineBindingDTO,
+  "attributes"
+> & {
   attributes?: Record<string, unknown>;
 };
-
-export type WorkflowDefinitionDTO = {
-  workflowCode?: string;
-  workflowName?: string;
-  workflowVersionNo?: number;
-  platformType?: EtlPlatformType;
-  description?: string;
-  enabled?: boolean;
-  stages?: WorkflowStageDTO[];
+export type WorkflowDefinitionDTO = Omit<
+  GeneratedWorkflowDefinitionDTO,
+  "engineBinding" | "stages"
+> & {
   engineBinding?: WorkflowEngineBindingDTO | null;
+  stages?: WorkflowStageDTO[];
 };
 
-export type WorkflowPlatformMetadataDTO = {
-  platformType?: EtlPlatformType;
-  platformName?: string;
-  description?: string;
-  requiredBindingFields?: string[];
-  supportedOperations?: string[];
-};
+export type { WorkflowPlatformMetadataDTO };
 
 export type SingleResult<T> = {
   data?: T;
@@ -62,8 +41,6 @@ export type MultiResult<T> = {
   success?: boolean;
   message?: string;
 };
-
-const generatedApi = getJavaApi();
 
 export const listEtlWorkflowDefinitions = () =>
   generatedApi.listDefinitions() as Promise<MultiResult<WorkflowDefinitionDTO>>;

@@ -1,4 +1,14 @@
 import { getJavaApi } from "./generated/valset";
+import type {
+  CountTaskStateParams,
+  ForceTaskSuccessParams,
+  GetTaskLog1Params,
+  ListTaskInstancesParams,
+  WorkflowTaskInstanceDTO,
+  WorkflowTaskInstancePageDTO,
+} from "./generated/valset/schemas";
+
+const generatedApi = getJavaApi();
 
 export type WorkflowTaskInstanceStatus =
   | "SUBMITTED_SUCCESS"
@@ -12,99 +22,32 @@ export type WorkflowTaskInstanceStatus =
   | "FORCED_SUCCESS"
   | "DISPATCH"
   | string;
-
-export type WorkflowTaskInstanceDTO = {
-  id?: number | null;
-  name?: string;
-  taskType?: string;
-  workflowInstanceId?: string;
-  workflowInstanceName?: string;
-  projectCode?: number | null;
-  taskCode?: number | null;
-  taskDefinitionVersion?: number | null;
-  processDefinitionName?: string;
-  taskGroupPriority?: number | null;
-  state?: WorkflowTaskInstanceStatus;
-  firstSubmitTime?: string;
-  submitTime?: string;
-  startTime?: string;
-  endTime?: string;
-  host?: string;
-  executePath?: string;
-  logPath?: string;
-  retryTimes?: number | null;
-  alertFlag?: string;
-  pid?: number | null;
-  appLink?: string;
-  flag?: string;
-  duration?: number | null;
-  maxRetryTimes?: number | null;
-  retryInterval?: number | null;
-  taskInstancePriority?: string;
-  workflowInstancePriority?: string;
-  workerGroup?: string;
-  environmentCode?: number | null;
-  executorId?: number | null;
-  executorName?: string;
-  delayTime?: number | null;
-  taskParams?: string;
-  dryRun?: number | null;
-  taskGroupId?: number | null;
-  cpuQuota?: number | null;
-  memoryMax?: number | null;
-  taskExecuteType?: string;
-};
-
-export type WorkflowTaskInstancePageDTO = {
-  workflowInstanceState?: string;
-  taskList?: WorkflowTaskInstanceDTO[];
-  totalCount?: number;
-  pageIndex?: number;
-  pageSize?: number;
-};
-
-export type WorkflowTaskInstanceStateCountDTO = {
-  state?: WorkflowTaskInstanceStatus;
-  count?: number | string;
-};
-
-export type WorkflowTaskInstanceStateCountPageDTO = {
-  totalCount?: number;
-  taskInstanceStatusCounts?: WorkflowTaskInstanceStateCountDTO[];
-};
-
-export type WorkflowTaskInstanceQueryParams = {
-  workflowCode?: string;
-  workflowVersionNo?: number;
-  taskName?: string;
-  workflowInstanceName?: string;
-  status?: string;
-  startTimeFrom?: string;
-  endTimeTo?: string;
-  pageIndex?: number;
-  pageSize?: number;
-};
-
-export type WorkflowTaskInstanceLogQueryParams = {
-  workflowCode: string;
-  workflowVersionNo: number;
-  skipLineNum?: number;
-  limit?: number;
-};
-
-export type WorkflowTaskInstanceStateCountQueryParams = {
+export type WorkflowTaskInstanceQueryParams = ListTaskInstancesParams;
+export type WorkflowTaskInstanceLogQueryParams = GetTaskLog1Params;
+export type WorkflowTaskInstanceStateCountQueryParams = CountTaskStateParams & {
   startDate: string;
   endDate: string;
   projectCode: number;
 };
-
+export type WorkflowTaskInstanceStateCountDTO = {
+  state?: WorkflowTaskInstanceStatus;
+  count?: number | string;
+};
+export type WorkflowTaskInstanceStateCountPageDTO = {
+  totalCount?: number;
+  taskInstanceStatusCounts?: WorkflowTaskInstanceStateCountDTO[];
+};
 export type SingleResult<T> = {
   data?: T;
   success?: boolean;
   message?: string;
 };
 
-const generatedApi = getJavaApi();
+export type {
+  ForceTaskSuccessParams,
+  WorkflowTaskInstanceDTO,
+  WorkflowTaskInstancePageDTO,
+};
 
 export const listEtlWorkflowTaskInstances = (
   params?: WorkflowTaskInstanceQueryParams,
@@ -122,7 +65,7 @@ export const forceSuccessEtlWorkflowTaskInstance = (
     {
       workflowCode: params.workflowCode,
       workflowVersionNo: params.workflowVersionNo,
-    },
+    } satisfies ForceTaskSuccessParams,
   ) as Promise<SingleResult<boolean>>;
 
 export const getEtlWorkflowTaskInstanceLog = (

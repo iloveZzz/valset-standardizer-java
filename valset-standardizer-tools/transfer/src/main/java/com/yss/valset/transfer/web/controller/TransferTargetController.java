@@ -73,9 +73,9 @@ public class TransferTargetController {
      * @param targetType 目标类型
      * @return 表单模板名称
      */
-    @GetMapping("/template-name")
+    @GetMapping("/temp-name")
     @Operation(summary = "查询投递目标对应表单模板名", description = "根据目标类型返回前端应加载的表单模板名称。")
-    public SingleResult<String> getTemplateName(@RequestParam("targetType") TargetType targetType) {
+    public SingleResult<String> getFormTempName(@RequestParam("targetType") TargetType targetType) {
         return SingleResult.of(TransferFormTemplateNames.targetTemplateName(targetType));
     }
 
